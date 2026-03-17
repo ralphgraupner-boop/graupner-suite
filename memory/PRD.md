@@ -19,7 +19,7 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - [x] Leistungsstamm (Arbeitsleistungen/Dienstleistungen)
 - [x] Angebotserstellung mit Positionen
 - [x] WYSIWYG-Dokumenteneditor für alle Dokumenttypen
-- [ ] Spracheingabe → KI-Angebot (OpenAI GPT-5.2 + Whisper) - Backend ready, Frontend UI ready, API Key needed
+- [x] Spracheingabe → KI-Angebot (OpenAI GPT-5.2 + Whisper) - Vollständig aktiviert
 - [x] Auftragsbestätigung aus Angebot
 - [x] Rechnungen mit fortlaufender Nummer
 - [x] MwSt auswählbar (19% / 7% / Kleinunternehmer)
@@ -83,7 +83,7 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - [x] WYSIWYG-Dokumenteneditor fertiggestellt
 
 ### P1 (Wichtig)
-- [ ] Spracheingabe aktivieren (Emergent LLM Key für OpenAI Whisper + GPT)
+- [x] Spracheingabe aktiviert (Emergent LLM Key für OpenAI Whisper + GPT-5.2)
 - [ ] E-Mail-Versand aktivieren (RESEND_API_KEY benötigt)
 - [ ] Webhook-Dokumentation für Website-Integration
 
@@ -115,6 +115,6 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 ```
 
 ## Next Tasks
-1. Spracheingabe mit Emergent LLM Key aktivieren
-2. E-Mail-Integration mit Resend API Key
-3. Webhook-Dokumentation erstellen
+1. E-Mail-Integration mit Resend API Key
+2. Webhook-Dokumentation erstellen
+3. Dashboard mit echten Daten verbessern
