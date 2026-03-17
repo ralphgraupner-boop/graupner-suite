@@ -621,11 +621,51 @@ async def update_invoice_status(invoice_id: str, status: str = Body(..., embed=T
     update_data = {"status": status}
     if status == "Bezahlt":
         update_data["paid_at"] = datetime.now(timezone.utc).isoformat()
+    elif status == "Offen":
+        update_data["paid_at"] = None
     
     result = await db.invoices.update_one({"id": invoice_id}, {"$set": update_data})
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
     return {"message": "Status aktualisiert"}
+
+class InvoiceUpdate(BaseModel):
+    positions: List[Position]
+    notes: str = ""
+    vat_rate: float = 19.0
+    status: Optional[str] = None
+
+@api_router.put("/invoices/{invoice_id}", response_model=Invoice)
+async def update_invoice(invoice_id: str, update: InvoiceUpdate):
+    """Rechnung bearbeiten - auch wenn bereits bezahlt"""
+    existing = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    
+    subtotal_net = sum(p.quantity * p.price_net for p in update.positions)
+    vat_amount = subtotal_net * (update.vat_rate / 100) if update.vat_rate > 0 else 0
+    total_gross = subtotal_net + vat_amount
+    
+    update_data = {
+        "positions": [p.model_dump() for p in update.positions],
+        "notes": update.notes,
+        "vat_rate": update.vat_rate,
+        "subtotal_net": round(subtotal_net, 2),
+        "vat_amount": round(vat_amount, 2),
+        "total_gross": round(total_gross, 2)
+    }
+    
+    if update.status:
+        update_data["status"] = update.status
+        if update.status == "Bezahlt":
+            update_data["paid_at"] = datetime.now(timezone.utc).isoformat()
+        elif update.status == "Offen":
+            update_data["paid_at"] = None
+    
+    await db.invoices.update_one({"id": invoice_id}, {"$set": update_data})
+    
+    updated = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    return updated
 
 @api_router.delete("/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str):

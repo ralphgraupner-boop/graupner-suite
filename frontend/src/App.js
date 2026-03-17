@@ -1422,6 +1422,8 @@ const OrdersPage = () => {
 const InvoicesPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editInvoice, setEditInvoice] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -1474,6 +1476,11 @@ const InvoicesPage = () => {
     } catch (err) {
       toast.error("Fehler beim Löschen");
     }
+  };
+
+  const handleEdit = (invoice) => {
+    setEditInvoice(invoice);
+    setShowEditModal(true);
   };
 
   const getStatusBadge = (status) => {
@@ -1544,6 +1551,14 @@ const InvoicesPage = () => {
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
                         <button
+                          data-testid={`btn-edit-invoice-${invoice.id}`}
+                          onClick={() => handleEdit(invoice)}
+                          className="p-2 hover:bg-muted rounded-sm"
+                          title="Bearbeiten"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
                           data-testid={`btn-download-invoice-${invoice.id}`}
                           onClick={() => handleDownloadPDF(invoice.id, invoice.invoice_number)}
                           className="p-2 hover:bg-muted rounded-sm"
@@ -1578,7 +1593,288 @@ const InvoicesPage = () => {
           </div>
         </Card>
       )}
+
+      <EditInvoiceModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        invoice={editInvoice}
+        onSave={() => {
+          setShowEditModal(false);
+          loadInvoices();
+        }}
+      />
     </div>
+  );
+};
+
+// Edit Invoice Modal
+const EditInvoiceModal = ({ isOpen, onClose, invoice, onSave }) => {
+  const [positions, setPositions] = useState([]);
+  const [notes, setNotes] = useState("");
+  const [vatRate, setVatRate] = useState(19);
+  const [status, setStatus] = useState("Offen");
+  const [loading, setLoading] = useState(false);
+  const [articles, setArticles] = useState([]);
+  const [services, setServices] = useState([]);
+
+  useEffect(() => {
+    if (invoice) {
+      setPositions(invoice.positions || []);
+      setNotes(invoice.notes || "");
+      setVatRate(invoice.vat_rate || 19);
+      setStatus(invoice.status || "Offen");
+    }
+    loadStammdaten();
+  }, [invoice]);
+
+  const loadStammdaten = async () => {
+    try {
+      const [articlesRes, servicesRes] = await Promise.all([
+        api.get("/articles"),
+        api.get("/services")
+      ]);
+      setArticles(articlesRes.data);
+      setServices(servicesRes.data);
+    } catch (err) {
+      console.error("Fehler beim Laden der Stammdaten");
+    }
+  };
+
+  const addPosition = () => {
+    setPositions([
+      ...positions,
+      { pos_nr: positions.length + 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
+    ]);
+  };
+
+  const updatePosition = (index, field, value) => {
+    const updated = [...positions];
+    updated[index][field] = value;
+    setPositions(updated);
+  };
+
+  const removePosition = (index) => {
+    const updated = positions.filter((_, i) => i !== index);
+    updated.forEach((p, i) => (p.pos_nr = i + 1));
+    setPositions(updated);
+  };
+
+  const addArticle = (article) => {
+    setPositions([
+      ...positions,
+      {
+        pos_nr: positions.length + 1,
+        description: article.name + (article.description ? ` - ${article.description}` : ""),
+        quantity: 1,
+        unit: article.unit,
+        price_net: article.price_net
+      }
+    ]);
+  };
+
+  const addService = (service) => {
+    setPositions([
+      ...positions,
+      {
+        pos_nr: positions.length + 1,
+        description: service.name + (service.description ? ` - ${service.description}` : ""),
+        quantity: 1,
+        unit: service.unit,
+        price_net: service.price_net
+      }
+    ]);
+  };
+
+  const calculateTotals = () => {
+    const subtotal = positions.reduce((sum, p) => sum + p.quantity * p.price_net, 0);
+    const vat = subtotal * (vatRate / 100);
+    const total = subtotal + vat;
+    return { subtotal, vat, total };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (positions.length === 0) {
+      toast.error("Bitte fügen Sie mindestens eine Position hinzu");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.put(`/invoices/${invoice.id}`, {
+        positions,
+        notes,
+        vat_rate: vatRate,
+        status
+      });
+      toast.success("Rechnung aktualisiert!");
+      onSave();
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { subtotal, vat, total } = calculateTotals();
+
+  if (!invoice) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Rechnung ${invoice.invoice_number} bearbeiten`} size="xl">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-muted/50 p-4 rounded-sm">
+          <p className="text-sm text-muted-foreground">Kunde: <strong>{invoice.customer_name}</strong></p>
+          <p className="text-sm text-muted-foreground">Erstellt: {new Date(invoice.created_at).toLocaleDateString("de-DE")}</p>
+        </div>
+
+        {/* Status */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Status</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full h-10 rounded-sm border border-input bg-background px-3"
+          >
+            <option value="Offen">Offen</option>
+            <option value="Gesendet">Gesendet</option>
+            <option value="Bezahlt">Bezahlt</option>
+            <option value="Überfällig">Überfällig</option>
+          </select>
+        </div>
+
+        {/* Positions */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <label className="text-sm font-medium">Positionen</label>
+            <div className="flex gap-2 flex-wrap">
+              {services.length > 0 && (
+                <select
+                  onChange={(e) => {
+                    const service = services.find((s) => s.id === e.target.value);
+                    if (service) addService(service);
+                    e.target.value = "";
+                  }}
+                  className="h-9 rounded-sm border border-input bg-background px-2 text-sm"
+                >
+                  <option value="">+ Leistung</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
+              {articles.length > 0 && (
+                <select
+                  onChange={(e) => {
+                    const article = articles.find((a) => a.id === e.target.value);
+                    if (article) addArticle(article);
+                    e.target.value = "";
+                  }}
+                  className="h-9 rounded-sm border border-input bg-background px-2 text-sm"
+                >
+                  <option value="">+ Artikel</option>
+                  {articles.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={addPosition}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {positions.map((pos, index) => (
+              <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-muted/30 rounded-sm">
+                <div className="col-span-5">
+                  <Input
+                    value={pos.description}
+                    onChange={(e) => updatePosition(index, "description", e.target.value)}
+                    placeholder="Beschreibung"
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={pos.quantity}
+                    onChange={(e) => updatePosition(index, "quantity", parseFloat(e.target.value) || 0)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    value={pos.unit}
+                    onChange={(e) => updatePosition(index, "unit", e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={pos.price_net}
+                    onChange={(e) => updatePosition(index, "price_net", parseFloat(e.target.value) || 0)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <button
+                    type="button"
+                    onClick={() => removePosition(index)}
+                    className="p-1 hover:bg-destructive/10 hover:text-destructive rounded-sm"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Anmerkungen</label>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+          />
+        </div>
+
+        {/* VAT & Totals */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">MwSt-Satz</label>
+            <select
+              value={vatRate}
+              onChange={(e) => setVatRate(parseFloat(e.target.value))}
+              className="w-full h-10 rounded-sm border border-input bg-background px-3"
+            >
+              <option value={19}>19% MwSt</option>
+              <option value={7}>7% MwSt</option>
+              <option value={0}>0% (Kleinunternehmer)</option>
+            </select>
+          </div>
+          <div className="space-y-2 text-right">
+            <p className="text-sm text-muted-foreground">Netto: <span className="font-mono">{subtotal.toFixed(2)} €</span></p>
+            <p className="text-sm text-muted-foreground">MwSt: <span className="font-mono">{vat.toFixed(2)} €</span></p>
+            <p className="font-bold">Gesamt: <span className="font-mono">{total.toFixed(2)} €</span></p>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-4 pt-4 border-t">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button type="submit" data-testid="btn-save-invoice-edit" disabled={loading}>
+            {loading ? "Speichern..." : "Änderungen speichern"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
