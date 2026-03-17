@@ -14,7 +14,8 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 ## Core Requirements (Static)
 - [x] Passwortgeschützter Zugang
 - [x] Kundenmanagement (CRUD)
-- [x] Artikelstamm/Leistungskatalog
+- [x] Artikelstamm (Materialien/Produkte)
+- [x] Leistungsstamm (Arbeitsleistungen/Dienstleistungen)
 - [x] Angebotserstellung mit Positionen
 - [x] Spracheingabe → KI-Angebot (OpenAI GPT-5.2 + Whisper)
 - [x] Auftragsbestätigung aus Angebot
@@ -30,13 +31,14 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 ### Backend (FastAPI + MongoDB)
 - Auth-System mit JWT (Register/Login)
 - Kunden-CRUD mit Fotos-Support
-- Artikelstamm-CRUD
+- **Artikelstamm-CRUD** (Materialien: Holz, Schrauben, etc.)
+- **Leistungsstamm-CRUD** (Arbeitsleistungen: Reparatur, Montage, etc.)
 - Angebote mit Positionen, MwSt-Berechnung, fortlaufender Nummer (A-YYYY-NNNN)
 - Aufträge aus Angeboten erstellen (AB-YYYY-NNNN)
 - Rechnungen mit Fälligkeit und Bezahlt-Markierung (R-YYYY-NNNN)
 - PDF-Generierung mit ReportLab
 - Speech-to-Text mit OpenAI Whisper
-- KI-Angebotserstellung mit GPT-5.2
+- KI-Angebotserstellung mit GPT-5.2 (nutzt Artikel- UND Leistungsstamm)
 - Dashboard-Statistiken
 - Einstellungen-Verwaltung
 - Webhook-Endpoint für Website-Kontaktformular
@@ -48,12 +50,14 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - Angebotserstellung mit:
   - Kundenauswahl
   - Spracheingabe-Button
-  - Positionen hinzufügen/bearbeiten
-  - Artikelvorlagen einfügen
+  - **Leistung hinzufügen (Dropdown)**
+  - **Artikel hinzufügen (Dropdown)**
+  - Positionen manuell hinzufügen
   - MwSt-Auswahl
 - Aufträge-Übersicht mit Rechnung-Erstellung
 - Rechnungen-Liste mit Bezahlt-Markierung
-- Artikelstamm-Verwaltung
+- **Artikelstamm-Verwaltung** (Materialien)
+- **Leistungsstamm-Verwaltung** (Arbeitsleistungen)
 - Einstellungen für Firmendaten
 
 ### Design
@@ -70,6 +74,7 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 
 ### P0 (Kritisch)
 - [x] MVP abgeschlossen
+- [x] Artikelstamm + Leistungsstamm getrennt
 
 ### P1 (Wichtig)
 - [ ] E-Mail-Versand aktivieren (RESEND_API_KEY benötigt)

@@ -104,6 +104,20 @@ class ArticleCreate(BaseModel):
     unit: str = "Stück"
     price_net: float
 
+class Service(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str = ""
+    unit: str = "Stunde"
+    price_net: float
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class ServiceCreate(BaseModel):
+    name: str
+    description: str = ""
+    unit: str = "Stunde"
+    price_net: float
+
 class Position(BaseModel):
     pos_nr: int
     description: str
@@ -325,6 +339,36 @@ async def delete_article(article_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     return {"message": "Artikel gelöscht"}
+
+# ==================== SERVICES (LEISTUNGEN) ====================
+
+@api_router.get("/services", response_model=List[Service])
+async def get_services():
+    services = await db.services.find({}, {"_id": 0}).to_list(1000)
+    return services
+
+@api_router.post("/services", response_model=Service)
+async def create_service(service: ServiceCreate):
+    service_obj = Service(**service.model_dump())
+    await db.services.insert_one(service_obj.model_dump())
+    return service_obj
+
+@api_router.put("/services/{service_id}", response_model=Service)
+async def update_service(service_id: str, service: ServiceCreate):
+    existing = await db.services.find_one({"id": service_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Leistung nicht gefunden")
+    
+    updated = {**existing, **service.model_dump()}
+    await db.services.update_one({"id": service_id}, {"$set": updated})
+    return updated
+
+@api_router.delete("/services/{service_id}")
+async def delete_service(service_id: str):
+    result = await db.services.delete_one({"id": service_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Leistung nicht gefunden")
+    return {"message": "Leistung gelöscht"}
 
 # ==================== QUOTES ====================
 
@@ -666,9 +710,17 @@ async def generate_quote_with_ai(request: AIQuoteRequest):
     articles = await db.articles.find({}, {"_id": 0}).to_list(100)
     articles_context = ""
     if articles:
-        articles_context = "\n\nVerfügbare Artikel/Leistungen:\n"
+        articles_context = "\n\nVerfügbare Artikel (Material):\n"
         for a in articles:
             articles_context += f"- {a['name']}: {a['price_net']}€/{a['unit']} - {a.get('description', '')}\n"
+    
+    # Leistungsstamm laden für Kontext
+    services = await db.services.find({}, {"_id": 0}).to_list(100)
+    services_context = ""
+    if services:
+        services_context = "\n\nVerfügbare Leistungen (Arbeit):\n"
+        for s in services:
+            services_context += f"- {s['name']}: {s['price_net']}€/{s['unit']} - {s.get('description', '')}\n"
     
     system_message = f"""Du bist ein Assistent für eine Tischlerei. Erstelle aus der Sprachbeschreibung ein strukturiertes Angebot.
 
@@ -676,7 +728,7 @@ Kundeninformation:
 - Name: {customer['name']}
 - Adresse: {customer.get('address', 'Nicht angegeben')}
 - Notizen: {customer.get('notes', '')}
-{articles_context}
+{articles_context}{services_context}
 
 Antworte NUR mit einem JSON-Objekt im folgenden Format (keine Erklärungen):
 {{
@@ -689,7 +741,7 @@ Antworte NUR mit einem JSON-Objekt im folgenden Format (keine Erklärungen):
 Wichtig:
 - Schätze realistische Preise für Tischlerarbeiten
 - Verwende deutsche Beschreibungen
-- Trenne Material und Arbeitsleistung wenn sinnvoll
+- Trenne Material (Artikel) und Arbeitsleistung (Leistungen) in separate Positionen
 - Preise sind Nettopreise in Euro"""
 
     try:
