@@ -82,6 +82,7 @@ class Customer(BaseModel):
     address: str = ""
     notes: str = ""
     photos: List[str] = []
+    customer_type: str = "Privat"  # Privat, Vermieter, Mieter, Gewerblich, Hausverwaltung
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CustomerCreate(BaseModel):
@@ -91,6 +92,7 @@ class CustomerCreate(BaseModel):
     address: str = ""
     notes: str = ""
     photos: List[str] = []
+    customer_type: str = "Privat"
 
 class Article(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -179,6 +181,8 @@ class Invoice(BaseModel):
     subtotal_net: float
     vat_amount: float
     total_gross: float
+    deposit_amount: float = 0.0  # Anzahlung
+    final_amount: float = 0.0  # Restbetrag (total_gross - deposit_amount)
     status: str = "Offen"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     due_date: str = ""
@@ -191,6 +195,7 @@ class InvoiceCreate(BaseModel):
     notes: str = ""
     vat_rate: float = 19.0
     due_days: int = 14
+    deposit_amount: float = 0.0
 
 class CompanySettings(BaseModel):
     id: str = "company_settings"
@@ -219,6 +224,28 @@ class AIQuoteRequest(BaseModel):
     customer_id: str
     transcribed_text: str
     vat_rate: float = 19.0
+
+class QuoteUpdate(BaseModel):
+    positions: List[Position]
+    notes: str = ""
+    vat_rate: float = 19.0
+    status: Optional[str] = None
+    custom_total: Optional[float] = None  # Wenn gesetzt, werden Positionen proportional angepasst
+
+class OrderUpdate(BaseModel):
+    positions: List[Position]
+    notes: str = ""
+    vat_rate: float = 19.0
+    status: Optional[str] = None
+    custom_total: Optional[float] = None
+
+class InvoiceUpdate(BaseModel):
+    positions: List[Position]
+    notes: str = ""
+    vat_rate: float = 19.0
+    status: Optional[str] = None
+    custom_total: Optional[float] = None
+    deposit_amount: float = 0.0
 
 class EmailRequest(BaseModel):
     recipient_email: EmailStr
@@ -429,26 +456,43 @@ async def create_quote(quote: QuoteCreate):
     return quote_obj
 
 @api_router.put("/quotes/{quote_id}", response_model=Quote)
-async def update_quote(quote_id: str, positions: List[Position] = Body(...), notes: str = Body(""), vat_rate: float = Body(19.0)):
+async def update_quote(quote_id: str, update: QuoteUpdate):
+    """Angebot bearbeiten mit optionaler Gesamtsummen-Anpassung"""
     existing = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
     
+    positions = update.positions
+    
+    # Wenn custom_total gesetzt ist, Positionen proportional anpassen
+    if update.custom_total is not None and update.custom_total > 0:
+        current_total = sum(p.quantity * p.price_net for p in positions)
+        if current_total > 0:
+            # Brutto -> Netto umrechnen
+            target_net = update.custom_total / (1 + update.vat_rate / 100)
+            factor = target_net / current_total
+            for p in positions:
+                p.price_net = round(p.price_net * factor, 2)
+    
     subtotal_net = sum(p.quantity * p.price_net for p in positions)
-    vat_amount = subtotal_net * (vat_rate / 100) if vat_rate > 0 else 0
+    vat_amount = subtotal_net * (update.vat_rate / 100) if update.vat_rate > 0 else 0
     total_gross = subtotal_net + vat_amount
     
-    updated = {
-        **existing,
+    update_data = {
         "positions": [p.model_dump() for p in positions],
-        "notes": notes,
-        "vat_rate": vat_rate,
+        "notes": update.notes,
+        "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),
         "total_gross": round(total_gross, 2)
     }
     
-    await db.quotes.update_one({"id": quote_id}, {"$set": updated})
+    if update.status:
+        update_data["status"] = update.status
+    
+    await db.quotes.update_one({"id": quote_id}, {"$set": update_data})
+    
+    updated = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
     return updated
 
 @api_router.put("/quotes/{quote_id}/status")
@@ -522,6 +566,45 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
     return {"message": "Status aktualisiert"}
 
+@api_router.put("/orders/{order_id}", response_model=Order)
+async def update_order(order_id: str, update: OrderUpdate):
+    """Auftrag bearbeiten mit optionaler Gesamtsummen-Anpassung"""
+    existing = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
+    
+    positions = update.positions
+    
+    # Wenn custom_total gesetzt ist, Positionen proportional anpassen
+    if update.custom_total is not None and update.custom_total > 0:
+        current_total = sum(p.quantity * p.price_net for p in positions)
+        if current_total > 0:
+            target_net = update.custom_total / (1 + update.vat_rate / 100)
+            factor = target_net / current_total
+            for p in positions:
+                p.price_net = round(p.price_net * factor, 2)
+    
+    subtotal_net = sum(p.quantity * p.price_net for p in positions)
+    vat_amount = subtotal_net * (update.vat_rate / 100) if update.vat_rate > 0 else 0
+    total_gross = subtotal_net + vat_amount
+    
+    update_data = {
+        "positions": [p.model_dump() for p in positions],
+        "notes": update.notes,
+        "vat_rate": update.vat_rate,
+        "subtotal_net": round(subtotal_net, 2),
+        "vat_amount": round(vat_amount, 2),
+        "total_gross": round(total_gross, 2)
+    }
+    
+    if update.status:
+        update_data["status"] = update.status
+    
+    await db.orders.update_one({"id": order_id}, {"$set": update_data})
+    
+    updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    return updated
+
 @api_router.delete("/orders/{order_id}")
 async def delete_order(order_id: str):
     result = await db.orders.delete_one({"id": order_id})
@@ -563,6 +646,7 @@ async def create_invoice(invoice: InvoiceCreate):
     subtotal_net = sum(p.quantity * p.price_net for p in invoice.positions)
     vat_amount = subtotal_net * (invoice.vat_rate / 100) if invoice.vat_rate > 0 else 0
     total_gross = subtotal_net + vat_amount
+    final_amount = total_gross - invoice.deposit_amount
     
     from datetime import timedelta
     due_date = (datetime.now(timezone.utc) + timedelta(days=invoice.due_days)).isoformat()
@@ -579,6 +663,8 @@ async def create_invoice(invoice: InvoiceCreate):
         subtotal_net=round(subtotal_net, 2),
         vat_amount=round(vat_amount, 2),
         total_gross=round(total_gross, 2),
+        deposit_amount=round(invoice.deposit_amount, 2),
+        final_amount=round(final_amount, 2),
         due_date=due_date
     )
     
@@ -629,30 +715,38 @@ async def update_invoice_status(invoice_id: str, status: str = Body(..., embed=T
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
     return {"message": "Status aktualisiert"}
 
-class InvoiceUpdate(BaseModel):
-    positions: List[Position]
-    notes: str = ""
-    vat_rate: float = 19.0
-    status: Optional[str] = None
-
 @api_router.put("/invoices/{invoice_id}", response_model=Invoice)
 async def update_invoice(invoice_id: str, update: InvoiceUpdate):
-    """Rechnung bearbeiten - auch wenn bereits bezahlt"""
+    """Rechnung bearbeiten mit Anzahlung und optionaler Gesamtsummen-Anpassung"""
     existing = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
     
-    subtotal_net = sum(p.quantity * p.price_net for p in update.positions)
+    positions = update.positions
+    
+    # Wenn custom_total gesetzt ist, Positionen proportional anpassen
+    if update.custom_total is not None and update.custom_total > 0:
+        current_total = sum(p.quantity * p.price_net for p in positions)
+        if current_total > 0:
+            target_net = update.custom_total / (1 + update.vat_rate / 100)
+            factor = target_net / current_total
+            for p in positions:
+                p.price_net = round(p.price_net * factor, 2)
+    
+    subtotal_net = sum(p.quantity * p.price_net for p in positions)
     vat_amount = subtotal_net * (update.vat_rate / 100) if update.vat_rate > 0 else 0
     total_gross = subtotal_net + vat_amount
+    final_amount = total_gross - update.deposit_amount
     
     update_data = {
-        "positions": [p.model_dump() for p in update.positions],
+        "positions": [p.model_dump() for p in positions],
         "notes": update.notes,
         "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),
-        "total_gross": round(total_gross, 2)
+        "total_gross": round(total_gross, 2),
+        "deposit_amount": round(update.deposit_amount, 2),
+        "final_amount": round(final_amount, 2)
     }
     
     if update.status:

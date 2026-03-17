@@ -147,6 +147,459 @@ const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
   );
 };
 
+// ==================== DOCUMENT PREVIEW ====================
+const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }) => {
+  if (!isOpen || !document) return null;
+
+  const titles = {
+    quote: "Angebot",
+    order: "Auftragsbestätigung", 
+    invoice: "Rechnung"
+  };
+
+  const numberLabels = {
+    quote: "Angebots-Nr.",
+    order: "Auftrags-Nr.",
+    invoice: "Rechnungs-Nr."
+  };
+
+  const docNumber = document.quote_number || document.order_number || document.invoice_number;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-sm shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-auto m-4">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b bg-muted/30 sticky top-0">
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold">{titles[type]} {docNumber}</h2>
+            <Badge variant={document.status === "Bezahlt" ? "success" : document.status === "Offen" ? "warning" : "default"}>
+              {document.status}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <Button variant="outline" size="sm" onClick={() => { onClose(); onEdit(document); }}>
+                <Edit className="w-4 h-4" />
+                Bearbeiten
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => onDownload(document.id, docNumber)}>
+              <Download className="w-4 h-4" />
+              PDF
+            </Button>
+            <button onClick={onClose} className="p-2 hover:bg-muted rounded-sm">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Document Content */}
+        <div className="p-8 bg-white">
+          {/* Document Header */}
+          <div className="flex justify-between mb-8 pb-6 border-b">
+            <div>
+              <h1 className="text-3xl font-bold text-primary mb-2">{titles[type].toUpperCase()}</h1>
+              <p className="text-muted-foreground">{numberLabels[type]} {docNumber}</p>
+              <p className="text-muted-foreground">
+                Datum: {new Date(document.created_at).toLocaleDateString("de-DE")}
+              </p>
+              {document.valid_until && (
+                <p className="text-muted-foreground">
+                  Gültig bis: {new Date(document.valid_until).toLocaleDateString("de-DE")}
+                </p>
+              )}
+              {document.due_date && (
+                <p className="text-muted-foreground">
+                  Fällig: {new Date(document.due_date).toLocaleDateString("de-DE")}
+                </p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="font-semibold text-lg">{document.customer_name}</p>
+              {document.customer_address && (
+                <p className="text-muted-foreground whitespace-pre-line text-sm">
+                  {document.customer_address}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Positions Table */}
+          <table className="w-full mb-6">
+            <thead>
+              <tr className="border-b-2 border-primary/20">
+                <th className="text-left py-3 text-sm font-semibold text-primary">Pos</th>
+                <th className="text-left py-3 text-sm font-semibold text-primary">Beschreibung</th>
+                <th className="text-right py-3 text-sm font-semibold text-primary">Menge</th>
+                <th className="text-left py-3 text-sm font-semibold text-primary">Einheit</th>
+                <th className="text-right py-3 text-sm font-semibold text-primary">Einzelpreis</th>
+                <th className="text-right py-3 text-sm font-semibold text-primary">Gesamt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {document.positions?.map((pos, idx) => (
+                <tr key={idx} className="border-b">
+                  <td className="py-3 text-sm">{pos.pos_nr}</td>
+                  <td className="py-3 text-sm">{pos.description}</td>
+                  <td className="py-3 text-sm text-right font-mono">{pos.quantity}</td>
+                  <td className="py-3 text-sm">{pos.unit}</td>
+                  <td className="py-3 text-sm text-right font-mono">{pos.price_net?.toFixed(2)} €</td>
+                  <td className="py-3 text-sm text-right font-mono">{(pos.quantity * pos.price_net)?.toFixed(2)} €</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Totals */}
+          <div className="flex justify-end mb-6">
+            <div className="w-64 space-y-2">
+              <div className="flex justify-between py-2">
+                <span className="text-muted-foreground">Netto</span>
+                <span className="font-mono">{document.subtotal_net?.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-muted-foreground">MwSt ({document.vat_rate}%)</span>
+                <span className="font-mono">{document.vat_amount?.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between py-3 border-t-2 border-primary font-bold text-lg">
+                <span>Gesamt</span>
+                <span className="font-mono">{document.total_gross?.toFixed(2)} €</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {document.notes && (
+            <div className="mt-6 pt-6 border-t">
+              <p className="text-sm font-semibold text-muted-foreground mb-2">Anmerkungen:</p>
+              <p className="text-sm whitespace-pre-line">{document.notes}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== EDIT DOCUMENT MODAL (Universal für Quote/Order/Invoice) ====================
+const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
+  const [positions, setPositions] = useState([]);
+  const [notes, setNotes] = useState("");
+  const [vatRate, setVatRate] = useState(19);
+  const [status, setStatus] = useState("");
+  const [customTotal, setCustomTotal] = useState("");
+  const [depositAmount, setDepositAmount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [articles, setArticles] = useState([]);
+  const [services, setServices] = useState([]);
+
+  const titles = { quote: "Angebot", order: "Auftrag", invoice: "Rechnung" };
+  const statusOptions = {
+    quote: ["Entwurf", "Gesendet", "Beauftragt", "Abgelehnt"],
+    order: ["Offen", "In Arbeit", "Abgeschlossen", "Abgerechnet"],
+    invoice: ["Offen", "Gesendet", "Bezahlt", "Überfällig"]
+  };
+
+  useEffect(() => {
+    if (document) {
+      setPositions(document.positions || []);
+      setNotes(document.notes || "");
+      setVatRate(document.vat_rate || 19);
+      setStatus(document.status || "");
+      setCustomTotal("");
+      setDepositAmount(document.deposit_amount || 0);
+    }
+    loadStammdaten();
+  }, [document]);
+
+  const loadStammdaten = async () => {
+    try {
+      const [articlesRes, servicesRes] = await Promise.all([
+        api.get("/articles"),
+        api.get("/services")
+      ]);
+      setArticles(articlesRes.data);
+      setServices(servicesRes.data);
+    } catch (err) {
+      console.error("Fehler beim Laden der Stammdaten");
+    }
+  };
+
+  const addPosition = () => {
+    setPositions([
+      ...positions,
+      { pos_nr: positions.length + 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
+    ]);
+  };
+
+  const updatePosition = (index, field, value) => {
+    const updated = [...positions];
+    updated[index][field] = value;
+    setPositions(updated);
+  };
+
+  const removePosition = (index) => {
+    const updated = positions.filter((_, i) => i !== index);
+    updated.forEach((p, i) => (p.pos_nr = i + 1));
+    setPositions(updated);
+  };
+
+  const addArticle = (article) => {
+    setPositions([
+      ...positions,
+      {
+        pos_nr: positions.length + 1,
+        description: article.name + (article.description ? ` - ${article.description}` : ""),
+        quantity: 1,
+        unit: article.unit,
+        price_net: article.price_net
+      }
+    ]);
+  };
+
+  const addService = (service) => {
+    setPositions([
+      ...positions,
+      {
+        pos_nr: positions.length + 1,
+        description: service.name + (service.description ? ` - ${service.description}` : ""),
+        quantity: 1,
+        unit: service.unit,
+        price_net: service.price_net
+      }
+    ]);
+  };
+
+  const calculateTotals = () => {
+    const subtotal = positions.reduce((sum, p) => sum + p.quantity * p.price_net, 0);
+    const vat = subtotal * (vatRate / 100);
+    const total = subtotal + vat;
+    const final = total - depositAmount;
+    return { subtotal, vat, total, final };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (positions.length === 0) {
+      toast.error("Bitte fügen Sie mindestens eine Position hinzu");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
+      const docId = document.id;
+      
+      const payload = {
+        positions,
+        notes,
+        vat_rate: vatRate,
+        status: status || undefined,
+        custom_total: customTotal ? parseFloat(customTotal) : undefined
+      };
+
+      if (type === "invoice") {
+        payload.deposit_amount = depositAmount;
+      }
+
+      await api.put(`/${endpoint}/${docId}`, payload);
+      toast.success(`${titles[type]} aktualisiert!`);
+      onSave();
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { subtotal, vat, total, final } = calculateTotals();
+  const docNumber = document?.quote_number || document?.order_number || document?.invoice_number;
+
+  if (!document) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`${titles[type]} ${docNumber} bearbeiten`} size="xl">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-muted/50 p-4 rounded-sm">
+          <p className="text-sm text-muted-foreground">Kunde: <strong>{document.customer_name}</strong></p>
+          <p className="text-sm text-muted-foreground">Erstellt: {new Date(document.created_at).toLocaleDateString("de-DE")}</p>
+        </div>
+
+        {/* Status */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Status</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full h-10 rounded-sm border border-input bg-background px-3"
+          >
+            {statusOptions[type].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Positions */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <label className="text-sm font-medium">Positionen</label>
+            <div className="flex gap-2 flex-wrap">
+              {services.length > 0 && (
+                <select
+                  onChange={(e) => {
+                    const service = services.find((s) => s.id === e.target.value);
+                    if (service) addService(service);
+                    e.target.value = "";
+                  }}
+                  className="h-9 rounded-sm border border-input bg-background px-2 text-sm"
+                >
+                  <option value="">+ Leistung</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
+              {articles.length > 0 && (
+                <select
+                  onChange={(e) => {
+                    const article = articles.find((a) => a.id === e.target.value);
+                    if (article) addArticle(article);
+                    e.target.value = "";
+                  }}
+                  className="h-9 rounded-sm border border-input bg-background px-2 text-sm"
+                >
+                  <option value="">+ Artikel</option>
+                  {articles.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={addPosition}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {positions.map((pos, index) => (
+              <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-muted/30 rounded-sm">
+                <div className="col-span-5">
+                  <Input
+                    value={pos.description}
+                    onChange={(e) => updatePosition(index, "description", e.target.value)}
+                    placeholder="Beschreibung"
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={pos.quantity}
+                    onChange={(e) => updatePosition(index, "quantity", parseFloat(e.target.value) || 0)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    value={pos.unit}
+                    onChange={(e) => updatePosition(index, "unit", e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={pos.price_net}
+                    onChange={(e) => updatePosition(index, "price_net", parseFloat(e.target.value) || 0)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <button
+                    type="button"
+                    onClick={() => removePosition(index)}
+                    className="p-1 hover:bg-destructive/10 hover:text-destructive rounded-sm"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Anmerkungen</label>
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+          />
+        </div>
+
+        {/* VAT, Custom Total & Deposit */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">MwSt-Satz</label>
+            <select
+              value={vatRate}
+              onChange={(e) => setVatRate(parseFloat(e.target.value))}
+              className="w-full h-10 rounded-sm border border-input bg-background px-3"
+            >
+              <option value={19}>19% MwSt</option>
+              <option value={7}>7% MwSt</option>
+              <option value={0}>0% (Kleinunternehmer)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Gesamtsumme ändern (Brutto)</label>
+            <Input
+              type="number"
+              step="0.01"
+              value={customTotal}
+              onChange={(e) => setCustomTotal(e.target.value)}
+              placeholder={`${total.toFixed(2)} €`}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Positionen werden proportional angepasst</p>
+          </div>
+          {type === "invoice" && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Anzahlung (€)</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+          )}
+          <div className="space-y-1 text-right">
+            <p className="text-sm text-muted-foreground">Netto: <span className="font-mono">{subtotal.toFixed(2)} €</span></p>
+            <p className="text-sm text-muted-foreground">MwSt: <span className="font-mono">{vat.toFixed(2)} €</span></p>
+            <p className="font-bold">Gesamt: <span className="font-mono">{total.toFixed(2)} €</span></p>
+            {type === "invoice" && depositAmount > 0 && (
+              <p className="text-primary font-semibold">Restbetrag: <span className="font-mono">{final.toFixed(2)} €</span></p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-4 pt-4 border-t">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Speichern..." : "Änderungen speichern"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
 // ==================== SIDEBAR ====================
 const Sidebar = ({ onLogout }) => {
   const location = useLocation();
@@ -527,7 +980,12 @@ const CustomersPage = () => {
             <Card key={customer.id} className="p-6 card-hover">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{customer.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold truncate">{customer.name}</h3>
+                    {customer.customer_type && customer.customer_type !== "Privat" && (
+                      <Badge variant="default" className="text-xs">{customer.customer_type}</Badge>
+                    )}
+                  </div>
                   {customer.email && (
                     <p className="text-sm text-muted-foreground truncate">{customer.email}</p>
                   )}
@@ -593,7 +1051,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
     email: "",
     phone: "",
     address: "",
-    notes: ""
+    notes: "",
+    customer_type: "Privat"
   });
   const [loading, setLoading] = useState(false);
 
@@ -604,10 +1063,11 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
         email: customer.email || "",
         phone: customer.phone || "",
         address: customer.address || "",
-        notes: customer.notes || ""
+        notes: customer.notes || "",
+        customer_type: customer.customer_type || "Privat"
       });
     } else {
-      setForm({ name: "", email: "", phone: "", address: "", notes: "" });
+      setForm({ name: "", email: "", phone: "", address: "", notes: "", customer_type: "Privat" });
     }
   }, [customer]);
 
@@ -633,14 +1093,32 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={customer ? "Kunde bearbeiten" : "Neuer Kunde"}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Name *</label>
-          <Input
-            data-testid="input-customer-name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Name *</label>
+            <Input
+              data-testid="input-customer-name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Kundentyp</label>
+            <select
+              data-testid="select-customer-type"
+              value={form.customer_type}
+              onChange={(e) => setForm({ ...form, customer_type: e.target.value })}
+              className="w-full h-10 rounded-sm border border-input bg-background px-3"
+            >
+              <option value="Privat">Privat</option>
+              <option value="Vermieter">Vermieter</option>
+              <option value="Mieter">Mieter</option>
+              <option value="Gewerblich">Gewerblich</option>
+              <option value="Hausverwaltung">Hausverwaltung</option>
+              <option value="Wohnungsbaugesellschaft">Wohnungsbaugesellschaft</option>
+            </select>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -696,6 +1174,9 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
 const QuotesPage = () => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [previewQuote, setPreviewQuote] = useState(null);
+  const [editQuote, setEditQuote] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -713,7 +1194,8 @@ const QuotesPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, e) => {
+    e?.stopPropagation();
     if (!window.confirm("Angebot wirklich löschen?")) return;
     try {
       await api.delete(`/quotes/${id}`);
@@ -724,7 +1206,8 @@ const QuotesPage = () => {
     }
   };
 
-  const handleDownloadPDF = async (id, number) => {
+  const handleDownloadPDF = async (id, number, e) => {
+    e?.stopPropagation();
     try {
       const res = await axios.get(`${API}/pdf/quote/${id}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -740,7 +1223,8 @@ const QuotesPage = () => {
     }
   };
 
-  const handleCreateOrder = async (quoteId) => {
+  const handleCreateOrder = async (quoteId, e) => {
+    e?.stopPropagation();
     try {
       await api.post(`/orders/from-quote/${quoteId}`);
       toast.success("Auftrag erstellt");
@@ -748,6 +1232,12 @@ const QuotesPage = () => {
     } catch (err) {
       toast.error("Fehler beim Erstellen des Auftrags");
     }
+  };
+
+  const handleEdit = (quote, e) => {
+    e?.stopPropagation();
+    setEditQuote(quote);
+    setShowEditModal(true);
   };
 
   const getStatusBadge = (status) => {
@@ -799,7 +1289,11 @@ const QuotesPage = () => {
               </thead>
               <tbody>
                 {quotes.map((quote) => (
-                  <tr key={quote.id} className="border-b table-row-hover">
+                  <tr 
+                    key={quote.id} 
+                    className="border-b table-row-hover cursor-pointer"
+                    onClick={() => setPreviewQuote(quote)}
+                  >
                     <td className="p-4 font-mono text-sm">{quote.quote_number}</td>
                     <td className="p-4">{quote.customer_name}</td>
                     <td className="p-4 text-muted-foreground">
@@ -812,8 +1306,16 @@ const QuotesPage = () => {
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
                         <button
+                          data-testid={`btn-edit-quote-${quote.id}`}
+                          onClick={(e) => handleEdit(quote, e)}
+                          className="p-2 hover:bg-muted rounded-sm"
+                          title="Bearbeiten"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
                           data-testid={`btn-download-quote-${quote.id}`}
-                          onClick={() => handleDownloadPDF(quote.id, quote.quote_number)}
+                          onClick={(e) => handleDownloadPDF(quote.id, quote.quote_number, e)}
                           className="p-2 hover:bg-muted rounded-sm"
                           title="PDF herunterladen"
                         >
@@ -822,7 +1324,7 @@ const QuotesPage = () => {
                         {quote.status === "Entwurf" && (
                           <button
                             data-testid={`btn-create-order-${quote.id}`}
-                            onClick={() => handleCreateOrder(quote.id)}
+                            onClick={(e) => handleCreateOrder(quote.id, e)}
                             className="p-2 hover:bg-primary/10 text-primary rounded-sm"
                             title="Auftrag erstellen"
                           >
@@ -831,7 +1333,7 @@ const QuotesPage = () => {
                         )}
                         <button
                           data-testid={`btn-delete-quote-${quote.id}`}
-                          onClick={() => handleDelete(quote.id)}
+                          onClick={(e) => handleDelete(quote.id, e)}
                           className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"
                           title="Löschen"
                         >
@@ -846,6 +1348,26 @@ const QuotesPage = () => {
           </div>
         </Card>
       )}
+
+      <DocumentPreview
+        isOpen={!!previewQuote}
+        onClose={() => setPreviewQuote(null)}
+        document={previewQuote}
+        type="quote"
+        onDownload={(id, num) => handleDownloadPDF(id, num)}
+        onEdit={(q) => handleEdit(q)}
+      />
+
+      <EditDocumentModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        document={editQuote}
+        type="quote"
+        onSave={() => {
+          setShowEditModal(false);
+          loadQuotes();
+        }}
+      />
     </div>
   );
 };
@@ -1290,6 +1812,9 @@ const NewQuotePage = () => {
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [previewOrder, setPreviewOrder] = useState(null);
+  const [editOrder, setEditOrder] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -1306,7 +1831,8 @@ const OrdersPage = () => {
     }
   };
 
-  const handleCreateInvoice = async (orderId) => {
+  const handleCreateInvoice = async (orderId, e) => {
+    e?.stopPropagation();
     try {
       await api.post(`/invoices/from-order/${orderId}`, { due_days: 14 });
       toast.success("Rechnung erstellt");
@@ -1316,7 +1842,8 @@ const OrdersPage = () => {
     }
   };
 
-  const handleDownloadPDF = async (id, number) => {
+  const handleDownloadPDF = async (id, number, e) => {
+    e?.stopPropagation();
     try {
       const res = await axios.get(`${API}/pdf/order/${id}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -1330,6 +1857,12 @@ const OrdersPage = () => {
     } catch (err) {
       toast.error("Fehler beim PDF-Download");
     }
+  };
+
+  const handleEdit = (order, e) => {
+    e?.stopPropagation();
+    setEditOrder(order);
+    setShowEditModal(true);
   };
 
   const getStatusBadge = (status) => {
@@ -1375,7 +1908,11 @@ const OrdersPage = () => {
               </thead>
               <tbody>
                 {orders.map((order) => (
-                  <tr key={order.id} className="border-b table-row-hover">
+                  <tr 
+                    key={order.id} 
+                    className="border-b table-row-hover cursor-pointer"
+                    onClick={() => setPreviewOrder(order)}
+                  >
                     <td className="p-4 font-mono text-sm">{order.order_number}</td>
                     <td className="p-4">{order.customer_name}</td>
                     <td className="p-4 text-muted-foreground">
@@ -1388,8 +1925,16 @@ const OrdersPage = () => {
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
                         <button
+                          data-testid={`btn-edit-order-${order.id}`}
+                          onClick={(e) => handleEdit(order, e)}
+                          className="p-2 hover:bg-muted rounded-sm"
+                          title="Bearbeiten"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
                           data-testid={`btn-download-order-${order.id}`}
-                          onClick={() => handleDownloadPDF(order.id, order.order_number)}
+                          onClick={(e) => handleDownloadPDF(order.id, order.order_number, e)}
                           className="p-2 hover:bg-muted rounded-sm"
                           title="PDF herunterladen"
                         >
@@ -1398,7 +1943,7 @@ const OrdersPage = () => {
                         {order.status !== "Abgerechnet" && (
                           <button
                             data-testid={`btn-create-invoice-${order.id}`}
-                            onClick={() => handleCreateInvoice(order.id)}
+                            onClick={(e) => handleCreateInvoice(order.id, e)}
                             className="p-2 hover:bg-primary/10 text-primary rounded-sm"
                             title="Rechnung erstellen"
                           >
@@ -1414,6 +1959,26 @@ const OrdersPage = () => {
           </div>
         </Card>
       )}
+
+      <DocumentPreview
+        isOpen={!!previewOrder}
+        onClose={() => setPreviewOrder(null)}
+        document={previewOrder}
+        type="order"
+        onDownload={(id, num) => handleDownloadPDF(id, num)}
+        onEdit={(o) => handleEdit(o)}
+      />
+
+      <EditDocumentModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        document={editOrder}
+        type="order"
+        onSave={() => {
+          setShowEditModal(false);
+          loadOrders();
+        }}
+      />
     </div>
   );
 };
@@ -1424,6 +1989,7 @@ const InvoicesPage = () => {
   const [loading, setLoading] = useState(true);
   const [editInvoice, setEditInvoice] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -1441,7 +2007,8 @@ const InvoicesPage = () => {
     }
   };
 
-  const handleMarkPaid = async (id) => {
+  const handleMarkPaid = async (id, e) => {
+    e?.stopPropagation();
     try {
       await api.put(`/invoices/${id}/status`, { status: "Bezahlt" });
       toast.success("Rechnung als bezahlt markiert");
@@ -1451,7 +2018,8 @@ const InvoicesPage = () => {
     }
   };
 
-  const handleDownloadPDF = async (id, number) => {
+  const handleDownloadPDF = async (id, number, e) => {
+    e?.stopPropagation();
     try {
       const res = await axios.get(`${API}/pdf/invoice/${id}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -1467,7 +2035,8 @@ const InvoicesPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, e) => {
+    e?.stopPropagation();
     if (!window.confirm("Rechnung wirklich löschen?")) return;
     try {
       await api.delete(`/invoices/${id}`);
@@ -1478,7 +2047,8 @@ const InvoicesPage = () => {
     }
   };
 
-  const handleEdit = (invoice) => {
+  const handleEdit = (invoice, e) => {
+    e?.stopPropagation();
     setEditInvoice(invoice);
     setShowEditModal(true);
   };
@@ -1533,7 +2103,11 @@ const InvoicesPage = () => {
               </thead>
               <tbody>
                 {invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-b table-row-hover">
+                  <tr 
+                    key={invoice.id} 
+                    className="border-b table-row-hover cursor-pointer"
+                    onClick={() => setPreviewInvoice(invoice)}
+                  >
                     <td className="p-4 font-mono text-sm">{invoice.invoice_number}</td>
                     <td className="p-4">{invoice.customer_name}</td>
                     <td className="p-4 text-muted-foreground">
@@ -1552,7 +2126,7 @@ const InvoicesPage = () => {
                       <div className="flex justify-end gap-2">
                         <button
                           data-testid={`btn-edit-invoice-${invoice.id}`}
-                          onClick={() => handleEdit(invoice)}
+                          onClick={(e) => handleEdit(invoice, e)}
                           className="p-2 hover:bg-muted rounded-sm"
                           title="Bearbeiten"
                         >
@@ -1560,7 +2134,7 @@ const InvoicesPage = () => {
                         </button>
                         <button
                           data-testid={`btn-download-invoice-${invoice.id}`}
-                          onClick={() => handleDownloadPDF(invoice.id, invoice.invoice_number)}
+                          onClick={(e) => handleDownloadPDF(invoice.id, invoice.invoice_number, e)}
                           className="p-2 hover:bg-muted rounded-sm"
                           title="PDF herunterladen"
                         >
@@ -1569,7 +2143,7 @@ const InvoicesPage = () => {
                         {invoice.status === "Offen" && (
                           <button
                             data-testid={`btn-mark-paid-${invoice.id}`}
-                            onClick={() => handleMarkPaid(invoice.id)}
+                            onClick={(e) => handleMarkPaid(invoice.id, e)}
                             className="p-2 hover:bg-green-100 text-green-700 rounded-sm"
                             title="Als bezahlt markieren"
                           >
@@ -1578,7 +2152,7 @@ const InvoicesPage = () => {
                         )}
                         <button
                           data-testid={`btn-delete-invoice-${invoice.id}`}
-                          onClick={() => handleDelete(invoice.id)}
+                          onClick={(e) => handleDelete(invoice.id, e)}
                           className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"
                           title="Löschen"
                         >
@@ -1594,287 +2168,26 @@ const InvoicesPage = () => {
         </Card>
       )}
 
-      <EditInvoiceModal
+      <DocumentPreview
+        isOpen={!!previewInvoice}
+        onClose={() => setPreviewInvoice(null)}
+        document={previewInvoice}
+        type="invoice"
+        onDownload={(id, num) => handleDownloadPDF(id, num)}
+        onEdit={(inv) => handleEdit(inv)}
+      />
+
+      <EditDocumentModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        invoice={editInvoice}
+        document={editInvoice}
+        type="invoice"
         onSave={() => {
           setShowEditModal(false);
           loadInvoices();
         }}
       />
     </div>
-  );
-};
-
-// Edit Invoice Modal
-const EditInvoiceModal = ({ isOpen, onClose, invoice, onSave }) => {
-  const [positions, setPositions] = useState([]);
-  const [notes, setNotes] = useState("");
-  const [vatRate, setVatRate] = useState(19);
-  const [status, setStatus] = useState("Offen");
-  const [loading, setLoading] = useState(false);
-  const [articles, setArticles] = useState([]);
-  const [services, setServices] = useState([]);
-
-  useEffect(() => {
-    if (invoice) {
-      setPositions(invoice.positions || []);
-      setNotes(invoice.notes || "");
-      setVatRate(invoice.vat_rate || 19);
-      setStatus(invoice.status || "Offen");
-    }
-    loadStammdaten();
-  }, [invoice]);
-
-  const loadStammdaten = async () => {
-    try {
-      const [articlesRes, servicesRes] = await Promise.all([
-        api.get("/articles"),
-        api.get("/services")
-      ]);
-      setArticles(articlesRes.data);
-      setServices(servicesRes.data);
-    } catch (err) {
-      console.error("Fehler beim Laden der Stammdaten");
-    }
-  };
-
-  const addPosition = () => {
-    setPositions([
-      ...positions,
-      { pos_nr: positions.length + 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
-    ]);
-  };
-
-  const updatePosition = (index, field, value) => {
-    const updated = [...positions];
-    updated[index][field] = value;
-    setPositions(updated);
-  };
-
-  const removePosition = (index) => {
-    const updated = positions.filter((_, i) => i !== index);
-    updated.forEach((p, i) => (p.pos_nr = i + 1));
-    setPositions(updated);
-  };
-
-  const addArticle = (article) => {
-    setPositions([
-      ...positions,
-      {
-        pos_nr: positions.length + 1,
-        description: article.name + (article.description ? ` - ${article.description}` : ""),
-        quantity: 1,
-        unit: article.unit,
-        price_net: article.price_net
-      }
-    ]);
-  };
-
-  const addService = (service) => {
-    setPositions([
-      ...positions,
-      {
-        pos_nr: positions.length + 1,
-        description: service.name + (service.description ? ` - ${service.description}` : ""),
-        quantity: 1,
-        unit: service.unit,
-        price_net: service.price_net
-      }
-    ]);
-  };
-
-  const calculateTotals = () => {
-    const subtotal = positions.reduce((sum, p) => sum + p.quantity * p.price_net, 0);
-    const vat = subtotal * (vatRate / 100);
-    const total = subtotal + vat;
-    return { subtotal, vat, total };
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (positions.length === 0) {
-      toast.error("Bitte fügen Sie mindestens eine Position hinzu");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await api.put(`/invoices/${invoice.id}`, {
-        positions,
-        notes,
-        vat_rate: vatRate,
-        status
-      });
-      toast.success("Rechnung aktualisiert!");
-      onSave();
-    } catch (err) {
-      toast.error("Fehler beim Speichern");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const { subtotal, vat, total } = calculateTotals();
-
-  if (!invoice) return null;
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Rechnung ${invoice.invoice_number} bearbeiten`} size="xl">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-muted/50 p-4 rounded-sm">
-          <p className="text-sm text-muted-foreground">Kunde: <strong>{invoice.customer_name}</strong></p>
-          <p className="text-sm text-muted-foreground">Erstellt: {new Date(invoice.created_at).toLocaleDateString("de-DE")}</p>
-        </div>
-
-        {/* Status */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Status</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="w-full h-10 rounded-sm border border-input bg-background px-3"
-          >
-            <option value="Offen">Offen</option>
-            <option value="Gesendet">Gesendet</option>
-            <option value="Bezahlt">Bezahlt</option>
-            <option value="Überfällig">Überfällig</option>
-          </select>
-        </div>
-
-        {/* Positions */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <label className="text-sm font-medium">Positionen</label>
-            <div className="flex gap-2 flex-wrap">
-              {services.length > 0 && (
-                <select
-                  onChange={(e) => {
-                    const service = services.find((s) => s.id === e.target.value);
-                    if (service) addService(service);
-                    e.target.value = "";
-                  }}
-                  className="h-9 rounded-sm border border-input bg-background px-2 text-sm"
-                >
-                  <option value="">+ Leistung</option>
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              )}
-              {articles.length > 0 && (
-                <select
-                  onChange={(e) => {
-                    const article = articles.find((a) => a.id === e.target.value);
-                    if (article) addArticle(article);
-                    e.target.value = "";
-                  }}
-                  className="h-9 rounded-sm border border-input bg-background px-2 text-sm"
-                >
-                  <option value="">+ Artikel</option>
-                  {articles.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
-              )}
-              <Button type="button" variant="outline" size="sm" onClick={addPosition}>
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {positions.map((pos, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-muted/30 rounded-sm">
-                <div className="col-span-5">
-                  <Input
-                    value={pos.description}
-                    onChange={(e) => updatePosition(index, "description", e.target.value)}
-                    placeholder="Beschreibung"
-                    className="text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={pos.quantity}
-                    onChange={(e) => updatePosition(index, "quantity", parseFloat(e.target.value) || 0)}
-                    className="text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Input
-                    value={pos.unit}
-                    onChange={(e) => updatePosition(index, "unit", e.target.value)}
-                    className="text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={pos.price_net}
-                    onChange={(e) => updatePosition(index, "price_net", parseFloat(e.target.value) || 0)}
-                    className="text-sm"
-                  />
-                </div>
-                <div className="col-span-1">
-                  <button
-                    type="button"
-                    onClick={() => removePosition(index)}
-                    className="p-1 hover:bg-destructive/10 hover:text-destructive rounded-sm"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Anmerkungen</label>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-          />
-        </div>
-
-        {/* VAT & Totals */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">MwSt-Satz</label>
-            <select
-              value={vatRate}
-              onChange={(e) => setVatRate(parseFloat(e.target.value))}
-              className="w-full h-10 rounded-sm border border-input bg-background px-3"
-            >
-              <option value={19}>19% MwSt</option>
-              <option value={7}>7% MwSt</option>
-              <option value={0}>0% (Kleinunternehmer)</option>
-            </select>
-          </div>
-          <div className="space-y-2 text-right">
-            <p className="text-sm text-muted-foreground">Netto: <span className="font-mono">{subtotal.toFixed(2)} €</span></p>
-            <p className="text-sm text-muted-foreground">MwSt: <span className="font-mono">{vat.toFixed(2)} €</span></p>
-            <p className="font-bold">Gesamt: <span className="font-mono">{total.toFixed(2)} €</span></p>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-4 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Abbrechen
-          </Button>
-          <Button type="submit" data-testid="btn-save-invoice-edit" disabled={loading}>
-            {loading ? "Speichern..." : "Änderungen speichern"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
   );
 };
 
