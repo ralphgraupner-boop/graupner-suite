@@ -1,0 +1,161 @@
+{
+  "identity": {
+    "name": "Graupner Suite",
+    "persona": "The Industrial Architect",
+    "tone": "Precision, Robustness, Clarity, Craftsmanship",
+    "theme_mode": "light",
+    "keywords": ["Tischlerei", "Handwerk", "Präzision", "Effizienz"]
+  },
+  "typography": {
+    "fonts": {
+      "primary": "Manrope",
+      "secondary": "Barlow Condensed",
+      "mono": "JetBrains Mono"
+    },
+    "scale": {
+      "h1": "text-4xl font-bold tracking-tight lg:text-5xl",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "p": "text-base leading-7 text-muted-foreground",
+      "small": "text-sm font-medium leading-none"
+    },
+    "usage": {
+      "headings": "Barlow Condensed",
+      "body": "Manrope",
+      "data_tables": "Manrope",
+      "prices_numbers": "JetBrains Mono"
+    }
+  },
+  "colors": {
+    "palette": {
+      "base": {
+        "background": "#F8FAFC",
+        "foreground": "#0F172A",
+        "card": "#FFFFFF",
+        "card_foreground": "#0F172A",
+        "popover": "#FFFFFF",
+        "popover_foreground": "#0F172A"
+      },
+      "brand": {
+        "primary": "#14532D",
+        "primary_foreground": "#F0FDF4",
+        "secondary": "#F97316",
+        "secondary_foreground": "#FFF7ED",
+        "accent": "#F1F5F9",
+        "accent_foreground": "#0F172A"
+      },
+      "functional": {
+        "muted": "#F1F5F9",
+        "muted_foreground": "#64748B",
+        "destructive": "#EF4444",
+        "destructive_foreground": "#FEF2F2",
+        "border": "#E2E8F0",
+        "input": "#E2E8F0",
+        "ring": "#14532D"
+      }
+    },
+    "gradients": {
+      "subtle_shine": "linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%)",
+      "active_border": "linear-gradient(90deg, #14532D 0%, #F97316 100%)"
+    },
+    "usage_rules": {
+      "primary_action": "Use brand.primary (#14532D) for main CTAs (Create Quote, Save).",
+      "secondary_action": "Use brand.secondary (#F97316) for alerts, 'Draft' states, or 'Workshop' highlights.",
+      "backgrounds": "Avoid pure white #FFFFFF for main background. Use #F8FAFC (Slate-50) to make white cards pop.",
+      "text": "Never use pure black. Use #0F172A (Slate-900) for headers, #334155 (Slate-700) for body."
+    }
+  },
+  "visual_enhancers": {
+    "radius": "rounded-sm",
+    "shadows": {
+      "card": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+      "floating": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      "inner": "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)"
+    },
+    "borders": {
+      "default": "1px solid #E2E8F0",
+      "active": "1px solid #14532D"
+    },
+    "textures": {
+      "noise": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")"
+    }
+  },
+  "layout": {
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-12 gap-6",
+      "card_internal": "flex flex-col gap-4 p-6"
+    },
+    "containers": {
+      "main_wrapper": "max-w-[1600px] mx-auto p-6 md:p-8 lg:p-12",
+      "narrow_wrapper": "max-w-4xl mx-auto"
+    },
+    "spacing": {
+      "section_gap": "gap-8",
+      "component_gap": "gap-4",
+      "internal_padding": "p-6"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-sm font-medium transition-all shadow-sm active:scale-95",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/90 h-10 px-4 py-2 rounded-sm font-medium transition-all shadow-sm",
+      "outline": "border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 rounded-sm transition-all"
+    },
+    "cards": {
+      "dashboard_widget": "bg-card text-card-foreground rounded-sm border shadow-sm p-6 relative overflow-hidden group hover:border-primary/50 transition-colors",
+      "stat_card": "bg-card p-6 rounded-sm border shadow-sm flex flex-col justify-between h-32"
+    },
+    "inputs": {
+      "default": "flex h-10 w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-out",
+    "hover_effects": "hover:-translate-y-0.5 hover:shadow-md",
+    "entrance": {
+      "fade_in": "animate-in fade-in zoom-in-95 duration-300",
+      "slide_up": "animate-in slide-in-from-bottom-4 duration-500"
+    }
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1755237449468-e70840025313?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxjYXJwZW50ZXIlMjB3b3JraW5nJTIwd29vZCUyMHdvcmtzaG9wJTIwZGV0YWlsZWR8ZW58MHx8fHwxNzczNzQwODAyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Workbench with tools in a rustic workshop - Use for Login Page Background or Hero"
+    },
+    "texture_wood": {
+      "url": "https://images.unsplash.com/photo-1546531537-3884727f20d4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHw0fHxjYXJwZW50ZXIlMjB3b3JraW5nJTIwd29vZCUyMHdvcmtzaG9wJTIwZGV0YWlsZWR8ZW58MHx8fHwxNzczNzQwODAyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Chisel on wood chips - Use for sidebar texture or project headers"
+    },
+    "project_placeholder_1": {
+      "url": "https://images.unsplash.com/photo-1626081063434-79a2169791b1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwzfHxjYXJwZW50ZXIlMjB3b3JraW5nJTIwd29vZCUyMHdvcmtzaG9wJTIwZGV0YWlsZWR8ZW58MHx8fHwxNzczNzQwODAyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Person holding brown wooden table - Use for 'Active Projects' placeholder"
+    },
+    "invoice_placeholder_1": {
+      "url": "https://images.unsplash.com/photo-1601391548091-de4ff62ee29c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxjYXJwZW50ZXIlMjB3b3JraW5nJTIwd29vZCUyMHdvcmtzaG9wJTIwZGV0YWlsZWR8ZW58MHx8fHwxNzczNzQwODAyfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Person holding white paper - Use for 'New Invoice' or 'Documents' section"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Install 'lucide-react', 'recharts' (for dashboard stats), 'date-fns' (for German date formatting).",
+    "Use 'Barlow Condensed' for all H1-H3 headings. Import from Google Fonts.",
+    "Use 'Manrope' for all body text. Import from Google Fonts.",
+    "Implement a 'Bento Grid' layout for the Dashboard (Route: /dashboard).",
+    "For the 'Angebot' (Quote) and 'Rechnung' (Invoice) pages, use a 'Paper UI' metaphor: A white container with 'shadow-floating' centered on a gray background, resembling a physical A4 sheet.",
+    "Ensure 'MwSt' (VAT) logic is prominent in the UI (Toggle: 19% / 0% Kleinunternehmer).",
+    "Use 'data-testid' on all buttons and inputs (e.g., 'btn-create-invoice', 'input-client-name').",
+    "Strictly follow the color palette. Do NOT use gradients for buttons. Flat, solid colors signify 'Handwerk' honesty.",
+    "Use the provided image URLs for the Login page background and Dashboard placeholders."
+  ],
+  "universal_guidelines": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts. Use grids.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "NEVER use AI assistant Emoji characters like 🤖 etc.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Use 'sonner' for toasts.",
+    "Prioritize using pre-existing components from src/components/ui.",
+    "Components MUST use named exports.",
+    "Pages MUST use default exports."
+  ]
+}
