@@ -604,13 +604,14 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const isNew = !id || id === "new";
   
   const [customers, setCustomers] = useState([]);
   const [articles, setArticles] = useState([]);
   const [services, setServices] = useState([]);
   const [settings, setSettings] = useState({});
-  const [loading, setLoading] = useState(!isNew);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
   // Document state
@@ -666,6 +667,17 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         setDepositAmount(doc.deposit_amount || 0);
         setDocNumber(doc.quote_number || doc.order_number || doc.invoice_number);
         setCreatedAt(doc.created_at);
+      } else {
+        // Pre-select customer from query param
+        const params = new URLSearchParams(location.search);
+        const preselectedCustomerId = params.get("customer");
+        if (preselectedCustomerId) {
+          const cust = customersRes.data.find(c => c.id === preselectedCustomerId);
+          if (cust) {
+            setSelectedCustomerId(preselectedCustomerId);
+            setCustomer(cust);
+          }
+        }
       }
     } catch (err) {
       toast.error("Fehler beim Laden der Daten");
@@ -1006,25 +1018,24 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
             {/* Customer Selection / Address */}
             <div className="px-10 py-6 border-b bg-slate-50/50">
-              {isNew || !customer ? (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground block mb-2">Kunde auswählen:</label>
-                  <select
-                    value={selectedCustomerId}
-                    onChange={(e) => handleCustomerChange(e.target.value)}
-                    className="w-full max-w-md h-10 rounded-sm border border-input bg-white px-3"
-                  >
-                    <option value="">Kunde auswählen...</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} {c.customer_type !== "Privat" ? `(${c.customer_type})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground block mb-2">Kunde:</label>
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => handleCustomerChange(e.target.value)}
+                  className="w-full max-w-md h-10 rounded-sm border border-input bg-white px-3"
+                  data-testid="wysiwyg-customer-select"
+                >
+                  <option value="">Kunde auswählen...</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.customer_type !== "Privat" ? `(${c.customer_type})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {customer && (
-                <div className="mt-2">
+                <div className="mt-3">
                   <p className="font-semibold text-lg">{customer.name}</p>
                   {customer.address && (
                     <p className="text-muted-foreground whitespace-pre-line">{customer.address}</p>
@@ -1770,8 +1781,6 @@ const QuotesPage = () => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewQuote, setPreviewQuote] = useState(null);
-  const [editQuote, setEditQuote] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -1950,17 +1959,6 @@ const QuotesPage = () => {
         type="quote"
         onDownload={(id, num) => handleDownloadPDF(id, num)}
         onEdit={(q) => handleEdit(q)}
-      />
-
-      <EditDocumentModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        document={editQuote}
-        type="quote"
-        onSave={() => {
-          setShowEditModal(false);
-          loadQuotes();
-        }}
       />
     </div>
   );
@@ -2407,8 +2405,7 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewOrder, setPreviewOrder] = useState(null);
-  const [editOrder, setEditOrder] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadOrders();
@@ -2455,8 +2452,7 @@ const OrdersPage = () => {
 
   const handleEdit = (order, e) => {
     e?.stopPropagation();
-    setEditOrder(order);
-    setShowEditModal(true);
+    navigate(`/orders/edit/${order.id}`);
   };
 
   const getStatusBadge = (status) => {
@@ -2562,17 +2558,6 @@ const OrdersPage = () => {
         onDownload={(id, num) => handleDownloadPDF(id, num)}
         onEdit={(o) => handleEdit(o)}
       />
-
-      <EditDocumentModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        document={editOrder}
-        type="order"
-        onSave={() => {
-          setShowEditModal(false);
-          loadOrders();
-        }}
-      />
     </div>
   );
 };
@@ -2581,8 +2566,6 @@ const OrdersPage = () => {
 const InvoicesPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editInvoice, setEditInvoice] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState(null);
   const navigate = useNavigate();
 
@@ -2643,8 +2626,7 @@ const InvoicesPage = () => {
 
   const handleEdit = (invoice, e) => {
     e?.stopPropagation();
-    setEditInvoice(invoice);
-    setShowEditModal(true);
+    navigate(`/invoices/edit/${invoice.id}`);
   };
 
   const getStatusBadge = (status) => {
@@ -2769,17 +2751,6 @@ const InvoicesPage = () => {
         type="invoice"
         onDownload={(id, num) => handleDownloadPDF(id, num)}
         onEdit={(inv) => handleEdit(inv)}
-      />
-
-      <EditDocumentModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        document={editInvoice}
-        type="invoice"
-        onSave={() => {
-          setShowEditModal(false);
-          loadInvoices();
-        }}
       />
     </div>
   );
