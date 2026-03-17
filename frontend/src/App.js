@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
 import {
   LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package,
   Settings, LogOut, Plus, Mic, MicOff, Download, Mail, Trash2, Edit,
   ChevronRight, Euro, TrendingUp, Clock, CheckCircle, Search, X, Save,
-  Wrench
+  Wrench, Printer, Eye, ArrowLeft
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -597,6 +597,601 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
         </div>
       </form>
     </Modal>
+  );
+};
+
+// ==================== WYSIWYG DOCUMENT EDITOR ====================
+const WysiwygDocumentEditor = ({ type = "quote" }) => {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const isNew = !id || id === "new";
+  
+  const [customers, setCustomers] = useState([]);
+  const [articles, setArticles] = useState([]);
+  const [services, setServices] = useState([]);
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(!isNew);
+  const [saving, setSaving] = useState(false);
+  
+  // Document state
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [customer, setCustomer] = useState(null);
+  const [positions, setPositions] = useState([
+    { pos_nr: 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
+  ]);
+  const [notes, setNotes] = useState("");
+  const [vatRate, setVatRate] = useState(19);
+  const [status, setStatus] = useState(type === "quote" ? "Entwurf" : type === "order" ? "Offen" : "Offen");
+  const [depositAmount, setDepositAmount] = useState(0);
+  const [docNumber, setDocNumber] = useState("");
+  const [createdAt, setCreatedAt] = useState(new Date().toISOString());
+  
+  // Voice recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+
+  const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
+  const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
+
+  useEffect(() => {
+    loadData();
+  }, [id]);
+
+  const loadData = async () => {
+    try {
+      const [customersRes, articlesRes, servicesRes, settingsRes] = await Promise.all([
+        api.get("/customers"),
+        api.get("/articles"),
+        api.get("/services"),
+        api.get("/settings")
+      ]);
+      setCustomers(customersRes.data);
+      setArticles(articlesRes.data);
+      setServices(servicesRes.data);
+      setSettings(settingsRes.data);
+
+      // Load existing document if editing
+      if (!isNew) {
+        const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
+        const res = await api.get(`/${endpoint}/${id}`);
+        const doc = res.data;
+        setSelectedCustomerId(doc.customer_id);
+        setCustomer({ name: doc.customer_name, address: doc.customer_address });
+        setPositions(doc.positions || []);
+        setNotes(doc.notes || "");
+        setVatRate(doc.vat_rate || 19);
+        setStatus(doc.status || "");
+        setDepositAmount(doc.deposit_amount || 0);
+        setDocNumber(doc.quote_number || doc.order_number || doc.invoice_number);
+        setCreatedAt(doc.created_at);
+      }
+    } catch (err) {
+      toast.error("Fehler beim Laden der Daten");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCustomerChange = (customerId) => {
+    setSelectedCustomerId(customerId);
+    const cust = customers.find(c => c.id === customerId);
+    setCustomer(cust || null);
+  };
+
+  const addPosition = () => {
+    setPositions([
+      ...positions,
+      { pos_nr: positions.length + 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
+    ]);
+  };
+
+  const updatePosition = (index, field, value) => {
+    const updated = [...positions];
+    updated[index][field] = value;
+    setPositions(updated);
+  };
+
+  const removePosition = (index) => {
+    if (positions.length <= 1) return;
+    const updated = positions.filter((_, i) => i !== index);
+    updated.forEach((p, i) => (p.pos_nr = i + 1));
+    setPositions(updated);
+  };
+
+  const addFromStamm = (item, isService = false) => {
+    setPositions([
+      ...positions,
+      {
+        pos_nr: positions.length + 1,
+        description: item.name + (item.description ? ` - ${item.description}` : ""),
+        quantity: 1,
+        unit: item.unit,
+        price_net: item.price_net
+      }
+    ]);
+  };
+
+  const calculateTotals = () => {
+    const subtotal = positions.reduce((sum, p) => sum + (p.quantity || 0) * (p.price_net || 0), 0);
+    const vat = subtotal * (vatRate / 100);
+    const total = subtotal + vat;
+    const final = total - depositAmount;
+    return { subtotal, vat, total, final };
+  };
+
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+        stream.getTracks().forEach((track) => track.stop());
+        await processAudio(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      toast.info("Aufnahme gestartet - Sprechen Sie jetzt...");
+    } catch (err) {
+      toast.error("Mikrofon-Zugriff verweigert");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const processAudio = async (audioBlob) => {
+    if (!selectedCustomerId) {
+      toast.error("Bitte wählen Sie zuerst einen Kunden aus");
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+
+      const sttRes = await axios.post(`${API}/speech-to-text`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      const text = sttRes.data.text;
+
+      const aiRes = await api.post("/ai/generate-quote", {
+        customer_id: selectedCustomerId,
+        transcribed_text: text,
+        vat_rate: vatRate
+      });
+
+      if (aiRes.data.positions && aiRes.data.positions.length > 0) {
+        setPositions(aiRes.data.positions);
+        if (aiRes.data.notes) setNotes(aiRes.data.notes);
+        toast.success("KI hat das Dokument erstellt!");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Fehler bei der Sprachverarbeitung");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedCustomerId) {
+      toast.error("Bitte wählen Sie einen Kunden aus");
+      return;
+    }
+    if (positions.length === 0 || !positions[0].description) {
+      toast.error("Bitte fügen Sie mindestens eine Position hinzu");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
+      
+      if (isNew) {
+        const payload = {
+          customer_id: selectedCustomerId,
+          positions: positions.filter(p => p.description),
+          notes,
+          vat_rate: vatRate,
+          ...(type === "quote" && { valid_days: 30 }),
+          ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount })
+        };
+        await api.post(`/${endpoint}`, payload);
+        toast.success(`${titles[type]} erstellt!`);
+      } else {
+        const payload = {
+          positions: positions.filter(p => p.description),
+          notes,
+          vat_rate: vatRate,
+          status,
+          ...(type === "invoice" && { deposit_amount: depositAmount })
+        };
+        await api.put(`/${endpoint}/${id}`, payload);
+        toast.success(`${titles[type]} aktualisiert!`);
+      }
+      navigate(listPaths[type]);
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (isNew) {
+      toast.error("Bitte speichern Sie zuerst das Dokument");
+      return;
+    }
+    try {
+      const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
+      const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${titles[type]}_${docNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("PDF heruntergeladen");
+    } catch (err) {
+      toast.error("Fehler beim PDF-Download");
+    }
+  };
+
+  const { subtotal, vat, total, final } = calculateTotals();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      {/* Toolbar */}
+      <div className="fixed top-0 left-0 right-0 bg-card border-b z-40 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate(listPaths[type])}>
+              <ArrowLeft className="w-5 h-5" />
+              Zurück
+            </Button>
+            <div className="h-6 w-px bg-border" />
+            <h1 className="text-xl font-bold text-primary">
+              {isNew ? `Neues ${titles[type]}` : `${titles[type]} ${docNumber}`}
+            </h1>
+            {!isNew && (
+              <Badge variant={status === "Bezahlt" || status === "Beauftragt" ? "success" : "warning"}>
+                {status}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Voice Input */}
+            <Button
+              variant={isRecording ? "destructive" : "outline"}
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={aiLoading}
+            >
+              {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              {isRecording ? "Stop" : "Spracheingabe"}
+            </Button>
+            {aiLoading && (
+              <span className="text-sm text-muted-foreground animate-pulse">KI verarbeitet...</span>
+            )}
+            <div className="h-6 w-px bg-border" />
+            {!isNew && (
+              <Button variant="outline" onClick={handleDownloadPDF}>
+                <Download className="w-4 h-4" />
+                PDF
+              </Button>
+            )}
+            <Button onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4" />
+              {saving ? "Speichern..." : "Speichern"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Document Area */}
+      <div className="pt-20 pb-8 px-8 flex justify-center">
+        <div className="w-full max-w-4xl">
+          {/* Side Tools */}
+          <div className="mb-4 flex gap-2 flex-wrap">
+            <select
+              value=""
+              onChange={(e) => {
+                const service = services.find(s => s.id === e.target.value);
+                if (service) addFromStamm(service, true);
+              }}
+              className="h-9 rounded-sm border border-input bg-card px-3 text-sm"
+            >
+              <option value="">+ Leistung aus Stamm</option>
+              {services.map(s => (
+                <option key={s.id} value={s.id}>{s.name} ({s.price_net}€/{s.unit})</option>
+              ))}
+            </select>
+            <select
+              value=""
+              onChange={(e) => {
+                const article = articles.find(a => a.id === e.target.value);
+                if (article) addFromStamm(article, false);
+              }}
+              className="h-9 rounded-sm border border-input bg-card px-3 text-sm"
+            >
+              <option value="">+ Artikel aus Stamm</option>
+              {articles.map(a => (
+                <option key={a.id} value={a.id}>{a.name} ({a.price_net}€/{a.unit})</option>
+              ))}
+            </select>
+            {!isNew && (
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="h-9 rounded-sm border border-input bg-card px-3 text-sm"
+              >
+                {type === "quote" && (
+                  <>
+                    <option value="Entwurf">Status: Entwurf</option>
+                    <option value="Gesendet">Status: Gesendet</option>
+                    <option value="Beauftragt">Status: Beauftragt</option>
+                    <option value="Abgelehnt">Status: Abgelehnt</option>
+                  </>
+                )}
+                {type === "order" && (
+                  <>
+                    <option value="Offen">Status: Offen</option>
+                    <option value="In Arbeit">Status: In Arbeit</option>
+                    <option value="Abgeschlossen">Status: Abgeschlossen</option>
+                  </>
+                )}
+                {type === "invoice" && (
+                  <>
+                    <option value="Offen">Status: Offen</option>
+                    <option value="Gesendet">Status: Gesendet</option>
+                    <option value="Bezahlt">Status: Bezahlt</option>
+                    <option value="Überfällig">Status: Überfällig</option>
+                  </>
+                )}
+              </select>
+            )}
+          </div>
+
+          {/* Paper Document */}
+          <div className="bg-white shadow-xl rounded-sm border" style={{ minHeight: "1000px" }}>
+            {/* Document Header */}
+            <div className="p-10 border-b">
+              <div className="flex justify-between items-start">
+                {/* Left: Document Title & Info */}
+                <div>
+                  <h2 className="text-4xl font-bold text-primary tracking-tight mb-4">
+                    {titles[type].toUpperCase()}
+                  </h2>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>{type === "quote" ? "Angebots-Nr." : type === "order" ? "Auftrags-Nr." : "Rechnungs-Nr."}: {docNumber || "(wird beim Speichern vergeben)"}</p>
+                    <p>Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
+                  </div>
+                </div>
+                {/* Right: Company Info */}
+                <div className="text-right">
+                  <p className="font-bold text-lg">{settings.company_name || "Ihr Firmenname"}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                    {settings.address || "Ihre Adresse"}
+                  </p>
+                  {settings.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
+                  {settings.email && <p className="text-sm text-muted-foreground">{settings.email}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Selection / Address */}
+            <div className="px-10 py-6 border-b bg-slate-50/50">
+              {isNew || !customer ? (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground block mb-2">Kunde auswählen:</label>
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => handleCustomerChange(e.target.value)}
+                    className="w-full max-w-md h-10 rounded-sm border border-input bg-white px-3"
+                  >
+                    <option value="">Kunde auswählen...</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.customer_type !== "Privat" ? `(${c.customer_type})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              {customer && (
+                <div className="mt-2">
+                  <p className="font-semibold text-lg">{customer.name}</p>
+                  {customer.address && (
+                    <p className="text-muted-foreground whitespace-pre-line">{customer.address}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Positions Table - Editable */}
+            <div className="px-10 py-8">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-primary/30">
+                    <th className="text-left py-3 text-sm font-semibold text-primary w-12">Pos</th>
+                    <th className="text-left py-3 text-sm font-semibold text-primary">Beschreibung</th>
+                    <th className="text-right py-3 text-sm font-semibold text-primary w-24">Menge</th>
+                    <th className="text-left py-3 text-sm font-semibold text-primary w-24">Einheit</th>
+                    <th className="text-right py-3 text-sm font-semibold text-primary w-28">Einzelpreis</th>
+                    <th className="text-right py-3 text-sm font-semibold text-primary w-28">Gesamt</th>
+                    <th className="w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {positions.map((pos, idx) => (
+                    <tr key={idx} className="border-b border-slate-100 group">
+                      <td className="py-3 text-sm text-muted-foreground">{pos.pos_nr}</td>
+                      <td className="py-2">
+                        <input
+                          type="text"
+                          value={pos.description}
+                          onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                          placeholder="Beschreibung eingeben..."
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm"
+                        />
+                      </td>
+                      <td className="py-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={pos.quantity}
+                          onChange={(e) => updatePosition(idx, "quantity", parseFloat(e.target.value) || 0)}
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono"
+                        />
+                      </td>
+                      <td className="py-2">
+                        <input
+                          type="text"
+                          value={pos.unit}
+                          onChange={(e) => updatePosition(idx, "unit", e.target.value)}
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm"
+                        />
+                      </td>
+                      <td className="py-2">
+                        <div className="flex items-center justify-end">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={pos.price_net}
+                            onChange={(e) => updatePosition(idx, "price_net", parseFloat(e.target.value) || 0)}
+                            className="w-20 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono"
+                          />
+                          <span className="text-sm text-muted-foreground ml-1">€</span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-right font-mono text-sm">
+                        {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
+                      </td>
+                      <td className="py-3">
+                        <button
+                          onClick={() => removePosition(idx)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-opacity"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Add Position Button */}
+              <button
+                onClick={addPosition}
+                className="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Position hinzufügen
+              </button>
+            </div>
+
+            {/* Totals */}
+            <div className="px-10 py-6 border-t">
+              <div className="flex justify-end">
+                <div className="w-72 space-y-2">
+                  <div className="flex justify-between py-2">
+                    <span className="text-muted-foreground">Netto</span>
+                    <span className="font-mono">{subtotal.toFixed(2)} €</span>
+                  </div>
+                  <div className="flex justify-between py-2 items-center">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">MwSt</span>
+                      <select
+                        value={vatRate}
+                        onChange={(e) => setVatRate(parseFloat(e.target.value))}
+                        className="h-7 text-xs border rounded px-1 bg-white"
+                      >
+                        <option value={19}>19%</option>
+                        <option value={7}>7%</option>
+                        <option value={0}>0%</option>
+                      </select>
+                    </div>
+                    <span className="font-mono">{vat.toFixed(2)} €</span>
+                  </div>
+                  <div className="flex justify-between py-3 border-t-2 border-primary font-bold text-lg">
+                    <span>Gesamt</span>
+                    <span className="font-mono">{total.toFixed(2)} €</span>
+                  </div>
+                  {type === "invoice" && (
+                    <>
+                      <div className="flex justify-between py-2 items-center">
+                        <span className="text-muted-foreground">Anzahlung</span>
+                        <div className="flex items-center">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
+                            className="w-20 border rounded px-2 py-1 text-sm text-right font-mono"
+                          />
+                          <span className="ml-1">€</span>
+                        </div>
+                      </div>
+                      {depositAmount > 0 && (
+                        <div className="flex justify-between py-2 text-primary font-semibold">
+                          <span>Restbetrag</span>
+                          <span className="font-mono">{final.toFixed(2)} €</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="px-10 py-6 border-t">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">Anmerkungen:</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Zusätzliche Anmerkungen..."
+                className="w-full bg-slate-50 border rounded-sm px-4 py-3 text-sm min-h-[80px] focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            {/* Footer */}
+            {type === "invoice" && settings.iban && (
+              <div className="px-10 py-6 border-t bg-slate-50/50 text-sm text-muted-foreground">
+                <p className="font-medium mb-1">Bankverbindung:</p>
+                <p>{settings.bank_name} | IBAN: {settings.iban} | BIC: {settings.bic}</p>
+                {settings.tax_id && <p className="mt-2">Steuernummer: {settings.tax_id}</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -1236,8 +1831,7 @@ const QuotesPage = () => {
 
   const handleEdit = (quote, e) => {
     e?.stopPropagation();
-    setEditQuote(quote);
-    setShowEditModal(true);
+    navigate(`/quotes/edit/${quote.id}`);
   };
 
   const getStatusBadge = (status) => {
@@ -3210,11 +3804,11 @@ function App() {
               />
               <Route
                 path="/quotes/new"
-                element={
-                  <MainLayout onLogout={logout}>
-                    <NewQuotePage />
-                  </MainLayout>
-                }
+                element={<WysiwygDocumentEditor type="quote" />}
+              />
+              <Route
+                path="/quotes/edit/:id"
+                element={<WysiwygDocumentEditor type="quote" />}
               />
               <Route
                 path="/orders"
@@ -3223,6 +3817,10 @@ function App() {
                     <OrdersPage />
                   </MainLayout>
                 }
+              />
+              <Route
+                path="/orders/edit/:id"
+                element={<WysiwygDocumentEditor type="order" />}
               />
               <Route
                 path="/invoices"
@@ -3234,11 +3832,11 @@ function App() {
               />
               <Route
                 path="/invoices/new"
-                element={
-                  <MainLayout onLogout={logout}>
-                    <NewInvoicePage />
-                  </MainLayout>
-                }
+                element={<WysiwygDocumentEditor type="invoice" />}
+              />
+              <Route
+                path="/invoices/edit/:id"
+                element={<WysiwygDocumentEditor type="invoice" />}
               />
               <Route
                 path="/articles"
