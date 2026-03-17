@@ -41,7 +41,9 @@ db = client[os.environ['DB_NAME']]
 
 # API Keys
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-JWT_SECRET = os.environ.get('JWT_SECRET', 'graupner-suite-secret-2024')
+JWT_SECRET = os.environ.get('JWT_SECRET')
+if not JWT_SECRET:
+    JWT_SECRET = 'graupner-suite-secret-' + os.environ.get('DB_NAME', 'default')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 
