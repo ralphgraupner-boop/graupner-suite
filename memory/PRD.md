@@ -34,6 +34,15 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 
 ## What's Been Implemented
 
+### PWA / Mobile App (Fertiggestellt 18.03.2026)
+- Progressive Web App (PWA) mit manifest.json und Service Worker
+- Installierbar auf iPhone und Android als Homescreen-App
+- Responsive Layout: Desktop-Sidebar wird auf Mobilgeräten durch Bottom-Tab-Navigation ersetzt
+- Kartenbasierte Listen statt Tabellen auf kleinen Bildschirmen
+- Kompakter WYSIWYG-Editor-Toolbar auf Mobilgeräten
+- Mobile-optimierte Login-Seite, Dashboard, Kundenverwaltung
+- "Mehr"-Menü für zusätzliche Navigation (Aufträge, Artikel, Leistungen, Einstellungen)
+
 ### WYSIWYG Editor (Fertiggestellt 19.02.2026)
 - Vollständiger WYSIWYG-Editor für Angebote, Aufträge und Rechnungen
 - Neue Dokumente erstellen und bestehende bearbeiten
@@ -71,9 +80,9 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - Farben: Forest Green (#14532D) + Safety Orange (#F97316)
 - Deutsche Sprache durchgehend
 
-## Test Results (19.02.2026)
-- Backend: 100% (20/21 Tests, 1 übersprungen)
-- Frontend: 100% (alle WYSIWYG-Flows getestet)
+## Test Results (18.03.2026)
+- Mobile/PWA: Frontend 100% (alle responsive Features + PWA)
+- WYSIWYG Editor: Backend 100%, Frontend 100%
 
 ## Prioritized Backlog
 
