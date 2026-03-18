@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package,
   Settings, LogOut, Plus, Mic, MicOff, Download, Mail, Trash2, Edit,
   ChevronRight, Euro, TrendingUp, Clock, CheckCircle, Search, X, Save,
-  Wrench, Printer, Eye, ArrowLeft
+  Wrench, Printer, Eye, ArrowLeft, Menu
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -91,22 +91,22 @@ const Card = ({ children, className = "", ...props }) => (
 );
 
 const StatCard = ({ title, value, subtitle, icon: Icon, trend }) => (
-  <Card className="p-6 card-hover">
+  <Card className="p-3 lg:p-6 card-hover">
     <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <p className="text-3xl font-bold mt-2 font-mono">{value}</p>
-        {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+      <div className="min-w-0">
+        <p className="text-xs lg:text-sm font-medium text-muted-foreground truncate">{title}</p>
+        <p className="text-xl lg:text-3xl font-bold mt-1 lg:mt-2 font-mono">{value}</p>
+        {subtitle && <p className="text-xs lg:text-sm text-muted-foreground mt-0.5 lg:mt-1 hidden sm:block">{subtitle}</p>}
       </div>
       {Icon && (
-        <div className="p-3 bg-primary/10 rounded-sm">
-          <Icon className="w-5 h-5 text-primary" />
+        <div className="p-2 lg:p-3 bg-primary/10 rounded-sm shrink-0">
+          <Icon className="w-4 h-4 lg:w-5 lg:h-5 text-primary" />
         </div>
       )}
     </div>
     {trend && (
-      <div className="flex items-center gap-1 mt-3 text-sm text-green-600">
-        <TrendingUp className="w-4 h-4" />
+      <div className="flex items-center gap-1 mt-2 lg:mt-3 text-xs lg:text-sm text-green-600">
+        <TrendingUp className="w-3 h-3 lg:w-4 lg:h-4" />
         {trend}
       </div>
     )}
@@ -881,15 +881,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     <div className="min-h-screen bg-slate-100">
       {/* Toolbar */}
       <div className="fixed top-0 left-0 right-0 bg-card border-b z-40 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate(listPaths[type])}>
-              <ArrowLeft className="w-5 h-5" />
-              Zurück
+        <div className="flex items-center justify-between px-3 lg:px-6 py-2 lg:py-3">
+          <div className="flex items-center gap-2 lg:gap-4 min-w-0">
+            <Button variant="ghost" size="sm" onClick={() => navigate(listPaths[type])}>
+              <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
+              <span className="hidden sm:inline">Zurück</span>
             </Button>
-            <div className="h-6 w-px bg-border" />
-            <h1 className="text-xl font-bold text-primary">
-              {isNew ? `Neues ${titles[type]}` : `${titles[type]} ${docNumber}`}
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <h1 className="text-sm lg:text-xl font-bold text-primary truncate">
+              {isNew ? `${titles[type]}` : `${titles[type]} ${docNumber}`}
             </h1>
             {!isNew && (
               <Badge variant={status === "Bezahlt" || status === "Beauftragt" ? "success" : "warning"}>
@@ -897,50 +897,50 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            {/* Voice Input */}
+          <div className="flex items-center gap-1.5 lg:gap-3 shrink-0">
             <Button
               variant={isRecording ? "destructive" : "outline"}
+              size="sm"
               onClick={isRecording ? stopRecording : startRecording}
               disabled={aiLoading}
+              data-testid="btn-voice-input"
             >
               {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              {isRecording ? "Stop" : "Spracheingabe"}
+              <span className="hidden sm:inline">{isRecording ? "Stop" : "Spracheingabe"}</span>
             </Button>
             {aiLoading && (
-              <span className="text-sm text-muted-foreground animate-pulse">KI verarbeitet...</span>
+              <span className="text-xs text-muted-foreground animate-pulse hidden sm:inline">KI verarbeitet...</span>
             )}
-            <div className="h-6 w-px bg-border" />
             {!isNew && (
-              <Button variant="outline" onClick={handleDownloadPDF}>
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
                 <Download className="w-4 h-4" />
-                PDF
+                <span className="hidden sm:inline">PDF</span>
               </Button>
             )}
-            <Button onClick={handleSave} disabled={saving}>
+            <Button size="sm" onClick={handleSave} disabled={saving} data-testid="btn-save-document">
               <Save className="w-4 h-4" />
-              {saving ? "Speichern..." : "Speichern"}
+              <span className="hidden sm:inline">{saving ? "..." : "Speichern"}</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* Document Area */}
-      <div className="pt-20 pb-8 px-8 flex justify-center">
+      <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-8 flex justify-center">
         <div className="w-full max-w-4xl">
           {/* Side Tools */}
-          <div className="mb-4 flex gap-2 flex-wrap">
+          <div className="mb-3 lg:mb-4 flex gap-2 flex-wrap">
             <select
               value=""
               onChange={(e) => {
                 const service = services.find(s => s.id === e.target.value);
                 if (service) addFromStamm(service, true);
               }}
-              className="h-9 rounded-sm border border-input bg-card px-3 text-sm"
+              className="h-8 lg:h-9 rounded-sm border border-input bg-card px-2 lg:px-3 text-xs lg:text-sm flex-1 min-w-0 lg:flex-none"
             >
-              <option value="">+ Leistung aus Stamm</option>
+              <option value="">+ Leistung</option>
               {services.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.price_net}€/{s.unit})</option>
+                <option key={s.id} value={s.id}>{s.name} ({s.price_net}€)</option>
               ))}
             </select>
             <select
@@ -949,11 +949,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 const article = articles.find(a => a.id === e.target.value);
                 if (article) addFromStamm(article, false);
               }}
-              className="h-9 rounded-sm border border-input bg-card px-3 text-sm"
+              className="h-8 lg:h-9 rounded-sm border border-input bg-card px-2 lg:px-3 text-xs lg:text-sm flex-1 min-w-0 lg:flex-none"
             >
-              <option value="">+ Artikel aus Stamm</option>
+              <option value="">+ Artikel</option>
               {articles.map(a => (
-                <option key={a.id} value={a.id}>{a.name} ({a.price_net}€/{a.unit})</option>
+                <option key={a.id} value={a.id}>{a.name} ({a.price_net}€)</option>
               ))}
             </select>
             {!isNew && (
@@ -990,34 +990,34 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           </div>
 
           {/* Paper Document */}
-          <div className="bg-white shadow-xl rounded-sm border" style={{ minHeight: "1000px" }}>
+          <div className="bg-white shadow-xl rounded-sm border" style={{ minHeight: "600px" }}>
             {/* Document Header */}
-            <div className="p-10 border-b">
-              <div className="flex justify-between items-start">
+            <div className="p-4 lg:p-10 border-b">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 {/* Left: Document Title & Info */}
                 <div>
-                  <h2 className="text-4xl font-bold text-primary tracking-tight mb-4">
+                  <h2 className="text-2xl lg:text-4xl font-bold text-primary tracking-tight mb-2 lg:mb-4">
                     {titles[type].toUpperCase()}
                   </h2>
-                  <div className="space-y-1 text-sm text-muted-foreground">
+                  <div className="space-y-0.5 text-xs lg:text-sm text-muted-foreground">
                     <p>{type === "quote" ? "Angebots-Nr." : type === "order" ? "Auftrags-Nr." : "Rechnungs-Nr."}: {docNumber || "(wird beim Speichern vergeben)"}</p>
                     <p>Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
                   </div>
                 </div>
                 {/* Right: Company Info */}
-                <div className="text-right">
-                  <p className="font-bold text-lg">{settings.company_name || "Ihr Firmenname"}</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                <div className="sm:text-right">
+                  <p className="font-bold text-base lg:text-lg">{settings.company_name || "Ihr Firmenname"}</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground whitespace-pre-line">
                     {settings.address || "Ihre Adresse"}
                   </p>
-                  {settings.phone && <p className="text-sm text-muted-foreground">Tel: {settings.phone}</p>}
-                  {settings.email && <p className="text-sm text-muted-foreground">{settings.email}</p>}
+                  {settings.phone && <p className="text-xs lg:text-sm text-muted-foreground">Tel: {settings.phone}</p>}
+                  {settings.email && <p className="text-xs lg:text-sm text-muted-foreground">{settings.email}</p>}
                 </div>
               </div>
             </div>
 
             {/* Customer Selection / Address */}
-            <div className="px-10 py-6 border-b bg-slate-50/50">
+            <div className="px-4 lg:px-10 py-4 lg:py-6 border-b bg-slate-50/50">
               <div>
                 <label className="text-sm font-medium text-muted-foreground block mb-2">Kunde:</label>
                 <select
@@ -1045,8 +1045,53 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             </div>
 
             {/* Positions Table - Editable */}
-            <div className="px-10 py-8">
-              <table className="w-full">
+            <div className="px-4 lg:px-10 py-4 lg:py-8">
+              {/* Mobile Positions - Card Layout */}
+              <div className="lg:hidden space-y-3">
+                {positions.map((pos, idx) => (
+                  <div key={idx} className="border rounded-sm p-3 bg-white">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs font-mono text-muted-foreground">Pos. {pos.pos_nr}</span>
+                      <button onClick={() => removePosition(idx)} className="p-1 hover:bg-destructive/10 rounded-sm">
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={pos.description}
+                      onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                      placeholder="Beschreibung..."
+                      className="w-full border rounded px-2 py-1.5 text-sm mb-2"
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block">Menge</label>
+                        <input type="number" step="0.01" value={pos.quantity}
+                          onChange={(e) => updatePosition(idx, "quantity", parseFloat(e.target.value) || 0)}
+                          className="w-full border rounded px-2 py-1.5 text-sm text-center font-mono" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block">Einheit</label>
+                        <input value={pos.unit}
+                          onChange={(e) => updatePosition(idx, "unit", e.target.value)}
+                          className="w-full border rounded px-2 py-1.5 text-sm text-center" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block">Preis (€)</label>
+                        <input type="number" step="0.01" value={pos.price_net}
+                          onChange={(e) => updatePosition(idx, "price_net", parseFloat(e.target.value) || 0)}
+                          className="w-full border rounded px-2 py-1.5 text-sm text-right font-mono" />
+                      </div>
+                    </div>
+                    <div className="text-right mt-2 font-mono text-sm font-semibold">
+                      = {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Positions - Table */}
+              <table className="hidden lg:table w-full">
                 <thead>
                   <tr className="border-b-2 border-primary/30">
                     <th className="text-left py-3 text-sm font-semibold text-primary w-12">Pos</th>
@@ -1063,40 +1108,26 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     <tr key={idx} className="border-b border-slate-100 group">
                       <td className="py-3 text-sm text-muted-foreground">{pos.pos_nr}</td>
                       <td className="py-2">
-                        <input
-                          type="text"
-                          value={pos.description}
+                        <input type="text" value={pos.description}
                           onChange={(e) => updatePosition(idx, "description", e.target.value)}
                           placeholder="Beschreibung eingeben..."
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm"
-                        />
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm" />
                       </td>
                       <td className="py-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={pos.quantity}
+                        <input type="number" step="0.01" value={pos.quantity}
                           onChange={(e) => updatePosition(idx, "quantity", parseFloat(e.target.value) || 0)}
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono"
-                        />
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono" />
                       </td>
                       <td className="py-2">
-                        <input
-                          type="text"
-                          value={pos.unit}
+                        <input type="text" value={pos.unit}
                           onChange={(e) => updatePosition(idx, "unit", e.target.value)}
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm"
-                        />
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm" />
                       </td>
                       <td className="py-2">
                         <div className="flex items-center justify-end">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={pos.price_net}
+                          <input type="number" step="0.01" value={pos.price_net}
                             onChange={(e) => updatePosition(idx, "price_net", parseFloat(e.target.value) || 0)}
-                            className="w-20 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono"
-                          />
+                            className="w-20 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono" />
                           <span className="text-sm text-muted-foreground ml-1">€</span>
                         </div>
                       </td>
@@ -1104,10 +1135,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
                       </td>
                       <td className="py-3">
-                        <button
-                          onClick={() => removePosition(idx)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-opacity"
-                        >
+                        <button onClick={() => removePosition(idx)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-opacity">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -1119,6 +1148,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               {/* Add Position Button */}
               <button
                 onClick={addPosition}
+                data-testid="btn-add-position"
                 className="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -1127,9 +1157,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             </div>
 
             {/* Totals */}
-            <div className="px-10 py-6 border-t">
+            <div className="px-4 lg:px-10 py-4 lg:py-6 border-t">
               <div className="flex justify-end">
-                <div className="w-72 space-y-2">
+                <div className="w-full sm:w-72 space-y-2">
                   <div className="flex justify-between py-2">
                     <span className="text-muted-foreground">Netto</span>
                     <span className="font-mono">{subtotal.toFixed(2)} €</span>
@@ -1181,21 +1211,21 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             </div>
 
             {/* Notes */}
-            <div className="px-10 py-6 border-t">
+            <div className="px-4 lg:px-10 py-4 lg:py-6 border-t">
               <label className="text-sm font-medium text-muted-foreground block mb-2">Anmerkungen:</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Zusätzliche Anmerkungen..."
-                className="w-full bg-slate-50 border rounded-sm px-4 py-3 text-sm min-h-[80px] focus:ring-2 focus:ring-primary/20"
+                className="w-full bg-slate-50 border rounded-sm px-3 lg:px-4 py-2 lg:py-3 text-sm min-h-[60px] lg:min-h-[80px] focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             {/* Footer */}
             {type === "invoice" && settings.iban && (
-              <div className="px-10 py-6 border-t bg-slate-50/50 text-sm text-muted-foreground">
+              <div className="px-4 lg:px-10 py-4 lg:py-6 border-t bg-slate-50/50 text-xs lg:text-sm text-muted-foreground">
                 <p className="font-medium mb-1">Bankverbindung:</p>
-                <p>{settings.bank_name} | IBAN: {settings.iban} | BIC: {settings.bic}</p>
+                <p className="break-all">{settings.bank_name} | IBAN: {settings.iban} | BIC: {settings.bic}</p>
                 {settings.tax_id && <p className="mt-2">Steuernummer: {settings.tax_id}</p>}
               </div>
             )}
@@ -1206,27 +1236,35 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   );
 };
 
-// ==================== SIDEBAR ====================
+// ==================== NAVIGATION ====================
+const navItems = [
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/customers", icon: Users, label: "Kunden" },
+  { path: "/quotes", icon: FileText, label: "Angebote" },
+  { path: "/orders", icon: ClipboardCheck, label: "Aufträge" },
+  { path: "/invoices", icon: Receipt, label: "Rechnungen" },
+  { path: "/articles", icon: Package, label: "Artikel" },
+  { path: "/services", icon: Wrench, label: "Leistungen" },
+  { path: "/settings", icon: Settings, label: "Einstellungen" }
+];
+
+const mobileTabItems = [
+  { path: "/dashboard", icon: LayoutDashboard, label: "Home" },
+  { path: "/customers", icon: Users, label: "Kunden" },
+  { path: "/quotes", icon: FileText, label: "Angebote" },
+  { path: "/invoices", icon: Receipt, label: "Rechnungen" },
+];
+
 const Sidebar = ({ onLogout }) => {
   const location = useLocation();
-  const navItems = [
-    { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/customers", icon: Users, label: "Kunden" },
-    { path: "/quotes", icon: FileText, label: "Angebote" },
-    { path: "/orders", icon: ClipboardCheck, label: "Aufträge" },
-    { path: "/invoices", icon: Receipt, label: "Rechnungen" },
-    { path: "/articles", icon: Package, label: "Artikel" },
-    { path: "/services", icon: Wrench, label: "Leistungen" },
-    { path: "/settings", icon: Settings, label: "Einstellungen" }
-  ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-card border-r flex flex-col">
+    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-card border-r flex-col z-30">
       <div className="p-6 border-b">
         <h1 className="text-2xl font-bold text-primary">Graupner Suite</h1>
         <p className="text-sm text-muted-foreground mt-1">Tischlerei-Software</p>
       </div>
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map(({ path, icon: Icon, label }) => (
           <Link
             key={path}
@@ -1254,6 +1292,89 @@ const Sidebar = ({ onLogout }) => {
         </button>
       </div>
     </aside>
+  );
+};
+
+const MobileNav = ({ onLogout }) => {
+  const location = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreItems = navItems.filter(i => !mobileTabItems.find(t => t.path === i.path));
+
+  return (
+    <>
+      {/* Mobile Top Bar */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b flex items-center justify-between px-4 z-30">
+        <h1 className="text-lg font-bold text-primary">Graupner Suite</h1>
+        <button
+          onClick={() => setMoreOpen(!moreOpen)}
+          className="p-2 hover:bg-muted rounded-sm"
+          data-testid="btn-mobile-menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </header>
+
+      {/* Mobile Bottom Tab Bar */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex justify-around items-center z-30 safe-area-bottom" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {mobileTabItems.map(({ path, icon: Icon, label }) => (
+          <Link
+            key={path}
+            to={path}
+            data-testid={`mobile-nav-${path.slice(1)}`}
+            className={`flex flex-col items-center gap-0.5 py-2 px-3 min-w-[64px] ${
+              location.pathname.startsWith(path)
+                ? "text-primary"
+                : "text-muted-foreground"
+            }`}
+          >
+            <Icon className="w-5 h-5" />
+            <span className="text-[10px] font-medium">{label}</span>
+          </Link>
+        ))}
+        <button
+          onClick={() => setMoreOpen(!moreOpen)}
+          data-testid="mobile-nav-more"
+          className={`flex flex-col items-center gap-0.5 py-2 px-3 min-w-[64px] ${
+            moreOpen ? "text-primary" : "text-muted-foreground"
+          }`}
+        >
+          <Menu className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Mehr</span>
+        </button>
+      </nav>
+
+      {/* More Menu Overlay */}
+      {moreOpen && (
+        <div className="lg:hidden fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute bottom-16 left-0 right-0 bg-card rounded-t-xl shadow-xl border-t p-4 space-y-1" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }} onClick={e => e.stopPropagation()}>
+            {moreItems.map(({ path, icon: Icon, label }) => (
+              <Link
+                key={path}
+                to={path}
+                onClick={() => setMoreOpen(false)}
+                data-testid={`mobile-more-${path.slice(1)}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-sm ${
+                  location.pathname.startsWith(path)
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="font-medium">{label}</span>
+              </Link>
+            ))}
+            <button
+              onClick={() => { setMoreOpen(false); onLogout(); }}
+              className="flex items-center gap-3 px-4 py-3 w-full text-destructive rounded-sm mt-2 border-t pt-4"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Abmelden</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -1298,15 +1419,16 @@ const LoginPage = ({ onLogin }) => {
           </div>
         </div>
       </div>
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
-        <Card className="w-full max-w-md p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8 bg-background">
+        <Card className="w-full max-w-md p-6 lg:p-8">
+          <div className="text-center mb-6 lg:mb-8">
+            <h1 className="text-2xl lg:text-3xl font-bold text-primary">
               {isRegister ? "Registrieren" : "Anmelden"}
             </h1>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">
               {isRegister ? "Erstellen Sie Ihr Konto" : "Willkommen zurück"}
             </p>
+            <p className="lg:hidden text-xs text-muted-foreground mt-2">Graupner Suite</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -1399,12 +1521,12 @@ const DashboardPage = () => {
 
   return (
     <div data-testid="dashboard-page">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Übersicht Ihrer Geschäftstätigkeit</p>
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl lg:text-4xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">Übersicht Ihrer Geschäftstätigkeit</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
         <StatCard
           title="Kunden"
           value={stats?.customers_count || 0}
@@ -1463,28 +1585,28 @@ const DashboardPage = () => {
             <Clock className="w-5 h-5 text-primary" />
             Schnellaktionen
           </h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 lg:gap-4">
             <Link to="/quotes/new" data-testid="quick-new-quote">
-              <Button variant="outline" className="w-full h-24 flex-col">
-                <FileText className="w-6 h-6 mb-2" />
+              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
+                <FileText className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
                 Neues Angebot
               </Button>
             </Link>
             <Link to="/customers/new" data-testid="quick-new-customer">
-              <Button variant="outline" className="w-full h-24 flex-col">
-                <Users className="w-6 h-6 mb-2" />
+              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
+                <Users className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
                 Neuer Kunde
               </Button>
             </Link>
             <Link to="/invoices/new" data-testid="quick-new-invoice">
-              <Button variant="outline" className="w-full h-24 flex-col">
-                <Receipt className="w-6 h-6 mb-2" />
+              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
+                <Receipt className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
                 Neue Rechnung
               </Button>
             </Link>
             <Link to="/articles" data-testid="quick-articles">
-              <Button variant="outline" className="w-full h-24 flex-col">
-                <Package className="w-6 h-6 mb-2" />
+              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
+                <Package className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
                 Artikelstamm
               </Button>
             </Link>
@@ -1538,29 +1660,32 @@ const CustomersPage = () => {
 
   return (
     <div data-testid="customers-page">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4 lg:mb-8">
         <div>
-          <h1 className="text-4xl font-bold">Kunden</h1>
-          <p className="text-muted-foreground mt-2">{customers.length} Kunden gesamt</p>
+          <h1 className="text-2xl lg:text-4xl font-bold">Kunden</h1>
+          <p className="text-muted-foreground mt-1 text-sm lg:text-base">{customers.length} Kunden gesamt</p>
         </div>
         <Button
           data-testid="btn-new-customer"
+          size="sm"
+          className="lg:h-10 lg:px-4"
           onClick={() => {
             setEditCustomer(null);
             setShowModal(true);
           }}
         >
-          <Plus className="w-5 h-5" />
-          Neuer Kunde
+          <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
+          <span className="hidden sm:inline">Neuer Kunde</span>
+          <span className="sm:hidden">Neu</span>
         </Button>
       </div>
 
-      <Card className="p-4 mb-6">
+      <Card className="p-3 lg:p-4 mb-4 lg:mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground" />
           <Input
             data-testid="input-search-customers"
-            className="pl-10"
+            className="pl-9 lg:pl-10 h-9 lg:h-10"
             placeholder="Kunden suchen..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -1573,17 +1698,17 @@ const CustomersPage = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold">Keine Kunden gefunden</h3>
-          <p className="text-muted-foreground mt-2">
+        <Card className="p-8 lg:p-12 text-center">
+          <Users className="w-10 h-10 lg:w-12 lg:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base lg:text-lg font-semibold">Keine Kunden gefunden</h3>
+          <p className="text-muted-foreground mt-2 text-sm">
             {search ? "Versuchen Sie eine andere Suche" : "Erstellen Sie Ihren ersten Kunden"}
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           {filtered.map((customer) => (
-            <Card key={customer.id} className="p-6 card-hover">
+            <Card key={customer.id} className="p-4 lg:p-6 card-hover">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -1855,14 +1980,15 @@ const QuotesPage = () => {
 
   return (
     <div data-testid="quotes-page">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4 lg:mb-8">
         <div>
-          <h1 className="text-4xl font-bold">Angebote</h1>
-          <p className="text-muted-foreground mt-2">{quotes.length} Angebote gesamt</p>
+          <h1 className="text-2xl lg:text-4xl font-bold">Angebote</h1>
+          <p className="text-muted-foreground mt-1 text-sm lg:text-base">{quotes.length} Angebote gesamt</p>
         </div>
-        <Button data-testid="btn-new-quote" onClick={() => navigate("/quotes/new")}>
-          <Plus className="w-5 h-5" />
-          Neues Angebot
+        <Button data-testid="btn-new-quote" onClick={() => navigate("/quotes/new")} size="sm" className="lg:h-10 lg:px-4">
+          <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
+          <span className="hidden sm:inline">Neues Angebot</span>
+          <span className="sm:hidden">Neu</span>
         </Button>
       </div>
 
@@ -1871,13 +1997,46 @@ const QuotesPage = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : quotes.length === 0 ? (
-        <Card className="p-12 text-center">
-          <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold">Keine Angebote vorhanden</h3>
-          <p className="text-muted-foreground mt-2">Erstellen Sie Ihr erstes Angebot</p>
+        <Card className="p-8 lg:p-12 text-center">
+          <FileText className="w-10 h-10 lg:w-12 lg:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base lg:text-lg font-semibold">Keine Angebote vorhanden</h3>
+          <p className="text-muted-foreground mt-2 text-sm">Erstellen Sie Ihr erstes Angebot</p>
         </Card>
       ) : (
-        <Card>
+        <>
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-3">
+            {quotes.map((quote) => (
+              <Card key={quote.id} className="p-4" onClick={() => setPreviewQuote(quote)}>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-sm text-muted-foreground">{quote.quote_number}</p>
+                    <p className="font-semibold truncate">{quote.customer_name}</p>
+                  </div>
+                  {getStatusBadge(quote.status)}
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(quote.created_at).toLocaleDateString("de-DE")}
+                  </div>
+                  <div className="font-mono font-semibold">
+                    {quote.total_gross.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
+                  <button data-testid={`btn-edit-quote-${quote.id}`} onClick={(e) => handleEdit(quote, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>
+                  <button data-testid={`btn-download-quote-m-${quote.id}`} onClick={(e) => handleDownloadPDF(quote.id, quote.quote_number, e)} className="p-2 hover:bg-muted rounded-sm"><Download className="w-4 h-4" /></button>
+                  {quote.status === "Entwurf" && (
+                    <button onClick={(e) => handleCreateOrder(quote.id, e)} className="p-2 hover:bg-primary/10 text-primary rounded-sm"><CheckCircle className="w-4 h-4" /></button>
+                  )}
+                  <button onClick={(e) => handleDelete(quote.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <Card className="hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -1950,6 +2109,7 @@ const QuotesPage = () => {
             </table>
           </div>
         </Card>
+        </>
       )}
 
       <DocumentPreview
@@ -2467,9 +2627,9 @@ const OrdersPage = () => {
 
   return (
     <div data-testid="orders-page">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Aufträge</h1>
-        <p className="text-muted-foreground mt-2">{orders.length} Aufträge gesamt</p>
+      <div className="mb-4 lg:mb-8">
+        <h1 className="text-2xl lg:text-4xl font-bold">Aufträge</h1>
+        <p className="text-muted-foreground mt-1 text-sm lg:text-base">{orders.length} Aufträge gesamt</p>
       </div>
 
       {loading ? (
@@ -2477,13 +2637,45 @@ const OrdersPage = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : orders.length === 0 ? (
-        <Card className="p-12 text-center">
-          <ClipboardCheck className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold">Keine Aufträge vorhanden</h3>
-          <p className="text-muted-foreground mt-2">Erstellen Sie Aufträge aus Angeboten</p>
+        <Card className="p-8 lg:p-12 text-center">
+          <ClipboardCheck className="w-10 h-10 lg:w-12 lg:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base lg:text-lg font-semibold">Keine Aufträge vorhanden</h3>
+          <p className="text-muted-foreground mt-2 text-sm">Erstellen Sie Aufträge aus Angeboten</p>
         </Card>
       ) : (
-        <Card>
+        <>
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-3">
+            {orders.map((order) => (
+              <Card key={order.id} className="p-4" onClick={() => setPreviewOrder(order)}>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-sm text-muted-foreground">{order.order_number}</p>
+                    <p className="font-semibold truncate">{order.customer_name}</p>
+                  </div>
+                  {getStatusBadge(order.status)}
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(order.created_at).toLocaleDateString("de-DE")}
+                  </div>
+                  <div className="font-mono font-semibold">
+                    {order.total_gross.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
+                  <button data-testid={`btn-edit-order-${order.id}`} onClick={(e) => handleEdit(order, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>
+                  <button onClick={(e) => handleDownloadPDF(order.id, order.order_number, e)} className="p-2 hover:bg-muted rounded-sm"><Download className="w-4 h-4" /></button>
+                  {order.status !== "Abgerechnet" && (
+                    <button onClick={(e) => handleCreateInvoice(order.id, e)} className="p-2 hover:bg-primary/10 text-primary rounded-sm"><Receipt className="w-4 h-4" /></button>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <Card className="hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -2548,6 +2740,7 @@ const OrdersPage = () => {
             </table>
           </div>
         </Card>
+        </>
       )}
 
       <DocumentPreview
@@ -2641,14 +2834,15 @@ const InvoicesPage = () => {
 
   return (
     <div data-testid="invoices-page">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4 lg:mb-8">
         <div>
-          <h1 className="text-4xl font-bold">Rechnungen</h1>
-          <p className="text-muted-foreground mt-2">{invoices.length} Rechnungen gesamt</p>
+          <h1 className="text-2xl lg:text-4xl font-bold">Rechnungen</h1>
+          <p className="text-muted-foreground mt-1 text-sm lg:text-base">{invoices.length} Rechnungen gesamt</p>
         </div>
-        <Button data-testid="btn-new-invoice" onClick={() => navigate("/invoices/new")}>
-          <Plus className="w-5 h-5" />
-          Neue Rechnung
+        <Button data-testid="btn-new-invoice" onClick={() => navigate("/invoices/new")} size="sm" className="lg:h-10 lg:px-4">
+          <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
+          <span className="hidden sm:inline">Neue Rechnung</span>
+          <span className="sm:hidden">Neu</span>
         </Button>
       </div>
 
@@ -2657,13 +2851,47 @@ const InvoicesPage = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : invoices.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Receipt className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold">Keine Rechnungen vorhanden</h3>
-          <p className="text-muted-foreground mt-2">Erstellen Sie Ihre erste Rechnung</p>
+        <Card className="p-8 lg:p-12 text-center">
+          <Receipt className="w-10 h-10 lg:w-12 lg:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base lg:text-lg font-semibold">Keine Rechnungen vorhanden</h3>
+          <p className="text-muted-foreground mt-2 text-sm">Erstellen Sie Ihre erste Rechnung</p>
         </Card>
       ) : (
-        <Card>
+        <>
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-3">
+            {invoices.map((invoice) => (
+              <Card key={invoice.id} className="p-4" onClick={() => setPreviewInvoice(invoice)}>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-sm text-muted-foreground">{invoice.invoice_number}</p>
+                    <p className="font-semibold truncate">{invoice.customer_name}</p>
+                  </div>
+                  {getStatusBadge(invoice.status)}
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(invoice.created_at).toLocaleDateString("de-DE")}
+                    {invoice.due_date && <span className="ml-2">Fällig: {new Date(invoice.due_date).toLocaleDateString("de-DE")}</span>}
+                  </div>
+                  <div className="font-mono font-semibold">
+                    {invoice.total_gross.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+                  </div>
+                </div>
+                <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
+                  <button data-testid={`btn-edit-invoice-${invoice.id}`} onClick={(e) => handleEdit(invoice, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>
+                  <button onClick={(e) => handleDownloadPDF(invoice.id, invoice.invoice_number, e)} className="p-2 hover:bg-muted rounded-sm"><Download className="w-4 h-4" /></button>
+                  {invoice.status === "Offen" && (
+                    <button onClick={(e) => handleMarkPaid(invoice.id, e)} className="p-2 hover:bg-green-100 text-green-700 rounded-sm"><CheckCircle className="w-4 h-4" /></button>
+                  )}
+                  <button onClick={(e) => handleDelete(invoice.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <Card className="hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -2742,6 +2970,7 @@ const InvoicesPage = () => {
             </table>
           </div>
         </Card>
+        </>
       )}
 
       <DocumentPreview
@@ -3721,7 +3950,8 @@ const MainLayout = ({ children, onLogout }) => {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar onLogout={onLogout} />
-      <main className="ml-64 p-8">{children}</main>
+      <MobileNav onLogout={onLogout} />
+      <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 px-4 lg:px-8 py-4 lg:py-8">{children}</main>
     </div>
   );
 };
