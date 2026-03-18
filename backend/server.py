@@ -841,6 +841,7 @@ async def send_push_to_all(title: str, body: str, url: str = "/"):
         logger.warning("VAPID keys not configured, skipping push")
         return
     subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(100)
+    logger.info(f"Sending push to {len(subscriptions)} subscribers: {title}")
     payload = json.dumps({"title": title, "body": body, "url": url})
     for sub in subscriptions:
         try:
@@ -850,10 +851,14 @@ async def send_push_to_all(title: str, body: str, url: str = "/"):
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims={"sub": "mailto:info@graupner-suite.de"}
             )
+            logger.info(f"Push sent successfully to {sub['endpoint'][:50]}")
         except WebPushException as e:
             logger.error(f"Push failed for {sub['endpoint'][:50]}: {e}")
             if e.response and e.response.status_code in (404, 410):
                 await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+                logger.info(f"Removed expired subscription: {sub['endpoint'][:50]}")
+        except Exception as e:
+            logger.error(f"Push unexpected error: {e}")
 
 # ==================== WEBHOOK ====================
 

@@ -64,26 +64,38 @@ async function subscribeToPush() {
   try {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') return null;
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey)
-      });
+    if (subscription) {
+      await subscription.unsubscribe();
     }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return null;
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey)
+    });
+    const p256dhKey = subscription.getKey('p256dh');
+    const authKey = subscription.getKey('auth');
+    if (!p256dhKey || !authKey) return null;
+    
+    const p256dh = arrayBufferToBase64Url(p256dhKey);
+    const auth = arrayBufferToBase64Url(authKey);
+    
     await api.post('/push/subscribe', {
       endpoint: subscription.endpoint,
-      keys: {
-        p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))),
-        auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth'))))
-      }
+      keys: { p256dh, auth }
     });
     return subscription;
   } catch (err) {
     console.error('Push subscription failed:', err);
     return null;
   }
+}
+
+function arrayBufferToBase64Url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 async function unsubscribeFromPush() {
@@ -3847,20 +3859,25 @@ const PushNotificationSettings = () => {
 
   const togglePush = async () => {
     setLoading(true);
-    if (pushEnabled) {
-      await unsubscribeFromPush();
-      setPushEnabled(false);
-      toast.success("Push-Benachrichtigungen deaktiviert");
-    } else {
-      const sub = await subscribeToPush();
-      if (sub) {
-        setPushEnabled(true);
-        toast.success("Push-Benachrichtigungen aktiviert!");
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+        toast.success("Push-Benachrichtigungen deaktiviert");
       } else {
-        toast.error("Push-Benachrichtigungen konnten nicht aktiviert werden. Bitte erlauben Sie Benachrichtigungen in Ihren Browser-Einstellungen.");
+        const sub = await subscribeToPush();
+        if (sub) {
+          setPushEnabled(true);
+          toast.success("Push-Benachrichtigungen aktiviert!");
+        } else {
+          toast.error("Bitte erlauben Sie Benachrichtigungen in Ihren Browser-Einstellungen.");
+        }
       }
+    } catch (err) {
+      toast.error("Fehler: " + (err.message || "Unbekannter Fehler"));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const sendTestPush = async () => {
