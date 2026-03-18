@@ -37,7 +37,7 @@ const useAuth = () => {
 };
 
 // ==================== PUSH NOTIFICATION HELPER ====================
-const VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+let VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY || "";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -48,8 +48,19 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+async function ensureVapidKey() {
+  if (VAPID_PUBLIC_KEY) return VAPID_PUBLIC_KEY;
+  try {
+    const res = await api.get('/push/vapid-key');
+    VAPID_PUBLIC_KEY = res.data.vapid_public_key || "";
+  } catch (e) {}
+  return VAPID_PUBLIC_KEY;
+}
+
 async function subscribeToPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !VAPID_PUBLIC_KEY) return null;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  const vapidKey = await ensureVapidKey();
+  if (!vapidKey) return null;
   try {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
@@ -58,7 +69,7 @@ async function subscribeToPush() {
       if (permission !== 'granted') return null;
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey: urlBase64ToUint8Array(vapidKey)
       });
     }
     await api.post('/push/subscribe', {
@@ -3814,9 +3825,15 @@ const PushNotificationSettings = () => {
   }, []);
 
   const checkPushStatus = async () => {
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window && !!VAPID_PUBLIC_KEY;
-    setPushSupported(supported);
-    if (supported) {
+    const hasBrowserSupport = 'serviceWorker' in navigator && 'PushManager' in window;
+    if (!hasBrowserSupport) {
+      setPushSupported(false);
+      setLoading(false);
+      return;
+    }
+    const vapidKey = await ensureVapidKey();
+    setPushSupported(!!vapidKey);
+    if (vapidKey) {
       try {
         const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
