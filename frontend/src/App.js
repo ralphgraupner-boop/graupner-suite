@@ -92,7 +92,9 @@ async function unsubscribeFromPush() {
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
     if (subscription) {
-      await api.delete('/push/subscribe', { data: { endpoint: subscription.endpoint, keys: {} } });
+      try {
+        await api.post('/push/unsubscribe', { endpoint: subscription.endpoint });
+      } catch (e) {}
       await subscription.unsubscribe();
     }
   } catch (err) {
@@ -3903,7 +3905,7 @@ const PushNotificationSettings = () => {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
           <Button
             variant={pushEnabled ? "outline" : "default"}
             size="sm"
@@ -3912,7 +3914,7 @@ const PushNotificationSettings = () => {
             data-testid="btn-toggle-push"
           >
             {pushEnabled ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-            {loading ? "..." : pushEnabled ? "Deaktivieren" : "Aktivieren"}
+            {loading ? "..." : pushEnabled ? "Aus" : "Aktivieren"}
           </Button>
           {pushEnabled && (
             <Button variant="outline" size="sm" onClick={sendTestPush} data-testid="btn-test-push">

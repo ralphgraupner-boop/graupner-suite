@@ -821,6 +821,15 @@ async def push_unsubscribe(subscription: PushSubscription):
     await db.push_subscriptions.delete_one({"endpoint": subscription.endpoint})
     return {"message": "Push-Benachrichtigung deaktiviert"}
 
+class PushUnsubscribe(BaseModel):
+    endpoint: str
+
+@api_router.post("/push/unsubscribe")
+async def push_unsubscribe_post(data: PushUnsubscribe):
+    """Browser Push-Benachrichtigung deaktivieren (POST)"""
+    await db.push_subscriptions.delete_one({"endpoint": data.endpoint})
+    return {"message": "Push-Benachrichtigung deaktiviert"}
+
 @api_router.get("/push/vapid-key")
 async def get_vapid_key():
     """VAPID Public Key für Push-Benachrichtigungen"""
