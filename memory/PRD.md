@@ -34,6 +34,14 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 
 ## What's Been Implemented
 
+### Push-Benachrichtigungen (Fertiggestellt 18.03.2026)
+- Browser Push-Benachrichtigungen bei neuen Kundenanfragen via Webhook
+- VAPID-basiertes Web Push Protokoll
+- Automatische Subscription nach Login
+- Toggle-Button und Test-Funktion in den Einstellungen
+- Service Worker empfängt und zeigt Notifications mit App-Icon
+- Klick auf Notification öffnet die Kundenliste
+
 ### PWA / Mobile App (Fertiggestellt 18.03.2026)
 - Progressive Web App (PWA) mit manifest.json und Service Worker
 - Installierbar auf iPhone und Android als Homescreen-App

@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package,
   Settings, LogOut, Plus, Mic, MicOff, Download, Mail, Trash2, Edit,
   ChevronRight, Euro, TrendingUp, Clock, CheckCircle, Search, X, Save,
-  Wrench, Printer, Eye, ArrowLeft, Menu
+  Wrench, Printer, Eye, ArrowLeft, Menu, Bell, BellOff
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -34,6 +34,59 @@ const useAuth = () => {
 
   return { token, user, login, logout, isAuthenticated: !!token };
 };
+
+// ==================== PUSH NOTIFICATION HELPER ====================
+const VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !VAPID_PUBLIC_KEY) return null;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return null;
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    await api.post('/push/subscribe', {
+      endpoint: subscription.endpoint,
+      keys: {
+        p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))),
+        auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth'))))
+      }
+    });
+    return subscription;
+  } catch (err) {
+    console.error('Push subscription failed:', err);
+    return null;
+  }
+}
+
+async function unsubscribeFromPush() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      await api.delete('/push/subscribe', { data: { endpoint: subscription.endpoint, keys: {} } });
+      await subscription.unsubscribe();
+    }
+  } catch (err) {
+    console.error('Push unsubscribe failed:', err);
+  }
+}
 
 // ==================== API HELPERS ====================
 const api = axios.create({ baseURL: API });
@@ -3748,6 +3801,102 @@ const ServiceModal = ({ isOpen, onClose, service, onSave }) => {
 };
 
 // ==================== SETTINGS ====================
+// ==================== PUSH NOTIFICATION SETTINGS ====================
+const PushNotificationSettings = () => {
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkPushStatus();
+  }, []);
+
+  const checkPushStatus = async () => {
+    const supported = 'serviceWorker' in navigator && 'PushManager' in window && !!VAPID_PUBLIC_KEY;
+    setPushSupported(supported);
+    if (supported) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setPushEnabled(!!sub);
+      } catch (e) {}
+    }
+    setLoading(false);
+  };
+
+  const togglePush = async () => {
+    setLoading(true);
+    if (pushEnabled) {
+      await unsubscribeFromPush();
+      setPushEnabled(false);
+      toast.success("Push-Benachrichtigungen deaktiviert");
+    } else {
+      const sub = await subscribeToPush();
+      if (sub) {
+        setPushEnabled(true);
+        toast.success("Push-Benachrichtigungen aktiviert!");
+      } else {
+        toast.error("Push-Benachrichtigungen konnten nicht aktiviert werden. Bitte erlauben Sie Benachrichtigungen in Ihren Browser-Einstellungen.");
+      }
+    }
+    setLoading(false);
+  };
+
+  const sendTestPush = async () => {
+    try {
+      await api.post("/webhook/contact", {
+        name: "Test Kunde",
+        email: "test@example.com",
+        phone: "0123 456789",
+        message: "Dies ist eine Test-Benachrichtigung von Ihrer Graupner Suite!"
+      });
+      toast.success("Test-Benachrichtigung gesendet!");
+    } catch (err) {
+      toast.error("Fehler beim Senden der Test-Benachrichtigung");
+    }
+  };
+
+  return (
+    <Card className="p-4 lg:p-6 mt-6">
+      <h3 className="text-base lg:text-lg font-semibold mb-4 flex items-center gap-2">
+        <Bell className="w-5 h-5 text-primary" />
+        Push-Benachrichtigungen
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Erhalten Sie sofort eine Benachrichtigung auf Ihr Gerät, wenn eine neue Kundenanfrage über das Kontaktformular eingeht.
+      </p>
+      {!pushSupported ? (
+        <p className="text-sm text-amber-600">
+          Push-Benachrichtigungen werden in diesem Browser nicht unterstützt.
+        </p>
+      ) : (
+        <div className="flex items-center gap-4">
+          <Button
+            variant={pushEnabled ? "outline" : "default"}
+            size="sm"
+            onClick={togglePush}
+            disabled={loading}
+            data-testid="btn-toggle-push"
+          >
+            {pushEnabled ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+            {loading ? "..." : pushEnabled ? "Deaktivieren" : "Aktivieren"}
+          </Button>
+          {pushEnabled && (
+            <Button variant="outline" size="sm" onClick={sendTestPush} data-testid="btn-test-push">
+              Test senden
+            </Button>
+          )}
+          {pushEnabled && (
+            <span className="text-sm text-green-600 flex items-center gap-1">
+              <CheckCircle className="w-4 h-4" /> Aktiv
+            </span>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+};
+
 const SettingsPage = () => {
   const [settings, setSettings] = useState({
     company_name: "",
@@ -3802,13 +3951,13 @@ const SettingsPage = () => {
 
   return (
     <div data-testid="settings-page">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Einstellungen</h1>
-        <p className="text-muted-foreground mt-2">Firmendaten und Konfiguration</p>
+      <div className="mb-4 lg:mb-8">
+        <h1 className="text-2xl lg:text-4xl font-bold">Einstellungen</h1>
+        <p className="text-muted-foreground mt-1 text-sm lg:text-base">Firmendaten und Konfiguration</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <Card className="p-4 lg:p-6">
           <h3 className="text-lg font-semibold mb-4">Firmendaten</h3>
           <div className="space-y-4">
             <div>
@@ -3941,6 +4090,9 @@ const SettingsPage = () => {
           {saving ? "Speichern..." : "Einstellungen speichern"}
         </Button>
       </div>
+
+      {/* Push Notifications Section */}
+      <PushNotificationSettings />
     </div>
   );
 };
@@ -3959,6 +4111,13 @@ const MainLayout = ({ children, onLogout }) => {
 // ==================== APP ====================
 function App() {
   const { token, login, logout, isAuthenticated } = useAuth();
+
+  // Auto-subscribe to push notifications when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      subscribeToPush();
+    }
+  }, [isAuthenticated]);
 
   return (
     <div className="App">

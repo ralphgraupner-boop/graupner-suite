@@ -15,6 +15,7 @@ import bcrypt
 from io import BytesIO
 import asyncio
 import base64
+import json
 
 # PDF Generation
 from reportlab.lib.pagesizes import A4
@@ -23,6 +24,9 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+
+# Push Notifications
+from pywebpush import webpush, WebPushException
 
 # Emergent Integrations
 from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -46,6 +50,8 @@ if not JWT_SECRET:
     JWT_SECRET = 'graupner-suite-secret-' + os.environ.get('DB_NAME', 'default')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 
 # Initialize Resend
 if RESEND_API_KEY:
@@ -786,6 +792,60 @@ async def update_settings(settings: CompanySettings):
     )
     return settings
 
+# ==================== PUSH NOTIFICATIONS ====================
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: dict
+
+@api_router.post("/push/subscribe")
+async def push_subscribe(subscription: PushSubscription):
+    """Browser Push-Benachrichtigung abonnieren"""
+    existing = await db.push_subscriptions.find_one({"endpoint": subscription.endpoint})
+    if existing:
+        await db.push_subscriptions.update_one(
+            {"endpoint": subscription.endpoint},
+            {"$set": {"keys": subscription.keys, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    else:
+        await db.push_subscriptions.insert_one({
+            "endpoint": subscription.endpoint,
+            "keys": subscription.keys,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    return {"message": "Push-Benachrichtigung aktiviert"}
+
+@api_router.delete("/push/subscribe")
+async def push_unsubscribe(subscription: PushSubscription):
+    """Browser Push-Benachrichtigung deaktivieren"""
+    await db.push_subscriptions.delete_one({"endpoint": subscription.endpoint})
+    return {"message": "Push-Benachrichtigung deaktiviert"}
+
+@api_router.get("/push/vapid-key")
+async def get_vapid_key():
+    """VAPID Public Key für Push-Benachrichtigungen"""
+    return {"vapid_public_key": VAPID_PUBLIC_KEY}
+
+async def send_push_to_all(title: str, body: str, url: str = "/"):
+    """Push-Benachrichtigung an alle Abonnenten senden"""
+    if not VAPID_PRIVATE_KEY:
+        logger.warning("VAPID keys not configured, skipping push")
+        return
+    subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(100)
+    payload = json.dumps({"title": title, "body": body, "url": url})
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": "mailto:info@graupner-suite.de"}
+            )
+        except WebPushException as e:
+            logger.error(f"Push failed for {sub['endpoint'][:50]}: {e}")
+            if e.response and e.response.status_code in (404, 410):
+                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+
 # ==================== WEBHOOK ====================
 
 @api_router.post("/webhook/contact")
@@ -801,6 +861,14 @@ async def webhook_contact(contact: WebhookContact):
     )
     await db.customers.insert_one(customer.model_dump())
     logger.info(f"Neue Kundenanfrage über Webhook: {contact.name}")
+    
+    # Send push notification
+    await send_push_to_all(
+        title="Neue Kundenanfrage",
+        body=f"{contact.name}: {contact.message[:100] if contact.message else 'Neue Anfrage'}",
+        url="/customers"
+    )
+    
     return {"message": "Anfrage erfolgreich empfangen", "customer_id": customer.id}
 
 # ==================== SPEECH TO TEXT ====================
