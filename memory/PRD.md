@@ -34,6 +34,15 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 
 ## What's Been Implemented
 
+### Webhook-Dokumentation & Website-Integration (Fertiggestellt 18.03.2026)
+- Eigene Seite "Website-Integration" in der App-Navigation
+- Webhook-URL prominent angezeigt mit Kopier-Button
+- Fertiger HTML/JavaScript Code-Snippet zum Kopieren in die eigene Website
+- PHP Code-Snippet für WordPress/PHP-Websites
+- JSON-Datenformat-Dokumentation
+- Eingebautes Test-Formular zum direkten Testen des Webhooks
+- "So funktioniert es" Erklärung in 4 Schritten
+
 ### Push-Benachrichtigungen (Fertiggestellt 18.03.2026)
 - Browser Push-Benachrichtigungen bei neuen Kundenanfragen via Webhook
 - VAPID-basiertes Web Push Protokoll
@@ -102,7 +111,7 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 ### P1 (Wichtig)
 - [x] Spracheingabe aktiviert (Emergent LLM Key für OpenAI Whisper + GPT-5.2)
 - [ ] E-Mail-Versand aktivieren (RESEND_API_KEY benötigt)
-- [ ] Webhook-Dokumentation für Website-Integration
+- [x] Webhook-Dokumentation für Website-Integration
 
 ### P2 (Nice-to-have)
 - [ ] Auftrags-Status-Workflow (In Arbeit, Fertig)
@@ -133,5 +142,5 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 
 ## Next Tasks
 1. E-Mail-Integration mit Resend API Key
-2. Webhook-Dokumentation erstellen
-3. Dashboard mit echten Daten verbessern
+2. Dashboard mit Charts und Echtzeit-Daten verbessern
+3. Druckansicht für Dokumente

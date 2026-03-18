@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package,
   Settings, LogOut, Plus, Mic, MicOff, Download, Mail, Trash2, Edit,
   ChevronRight, Euro, TrendingUp, Clock, CheckCircle, Search, X, Save,
-  Wrench, Printer, Eye, ArrowLeft, Menu, Bell, BellOff
+  Wrench, Printer, Eye, ArrowLeft, Menu, Bell, BellOff, Copy, ExternalLink,
+  Code, Globe, Send
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -1298,6 +1299,7 @@ const navItems = [
   { path: "/invoices", icon: Receipt, label: "Rechnungen" },
   { path: "/articles", icon: Package, label: "Artikel" },
   { path: "/services", icon: Wrench, label: "Leistungen" },
+  { path: "/webhook", icon: Globe, label: "Website-Integration" },
   { path: "/settings", icon: Settings, label: "Einstellungen" }
 ];
 
@@ -4097,6 +4099,330 @@ const SettingsPage = () => {
   );
 };
 
+// ==================== WEBHOOK DOCUMENTATION ====================
+const WebhookDocPage = () => {
+  const webhookUrl = `${BACKEND_URL}/api/webhook/contact`;
+  const [testName, setTestName] = useState("");
+  const [testEmail, setTestEmail] = useState("");
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [testResult, setTestResult] = useState(null);
+  const [testing, setTesting] = useState(false);
+  const [copied, setCopied] = useState("");
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    setCopied(label);
+    toast.success("In Zwischenablage kopiert!");
+    setTimeout(() => setCopied(""), 2000);
+  };
+
+  const sendTestWebhook = async () => {
+    if (!testName) { toast.error("Bitte Name eingeben"); return; }
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await axios.post(`${API}/webhook/contact`, {
+        name: testName, email: testEmail, phone: testPhone, message: testMessage
+      });
+      setTestResult({ success: true, data: res.data });
+      toast.success("Test-Anfrage erfolgreich gesendet! Push-Benachrichtigung sollte erscheinen.");
+    } catch (err) {
+      setTestResult({ success: false, error: err.response?.data?.detail || err.message });
+      toast.error("Fehler beim Senden");
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const htmlSnippet = `<!-- Graupner Suite Kontaktformular -->
+<form id="kontaktformular" onsubmit="sendToGraupner(event)">
+  <input type="text" name="name" placeholder="Ihr Name" required />
+  <input type="email" name="email" placeholder="E-Mail" />
+  <input type="tel" name="phone" placeholder="Telefon" />
+  <textarea name="message" placeholder="Ihre Nachricht"></textarea>
+  <button type="submit">Anfrage senden</button>
+</form>
+
+<script>
+async function sendToGraupner(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = {
+    name: form.name.value,
+    email: form.email.value,
+    phone: form.phone.value,
+    message: form.message.value
+  };
+  try {
+    const res = await fetch("${webhookUrl}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      alert("Anfrage erfolgreich gesendet!");
+      form.reset();
+    } else {
+      alert("Fehler beim Senden. Bitte versuchen Sie es erneut.");
+    }
+  } catch (err) {
+    alert("Verbindungsfehler. Bitte versuchen Sie es später erneut.");
+  }
+}
+</script>`;
+
+  const phpSnippet = `<?php
+// Graupner Suite Webhook - PHP Beispiel
+$data = [
+    "name"    => $_POST["name"],
+    "email"   => $_POST["email"],
+    "phone"   => $_POST["phone"],
+    "message" => $_POST["message"]
+];
+
+$ch = curl_init("${webhookUrl}");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+curl_close($ch);
+
+if ($response) {
+    echo "Anfrage erfolgreich weitergeleitet!";
+} else {
+    echo "Fehler bei der Weiterleitung.";
+}
+?>`;
+
+  return (
+    <div data-testid="webhook-doc-page">
+      <div className="mb-4 lg:mb-8">
+        <h1 className="text-2xl lg:text-4xl font-bold">Website-Integration</h1>
+        <p className="text-muted-foreground mt-1 text-sm lg:text-base">Verbinden Sie Ihr Kontaktformular mit der Graupner Suite</p>
+      </div>
+
+      {/* Webhook URL */}
+      <Card className="p-4 lg:p-6 mb-4 lg:mb-6 border-primary/30">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-primary/10 rounded-sm shrink-0">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-base lg:text-lg">Ihre Webhook-URL</h3>
+            <p className="text-sm text-muted-foreground mt-1 mb-3">
+              Diese URL empfängt Anfragen von Ihrem Website-Kontaktformular und erstellt automatisch einen neuen Kunden.
+            </p>
+            <div className="flex items-center gap-2 bg-slate-100 rounded-sm p-3 overflow-x-auto">
+              <code className="text-sm font-mono text-primary break-all flex-1" data-testid="webhook-url">{webhookUrl}</code>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(webhookUrl, "url")}
+                className="shrink-0"
+                data-testid="btn-copy-url"
+              >
+                <Copy className="w-4 h-4" />
+                {copied === "url" ? "Kopiert!" : "Kopieren"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        {/* Left: Code Snippets */}
+        <div className="space-y-4 lg:space-y-6">
+          {/* JSON Format */}
+          <Card className="p-4 lg:p-6">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Code className="w-5 h-5 text-primary" />
+              Datenformat (JSON)
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Ihr Kontaktformular muss die Daten als JSON im folgenden Format senden:
+            </p>
+            <div className="relative">
+              <pre className="bg-slate-900 text-slate-100 rounded-sm p-4 text-xs lg:text-sm overflow-x-auto">
+{`POST ${webhookUrl}
+Content-Type: application/json
+
+{
+  "name": "Max Mustermann",     // Pflichtfeld
+  "email": "max@example.de",    // Optional
+  "phone": "0171 1234567",      // Optional
+  "address": "Musterstr. 1",    // Optional
+  "message": "Ich brauche..."   // Optional
+}`}
+              </pre>
+              <button
+                onClick={() => copyToClipboard(`{\n  "name": "Max Mustermann",\n  "email": "max@example.de",\n  "phone": "0171 1234567",\n  "message": "Anfrage..."\n}`, "json")}
+                className="absolute top-2 right-2 p-1.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </Card>
+
+          {/* HTML Snippet */}
+          <Card className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Code className="w-5 h-5 text-orange-500" />
+                HTML / JavaScript
+              </h3>
+              <Button variant="outline" size="sm" onClick={() => copyToClipboard(htmlSnippet, "html")}>
+                <Copy className="w-4 h-4" />
+                {copied === "html" ? "Kopiert!" : "Kopieren"}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Kopieren Sie diesen Code in Ihre Website. Das Formular sendet Anfragen direkt an die Graupner Suite.
+            </p>
+            <pre className="bg-slate-900 text-slate-100 rounded-sm p-4 text-xs overflow-x-auto max-h-64 overflow-y-auto">
+              {htmlSnippet}
+            </pre>
+          </Card>
+
+          {/* PHP Snippet */}
+          <Card className="p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Code className="w-5 h-5 text-indigo-500" />
+                PHP Beispiel
+              </h3>
+              <Button variant="outline" size="sm" onClick={() => copyToClipboard(phpSnippet, "php")}>
+                <Copy className="w-4 h-4" />
+                {copied === "php" ? "Kopiert!" : "Kopieren"}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Falls Ihre Website PHP verwendet (z.B. WordPress), nutzen Sie diesen Code:
+            </p>
+            <pre className="bg-slate-900 text-slate-100 rounded-sm p-4 text-xs overflow-x-auto max-h-64 overflow-y-auto">
+              {phpSnippet}
+            </pre>
+          </Card>
+        </div>
+
+        {/* Right: Test Form */}
+        <div className="space-y-4 lg:space-y-6">
+          <Card className="p-4 lg:p-6">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Test-Formular
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Testen Sie hier, ob der Webhook funktioniert. Die Anfrage wird als neuer Kunde gespeichert und Sie erhalten eine Push-Benachrichtigung.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name *</label>
+                <Input
+                  data-testid="input-test-name"
+                  value={testName}
+                  onChange={(e) => setTestName(e.target.value)}
+                  placeholder="Max Mustermann"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">E-Mail</label>
+                <Input
+                  data-testid="input-test-email"
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="max@example.de"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Telefon</label>
+                <Input
+                  data-testid="input-test-phone"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder="0171 1234567"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Nachricht</label>
+                <Textarea
+                  data-testid="input-test-message"
+                  value={testMessage}
+                  onChange={(e) => setTestMessage(e.target.value)}
+                  placeholder="Ich brauche eine neue Küche..."
+                  rows={3}
+                />
+              </div>
+              <Button
+                data-testid="btn-send-test-webhook"
+                onClick={sendTestWebhook}
+                disabled={testing}
+                className="w-full"
+              >
+                <Send className="w-4 h-4" />
+                {testing ? "Sende..." : "Test-Anfrage senden"}
+              </Button>
+            </div>
+
+            {testResult && (
+              <div className={`mt-4 p-3 rounded-sm text-sm ${testResult.success ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"}`}>
+                {testResult.success ? (
+                  <>
+                    <p className="font-medium flex items-center gap-1"><CheckCircle className="w-4 h-4" /> Erfolgreich!</p>
+                    <p className="mt-1">Neuer Kunde wurde angelegt. Prüfen Sie Ihre Push-Benachrichtigungen und die Kundenliste.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">Fehler</p>
+                    <p className="mt-1">{testResult.error}</p>
+                  </>
+                )}
+              </div>
+            )}
+          </Card>
+
+          {/* How it works */}
+          <Card className="p-4 lg:p-6">
+            <h3 className="font-semibold mb-3">So funktioniert es</h3>
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm">1</div>
+                <div>
+                  <p className="font-medium text-sm">Besucher füllt Kontaktformular aus</p>
+                  <p className="text-xs text-muted-foreground">Auf Ihrer Website (z.B. graupner-tischlerei.de)</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm">2</div>
+                <div>
+                  <p className="font-medium text-sm">Daten werden an Webhook gesendet</p>
+                  <p className="text-xs text-muted-foreground">Automatisch per JavaScript oder PHP</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm">3</div>
+                <div>
+                  <p className="font-medium text-sm">Neuer Kunde wird angelegt</p>
+                  <p className="text-xs text-muted-foreground">Automatisch in der Graupner Suite gespeichert</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm">4</div>
+                <div>
+                  <p className="font-medium text-sm">Push-Benachrichtigung</p>
+                  <p className="text-xs text-muted-foreground">Sie werden sofort auf Ihrem Handy/PC benachrichtigt</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== MAIN LAYOUT ====================
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -4219,6 +4545,14 @@ function App() {
                 element={
                   <MainLayout onLogout={logout}>
                     <SettingsPage />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/webhook"
+                element={
+                  <MainLayout onLogout={logout}>
+                    <WebhookDocPage />
                   </MainLayout>
                 }
               />
