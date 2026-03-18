@@ -64,9 +64,19 @@ async function subscribeToPush() {
   try {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
+    
     if (subscription) {
-      await subscription.unsubscribe();
+      // Already subscribed - just make sure backend knows
+      const p256dh = arrayBufferToBase64Url(subscription.getKey('p256dh'));
+      const auth = arrayBufferToBase64Url(subscription.getKey('auth'));
+      await api.post('/push/subscribe', {
+        endpoint: subscription.endpoint,
+        keys: { p256dh, auth }
+      });
+      return subscription;
     }
+    
+    // New subscription needed
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
     subscription = await registration.pushManager.subscribe({
@@ -77,12 +87,12 @@ async function subscribeToPush() {
     const authKey = subscription.getKey('auth');
     if (!p256dhKey || !authKey) return null;
     
-    const p256dh = arrayBufferToBase64Url(p256dhKey);
-    const auth = arrayBufferToBase64Url(authKey);
-    
     await api.post('/push/subscribe', {
       endpoint: subscription.endpoint,
-      keys: { p256dh, auth }
+      keys: {
+        p256dh: arrayBufferToBase64Url(p256dhKey),
+        auth: arrayBufferToBase64Url(authKey)
+      }
     });
     return subscription;
   } catch (err) {
@@ -3882,15 +3892,14 @@ const PushNotificationSettings = () => {
 
   const sendTestPush = async () => {
     try {
-      await api.post("/webhook/contact", {
-        name: "Test Kunde",
-        email: "test@example.com",
-        phone: "0123 456789",
-        message: "Dies ist eine Test-Benachrichtigung von Ihrer Graupner Suite!"
-      });
-      toast.success("Test-Benachrichtigung gesendet!");
+      const res = await api.post("/push/test");
+      if (res.data.success) {
+        toast.success(`Push gesendet an ${res.data.subscribers} Gerät(e). Warten Sie 5 Sekunden...`);
+      } else {
+        toast.error(res.data.message);
+      }
     } catch (err) {
-      toast.error("Fehler beim Senden der Test-Benachrichtigung");
+      toast.error("Fehler: " + (err.response?.data?.detail || err.message));
     }
   };
 

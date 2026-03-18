@@ -1,15 +1,6 @@
-const CACHE_NAME = 'graupner-suite-v1';
-const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/icon-192.png',
-  '/icon-512.png'
-];
+const CACHE_NAME = 'graupner-suite-v2';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
   self.skipWaiting();
 });
 
@@ -26,28 +17,32 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('/api/')) return;
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  );
 });
 
 // Push Notifications
 self.addEventListener('push', (event) => {
   let data = { title: 'Graupner Suite', body: 'Neue Benachrichtigung', url: '/' };
   try {
-    data = event.data.json();
+    if (event.data) {
+      data = event.data.json();
+    }
   } catch (e) {
-    data.body = event.data ? event.data.text() : data.body;
+    if (event.data) {
+      data.body = event.data.text();
+    }
   }
+  const options = {
+    body: data.body || 'Neue Nachricht',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: 'graupner-' + Date.now(),
+    renotify: true,
+    requireInteraction: true,
+    data: { url: data.url || '/' }
+  };
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      vibrate: [200, 100, 200],
-      tag: 'graupner-notification',
-      data: { url: data.url || '/' }
-    })
+    self.registration.showNotification(data.title || 'Graupner Suite', options)
   );
 });
 
@@ -57,7 +52,7 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
+        if ('focus' in client) {
           client.navigate(url);
           return client.focus();
         }

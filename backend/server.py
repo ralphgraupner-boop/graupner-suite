@@ -835,6 +835,19 @@ async def get_vapid_key():
     """VAPID Public Key für Push-Benachrichtigungen"""
     return {"vapid_public_key": VAPID_PUBLIC_KEY}
 
+@api_router.post("/push/test")
+async def push_test():
+    """Test Push-Benachrichtigung an alle Abonnenten"""
+    subs = await db.push_subscriptions.find({}, {"_id": 0}).to_list(100)
+    if not subs:
+        return {"success": False, "message": "Keine Push-Subscriptions vorhanden. Bitte zuerst aktivieren.", "subscribers": 0}
+    await send_push_to_all(
+        title="Test-Benachrichtigung",
+        body="Wenn Sie das lesen, funktionieren Push-Benachrichtigungen!",
+        url="/dashboard"
+    )
+    return {"success": True, "message": f"Push an {len(subs)} Gerät(e) gesendet", "subscribers": len(subs)}
+
 async def send_push_to_all(title: str, body: str, url: str = "/"):
     """Push-Benachrichtigung an alle Abonnenten senden"""
     if not VAPID_PRIVATE_KEY:
