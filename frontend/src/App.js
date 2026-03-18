@@ -3868,9 +3868,23 @@ const PushNotificationSettings = () => {
         Erhalten Sie sofort eine Benachrichtigung auf Ihr Gerät, wenn eine neue Kundenanfrage über das Kontaktformular eingeht.
       </p>
       {!pushSupported ? (
-        <p className="text-sm text-amber-600">
-          Push-Benachrichtigungen werden in diesem Browser nicht unterstützt.
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-amber-600 font-medium">
+            Push-Benachrichtigungen werden in diesem Browser nicht unterstützt.
+          </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-sm p-4 text-sm space-y-2">
+            <p className="font-medium text-amber-800">So aktivieren Sie Push-Benachrichtigungen:</p>
+            <ol className="list-decimal list-inside space-y-1.5 text-amber-700">
+              <li>Öffnen Sie <strong>Google Chrome</strong> auf Ihrem Handy</li>
+              <li>Gehen Sie zu dieser Seite: <code className="bg-amber-100 px-1 rounded text-xs break-all">{window.location.origin}</code></li>
+              <li>Tippen Sie auf das <strong>3-Punkte-Menü</strong> (oben rechts)</li>
+              <li>Wählen Sie <strong>"Zum Startbildschirm hinzufügen"</strong> oder <strong>"App installieren"</strong></li>
+              <li>Öffnen Sie die App über das neue Icon auf Ihrem Homescreen</li>
+              <li>Gehen Sie zu Einstellungen → Push-Benachrichtigungen → <strong>Aktivieren</strong></li>
+            </ol>
+            <p className="text-xs text-amber-600 mt-2">Hinweis: Samsung Internet unterstützt keine Web Push. Google Chrome ist empfohlen.</p>
+          </div>
+        </div>
       ) : (
         <div className="flex items-center gap-4">
           <Button
