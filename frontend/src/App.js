@@ -3931,27 +3931,30 @@ const PushNotificationSettings = () => {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button
-            variant={pushEnabled ? "outline" : "default"}
-            size="sm"
-            onClick={togglePush}
-            disabled={loading}
-            data-testid="btn-toggle-push"
-          >
-            {pushEnabled ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-            {loading ? "..." : pushEnabled ? "Aus" : "Aktivieren"}
-          </Button>
-          {pushEnabled && (
-            <Button variant="outline" size="sm" onClick={sendTestPush} data-testid="btn-test-push">
-              Test senden
-            </Button>
-          )}
-          {pushEnabled && (
-            <span className="text-sm text-green-600 flex items-center gap-1">
-              <CheckCircle className="w-4 h-4" /> Aktiv
-            </span>
-          )}
+        <div key="push-controls">
+          <div className="flex items-center gap-3 flex-wrap">
+            {pushEnabled ? (
+              <div className="flex items-center gap-3 flex-wrap" key="enabled">
+                <span className="text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" /> Aktiv
+                </span>
+                <Button variant="outline" size="sm" onClick={sendTestPush} data-testid="btn-test-push">
+                  Test senden
+                </Button>
+                <Button variant="outline" size="sm" onClick={togglePush} disabled={loading} data-testid="btn-toggle-push">
+                  <BellOff className="w-4 h-4" />
+                  {loading ? "..." : "Aus"}
+                </Button>
+              </div>
+            ) : (
+              <div key="disabled">
+                <Button onClick={togglePush} disabled={loading} data-testid="btn-toggle-push">
+                  <Bell className="w-4 h-4" />
+                  {loading ? "..." : "Aktivieren"}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </Card>
