@@ -1143,21 +1143,21 @@ input[type=file]{{padding:8px;font-size:13px}}
 <h2>Themen</h2>
 <p class="section-label">Au&szlig;enbereich</p>
 <div class="checkbox-grid" style="margin-bottom:16px">
-<label><input type="checkbox" name="topic" value="Fenster"> Fenster</label>
-<label><input type="checkbox" name="topic" value="Balkontür"> Balkont&uuml;r</label>
-<label><input type="checkbox" name="topic" value="Terrassentür"> Terrassent&uuml;r</label>
-<label><input type="checkbox" name="topic" value="Schiebetür Balkon"> Schiebet&uuml;r Balkon</label>
-<label><input type="checkbox" name="topic" value="Schiebetür Terrasse"> Schiebet&uuml;r Terrasse</label>
-<label><input type="checkbox" name="topic" value="Sonstiges Außen"> Sonstiges</label>
+<label><input type="checkbox" name="topic[]" value="Fenster"> Fenster</label>
+<label><input type="checkbox" name="topic[]" value="Balkontür"> Balkont&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Terrassentür"> Terrassent&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Schiebetür Balon"> Schiebet&uuml;r Balkon</label>
+<label><input type="checkbox" name="topic[]" value="Schiebetür Terrasse"> Schiebet&uuml;r Terrasse</label>
+<label><input type="checkbox" name="topic[]" value="Sonstiges Außen"> Sonstiges</label>
 </div>
 <p class="section-label">Innenbereich</p>
 <div class="checkbox-grid">
-<label><input type="checkbox" name="topic" value="Zimmertür"> Zimmert&uuml;r</label>
-<label><input type="checkbox" name="topic" value="Wohnungstür"> Wohnungst&uuml;r</label>
-<label><input type="checkbox" name="topic" value="Schiebetür"> Schiebet&uuml;r</label>
-<label><input type="checkbox" name="topic" value="Schrank"> Schrank</label>
-<label><input type="checkbox" name="topic" value="Boden"> Boden</label>
-<label><input type="checkbox" name="topic" value="Sonstige Innen"> Sonstige</label>
+<label><input type="checkbox" name="topic[]" value="Zimmertür"> Zimmert&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Wohnungstür"> Wohnungst&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Schiebetür"> Schiebet&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Schrank"> Schrank</label>
+<label><input type="checkbox" name="topic[]" value="Boden"> Boden</label>
+<label><input type="checkbox" name="topic[]" value="Sonstige Innen"> Sonstige</label>
 </div>
 </div>
 
@@ -1171,6 +1171,13 @@ input[type=file]{{padding:8px;font-size:13px}}
 <input type="file" name="upload_file1" accept="image/*" multiple>
 <p class="file-info">Optional: Fotos vom Objekt (max. 5 MB pro Datei)</p>
 </div>
+</div>
+
+<div style="margin-top:16px;margin-bottom:16px;">
+<label style="display:flex;align-items:start;gap:8px;font-size:13px;cursor:pointer;">
+<input type="checkbox" name="dataprivacy" required style="margin-top:3px;">
+<span>Es gilt die <a href="https://www.tischlerei-graupner.de/j/privacy" target="_blank" style="color:#1a1a2e;text-decoration:underline;">Datenschutzerkl&auml;rung</a>.</span>
+</label>
 </div>
 
 <button type="submit" class="btn">Anfrage absenden</button>
@@ -1203,7 +1210,7 @@ async def kontakt_relay(request: Request):
     
     # 1. Save to Graupner Suite (reuse webhook logic)
     try:
-        topics = form_dict.get("topic", [])
+        topics = form_dict.get("topic[]", form_dict.get("topic", []))
         if isinstance(topics, str):
             topics = [topics]
         
