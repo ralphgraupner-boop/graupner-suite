@@ -147,6 +147,14 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - Parallel zum normalen IONOS-Formular (kein Eingriff in bestehende Funktionalität)
 - Backend verarbeitet einfache Payloads (name + nachricht) korrekt als neuen Kunden
 
+### 3-Spalten WYSIWYG Editor (Fertiggestellt 30.03.2026)
+- Desktop 3-Spalten-Layout: Links Leistungen/Artikel (Tabs, Suche, Drag&Drop), Mitte Dokument, Rechts Kalkulation
+- Drag & Drop von Leistungen/Artikeln ins Dokument (HTML5 native API)
+- Kalkulations-Panel mit EK-Preisen pro Position, Margenberechnung (€ und %), visueller Margen-Balken
+- Übersicht-Panel mit Positionen-Anzahl, Brutto und Kundenname
+- Mobile Layout unverändert (Dropdowns statt Sidebars)
+- Testing: 100% bestanden (iteration_4.json)
+
 ## Next Tasks
 1. E-Mail-Integration mit Resend API Key
 2. Dashboard mit Charts und Echtzeit-Daten verbessern
