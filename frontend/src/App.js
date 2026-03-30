@@ -8,7 +8,7 @@ import {
   Settings, LogOut, Plus, Mic, MicOff, Download, Mail, Trash2, Edit,
   ChevronRight, Euro, TrendingUp, Clock, CheckCircle, Search, X, Save,
   Wrench, Printer, Eye, ArrowLeft, Menu, Bell, BellOff, Copy, ExternalLink,
-  Code, Globe, Send
+  Code, Globe, Send, GripVertical, Calculator, Percent, ChevronDown, ChevronUp
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -722,6 +722,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
 
+  // 3-Column Layout state (Desktop)
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [sidebarTab, setSidebarTab] = useState("services"); // "services" | "articles"
+  const [costPrices, setCostPrices] = useState({});
+  const [kalkulationOpen, setKalkulationOpen] = useState(true);
+
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
 
@@ -813,6 +819,49 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       }
     ]);
   };
+
+  // Drag & Drop handlers
+  const handleDragStart = (e, item) => {
+    e.dataTransfer.setData("application/json", JSON.stringify(item));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    try {
+      const item = JSON.parse(e.dataTransfer.getData("application/json"));
+      addFromStamm(item);
+      toast.success(`"${item.name}" hinzugefügt`);
+    } catch {}
+  };
+
+  const updateCostPrice = (idx, value) => {
+    setCostPrices(prev => ({ ...prev, [idx]: parseFloat(value) || 0 }));
+  };
+
+  const calculateKalkulation = () => {
+    const revenue = positions.reduce((sum, p) => sum + (p.quantity || 0) * (p.price_net || 0), 0);
+    const costs = positions.reduce((sum, p, idx) => sum + (p.quantity || 0) * (costPrices[idx] || 0), 0);
+    const margin = revenue - costs;
+    const marginPercent = revenue > 0 ? (margin / revenue) * 100 : 0;
+    const hasCosts = Object.values(costPrices).some(v => v > 0);
+    return { revenue, costs, margin, marginPercent, hasCosts };
+  };
+
+  // Filter items for sidebar search
+  const filteredServices = services.filter(s =>
+    s.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
+    (s.description || "").toLowerCase().includes(sidebarSearch.toLowerCase())
+  );
+  const filteredArticles = articles.filter(a =>
+    a.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
+    (a.description || "").toLowerCase().includes(sidebarSearch.toLowerCase())
+  );
 
   const calculateTotals = () => {
     const subtotal = positions.reduce((sum, p) => sum + (p.quantity || 0) * (p.price_net || 0), 0);
@@ -1014,18 +1063,91 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         </div>
       </div>
 
-      {/* Document Area */}
-      <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-8 flex justify-center">
-        <div className="w-full max-w-4xl">
-          {/* Side Tools */}
-          <div className="mb-3 lg:mb-4 flex gap-2 flex-wrap">
+      {/* Document Area - 3 Column Layout (Desktop) */}
+      <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-4">
+        <div className="lg:grid lg:grid-cols-[260px_1fr_280px] lg:gap-4 lg:max-w-[1600px] lg:mx-auto">
+
+          {/* === LEFT SIDEBAR: Services & Articles (Desktop only) === */}
+          <div className="hidden lg:block">
+            <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pr-1">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Suchen..."
+                  value={sidebarSearch}
+                  onChange={(e) => setSidebarSearch(e.target.value)}
+                  className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-card text-sm"
+                  data-testid="sidebar-search"
+                />
+              </div>
+
+              {/* Tabs */}
+              <div className="flex rounded-md border border-input overflow-hidden">
+                <button
+                  onClick={() => setSidebarTab("services")}
+                  className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "services" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
+                  data-testid="tab-services"
+                >
+                  <Wrench className="w-3.5 h-3.5 inline mr-1" />
+                  Leistungen ({filteredServices.length})
+                </button>
+                <button
+                  onClick={() => setSidebarTab("articles")}
+                  className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "articles" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
+                  data-testid="tab-articles"
+                >
+                  <Package className="w-3.5 h-3.5 inline mr-1" />
+                  Artikel ({filteredArticles.length})
+                </button>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-1.5">
+                {(sidebarTab === "services" ? filteredServices : filteredArticles).map((item) => (
+                  <div
+                    key={item.id}
+                    draggable="true"
+                    onDragStart={(e) => handleDragStart(e, item)}
+                    onClick={() => { addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); }}
+                    className="group flex items-start gap-2 p-2.5 rounded-md border border-input bg-card hover:border-primary/40 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all"
+                    data-testid={`draggable-item-${item.id}`}
+                  >
+                    <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      {item.description && (
+                        <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-mono font-semibold text-primary">{item.price_net.toFixed(2)} €</span>
+                        <span className="text-[10px] text-muted-foreground">/ {item.unit}</span>
+                      </div>
+                    </div>
+                    <Plus className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary shrink-0 mt-0.5" />
+                  </div>
+                ))}
+                {(sidebarTab === "services" ? filteredServices : filteredArticles).length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-6">
+                    {sidebarSearch ? "Keine Ergebnisse" : `Keine ${sidebarTab === "services" ? "Leistungen" : "Artikel"} vorhanden`}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* === CENTER: Document === */}
+          <div>
+            {/* Mobile Side Tools (unchanged) */}
+            <div className="mb-3 lg:mb-4 flex gap-2 flex-wrap lg:hidden">
             <select
               value=""
               onChange={(e) => {
                 const service = services.find(s => s.id === e.target.value);
                 if (service) addFromStamm(service, true);
               }}
-              className="h-8 lg:h-9 rounded-sm border border-input bg-card px-2 lg:px-3 text-xs lg:text-sm flex-1 min-w-0 lg:flex-none"
+              className="h-8 rounded-sm border border-input bg-card px-2 text-xs flex-1 min-w-0"
             >
               <option value="">+ Leistung</option>
               {services.map(s => (
@@ -1038,18 +1160,21 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 const article = articles.find(a => a.id === e.target.value);
                 if (article) addFromStamm(article, false);
               }}
-              className="h-8 lg:h-9 rounded-sm border border-input bg-card px-2 lg:px-3 text-xs lg:text-sm flex-1 min-w-0 lg:flex-none"
+              className="h-8 rounded-sm border border-input bg-card px-2 text-xs flex-1 min-w-0"
             >
               <option value="">+ Artikel</option>
               {articles.map(a => (
                 <option key={a.id} value={a.id}>{a.name} ({a.price_net}€)</option>
               ))}
             </select>
+            </div>
+            {/* Status Dropdown (all screen sizes) */}
             {!isNew && (
+              <div className="mb-3 lg:mb-4">
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="h-9 rounded-sm border border-input bg-card px-3 text-sm"
+                className="h-8 lg:h-9 rounded-sm border border-input bg-card px-2 lg:px-3 text-xs lg:text-sm"
               >
                 {type === "quote" && (
                   <>
@@ -1075,11 +1200,17 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   </>
                 )}
               </select>
+              </div>
             )}
-          </div>
 
-          {/* Paper Document */}
-          <div className="bg-white shadow-xl rounded-sm border" style={{ minHeight: "600px" }}>
+          {/* Paper Document - Drop Zone */}
+          <div
+            className="bg-white shadow-xl rounded-sm border"
+            style={{ minHeight: "600px" }}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            data-testid="document-drop-zone"
+          >
             {/* Document Header */}
             <div className="p-4 lg:p-10 border-b">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -1319,6 +1450,150 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </div>
             )}
           </div>
+          </div>
+
+          {/* === RIGHT SIDEBAR: Kalkulation (Desktop only) === */}
+          <div className="hidden lg:block">
+            <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pl-1">
+
+              {/* Kalkulation Header */}
+              <div className="rounded-md border border-input bg-card overflow-hidden">
+                <button
+                  onClick={() => setKalkulationOpen(!kalkulationOpen)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                  data-testid="kalkulation-toggle"
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <Calculator className="w-4 h-4 text-primary" />
+                    Kalkulation
+                  </span>
+                  {kalkulationOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {kalkulationOpen && (() => {
+                  const kalk = calculateKalkulation();
+                  return (
+                    <div className="border-t p-3 space-y-3">
+                      {/* Revenue Summary */}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Erlöse</p>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Netto</span>
+                          <span className="font-mono font-medium">{subtotal.toFixed(2)} €</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">MwSt ({vatRate}%)</span>
+                          <span className="font-mono">{vat.toFixed(2)} €</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold border-t pt-1.5">
+                          <span>Brutto</span>
+                          <span className="font-mono">{total.toFixed(2)} €</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="h-px bg-border" />
+
+                      {/* Cost Calculation */}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          Kosten pro Position
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">EK-Preise eingeben für Margenberechnung</p>
+                        {positions.map((pos, idx) => pos.description && (
+                          <div key={idx} className="flex items-center gap-1.5 text-xs">
+                            <span className="text-muted-foreground w-5 shrink-0">{pos.pos_nr}.</span>
+                            <span className="truncate flex-1" title={pos.description}>
+                              {pos.description.substring(0, 20)}{pos.description.length > 20 ? "…" : ""}
+                            </span>
+                            <div className="flex items-center shrink-0">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="EK"
+                                value={costPrices[idx] || ""}
+                                onChange={(e) => updateCostPrice(idx, e.target.value)}
+                                className="w-16 h-6 border rounded px-1.5 text-xs text-right font-mono bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                                data-testid={`cost-price-${idx}`}
+                              />
+                              <span className="text-muted-foreground ml-0.5">€</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Margin Result */}
+                      {kalk.hasCosts && (
+                        <>
+                          <div className="h-px bg-border" />
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Ergebnis</p>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Erlöse (Netto)</span>
+                              <span className="font-mono">{kalk.revenue.toFixed(2)} €</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Kosten</span>
+                              <span className="font-mono text-red-600">-{kalk.costs.toFixed(2)} €</span>
+                            </div>
+                            <div className={`flex justify-between text-sm font-bold border-t pt-1.5 ${kalk.margin >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                              <span className="flex items-center gap-1">
+                                <TrendingUp className="w-3.5 h-3.5" />
+                                Marge
+                              </span>
+                              <span className="font-mono">{kalk.margin.toFixed(2)} €</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Marge in %</span>
+                              <span className={`font-mono font-semibold ${kalk.marginPercent >= 20 ? "text-emerald-600" : kalk.marginPercent >= 0 ? "text-amber-600" : "text-red-600"}`}>
+                                {kalk.marginPercent.toFixed(1)}%
+                              </span>
+                            </div>
+                            {/* Visual margin bar */}
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${kalk.marginPercent >= 20 ? "bg-emerald-500" : kalk.marginPercent >= 0 ? "bg-amber-500" : "bg-red-500"}`}
+                                style={{ width: `${Math.min(Math.max(kalk.marginPercent, 0), 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {!kalk.hasCosts && (
+                        <div className="text-xs text-muted-foreground bg-slate-50 rounded-md p-2.5 text-center">
+                          Tragen Sie EK-Preise ein, um die Marge zu berechnen
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Quick Info */}
+              <div className="rounded-md border border-input bg-card p-3 space-y-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Übersicht</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-slate-50 rounded-md p-2 text-center">
+                    <p className="text-lg font-bold font-mono text-primary">{positions.filter(p => p.description).length}</p>
+                    <p className="text-[10px] text-muted-foreground">Positionen</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-md p-2 text-center">
+                    <p className="text-lg font-bold font-mono text-primary">{total.toFixed(0)}€</p>
+                    <p className="text-[10px] text-muted-foreground">Brutto</p>
+                  </div>
+                </div>
+                {customer && (
+                  <div className="bg-slate-50 rounded-md p-2">
+                    <p className="text-[10px] text-muted-foreground">Kunde</p>
+                    <p className="text-sm font-medium truncate">{customer.name}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
