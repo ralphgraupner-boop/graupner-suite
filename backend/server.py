@@ -81,6 +81,8 @@ class TokenResponse(BaseModel):
     token: str
     username: str
 
+CATEGORIES = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"]
+
 class Customer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -90,6 +92,7 @@ class Customer(BaseModel):
     notes: str = ""
     photos: List[str] = []
     customer_type: str = "Privat"  # Privat, Vermieter, Mieter, Gewerblich, Hausverwaltung
+    categories: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CustomerCreate(BaseModel):
@@ -100,6 +103,23 @@ class CustomerCreate(BaseModel):
     notes: str = ""
     photos: List[str] = []
     customer_type: str = "Privat"
+    categories: List[str] = []
+
+class Anfrage(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: str = ""
+    notes: str = ""
+    photos: List[str] = []
+    categories: List[str] = []
+    customer_type: str = "Privat"
+    firma: Optional[str] = None
+    source: str = "kontaktformular"
+    obj_address: str = ""
+    nachricht: str = ""
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Article(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -966,17 +986,31 @@ async def webhook_contact(contact: WebhookContact):
     }
     customer_type = rolle_map.get(contact.rolle, "Privat")
 
-    customer = Customer(
+    # Build object address
+    obj_addr_str = ""
+    if contact.objstrasse:
+        obj_addr_str = contact.objstrasse
+        if contact.objplz or contact.objstadt:
+            obj_addr_str += f", {contact.objplz or ''} {contact.objstadt or ''}".strip()
+        if contact.objvorname or contact.objnachname:
+            obj_addr_str += f" (Kontakt: {contact.objvorname or ''} {contact.objnachname or ''})".strip()
+
+    anfrage = Anfrage(
         name=name,
         email=contact.email or "",
         phone=contact.telefon or contact.phone or "",
         address=address,
         notes="\n".join(notes_parts),
         photos=contact.photos,
-        customer_type=customer_type
+        categories=contact.topics or [],
+        customer_type=customer_type,
+        firma=contact.firma or "",
+        source="webhook",
+        obj_address=obj_addr_str,
+        nachricht=contact.nachricht or contact.message or ""
     )
-    await db.customers.insert_one(customer.model_dump())
-    logger.info(f"Neue Kundenanfrage über Webhook: {name} ({customer_type})")
+    await db.anfragen.insert_one(anfrage.model_dump())
+    logger.info(f"Neue Anfrage über Webhook: {name} ({customer_type})")
 
     # Build push message
     push_body = f"{name}"
@@ -986,12 +1020,12 @@ async def webhook_contact(contact: WebhookContact):
         push_body += f": {msg[:80]}"
 
     await send_push_to_all(
-        title="Neue Kundenanfrage",
+        title="Neue Anfrage",
         body=push_body,
-        url="/customers"
+        url="/anfragen"
     )
 
-    return {"message": "Anfrage erfolgreich empfangen", "customer_id": customer.id}
+    return {"message": "Anfrage erfolgreich empfangen", "anfrage_id": anfrage.id}
 
 @api_router.get("/webhook/contact-beacon")
 async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str = "", phone: str = ""):
@@ -1008,20 +1042,21 @@ async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str
     if msg:
         notes_parts.append(f"Nachricht: {msg}")
 
-    customer = Customer(
+    anfrage = Anfrage(
         name=name,
         email=email,
         phone=phone,
         notes="\n".join(notes_parts),
-        customer_type="Privat"
+        source="beacon",
+        nachricht=msg or ""
     )
-    await db.customers.insert_one(customer.model_dump())
-    logger.info(f"Neue Kundenanfrage über Beacon-Webhook: {name}")
+    await db.anfragen.insert_one(anfrage.model_dump())
+    logger.info(f"Neue Anfrage über Beacon-Webhook: {name}")
 
     push_body = f"{name}"
     if msg:
         push_body += f": {msg[:80]}"
-    await send_push_to_all(title="Neue Kundenanfrage", body=push_body, url="/customers")
+    await send_push_to_all(title="Neue Anfrage", body=push_body, url="/anfragen")
 
     # Return 1x1 transparent GIF
     pixel = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
@@ -1136,15 +1171,11 @@ Kontaktdaten als Objektadresse &uuml;bernehmen
 <div class="card">
 <h2>Was wird ben&ouml;tigt?</h2>
 <div class="topic-grid">
+<label><input type="checkbox" name="topic[]" value="Schiebet&uuml;r">Schiebet&uuml;r</label>
 <label><input type="checkbox" name="topic[]" value="Fenster">Fenster</label>
-<label><input type="checkbox" name="topic[]" value="Balkont&uuml;r">Balkont&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Terrassent&uuml;r">Terrassent&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Schiebet&uuml;r Balon">Schiebet&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Zimmert&uuml;r">Zimmert&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Wohnungst&uuml;r">Wohnungst&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Schrank">Schrank</label>
-<label><input type="checkbox" name="topic[]" value="Boden">Boden</label>
-<label><input type="checkbox" name="topic[]" value="Sonstiges">Sonstiges</label>
+<label><input type="checkbox" name="topic[]" value="Innent&uuml;r">Innent&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Eingangst&uuml;r">Eingangst&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Sonstige Reparaturen">Sonstige Reparaturen</label>
 </div>
 </div>
 
@@ -1237,21 +1268,26 @@ async def kontakt_relay(request: Request):
         rolle_map = {"Eigentümer/Vermieter": "Vermieter", "Hausverwaltung": "Hausverwaltung", "Mieter": "Mieter", "Interessent Tischlerarbeiten": "Privat"}
         customer_type = rolle_map.get(form_dict.get("rolle", ""), "Privat")
         
-        customer = Customer(
+        anfrage = Anfrage(
             name=name,
             email=form_dict.get("email", ""),
             phone=form_dict.get("telefon", ""),
             address=address,
             notes="\n".join(notes_parts),
-            customer_type=customer_type
+            categories=topics,
+            customer_type=customer_type,
+            firma=form_dict.get("firma", ""),
+            source="kontaktformular",
+            obj_address=obj_addr,
+            nachricht=form_dict.get("nachricht", "")
         )
-        await db.customers.insert_one(customer.model_dump())
-        logger.info(f"Neue Kundenanfrage über Kontaktformular-Relay: {name}")
+        await db.anfragen.insert_one(anfrage.model_dump())
+        logger.info(f"Neue Anfrage über Kontaktformular-Relay: {name}")
         
         push_body = f"{name}"
         if topics:
             push_body += f" ({', '.join(topics[:2])})"
-        await send_push_to_all(title="Neue Kundenanfrage", body=push_body, url="/customers")
+        await send_push_to_all(title="Neue Anfrage", body=push_body, url="/anfragen")
     except Exception as e:
         logger.error(f"Fehler beim Speichern in Graupner Suite: {e}")
     
@@ -1787,6 +1823,46 @@ async def send_email(request: EmailRequest):
 
 # ==================== DASHBOARD ====================
 
+@api_router.get("/anfragen")
+async def list_anfragen(category: str = "", user=Depends(get_current_user)):
+    """Alle Anfragen auflisten, optional nach Kategorie filtern"""
+    query = {}
+    if category:
+        query["categories"] = category
+    anfragen = await db.anfragen.find(query, {"_id": 0}).to_list(1000)
+    anfragen.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return anfragen
+
+@api_router.delete("/anfragen/{anfrage_id}")
+async def delete_anfrage(anfrage_id: str, user=Depends(get_current_user)):
+    """Anfrage löschen/ablehnen"""
+    result = await db.anfragen.delete_one({"id": anfrage_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    return {"message": "Anfrage gelöscht"}
+
+@api_router.post("/anfragen/{anfrage_id}/convert")
+async def convert_anfrage(anfrage_id: str, user=Depends(get_current_user)):
+    """Anfrage in Kunde umwandeln"""
+    anfrage = await db.anfragen.find_one({"id": anfrage_id}, {"_id": 0})
+    if not anfrage:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    
+    customer = Customer(
+        name=anfrage.get("name", "Unbekannt"),
+        email=anfrage.get("email", ""),
+        phone=anfrage.get("phone", ""),
+        address=anfrage.get("address", ""),
+        notes=anfrage.get("notes", ""),
+        photos=anfrage.get("photos", []),
+        customer_type=anfrage.get("customer_type", "Privat"),
+        categories=anfrage.get("categories", [])
+    )
+    await db.customers.insert_one(customer.model_dump())
+    await db.anfragen.delete_one({"id": anfrage_id})
+    
+    return {"message": "Anfrage in Kunde umgewandelt", "customer_id": customer.id}
+
 @api_router.get("/dashboard/stats")
 async def get_dashboard_stats():
     """Dashboard-Statistiken"""
@@ -1802,6 +1878,19 @@ async def get_dashboard_stats():
     total_quotes_value = sum(q.get("total_gross", 0) for q in quotes)
     total_invoices_value = sum(i.get("total_gross", 0) for i in invoices)
     paid_invoices_value = sum(i.get("total_gross", 0) for i in invoices if i.get("status") == "Bezahlt")
+    
+    # Anfragen stats
+    anfragen = await db.anfragen.find({}, {"_id": 0}).to_list(1000)
+    anfragen_by_category = {}
+    for cat in CATEGORIES:
+        anfragen_by_category[cat] = 0
+    for a in anfragen:
+        for cat in a.get("categories", []):
+            if cat in anfragen_by_category:
+                anfragen_by_category[cat] += 1
+    
+    # Recent anfragen (last 5)
+    recent_anfragen = sorted(anfragen, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
     
     return {
         "customers_count": customers,
@@ -1819,6 +1908,11 @@ async def get_dashboard_stats():
             "unpaid": unpaid_invoices,
             "total_value": round(total_invoices_value, 2),
             "paid_value": round(paid_invoices_value, 2)
+        },
+        "anfragen": {
+            "total": len(anfragen),
+            "by_category": anfragen_by_category,
+            "recent": recent_anfragen
         }
     }
 

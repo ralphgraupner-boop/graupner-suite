@@ -9,7 +9,7 @@ import {
   ChevronRight, Euro, TrendingUp, Clock, CheckCircle, Search, X, Save,
   Wrench, Printer, Eye, ArrowLeft, Menu, Bell, BellOff, Copy, ExternalLink,
   Code, Globe, Send, GripVertical, Calculator, Percent, ChevronDown, ChevronUp,
-  Bookmark, BookmarkCheck, FileSearch
+  Bookmark, BookmarkCheck, FileSearch, Inbox, UserCheck, Filter
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -1804,6 +1804,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 // ==================== NAVIGATION ====================
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/anfragen", icon: Inbox, label: "Anfragen" },
   { path: "/customers", icon: Users, label: "Kunden" },
   { path: "/quotes", icon: FileText, label: "Angebote" },
   { path: "/orders", icon: ClipboardCheck, label: "Aufträge" },
@@ -1816,9 +1817,9 @@ const navItems = [
 
 const mobileTabItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Home" },
+  { path: "/anfragen", icon: Inbox, label: "Anfragen" },
   { path: "/customers", icon: Users, label: "Kunden" },
   { path: "/quotes", icon: FileText, label: "Angebote" },
-  { path: "/invoices", icon: Receipt, label: "Rechnungen" },
 ];
 
 const Sidebar = ({ onLogout }) => {
@@ -2092,7 +2093,12 @@ const DashboardPage = () => {
         <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">Übersicht Ihrer Geschäftstätigkeit</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
+        <StatCard
+          title="Neue Anfragen"
+          value={stats?.anfragen?.total || 0}
+          icon={Inbox}
+        />
         <StatCard
           title="Kunden"
           value={stats?.customers_count || 0}
@@ -2118,7 +2124,59 @@ const DashboardPage = () => {
         />
       </div>
 
+      {/* Anfragen nach Kategorie */}
+      {stats?.anfragen?.total > 0 && (
+        <Card className="p-6 mb-6" data-testid="dashboard-anfragen-categories">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Filter className="w-5 h-5 text-primary" />
+            Anfragen nach Kategorie
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {Object.entries(stats?.anfragen?.by_category || {}).map(([cat, count]) => (
+              <div key={cat} className="flex items-center justify-between p-3 bg-muted/50 rounded-sm">
+                <span className="text-sm font-medium truncate mr-2">{cat}</span>
+                <span className="text-lg font-bold font-mono text-primary">{count}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Neue Anfragen Widget */}
+        <Card className="p-6" data-testid="dashboard-recent-anfragen">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Inbox className="w-5 h-5 text-primary" />
+            Letzte Anfragen
+          </h3>
+          {(stats?.anfragen?.recent || []).length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4 text-center">Keine Anfragen vorhanden</p>
+          ) : (
+            <div className="space-y-3">
+              {(stats?.anfragen?.recent || []).map((a) => (
+                <div key={a.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-sm border">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{a.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {(a.categories || []).map((c) => (
+                        <span key={c} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground ml-2 shrink-0">
+                    {new Date(a.created_at).toLocaleDateString("de-DE")}
+                  </span>
+                </div>
+              ))}
+              <Link to="/anfragen">
+                <Button variant="ghost" size="sm" className="w-full mt-2">
+                  Alle Anfragen anzeigen <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          )}
+        </Card>
+
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Euro className="w-5 h-5 text-primary" />
@@ -2170,10 +2228,10 @@ const DashboardPage = () => {
                 Neue Rechnung
               </Button>
             </Link>
-            <Link to="/articles" data-testid="quick-articles">
+            <Link to="/anfragen" data-testid="quick-anfragen">
               <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
-                <Package className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
-                Artikelstamm
+                <Inbox className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
+                Anfragen
               </Button>
             </Link>
           </div>
@@ -2183,11 +2241,201 @@ const DashboardPage = () => {
   );
 };
 
+// ==================== ANFRAGEN ====================
+const CATEGORIES = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"];
+
+const AnfragenPage = () => {
+  const [anfragen, setAnfragen] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    loadAnfragen();
+  }, [activeCategory]);
+
+  const loadAnfragen = async () => {
+    try {
+      const params = activeCategory ? { category: activeCategory } : {};
+      const res = await api.get("/anfragen", { params });
+      setAnfragen(res.data);
+    } catch (err) {
+      toast.error("Fehler beim Laden der Anfragen");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConvert = async (id) => {
+    try {
+      await api.post(`/anfragen/${id}/convert`);
+      toast.success("Anfrage wurde in Kunde umgewandelt");
+      loadAnfragen();
+    } catch (err) {
+      toast.error("Fehler beim Umwandeln");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Anfrage wirklich löschen?")) return;
+    try {
+      await api.delete(`/anfragen/${id}`);
+      toast.success("Anfrage gelöscht");
+      loadAnfragen();
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
+  const filtered = anfragen.filter(
+    (a) =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      (a.email || "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.nachricht || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div data-testid="anfragen-page">
+      <div className="flex items-center justify-between mb-4 lg:mb-8">
+        <div>
+          <h1 className="text-2xl lg:text-4xl font-bold">Anfragen</h1>
+          <p className="text-muted-foreground mt-1 text-sm lg:text-base">{anfragen.length} Anfragen gesamt</p>
+        </div>
+      </div>
+
+      {/* Category filter pills */}
+      <div className="flex flex-wrap gap-2 mb-4" data-testid="anfragen-category-filter">
+        <button
+          onClick={() => { setActiveCategory(""); setLoading(true); }}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+            !activeCategory
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+          data-testid="filter-all"
+        >
+          Alle ({anfragen.length})
+        </button>
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => { setActiveCategory(cat); setLoading(true); }}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              activeCategory === cat
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+            data-testid={`filter-${cat.toLowerCase().replace(/\s+/g, '-')}`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <Card className="p-3 lg:p-4 mb-4 lg:mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground" />
+          <Input
+            data-testid="input-search-anfragen"
+            className="pl-9 lg:pl-10 h-9 lg:h-10"
+            placeholder="Anfragen durchsuchen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </Card>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="p-8 lg:p-12 text-center">
+          <Inbox className="w-10 h-10 lg:w-12 lg:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base lg:text-lg font-semibold">Keine Anfragen vorhanden</h3>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {search || activeCategory ? "Keine Ergebnisse für diesen Filter" : "Neue Anfragen erscheinen hier automatisch"}
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((anfrage) => (
+            <Card key={anfrage.id} className="p-4 lg:p-5" data-testid={`anfrage-card-${anfrage.id}`}>
+              <div className="flex items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-base">{anfrage.name}</h3>
+                    {anfrage.firma && (
+                      <Badge variant="info" className="text-xs">{anfrage.firma}</Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+
+                  {/* Categories */}
+                  {(anfrage.categories || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {anfrage.categories.map((cat) => (
+                        <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Contact details */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+                    {anfrage.email && <span>{anfrage.email}</span>}
+                    {anfrage.phone && <span>{anfrage.phone}</span>}
+                    {anfrage.address && <span>{anfrage.address}</span>}
+                  </div>
+
+                  {/* Message */}
+                  {anfrage.nachricht && (
+                    <p className="mt-2 text-sm bg-muted/50 p-3 rounded-sm line-clamp-3">{anfrage.nachricht}</p>
+                  )}
+
+                  {/* Object address */}
+                  {anfrage.obj_address && (
+                    <p className="mt-1 text-xs text-muted-foreground">Objektadresse: {anfrage.obj_address}</p>
+                  )}
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    onClick={() => handleConvert(anfrage.id)}
+                    data-testid={`btn-convert-${anfrage.id}`}
+                    className="p-2.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-sm transition-colors"
+                    title="Als Kunde übernehmen"
+                  >
+                    <UserCheck className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(anfrage.id)}
+                    data-testid={`btn-delete-anfrage-${anfrage.id}`}
+                    className="p-2.5 hover:bg-destructive/10 hover:text-destructive rounded-sm transition-colors"
+                    title="Anfrage löschen"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ==================== CUSTOMERS ====================
 const CustomersPage = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editCustomer, setEditCustomer] = useState(null);
   const navigate = useNavigate();
@@ -2220,8 +2468,9 @@ const CustomersPage = () => {
 
   const filtered = customers.filter(
     (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email?.toLowerCase().includes(search.toLowerCase())
+      (c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.email?.toLowerCase().includes(search.toLowerCase())) &&
+      (!categoryFilter || (c.categories || []).includes(categoryFilter))
   );
 
   return (
@@ -2259,6 +2508,33 @@ const CustomersPage = () => {
         </div>
       </Card>
 
+      {/* Category filter pills */}
+      <div className="flex flex-wrap gap-2 mb-4" data-testid="customers-category-filter">
+        <button
+          onClick={() => setCategoryFilter("")}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+            !categoryFilter
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          Alle
+        </button>
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              categoryFilter === cat
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -2288,6 +2564,13 @@ const CustomersPage = () => {
                   )}
                   {customer.phone && (
                     <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                  )}
+                  {(customer.categories || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {customer.categories.map((cat) => (
+                        <span key={cat} className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div className="flex gap-2 ml-4">
@@ -2349,7 +2632,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
     phone: "",
     address: "",
     notes: "",
-    customer_type: "Privat"
+    customer_type: "Privat",
+    categories: []
   });
   const [loading, setLoading] = useState(false);
 
@@ -2361,10 +2645,11 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
         phone: customer.phone || "",
         address: customer.address || "",
         notes: customer.notes || "",
-        customer_type: customer.customer_type || "Privat"
+        customer_type: customer.customer_type || "Privat",
+        categories: customer.categories || []
       });
     } else {
-      setForm({ name: "", email: "", phone: "", address: "", notes: "", customer_type: "Privat" });
+      setForm({ name: "", email: "", phone: "", address: "", notes: "", customer_type: "Privat", categories: [] });
     }
   }, [customer]);
 
@@ -2434,6 +2719,30 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Kategorien</label>
+          <div className="flex flex-wrap gap-2" data-testid="customer-categories">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => {
+                  const cats = form.categories.includes(cat)
+                    ? form.categories.filter(c => c !== cat)
+                    : [...form.categories, cat];
+                  setForm({ ...form, categories: cats });
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                  form.categories.includes(cat)
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-input hover:border-primary/50"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
         <div>
@@ -5166,6 +5475,14 @@ function App() {
                 element={
                   <MainLayout onLogout={logout}>
                     <CustomersPage />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/anfragen"
+                element={
+                  <MainLayout onLogout={logout}>
+                    <AnfragenPage />
                   </MainLayout>
                 }
               />
