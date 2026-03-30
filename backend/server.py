@@ -981,6 +981,40 @@ async def webhook_contact(contact: WebhookContact):
 
     return {"message": "Anfrage erfolgreich empfangen", "customer_id": customer.id}
 
+@api_router.get("/webhook/contact-beacon")
+async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str = "", phone: str = ""):
+    """GET-Webhook als Bild-Beacon (umgeht CORS-Blockierung bei IONOS u.a.)"""
+    if not name:
+        # 1x1 transparent pixel
+        pixel = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+        return StreamingResponse(BytesIO(pixel), media_type="image/gif")
+
+    contact = WebhookContact(name=name, nachricht=nachricht, email=email, phone=phone)
+    # Reuse existing webhook logic
+    msg = contact.nachricht or contact.message
+    notes_parts = []
+    if msg:
+        notes_parts.append(f"Nachricht: {msg}")
+
+    customer = Customer(
+        name=name,
+        email=email,
+        phone=phone,
+        notes="\n".join(notes_parts),
+        customer_type="Privat"
+    )
+    await db.customers.insert_one(customer.model_dump())
+    logger.info(f"Neue Kundenanfrage über Beacon-Webhook: {name}")
+
+    push_body = f"{name}"
+    if msg:
+        push_body += f": {msg[:80]}"
+    await send_push_to_all(title="Neue Kundenanfrage", body=push_body, url="/customers")
+
+    # Return 1x1 transparent GIF
+    pixel = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+    return StreamingResponse(BytesIO(pixel), media_type="image/gif")
+
 # ==================== SPEECH TO TEXT ====================
 
 @api_router.post("/speech-to-text")

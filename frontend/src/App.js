@@ -4322,6 +4322,8 @@ curl_exec($ch);
 curl_close($ch);
 ?>`;
 
+  const beaconUrl = `${BACKEND_URL}/api/webhook/contact-beacon`;
+
   const ionosSnippet = `<script>
 // === Graupner Suite: IONOS Website-Builder Integration ===
 // Dieses Script in IONOS unter "Website > Einstellungen > Head-HTML" einfuegen
@@ -4341,15 +4343,13 @@ curl_close($ch);
       sent = true;
       setTimeout(function() { sent = false; }, 5000);
 
-      fetch("${webhookUrl}", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name, nachricht: nachricht }),
-        keepalive: true
-      }).catch(function() {});
+      // Bild-Beacon: funktioniert OHNE CORS, wird nie blockiert
+      var img = new Image();
+      img.src = "${beaconUrl}"
+        + "?name=" + encodeURIComponent(name)
+        + "&nachricht=" + encodeURIComponent(nachricht);
     }
 
-    // Beide Events abfangen (Go-X faengt manchmal submit ab)
     form.addEventListener('submit', sendToGraupner);
     var btn = form.querySelector('button[type="submit"]');
     if (btn) btn.addEventListener('click', sendToGraupner);
