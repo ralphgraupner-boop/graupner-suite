@@ -1047,32 +1047,37 @@ async def kontakt_form_page():
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8f9fa;color:#1a1a2e;line-height:1.6}}
-.header{{background:#1a1a2e;color:#fff;padding:24px 0;text-align:center}}
-.header h1{{font-size:22px;font-weight:600;letter-spacing:0.5px}}
-.header p{{font-size:14px;opacity:0.7;margin-top:4px}}
-.container{{max-width:800px;margin:32px auto;padding:0 16px}}
-.card{{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);padding:32px;margin-bottom:24px}}
-.card h2{{font-size:17px;font-weight:600;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #e8e8e8;color:#1a1a2e}}
-.row{{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}}
-.field{{flex:1;min-width:200px}}
-.field.full{{min-width:100%;flex-basis:100%}}
-label{{display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:#555}}
-input[type=text],input[type=email],input[type=tel],textarea,select{{width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;transition:border-color 0.2s}}
-input:focus,textarea:focus,select:focus{{outline:none;border-color:#1a1a2e;box-shadow:0 0 0 3px rgba(26,26,46,0.1)}}
-textarea{{resize:vertical;min-height:100px}}
-.radio-group{{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}}
-.radio-group label{{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s}}
-.radio-group input:checked+span{{color:#1a1a2e;font-weight:600}}
+.header{{background:#1a1a2e;color:#fff;padding:20px 0;text-align:center}}
+.header h1{{font-size:20px;font-weight:600}}
+.header p{{font-size:13px;opacity:0.7;margin-top:2px}}
+.container{{max-width:640px;margin:24px auto;padding:0 16px}}
+.card{{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:24px;margin-bottom:16px}}
+.card h2{{font-size:15px;font-weight:600;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid #eee;color:#1a1a2e}}
+.row{{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}}
+.field{{flex:1;min-width:160px}}
+label{{display:block;font-size:12px;font-weight:500;margin-bottom:3px;color:#555}}
+input[type=text],input[type=email],input[type=tel],textarea{{width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;transition:border-color 0.2s}}
+input:focus,textarea:focus{{outline:none;border-color:#1a1a2e;box-shadow:0 0 0 3px rgba(26,26,46,0.08)}}
+textarea{{resize:vertical;min-height:80px}}
+.radio-group{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}}
+.radio-group label{{display:flex;align-items:center;gap:5px;padding:7px 12px;border:1.5px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s}}
 .radio-group label:has(input:checked){{border-color:#1a1a2e;background:#f0f0ff}}
-.checkbox-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}}
-.checkbox-grid label{{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s}}
-.checkbox-grid label:has(input:checked){{border-color:#1a1a2e;background:#f0f0ff}}
-.section-label{{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#888;font-weight:600;margin:8px 0}}
-.btn{{display:block;width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:background 0.2s;letter-spacing:0.5px}}
+.topic-grid{{display:flex;flex-wrap:wrap;gap:6px}}
+.topic-grid label{{display:flex;align-items:center;gap:5px;padding:6px 10px;border:1.5px solid #ddd;border-radius:20px;cursor:pointer;font-size:12px;transition:all 0.2s;white-space:nowrap}}
+.topic-grid label:has(input:checked){{border-color:#1a1a2e;background:#1a1a2e;color:#fff}}
+.topic-grid input{{display:none}}
+.copy-check{{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f4ff;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:12px;border:1.5px solid transparent;transition:all 0.2s}}
+.copy-check:has(input:checked){{border-color:#1a1a2e;background:#e8ecff}}
+.copy-check input{{width:16px;height:16px}}
+.obj-fields{{transition:opacity 0.3s;}}
+.btn{{display:block;width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s}}
 .btn:hover{{background:#2a2a4e}}
 .required::after{{content:" *";color:#e74c3c}}
-.file-info{{font-size:12px;color:#888;margin-top:4px}}
-input[type=file]{{padding:8px;font-size:13px}}
+.privacy{{display:flex;align-items:start;gap:10px;padding:14px 16px;background:#fff;border-radius:10px;border:1.5px solid #ddd;cursor:pointer;font-size:14px;margin-bottom:16px}}
+.privacy input{{width:20px;height:20px;margin-top:1px;flex-shrink:0;cursor:pointer}}
+.file-info{{font-size:11px;color:#888;margin-top:3px}}
+input[type=file]{{padding:7px;font-size:13px}}
+.hidden{{display:none}}
 </style>
 </head>
 <body>
@@ -1082,108 +1087,101 @@ input[type=file]{{padding:8px;font-size:13px}}
 </div>
 <div class="container">
 <form action="{backend_url}/api/kontakt/submit" method="POST" enctype="multipart/form-data">
-
-<div class="card">
-<h2>Ihre Rolle</h2>
-<div class="radio-group">
-<label><input type="radio" name="rolle" value="Eigentümer/Vermieter"><span>Eigent&uuml;mer / Vermieter</span></label>
-<label><input type="radio" name="rolle" value="Hausverwaltung"><span>Hausverwaltung</span></label>
-<label><input type="radio" name="rolle" value="Mieter"><span>Mieter</span></label>
-<label><input type="radio" name="rolle" value="Interessent Tischlerarbeiten"><span>Interessent Tischlerarbeiten</span></label>
-</div>
-</div>
+<input type="hidden" name="rolle" value="Eigent&uuml;mer/Vermieter">
 
 <div class="card">
 <h2>Kontaktdaten</h2>
-<div class="radio-group" style="margin-bottom:16px">
+<div class="radio-group">
 <label><input type="radio" name="anrede" value="Herr"><span>Herr</span></label>
 <label><input type="radio" name="anrede" value="Frau"><span>Frau</span></label>
 </div>
 <div class="row">
-<div class="field"><label>Vorname</label><input type="text" name="vorname"></div>
-<div class="field"><label class="required">Nachname</label><input type="text" name="nachname" required></div>
+<div class="field"><label>Vorname</label><input type="text" name="vorname" id="k_vorname"></div>
+<div class="field"><label class="required">Nachname</label><input type="text" name="nachname" id="k_nachname" required></div>
 </div>
 <div class="row">
 <div class="field"><label>Firma</label><input type="text" name="firma"></div>
-<div class="field"><label class="required">Telefon</label><input type="tel" name="telefon" required></div>
+<div class="field"><label class="required">Telefon</label><input type="tel" name="telefon" id="k_telefon" required></div>
 </div>
 <div class="row">
 <div class="field"><label class="required">E-Mail</label><input type="email" name="email" required></div>
-<div class="field"><label>Website</label><input type="text" name="website"></div>
 </div>
 <div class="row">
-<div class="field"><label class="required">Stra&szlig;e, Nr.</label><input type="text" name="strasse" required></div>
-<div class="field" style="max-width:120px"><label class="required">PLZ</label><input type="text" name="plz" required></div>
-<div class="field"><label class="required">Stadt</label><input type="text" name="stadt" required></div>
+<div class="field"><label class="required">Stra&szlig;e, Nr.</label><input type="text" name="strasse" id="k_strasse" required></div>
+<div class="field" style="max-width:100px"><label class="required">PLZ</label><input type="text" name="plz" id="k_plz" required></div>
+<div class="field"><label class="required">Stadt</label><input type="text" name="stadt" id="k_stadt" required></div>
 </div>
 </div>
 
 <div class="card">
-<h2>Objektadresse <span style="font-weight:400;font-size:13px;color:#888">(falls abweichend)</span></h2>
+<h2>Objektadresse</h2>
+<label class="copy-check">
+<input type="checkbox" id="copyAddr" onchange="toggleCopy()">
+Kontaktdaten als Objektadresse &uuml;bernehmen
+</label>
+<div class="obj-fields" id="objFields">
 <div class="row">
-<div class="field"><label>Projekt-Nr.</label><input type="text" name="objprojektnr"></div>
+<div class="field"><label>Vorname</label><input type="text" name="objvorname" id="o_vorname"></div>
+<div class="field"><label>Nachname</label><input type="text" name="objnachname" id="o_nachname"></div>
+<div class="field"><label>Telefon</label><input type="tel" name="objtelefon" id="o_telefon"></div>
 </div>
 <div class="row">
-<div class="field"><label>Anrede</label><input type="text" name="objanrede"></div>
-<div class="field"><label>Vorname</label><input type="text" name="objvorname"></div>
-<div class="field"><label>Nachname</label><input type="text" name="objnachname"></div>
+<div class="field"><label>Stra&szlig;e</label><input type="text" name="objstrasse" id="o_strasse"></div>
+<div class="field" style="max-width:100px"><label>PLZ</label><input type="text" name="objplz" id="o_plz"></div>
+<div class="field"><label>Stadt</label><input type="text" name="objstadt" id="o_stadt"></div>
 </div>
-<div class="row">
-<div class="field"><label>Telefon</label><input type="tel" name="objtelefon"></div>
-<div class="field"><label>E-Mail</label><input type="email" name="objemail"></div>
-</div>
-<div class="row">
-<div class="field"><label>Stra&szlig;e</label><input type="text" name="objstrasse"></div>
-<div class="field" style="max-width:120px"><label>PLZ</label><input type="text" name="objplz"></div>
-<div class="field"><label>Stadt</label><input type="text" name="objstadt"></div>
 </div>
 </div>
 
 <div class="card">
-<h2>Themen</h2>
-<p class="section-label">Au&szlig;enbereich</p>
-<div class="checkbox-grid" style="margin-bottom:16px">
-<label><input type="checkbox" name="topic[]" value="Fenster"> Fenster</label>
-<label><input type="checkbox" name="topic[]" value="Balkontür"> Balkont&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Terrassentür"> Terrassent&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Schiebetür Balon"> Schiebet&uuml;r Balkon</label>
-<label><input type="checkbox" name="topic[]" value="Schiebetür Terrasse"> Schiebet&uuml;r Terrasse</label>
-<label><input type="checkbox" name="topic[]" value="Sonstiges Außen"> Sonstiges</label>
-</div>
-<p class="section-label">Innenbereich</p>
-<div class="checkbox-grid">
-<label><input type="checkbox" name="topic[]" value="Zimmertür"> Zimmert&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Wohnungstür"> Wohnungst&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Schiebetür"> Schiebet&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Schrank"> Schrank</label>
-<label><input type="checkbox" name="topic[]" value="Boden"> Boden</label>
-<label><input type="checkbox" name="topic[]" value="Sonstige Innen"> Sonstige</label>
+<h2>Was wird ben&ouml;tigt?</h2>
+<div class="topic-grid">
+<label><input type="checkbox" name="topic[]" value="Fenster">Fenster</label>
+<label><input type="checkbox" name="topic[]" value="Balkont&uuml;r">Balkont&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Terrassent&uuml;r">Terrassent&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Schiebet&uuml;r Balon">Schiebet&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Zimmert&uuml;r">Zimmert&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Wohnungst&uuml;r">Wohnungst&uuml;r</label>
+<label><input type="checkbox" name="topic[]" value="Schrank">Schrank</label>
+<label><input type="checkbox" name="topic[]" value="Boden">Boden</label>
+<label><input type="checkbox" name="topic[]" value="Sonstiges">Sonstiges</label>
 </div>
 </div>
 
 <div class="card">
-<h2>Ihre Nachricht</h2>
-<div class="field full">
-<textarea name="nachricht" placeholder="Beschreiben Sie Ihr Anliegen..." rows="5"></textarea>
-</div>
-<div class="field full" style="margin-top:12px">
+<h2>Nachricht &amp; Bilder</h2>
+<textarea name="nachricht" placeholder="Beschreiben Sie Ihr Anliegen..." rows="4"></textarea>
+<div style="margin-top:10px">
 <label>Bilder hochladen</label>
 <input type="file" name="upload_file1" accept="image/*" multiple>
-<p class="file-info">Optional: Fotos vom Objekt (max. 5 MB pro Datei)</p>
+<p class="file-info">Optional: Fotos vom Objekt (max. 50 MB)</p>
 </div>
 </div>
 
-<div style="margin-top:16px;margin-bottom:16px;">
-<label style="display:flex;align-items:start;gap:8px;font-size:13px;cursor:pointer;">
-<input type="checkbox" name="dataprivacy" required style="margin-top:3px;">
-<span>Es gilt die <a href="https://www.tischlerei-graupner.de/j/privacy" target="_blank" style="color:#1a1a2e;text-decoration:underline;">Datenschutzerkl&auml;rung</a>.</span>
+<label class="privacy">
+<input type="checkbox" name="dataprivacy" required>
+<span>Ich habe die <a href="https://www.tischlerei-graupner.de/j/privacy" target="_blank" style="color:#1a1a2e;font-weight:600;text-decoration:underline;">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.</span>
 </label>
-</div>
 
 <button type="submit" class="btn">Anfrage absenden</button>
-<p style="text-align:center;font-size:12px;color:#888;margin-top:12px">Ihre Daten werden sicher &uuml;bertragen und vertraulich behandelt.</p>
 </form>
 </div>
+
+<script>
+function toggleCopy(){{
+  var c=document.getElementById('copyAddr').checked;
+  var pairs=[['k_vorname','o_vorname'],['k_nachname','o_nachname'],['k_telefon','o_telefon'],['k_strasse','o_strasse'],['k_plz','o_plz'],['k_stadt','o_stadt']];
+  var fields=document.getElementById('objFields');
+  if(c){{
+    pairs.forEach(function(p){{document.getElementById(p[1]).value=document.getElementById(p[0]).value;}});
+    fields.style.opacity='0.4';
+    fields.querySelectorAll('input').forEach(function(i){{i.readOnly=true;}});
+  }}else{{
+    fields.style.opacity='1';
+    fields.querySelectorAll('input').forEach(function(i){{i.readOnly=false;}});
+  }}
+}}
+</script>
 </body>
 </html>""")
 
