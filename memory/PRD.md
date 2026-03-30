@@ -14,163 +14,71 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 
 ## Core Requirements (Static)
 - [x] Passwortgeschützter Zugang (JWT Auth)
-- [x] Kundenmanagement (CRUD) mit Kundentyp
+- [x] Kundenmanagement (CRUD) mit Kundentyp + Kategorien
 - [x] Artikelstamm (Materialien/Produkte)
 - [x] Leistungsstamm (Arbeitsleistungen/Dienstleistungen)
 - [x] Angebotserstellung mit Positionen
 - [x] WYSIWYG-Dokumenteneditor für alle Dokumenttypen
-- [x] Spracheingabe → KI-Angebot (OpenAI GPT-5.2 + Whisper) - Vollständig aktiviert
+- [x] Spracheingabe → KI-Angebot (OpenAI GPT-5.2 + Whisper)
 - [x] Auftragsbestätigung aus Angebot
 - [x] Rechnungen mit fortlaufender Nummer
 - [x] MwSt auswählbar (19% / 7% / Kleinunternehmer)
 - [x] PDF-Generierung für alle Dokumente
-- [x] Dashboard mit Statistiken
+- [x] Dashboard mit Statistiken + Anfragen-Übersicht
 - [x] Einstellungen für Firmendaten
 - [x] Webhook für Website-Kontaktformular
-- [x] Dokumentenvorschau (In-List Preview)
-- [x] Universelle Bearbeitung für alle Dokumenttypen
-- [x] Proportionale Gesamtsummenanpassung
-- [x] Anzahlungen bei Rechnungen
+- [x] Anfragen-System mit Kategorien und Conversion
 
 ## What's Been Implemented
 
-### Webhook-Dokumentation & Website-Integration (Fertiggestellt 18.03.2026)
-- Eigene Seite "Website-Integration" in der App-Navigation
-- Webhook-URL prominent angezeigt mit Kopier-Button
-- Fertiger HTML/JavaScript Code-Snippet zum Kopieren in die eigene Website
-- PHP Code-Snippet für WordPress/PHP-Websites
-- JSON-Datenformat-Dokumentation
-- Eingebautes Test-Formular zum direkten Testen des Webhooks
-- "So funktioniert es" Erklärung in 4 Schritten
+### Anfragen-System mit Kategorien (Fertiggestellt 30.03.2026)
+- Neuer "Anfragen"-Reiter in der Navigation (zwischen Dashboard und Kunden)
+- Kontaktformular-Eingänge landen in eigener "anfragen" Collection
+- 5 Kategorien: Schiebetür, Fenster, Innentür, Eingangstür, Sonstige Reparaturen
+- Ein-Klick-Übernahme: Anfrage → Kunde (mit Kategorien)
+- Löschen-Button (X) zum Verwerfen von Anfragen
+- Kategorie-Filter-Pills auf Anfragen- UND Kundenseite
+- Dashboard: "Neue Anfragen" Statistik-Kachel + "Letzte Anfragen" Widget + Kategorien-Übersicht
+- Kunden bekommen Kategorie-Feld (wird bei Übernahme mitgenommen)
+- Kontaktformular aktualisiert mit neuen 5 Kategorien
+- Alle 3 Eingangskanäle (Webhook, Kontaktformular-Relay, Beacon) speichern in anfragen
+- Testing: 100% bestanden (iteration_6.json)
 
-### Push-Benachrichtigungen (Fertiggestellt 18.03.2026)
-- Browser Push-Benachrichtigungen bei neuen Kundenanfragen via Webhook
-- VAPID-basiertes Web Push Protokoll
-- Automatische Subscription nach Login
-- Toggle-Button und Test-Funktion in den Einstellungen
-- Service Worker empfängt und zeigt Notifications mit App-Icon
-- Klick auf Notification öffnet die Kundenliste
+### 3-Spalten WYSIWYG Editor (Fertiggestellt 30.03.2026)
+- Desktop 3-Spalten-Layout: Links Leistungen/Artikel, Mitte Dokument, Rechts Vorlagen+Kalkulation
+- Drag & Drop von Leistungen/Artikeln ins Dokument
+- Vorlagen-System und Kalkulations-Panel
 
-### PWA / Mobile App (Fertiggestellt 18.03.2026)
-- Progressive Web App (PWA) mit manifest.json und Service Worker
-- Installierbar auf iPhone und Android als Homescreen-App
-- Responsive Layout: Desktop-Sidebar wird auf Mobilgeräten durch Bottom-Tab-Navigation ersetzt
-- Kartenbasierte Listen statt Tabellen auf kleinen Bildschirmen
-- Kompakter WYSIWYG-Editor-Toolbar auf Mobilgeräten
-- Mobile-optimierte Login-Seite, Dashboard, Kundenverwaltung
-- "Mehr"-Menü für zusätzliche Navigation (Aufträge, Artikel, Leistungen, Einstellungen)
+### Öffentliches Kontaktformular-Relay (Fertiggestellt 30.03.2026)
+- Öffentliche Kontaktseite unter /api/kontakt
+- Speichert jetzt in anfragen-Collection + Push-Benachrichtigung
+- Leitet alle Daten an original response.php weiter
 
-### WYSIWYG Editor (Fertiggestellt 19.02.2026)
-- Vollständiger WYSIWYG-Editor für Angebote, Aufträge und Rechnungen
-- Neue Dokumente erstellen und bestehende bearbeiten
-- Kundenauswahl mit Vorauswahl über URL-Parameter (?customer=id)
-- Inline-Bearbeitung von Positionen direkt im Dokument
-- Leistungen und Artikel aus Stammdaten einfügen
-- MwSt-Auswahl, Anzahlungen, Status-Verwaltung
-- PDF-Download direkt aus dem Editor
-- Spracheingabe-UI integriert (Backend-Integration pending)
-- Alte Modal-basierte Bearbeitungsformulare durch WYSIWYG ersetzt
-
-### Backend (FastAPI + MongoDB)
-- Auth-System mit JWT (Register/Login)
-- Kunden-CRUD
-- Artikelstamm-CRUD & Leistungsstamm-CRUD
-- Angebote, Aufträge, Rechnungen CRUD mit fortlaufender Nummerierung
-- PDF-Generierung mit ReportLab
-- Speech-to-Text Endpoint (OpenAI Whisper) - bereit, API Key fehlt
-- KI-Angebotserstellung Endpoint (GPT-5.2) - bereit, API Key fehlt
-- Dashboard-Statistiken
-- Einstellungen-Verwaltung
-- Webhook-Endpoint für Kontaktformular
-
-### Frontend (React + Tailwind)
-- Login/Register mit Werkstatt-Bild
-- Dashboard mit Statistiken und Schnellaktionen
-- Kunden-Verwaltung mit Suchfunktion
-- WYSIWYG-Editor für alle 3 Dokumenttypen
-- Dokumentenlisten mit Vorschau, PDF-Download, Bearbeiten
-- Artikelstamm & Leistungsstamm Verwaltung
-- Firmeneinstellungen
-
-### Design
-- Industrial Swiss Design (Manrope + Barlow Condensed)
-- Farben: Forest Green (#14532D) + Safety Orange (#F97316)
-- Deutsche Sprache durchgehend
-
-## Test Results (18.03.2026)
-- Mobile/PWA: Frontend 100% (alle responsive Features + PWA)
-- WYSIWYG Editor: Backend 100%, Frontend 100%
-
-## Prioritized Backlog
-
-### P0 (Kritisch)
-- [x] MVP abgeschlossen
-- [x] Artikelstamm + Leistungsstamm getrennt
-- [x] WYSIWYG-Dokumenteneditor fertiggestellt
-
-### P1 (Wichtig)
-- [x] Spracheingabe aktiviert (Emergent LLM Key für OpenAI Whisper + GPT-5.2)
-- [ ] E-Mail-Versand aktivieren (RESEND_API_KEY benötigt)
-- [x] Webhook-Dokumentation für Website-Integration
-
-### P2 (Nice-to-have)
-- [ ] Auftrags-Status-Workflow (In Arbeit, Fertig)
-- [ ] Rechnungs-Mahnwesen
-- [ ] Statistik-Charts im Dashboard
-- [ ] Druckansicht für Dokumente
-- [ ] Foto-Upload für Kundenanfragen
+### Weitere Features
+- Webhook-Dokumentation & Website-Integration
+- Push-Benachrichtigungen (VAPID)
+- PWA / Mobile App
+- IONOS Go-X Website-Builder Integration
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS, Axios, Sonner (Toasts)
 - **Backend**: FastAPI, Motor (MongoDB async), ReportLab (PDF)
-- **KI**: OpenAI GPT-5.2, Whisper (Speech-to-Text) - geplant
+- **KI**: OpenAI GPT-5.2, Whisper (Speech-to-Text)
 - **Auth**: JWT mit bcrypt
 - **Datenbank**: MongoDB
 
-## Code Architecture
-```
-/app/
-├── backend/
-│   └── server.py          # Monolithic FastAPI with all endpoints
-├── frontend/
-│   └── src/
-│       ├── App.js          # All components + routes (monolith)
-│       └── components/ui/  # Shadcn UI components
-└── memory/
-    └── PRD.md
-```
+## Prioritized Backlog
 
-### IONOS Go-X Website-Builder Integration (Fertiggestellt 30.03.2026)
-- JavaScript-Snippet speziell für IONOS Go-X Websites (z.B. schiebetuer-reparatur-hamburg.de)
-- Automatisches Auslesen von Name + Nachricht aus dem eingebauten Go-X Formular
-- Schritt-für-Schritt Anleitung in der Webhook-Dokumentationsseite
-- Parallel zum normalen IONOS-Formular (kein Eingriff in bestehende Funktionalität)
-- Backend verarbeitet einfache Payloads (name + nachricht) korrekt als neuen Kunden
+### P1 (Wichtig)
+- [ ] E-Mail-Versand aktivieren (RESEND_API_KEY benötigt)
 
-### 3-Spalten WYSIWYG Editor (Fertiggestellt 30.03.2026)
-- Desktop 3-Spalten-Layout: Links Leistungen/Artikel (Tabs, Suche, Drag&Drop), Mitte Dokument, Rechts Vorlagen+Kalkulation
-- Klick auf Leistung/Artikel öffnet Detail-Ansicht mit voller Beschreibung, Preis, Einheit
-- "Ins Dokument"-Button und "Bearbeiten"-Button in Detail-Ansicht
-- Drag & Drop von Leistungen/Artikeln ins Dokument (HTML5 native API)
-- Rechte Sidebar: Tabs für Vorlagen und Kalkulation
-- Vorlagen-System: Ähnliche Dokumente werden automatisch vorgeschlagen (gleicher Kunde, ähnliche Positionen)
-- Dokumente können als Vorlage markiert werden (Lesezeichen-Button)
-- "Positionen übernehmen"-Button kopiert alle Positionen aus Vorlage/ähnlichem Dokument
-- Kalkulations-Panel mit EK-Preisen pro Position, Margenberechnung (€ und %), visueller Margen-Balken
-- Übersicht-Panel mit Positionen-Anzahl, Brutto und Kundenname
-- Mobile Layout unverändert (Dropdowns statt Sidebars)
-- Testing: 100% bestanden (iteration_4.json + iteration_5.json, 31 Backend + alle Frontend-Tests)
+### P2 (Nice-to-have)
+- [ ] Mahnwesen (Überfällige Rechnungen, Zahlungserinnerungen)
+- [ ] Statistik-Charts im Dashboard
+- [ ] EK-Preise in Stammdaten für automatische Kalkulation
+- [ ] Firmendaten in PDF-Generierung integrieren
 
-### Öffentliches Kontaktformular-Relay (Fertiggestellt 30.03.2026)
-- Öffentliche Kontaktseite unter /api/kontakt (kein Login nötig)
-- Exakt gleiche Felder wie Original-Formular (Rolle, Anrede, Name, Firma, Adresse, Themen, Nachricht, Bilder)
-- Speichert Kunde direkt in Graupner Suite + Push-Benachrichtigung
-- Leitet alle Daten 1:1 an original response.php weiter (Graupner-Intern + E-Mail bleibt)
-- Multi-value Checkboxes (Themen) korrekt behandelt
-- Fallback-Seite bei Weiterleitungsfehler
-- Kein Zugriff auf Evanzo-Server nötig
-
-## Next Tasks
-1. E-Mail-Integration mit Resend API Key
-2. Dashboard mit Charts und Echtzeit-Daten verbessern
-3. Druckansicht für Dokumente
+### P3 (Backlog)
+- [ ] Auftrags-Status-Workflow (In Arbeit, Fertig)
+- [ ] Druckansicht für Dokumente
+- [ ] Code-Refactoring (App.js + server.py aufteilen)
