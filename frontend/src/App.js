@@ -4322,6 +4322,33 @@ curl_exec($ch);
 curl_close($ch);
 ?>`;
 
+  const ionosSnippet = `<script>
+// === Graupner Suite: IONOS Website-Builder Integration ===
+// Dieses Script in IONOS unter "Website > Einstellungen > Head-HTML" einfuegen
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form.form-form');
+    if (!form) return;
+
+    form.addEventListener('submit', function() {
+      // Formularfelder auslesen (Name = erstes Input, Nachricht = Textarea)
+      var inputs = form.querySelectorAll('input.form-input');
+      var textareas = form.querySelectorAll('textarea.form-input');
+      var name = inputs[0] ? inputs[0].value : '';
+      var nachricht = textareas[0] ? textareas[0].value : '';
+
+      // An Graupner Suite senden (parallel zum normalen IONOS-Formular)
+      fetch("${webhookUrl}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, nachricht: nachricht }),
+        keepalive: true
+      }).catch(function() {});
+    });
+  });
+})();
+</script>`;
+
   return (
     <div data-testid="webhook-doc-page">
       <div className="mb-4 lg:mb-8">
@@ -4429,6 +4456,36 @@ Content-Type: application/json
             </p>
             <pre className="bg-slate-900 text-slate-100 rounded-sm p-4 text-xs overflow-x-auto max-h-64 overflow-y-auto">
               {phpSnippet}
+            </pre>
+          </Card>
+
+          {/* IONOS Go-X Snippet */}
+          <Card className="p-4 lg:p-6 border-orange-300/50 bg-orange-50/30" data-testid="ionos-integration-card">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Globe className="w-5 h-5 text-orange-600" />
+                IONOS Website-Builder (Go-X)
+              </h3>
+              <Button variant="outline" size="sm" onClick={() => copyToClipboard(ionosSnippet, "ionos")} data-testid="btn-copy-ionos">
+                <Copy className="w-4 h-4" />
+                {copied === "ionos" ? "Kopiert!" : "Kopieren"}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Speziell f&uuml;r <strong>IONOS Go-X</strong> Websites (z.B. schiebetuer-reparatur-hamburg.de). 
+              Dieses Script liest automatisch <strong>Name</strong> und <strong>Nachricht</strong> aus dem eingebauten Formular aus.
+            </p>
+            <div className="bg-amber-100/60 border border-amber-200 rounded-sm p-3 mb-3">
+              <p className="text-xs font-medium text-amber-800 mb-2">So binden Sie es ein:</p>
+              <ol className="text-xs text-amber-700 space-y-1 list-decimal list-inside">
+                <li>IONOS Konto einloggen &rarr; <strong>Website bearbeiten</strong></li>
+                <li>Klicken Sie auf das <strong>Zahnrad-Symbol</strong> (Website-Einstellungen)</li>
+                <li>W&auml;hlen Sie <strong>"Head-HTML"</strong> oder <strong>"Eigener Code"</strong></li>
+                <li>F&uuml;gen Sie den Code unten ein und <strong>speichern</strong> Sie</li>
+              </ol>
+            </div>
+            <pre className="bg-slate-900 text-slate-100 rounded-sm p-4 text-xs overflow-x-auto max-h-64 overflow-y-auto">
+              {ionosSnippet}
             </pre>
           </Card>
         </div>

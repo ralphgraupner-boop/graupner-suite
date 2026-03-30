@@ -140,6 +140,13 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
     └── PRD.md
 ```
 
+### IONOS Go-X Website-Builder Integration (Fertiggestellt 30.03.2026)
+- JavaScript-Snippet speziell für IONOS Go-X Websites (z.B. schiebetuer-reparatur-hamburg.de)
+- Automatisches Auslesen von Name + Nachricht aus dem eingebauten Go-X Formular
+- Schritt-für-Schritt Anleitung in der Webhook-Dokumentationsseite
+- Parallel zum normalen IONOS-Formular (kein Eingriff in bestehende Funktionalität)
+- Backend verarbeitet einfache Payloads (name + nachricht) korrekt als neuen Kunden
+
 ## Next Tasks
 1. E-Mail-Integration mit Resend API Key
 2. Dashboard mit Charts und Echtzeit-Daten verbessern
