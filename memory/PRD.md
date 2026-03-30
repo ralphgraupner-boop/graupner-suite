@@ -148,12 +148,18 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - Backend verarbeitet einfache Payloads (name + nachricht) korrekt als neuen Kunden
 
 ### 3-Spalten WYSIWYG Editor (Fertiggestellt 30.03.2026)
-- Desktop 3-Spalten-Layout: Links Leistungen/Artikel (Tabs, Suche, Drag&Drop), Mitte Dokument, Rechts Kalkulation
+- Desktop 3-Spalten-Layout: Links Leistungen/Artikel (Tabs, Suche, Drag&Drop), Mitte Dokument, Rechts Vorlagen+Kalkulation
+- Klick auf Leistung/Artikel öffnet Detail-Ansicht mit voller Beschreibung, Preis, Einheit
+- "Ins Dokument"-Button und "Bearbeiten"-Button in Detail-Ansicht
 - Drag & Drop von Leistungen/Artikeln ins Dokument (HTML5 native API)
+- Rechte Sidebar: Tabs für Vorlagen und Kalkulation
+- Vorlagen-System: Ähnliche Dokumente werden automatisch vorgeschlagen (gleicher Kunde, ähnliche Positionen)
+- Dokumente können als Vorlage markiert werden (Lesezeichen-Button)
+- "Positionen übernehmen"-Button kopiert alle Positionen aus Vorlage/ähnlichem Dokument
 - Kalkulations-Panel mit EK-Preisen pro Position, Margenberechnung (€ und %), visueller Margen-Balken
 - Übersicht-Panel mit Positionen-Anzahl, Brutto und Kundenname
 - Mobile Layout unverändert (Dropdowns statt Sidebars)
-- Testing: 100% bestanden (iteration_4.json)
+- Testing: 100% bestanden (iteration_4.json + iteration_5.json, 31 Backend + alle Frontend-Tests)
 
 ## Next Tasks
 1. E-Mail-Integration mit Resend API Key

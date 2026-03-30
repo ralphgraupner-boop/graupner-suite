@@ -1625,25 +1625,30 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                       )}
                       {similarDocs.map(doc => (
                         <div key={doc.id} className="rounded-md border border-input hover:border-blue-300 transition-all">
-                          <button
-                            onClick={() => setExpandedDoc(expandedDoc === doc.id ? null : doc.id)}
-                            className="w-full flex items-center justify-between p-2 text-left"
-                          >
-                            <div className="min-w-0">
+                          <div className="flex items-center justify-between p-2">
+                            <button
+                              onClick={() => setExpandedDoc(expandedDoc === doc.id ? null : doc.id)}
+                              className="min-w-0 text-left flex-1"
+                            >
                               <p className="text-xs font-medium truncate">{doc.quote_number || doc.order_number || doc.invoice_number}</p>
                               <p className="text-[10px] text-muted-foreground truncate">{doc.customer_name} · {doc.total_gross?.toFixed(0)}€</p>
-                            </div>
+                            </button>
                             <div className="flex items-center gap-1 shrink-0">
                               <button
-                                onClick={(e) => { e.stopPropagation(); toggleDocTemplate(doc.id); }}
+                                onClick={() => toggleDocTemplate(doc.id)}
                                 className="p-1 hover:bg-amber-100 rounded transition-colors"
                                 title="Als Vorlage markieren"
                               >
                                 <Bookmark className="w-3 h-3 text-muted-foreground hover:text-amber-600" />
                               </button>
-                              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expandedDoc === doc.id ? "rotate-180" : ""}`} />
+                              <button
+                                onClick={() => setExpandedDoc(expandedDoc === doc.id ? null : doc.id)}
+                                className="p-1"
+                              >
+                                <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expandedDoc === doc.id ? "rotate-180" : ""}`} />
+                              </button>
                             </div>
-                          </button>
+                          </div>
                           {expandedDoc === doc.id && (
                             <div className="border-t p-2 bg-slate-50/50 space-y-1">
                               {(doc.positions || []).map((p, i) => (
@@ -1659,13 +1664,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                                 >
                                   <Copy className="w-3 h-3" />
                                   Übernehmen
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); toggleDocTemplate(doc.id); }}
-                                  className="flex items-center justify-center gap-1 h-7 px-2 rounded border border-input text-xs hover:bg-amber-50"
-                                  data-testid={`btn-template-${doc.id}`}
-                                >
-                                  <Bookmark className="w-3 h-3" />
                                 </button>
                               </div>
                             </div>
