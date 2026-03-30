@@ -4329,22 +4329,30 @@ curl_close($ch);
   document.addEventListener('DOMContentLoaded', function() {
     var form = document.querySelector('form.form-form');
     if (!form) return;
+    var sent = false;
 
-    form.addEventListener('submit', function() {
-      // Formularfelder auslesen (Name = erstes Input, Nachricht = Textarea)
+    function sendToGraupner() {
+      if (sent) return;
       var inputs = form.querySelectorAll('input.form-input');
       var textareas = form.querySelectorAll('textarea.form-input');
       var name = inputs[0] ? inputs[0].value : '';
       var nachricht = textareas[0] ? textareas[0].value : '';
+      if (!name) return;
+      sent = true;
+      setTimeout(function() { sent = false; }, 5000);
 
-      // An Graupner Suite senden (parallel zum normalen IONOS-Formular)
       fetch("${webhookUrl}", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name, nachricht: nachricht }),
         keepalive: true
       }).catch(function() {});
-    });
+    }
+
+    // Beide Events abfangen (Go-X faengt manchmal submit ab)
+    form.addEventListener('submit', sendToGraupner);
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.addEventListener('click', sendToGraupner);
   });
 })();
 </script>`;
