@@ -727,6 +727,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [sidebarTab, setSidebarTab] = useState("services"); // "services" | "articles"
   const [costPrices, setCostPrices] = useState({});
   const [kalkulationOpen, setKalkulationOpen] = useState(true);
+  const [selectedItem, setSelectedItem] = useState(null); // expanded detail view
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -1065,7 +1066,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
       {/* Document Area - 3 Column Layout (Desktop) */}
       <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-4">
-        <div className="lg:grid lg:grid-cols-[260px_1fr_280px] lg:gap-4 lg:max-w-[1600px] lg:mx-auto">
+        <div className="lg:grid lg:grid-cols-[340px_1fr_340px] lg:gap-4 lg:max-w-[1600px] lg:mx-auto">
 
           {/* === LEFT SIDEBAR: Services & Articles (Desktop only) === */}
           <div className="hidden lg:block">
@@ -1106,26 +1107,61 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               {/* Items List */}
               <div className="space-y-1.5">
                 {(sidebarTab === "services" ? filteredServices : filteredArticles).map((item) => (
-                  <div
-                    key={item.id}
-                    draggable="true"
-                    onDragStart={(e) => handleDragStart(e, item)}
-                    onClick={() => { addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); }}
-                    className="group flex items-start gap-2 p-2.5 rounded-md border border-input bg-card hover:border-primary/40 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all"
-                    data-testid={`draggable-item-${item.id}`}
-                  >
-                    <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{item.name}</p>
-                      {item.description && (
-                        <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-mono font-semibold text-primary">{item.price_net.toFixed(2)} €</span>
-                        <span className="text-[10px] text-muted-foreground">/ {item.unit}</span>
+                  <div key={item.id}>
+                    <div
+                      draggable="true"
+                      onDragStart={(e) => handleDragStart(e, item)}
+                      onClick={() => setSelectedItem(selectedItem?.id === item.id ? null : item)}
+                      className={`group flex items-start gap-2 p-2.5 rounded-md border cursor-grab active:cursor-grabbing transition-all ${selectedItem?.id === item.id ? "border-primary bg-primary/5 shadow-sm" : "border-input bg-card hover:border-primary/40 hover:shadow-sm"}`}
+                      data-testid={`draggable-item-${item.id}`}
+                    >
+                      <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-mono font-semibold text-primary">{item.price_net.toFixed(2)} €</span>
+                          <span className="text-[10px] text-muted-foreground">/ {item.unit}</span>
+                        </div>
                       </div>
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground/40 shrink-0 mt-0.5 transition-transform ${selectedItem?.id === item.id ? "rotate-180 text-primary" : ""}`} />
                     </div>
-                    <Plus className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary shrink-0 mt-0.5" />
+
+                    {/* Expanded Detail View */}
+                    {selectedItem?.id === item.id && (
+                      <div className="mt-1 rounded-md border border-primary/20 bg-white p-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200" data-testid={`detail-view-${item.id}`}>
+                        <h4 className="font-semibold text-base mb-1">{item.name}</h4>
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
+                        )}
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div className="bg-slate-50 rounded-md p-2.5">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Preis (Netto)</p>
+                            <p className="text-lg font-bold font-mono text-primary">{item.price_net.toFixed(2)} €</p>
+                          </div>
+                          <div className="bg-slate-50 rounded-md p-2.5">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Einheit</p>
+                            <p className="text-lg font-bold">{item.unit}</p>
+                          </div>
+                        </div>
+                        {item.category && (
+                          <p className="text-xs text-muted-foreground mb-3">Kategorie: <span className="font-medium">{item.category}</span></p>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); }}
+                            className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                            data-testid={`btn-add-item-${item.id}`}
+                          >
+                            <Plus className="w-4 h-4" />
+                            Ins Dokument
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground text-center mt-2">Oder per Drag & Drop ins Dokument ziehen</p>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {(sidebarTab === "services" ? filteredServices : filteredArticles).length === 0 && (
