@@ -4165,9 +4165,16 @@ const SettingsPage = () => {
 const WebhookDocPage = () => {
   const webhookUrl = `${BACKEND_URL}/api/webhook/contact`;
   const [testName, setTestName] = useState("");
+  const [testVorname, setTestVorname] = useState("");
   const [testEmail, setTestEmail] = useState("");
   const [testPhone, setTestPhone] = useState("");
   const [testMessage, setTestMessage] = useState("");
+  const [testRolle, setTestRolle] = useState("");
+  const [testAnrede, setTestAnrede] = useState("");
+  const [testStrasse, setTestStrasse] = useState("");
+  const [testPlz, setTestPlz] = useState("");
+  const [testStadt, setTestStadt] = useState("");
+  const [testTopics, setTestTopics] = useState([]);
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
   const [copied, setCopied] = useState("");
@@ -4180,15 +4187,25 @@ const WebhookDocPage = () => {
   };
 
   const sendTestWebhook = async () => {
-    if (!testName) { toast.error("Bitte Name eingeben"); return; }
+    if (!testName) { toast.error("Bitte Nachname eingeben"); return; }
     setTesting(true);
     setTestResult(null);
     try {
       const res = await axios.post(`${API}/webhook/contact`, {
-        name: testName, email: testEmail, phone: testPhone, message: testMessage
+        rolle: testRolle,
+        anrede: testAnrede,
+        vorname: testVorname,
+        nachname: testName,
+        email: testEmail,
+        telefon: testPhone,
+        strasse: testStrasse,
+        plz: testPlz,
+        stadt: testStadt,
+        topics: testTopics,
+        nachricht: testMessage
       });
       setTestResult({ success: true, data: res.data });
-      toast.success("Test-Anfrage erfolgreich gesendet! Push-Benachrichtigung sollte erscheinen.");
+      toast.success("Test-Anfrage erfolgreich gesendet!");
     } catch (err) {
       setTestResult({ success: false, error: err.response?.data?.detail || err.message });
       toast.error("Fehler beim Senden");
@@ -4424,53 +4441,82 @@ Content-Type: application/json
               Test-Formular
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Testen Sie hier, ob der Webhook funktioniert. Die Anfrage wird als neuer Kunde gespeichert und Sie erhalten eine Push-Benachrichtigung.
+              Testen Sie hier, ob der Webhook funktioniert. Die Felder entsprechen Ihrem Kontaktformular auf kontakt-graupner.de.
             </p>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Name *</label>
-                <Input
-                  data-testid="input-test-name"
-                  value={testName}
-                  onChange={(e) => setTestName(e.target.value)}
-                  placeholder="Max Mustermann"
-                />
+                <label className="block text-sm font-medium mb-1">Rolle *</label>
+                <select data-testid="input-test-rolle" value={testRolle} onChange={(e) => setTestRolle(e.target.value)}
+                  className="w-full h-10 rounded-sm border border-input bg-background px-3 text-sm">
+                  <option value="">Bitte wählen...</option>
+                  <option value="Eigentümer/Vermieter">Eigentümer/Vermieter</option>
+                  <option value="Hausverwaltung">Hausverwaltung</option>
+                  <option value="Mieter">Mieter</option>
+                  <option value="Interessent Tischlerarbeiten">Interessent Tischlerarbeiten</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Anrede</label>
+                  <select data-testid="input-test-anrede" value={testAnrede} onChange={(e) => setTestAnrede(e.target.value)}
+                    className="w-full h-10 rounded-sm border border-input bg-background px-3 text-sm">
+                    <option value="">--</option>
+                    <option value="Herr">Herr</option>
+                    <option value="Frau">Frau</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Vorname</label>
+                  <Input data-testid="input-test-vorname" value={testVorname} onChange={(e) => setTestVorname(e.target.value)} placeholder="Max" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nachname *</label>
+                  <Input data-testid="input-test-nachname" value={testName} onChange={(e) => setTestName(e.target.value)} placeholder="Mustermann" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Telefon *</label>
+                  <Input data-testid="input-test-phone" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="040 12345678" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">E-Mail *</label>
+                  <Input data-testid="input-test-email" type="email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="max@example.de" />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">E-Mail</label>
-                <Input
-                  data-testid="input-test-email"
-                  type="email"
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder="max@example.de"
-                />
+                <label className="block text-sm font-medium mb-1">Straße *</label>
+                <Input value={testStrasse} onChange={(e) => setTestStrasse(e.target.value)} placeholder="Eppendorfer Weg 123" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">PLZ *</label>
+                  <Input value={testPlz} onChange={(e) => setTestPlz(e.target.value)} placeholder="20253" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Stadt *</label>
+                  <Input value={testStadt} onChange={(e) => setTestStadt(e.target.value)} placeholder="Hamburg" />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Telefon</label>
-                <Input
-                  data-testid="input-test-phone"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="0171 1234567"
-                />
+                <label className="block text-sm font-medium mb-2">Themen</label>
+                <div className="grid grid-cols-2 gap-1.5 text-sm">
+                  {["Fenster","Balkontür","Terrassentür","Zimmertür","Wohnungstür","Schiebetür","Schrank","Boden","Sonstiges"].map(t => (
+                    <label key={t} className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" checked={testTopics.includes(t)}
+                        onChange={(e) => setTestTopics(prev => e.target.checked ? [...prev, t] : prev.filter(x => x !== t))}
+                        className="rounded border-input" />
+                      {t}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Nachricht</label>
-                <Textarea
-                  data-testid="input-test-message"
-                  value={testMessage}
-                  onChange={(e) => setTestMessage(e.target.value)}
-                  placeholder="Ich brauche eine neue Küche..."
-                  rows={3}
-                />
+                <Textarea data-testid="input-test-message" value={testMessage} onChange={(e) => setTestMessage(e.target.value)}
+                  placeholder="Bitte nennen Sie uns 3 Besichtigungstermine..." rows={3} />
               </div>
-              <Button
-                data-testid="btn-send-test-webhook"
-                onClick={sendTestWebhook}
-                disabled={testing}
-                className="w-full"
-              >
+              <Button data-testid="btn-send-test-webhook" onClick={sendTestWebhook} disabled={testing} className="w-full">
                 <Send className="w-4 h-4" />
                 {testing ? "Sende..." : "Test-Anfrage senden"}
               </Button>
@@ -4481,7 +4527,7 @@ Content-Type: application/json
                 {testResult.success ? (
                   <>
                     <p className="font-medium flex items-center gap-1"><CheckCircle className="w-4 h-4" /> Erfolgreich!</p>
-                    <p className="mt-1">Neuer Kunde wurde angelegt. Prüfen Sie Ihre Push-Benachrichtigungen und die Kundenliste.</p>
+                    <p className="mt-1">Neuer Kunde wurde angelegt. Prüfen Sie Ihre Kundenliste.</p>
                   </>
                 ) : (
                   <>
