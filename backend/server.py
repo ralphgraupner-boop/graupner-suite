@@ -1292,7 +1292,39 @@ async def kontakt_relay(request: Request):
             resp = future.result(timeout=20)
         
         if resp and resp.status_code == 200:
-            return HTMLResponse(content=resp.text, status_code=resp.status_code)
+            return HTMLResponse(content="""<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anfrage gesendet - Tischlerei Graupner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8f9fa;color:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.box{text-align:center;max-width:500px;padding:48px 32px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+.check{width:72px;height:72px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+.check svg{width:36px;height:36px;color:#2e7d32}
+h1{font-size:22px;margin-bottom:8px}
+p{font-size:15px;color:#666;line-height:1.6;margin-bottom:16px}
+.info{background:#f0f4ff;border-radius:10px;padding:16px;margin:20px 0;text-align:left;font-size:13px;color:#444;line-height:1.7}
+.info b{color:#1a1a2e}
+a.btn{display:inline-block;margin-top:20px;padding:12px 32px;background:#1a1a2e;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px}
+a.btn:hover{background:#2a2a4e}
+</style>
+</head>
+<body>
+<div class="box">
+<div class="check"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div>
+<h1>Vielen Dank!</h1>
+<p>Ihre Anfrage wurde erfolgreich gesendet.</p>
+<div class="info">
+<b>So geht es weiter:</b><br>
+Wir melden uns schnellstm&ouml;glich bei Ihnen &ndash; in der Regel innerhalb von 24 Stunden. Bei dringenden Anliegen erreichen Sie uns telefonisch unter <b>040 / 55 42 10 44</b>.
+</div>
+<a href="https://www.tischlerei-graupner.de" class="btn">Zur&uuml;ck zur Website</a>
+</div>
+</body>
+</html>""")
         else:
             raise Exception(f"response.php returned {resp.status_code if resp else 'None'}")
             
