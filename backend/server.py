@@ -148,6 +148,7 @@ class Quote(BaseModel):
     vat_amount: float
     total_gross: float
     status: str = "Entwurf"
+    is_template: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     valid_until: str = ""
 
@@ -172,6 +173,7 @@ class Order(BaseModel):
     vat_amount: float
     total_gross: float
     status: str = "Offen"
+    is_template: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Invoice(BaseModel):
@@ -187,9 +189,10 @@ class Invoice(BaseModel):
     subtotal_net: float
     vat_amount: float
     total_gross: float
-    deposit_amount: float = 0.0  # Anzahlung
-    final_amount: float = 0.0  # Restbetrag (total_gross - deposit_amount)
+    deposit_amount: float = 0.0
+    final_amount: float = 0.0
     status: str = "Offen"
+    is_template: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     due_date: str = ""
     paid_at: Optional[str] = None
@@ -262,13 +265,15 @@ class QuoteUpdate(BaseModel):
     notes: str = ""
     vat_rate: float = 19.0
     status: Optional[str] = None
-    custom_total: Optional[float] = None  # Wenn gesetzt, werden Positionen proportional angepasst
+    is_template: Optional[bool] = None
+    custom_total: Optional[float] = None
 
 class OrderUpdate(BaseModel):
     positions: List[Position]
     notes: str = ""
     vat_rate: float = 19.0
     status: Optional[str] = None
+    is_template: Optional[bool] = None
     custom_total: Optional[float] = None
 
 class InvoiceUpdate(BaseModel):
@@ -276,6 +281,7 @@ class InvoiceUpdate(BaseModel):
     notes: str = ""
     vat_rate: float = 19.0
     status: Optional[str] = None
+    is_template: Optional[bool] = None
     custom_total: Optional[float] = None
     deposit_amount: float = 0.0
 
@@ -1014,6 +1020,54 @@ async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str
     # Return 1x1 transparent GIF
     pixel = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
     return StreamingResponse(BytesIO(pixel), media_type="image/gif")
+
+# ==================== TEMPLATES & SIMILAR DOCS ====================
+
+@api_router.get("/documents/suggestions/{doc_type}")
+async def get_document_suggestions(doc_type: str, customer_id: str = "", current_positions: str = "", user=Depends(get_current_user)):
+    """Get templates and similar documents for the editor sidebar"""
+    collection = "quotes" if doc_type == "quote" else "orders" if doc_type == "order" else "invoices"
+    
+    all_docs = []
+    async for doc in db[collection].find({}, {"_id": 0}):
+        all_docs.append(doc)
+    
+    templates = [d for d in all_docs if d.get("is_template")]
+    
+    # Score similarity
+    current_descs = set(current_positions.lower().split(",")) if current_positions else set()
+    similar = []
+    for doc in all_docs:
+        if doc.get("is_template"):
+            continue
+        score = 0
+        if customer_id and doc.get("customer_id") == customer_id:
+            score += 3
+        for pos in doc.get("positions", []):
+            desc = pos.get("description", "").lower()
+            for cd in current_descs:
+                if cd.strip() and cd.strip() in desc:
+                    score += 2
+        if score > 0:
+            doc["_similarity_score"] = score
+            similar.append(doc)
+    
+    similar.sort(key=lambda x: x.get("_similarity_score", 0), reverse=True)
+    for s in similar:
+        s.pop("_similarity_score", None)
+    
+    return {"templates": templates[:10], "similar": similar[:10]}
+
+@api_router.put("/documents/{doc_type}/{doc_id}/template")
+async def toggle_template(doc_type: str, doc_id: str, user=Depends(get_current_user)):
+    """Toggle is_template flag on a document"""
+    collection = "quotes" if doc_type == "quote" else "orders" if doc_type == "order" else "invoices"
+    doc = await db[collection].find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+    new_val = not doc.get("is_template", False)
+    await db[collection].update_one({"id": doc_id}, {"$set": {"is_template": new_val}})
+    return {"is_template": new_val}
 
 # ==================== SPEECH TO TEXT ====================
 
