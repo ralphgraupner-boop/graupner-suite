@@ -1081,12 +1081,14 @@ async def kontakt_form_page():
 <title>Kontaktformular - Tischlerei Graupner</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8f9fa;color:#1a1a2e;line-height:1.6}}
-.header{{background:#1a1a2e;color:#fff;padding:20px 0;text-align:center}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;line-height:1.6;min-height:100vh;background:url('https://images.unsplash.com/photo-1755237449468-e70840025313?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxjYXJwZW50ZXIlMjB3b3JraW5nJTIwd29vZCUyMHdvcmtzaG9wJTIwZGV0YWlsZWR8ZW58MHx8fHwxNzczNzQwODAyfDA&ixlib=rb-4.1.0&q=85') center/cover fixed no-repeat;}}
+body::before{{content:'';position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:0}}
+body>*{{position:relative;z-index:1}}
+.header{{background:rgba(26,26,46,0.85);backdrop-filter:blur(8px);color:#fff;padding:20px 0;text-align:center}}
 .header h1{{font-size:20px;font-weight:600}}
 .header p{{font-size:13px;opacity:0.7;margin-top:2px}}
 .container{{max-width:640px;margin:24px auto;padding:0 16px}}
-.card{{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:24px;margin-bottom:16px}}
+.card{{background:rgba(255,255,255,0.95);backdrop-filter:blur(6px);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.12);padding:24px;margin-bottom:16px}}
 .card h2{{font-size:15px;font-weight:600;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid #eee;color:#1a1a2e}}
 .row{{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}}
 .field{{flex:1;min-width:160px}}
@@ -1108,7 +1110,7 @@ textarea{{resize:vertical;min-height:80px}}
 .btn{{display:block;width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s}}
 .btn:hover{{background:#2a2a4e}}
 .required::after{{content:" *";color:#e74c3c}}
-.privacy{{display:flex;align-items:start;gap:10px;padding:14px 16px;background:#fff;border-radius:10px;border:1.5px solid #ddd;cursor:pointer;font-size:14px;margin-bottom:16px}}
+.privacy{{display:flex;align-items:start;gap:10px;padding:14px 16px;background:rgba(255,255,255,0.95);backdrop-filter:blur(6px);border-radius:10px;border:1.5px solid #ddd;cursor:pointer;font-size:14px;margin-bottom:16px}}
 .privacy input{{width:20px;height:20px;margin-top:1px;flex-shrink:0;cursor:pointer}}
 .file-info{{font-size:11px;color:#888;margin-top:3px}}
 input[type=file]{{padding:7px;font-size:13px}}
