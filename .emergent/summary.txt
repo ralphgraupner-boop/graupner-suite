@@ -1,0 +1,129 @@
+<analysis>**original_problem_statement**: Complete craftsman management software (Handwerker-Management-Software) for a carpentry business (Graupner). Replaces old disconnected software. Needs customer management, document CRUD, voice-to-text AI quotes, PDF generation, financials (VAT, down payments), and a WYSIWYG document editor. Additionally, requires a mobile-friendly view (PWA), Push Notifications for new inquiries, and integration with their existing website contact form via Webhook.
+
+**User's preferred language**: German (INSTRUCT NEXT AGENT TO RESPOND IN GERMAN ONLY)
+
+**what currently exists?** 
+A robust full-stack application (React/FastAPI/MongoDB). Features include JWT authentication, a fully functional WYSIWYG editor for quotes/orders/invoices, AI-powered voice-to-text quote generation, a fully responsive Progressive Web App (PWA) layout for mobile devices, and browser Push Notifications. A Webhook endpoint exists and has been precisely tailored to match the specific form fields of the user's primary website ().
+
+**Last working item**:
+- **Last item agent was working**: Analyzing the user's *test* website () to integrate the Webhook. The agent just scraped the HTML to see how the contact form on this specific test domain is structured.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: manual testing by curl / screenshot / frontend form submission to verify data maps correctly.
+- **User Testing Done**: N
+
+**All Pending/In progress Issue list**: 
+  - **Issue 1 (P0)**: Map test website form to Webhook.
+     - **Attempted fixes**: The agent successfully scraped the test website's HTML. No code changes made yet for this specific site.
+     - **Next debug checklist**: Review the scraped HTML of  in the message history. Check if the form fields differ from the already implemented  fields (Rolle, Anrede, Themen, etc.). If they differ, adjust the FastAPI  model to accept them safely. Then, provide the user with the exact PHP script they need to insert into this test website's backend to forward leads to the app.
+     - **Why fix this issue and what will be achieved with the fix?**: Allows the user to safely test the end-to-end lead generation flow (Website -> Webhook -> App -> Push Notification) without touching their live production site.
+     - **Status**: IN PROGRESS
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: backend (via curl simulating the test site's payload).
+     - **Blocked on other issue**: None
+
+**In progress Task List**:
+  - **Task 1**: Provide integration instructions for the test website.
+     - **Where to resume**: Analyze the scraped HTML payload from the last message. Write the custom PHP  snippet tailored for the test website and provide it to the user with clear instructions on where to paste it via FTP/Hosting provider.
+     - **What will be achieved with this?**: User will be able to connect their test site to the CRM.
+     - **Status**: IN PROGRESS
+     - **Should Test frontend/backend/both after fix?**: backend
+     - **Blocked on something**: No
+
+**Upcoming and Future Tasks**
+  - **(P1) Email Sending**: Implement frontend controls (e.g., a Send Email button in the document editor/preview) to trigger the backend's email-sending functionality using Resend. (Requires User API Key).
+  - **(P2) Dynamic Dashboard**: Connect the dashboard widgets to real backend data to display meaningful statistics (e.g., total value of open quotes, overdue invoices) with Charts.
+  - **(P2) Photo Upload via Webhook**: Support receiving and displaying photo uploads from the customer contact form.
+  - **(P2) Dunning Process (Mahnwesen)**: Implement a system to track overdue invoices and generate payment reminders.
+  - **(P2) Company Settings PDF Integration**: Ensure the company details (address, tax ID, bank info) from the Settings page populate the generated PDF documents accurately.
+
+**Completed work in this session**
+- Complete implementation of WYSIWYG Editor for all doc types (Quotes, Orders, Invoices). (DONE)
+- AI Voice Input activated (Whisper + GPT-5.2) in WYSIWYG editor. (DONE)
+- App converted to a Progressive Web App (PWA) with manifest, service worker, and responsive mobile layouts (bottom tabs, card views). (DONE)
+- WebPush Notifications implemented (Backend VAPID generation, Frontend auto-subscribe, Settings toggle). (DONE)
+- Webhook documentation page built and API adjusted to match exact fields of . (DONE)
+
+**Earlier issues found/mentioned but not fixed**
+- None. *(Note: The user briefly complained about an Aimbot and Map lagging - they accidentally pasted a message meant for a gaming cheat bot into this chat. The agent correctly ignored it and refocused them).*
+
+**Known issue recurrence from previous fork**
+- **Issue recurrence in previous fork**: Users testing on mobile vs desktop.
+- **Recurrence count**: 1
+- **Status**: RESOLVED (Agent explained that Preview URL and Production URL have separate databases. User was testing Webhooks on Prod PC and expecting Push notifications on Preview Mobile. Remind user to use the SAME URL on all devices).
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Frontend**: React, Tailwind CSS, React Router, Axios, PWA (Service Workers).
+- **Backend**: FastAPI, Motor (async MongoDB), PyWebPush (VAPID encryption for notifications).
+- **AI/Integrations**:  library used for OpenAI Whisper and GPT-5.2.
+
+**key DB schema**
+- **customers**:  (Notes field modified to capture extended form fields like 'Themen' and 'Objektadresse').
+- **push_subscriptions**:  (Used for WebPush).
+
+**changes in tech stack**
+- Added PWA capabilities (Service Worker, Manifest).
+- Added WebPush architecture (, , ).
+
+**All files of reference**
+- : Contains the updated Webhook logic and Push Notification logic.
+- : Contains new responsive layouts, , and .
+- : Critical for receiving Push notifications in the background.
+-  files: Modified to include  and .
+
+**Areas that need refactoring**:
+-  is over 4600 lines long. It urgently needs to be split into separate page files (e.g., , , etc.).
+-  is over 1300 lines long. It should be split using FastAPI routers.
+
+**key api endpoints**
+-  (Receives website leads, creates customer, triggers push).
+-  & 
+-  (Fallback for frontend if env vars fail).
+-  (Audio to AI Quote).
+
+**Critical Info for New Agent**
+- **Database/URL Confusion**: The user often gets confused why data created on their PC doesn't show up on their mobile app. This is because they use the Emergent Production URL on PC and the Preview URL on mobile. Always remind them to push Redeploy changes and use the Production URL on their phone.
+- **Push Notification Crypto**: VAPID keys are strict. Ensure the frontend passes keys properly. If the user complains Push stopped working, check if the Subscription in the DB expired () and prompt them to re-login to refresh the token.
+- **Contact Form**: The webhook is highly customized to their specific Graupner contact form schema (Anrede, Rolle, Themen, etc.). Do not break this schema.
+
+**documents and test reports created in this job**
+-  (Updated regularly)
+-  (WYSIWYG tests - 100% pass)
+-  (Mobile/PWA tests - 100% pass)
+
+**Last 10 User Messages and any pending HUMAN messages**
+1. **User (PENDING)**: Provided test website URL () to test the webhook setup before going to their main domain. Agent scraped it but hasn't responded yet.
+2. **User**: Confirmed they want to test on a test website first. Asked if they should send domain.
+3. **User**: Asked how to get access to .
+4. **User**: Asked how connecting the form to the website actually works in practice.
+5. **User**: Pointed out the Webhook Test Form UI in the app didn't match the new Graupner fields. (Resolved - Agent updated UI).
+6. **User**: Confirmed they use the Production URL on PC and Preview URL on phone. (Resolved - Agent explained they must use the same URL).
+7. **User**: Accidentally pasted a rant about an Aimbot and a Map lagging. (Resolved - Agent ignored/redirected).
+8. **User**: Complained that test webhook data wasn't syncing between PC and phone.
+9. **User**: Asked if they need to press Redeploy changes. (Resolved).
+10. **User**: Said they followed steps but still aren't getting actual Push Popups, only in-app toasts. (Resolved - Agent fixed Service Worker and VAPID key encoding).
+
+**Project Health Check:**
+- **Broken**: None. App is in a very stable state.
+- **Mocked**: Email sending is still mocked/awaiting Resend API key from user.
+
+**3rd Party Integrations**
+- **OpenAI GPT-5.2 & Whisper** — uses Emergent LLM Key (via ).
+- **Resend (Email)** — requires User API Key.
+- **WebPush (VAPID)** — requires internal generated keys (already set up).
+
+**Testing status**
+- **Testing agent used after significant changes**: YES (Iteration 2 & 3 for WYSIWYG and PWA respectively).
+- **Troubleshoot agent used after agent stuck in loop**: NO.
+- **Test files created**: None.
+- **Known regressions**: None.
+
+**Credentials to test flow:**
+Username: 
+Password: 
+
+**What agent forgot to execute**
+- The agent was in the middle of analyzing the newly provided test website () to provide the user with the PHP snippet integration code for that specific site. The response to this is pending.</analysis>
