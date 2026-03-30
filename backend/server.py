@@ -219,12 +219,38 @@ class CompanySettings(BaseModel):
     logo_base64: str = ""
 
 class WebhookContact(BaseModel):
-    name: str
+    # Basic fields (backward compatible)
+    name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     address: str = ""
     message: str = ""
     photos: List[str] = []
+    # Graupner website form fields
+    rolle: Optional[str] = None  # Eigentümer/Vermieter, Hausverwaltung, Mieter, Interessent
+    anrede: Optional[str] = None  # Herr, Frau
+    vorname: Optional[str] = None
+    nachname: Optional[str] = None
+    firma: Optional[str] = None
+    telefon: Optional[str] = None
+    website: Optional[str] = None
+    strasse: Optional[str] = None
+    plz: Optional[str] = None
+    stadt: Optional[str] = None
+    # Object address
+    objanrede: Optional[str] = None
+    objvorname: Optional[str] = None
+    objnachname: Optional[str] = None
+    objtelefon: Optional[str] = None
+    objemail: Optional[str] = None
+    objstrasse: Optional[str] = None
+    objplz: Optional[str] = None
+    objstadt: Optional[str] = None
+    objprojektnr: Optional[str] = None
+    bewohnt: Optional[str] = None
+    # Topics
+    topics: List[str] = []
+    nachricht: Optional[str] = None
 
 class AIQuoteRequest(BaseModel):
     customer_id: str
@@ -877,25 +903,82 @@ async def send_push_to_all(title: str, body: str, url: str = "/"):
 
 @api_router.post("/webhook/contact")
 async def webhook_contact(contact: WebhookContact):
-    """Webhook für Website-Kontaktformular"""
+    """Webhook für Website-Kontaktformular (Graupner)"""
+    # Build name from form fields
+    name_parts = []
+    if contact.anrede:
+        name_parts.append(contact.anrede)
+    if contact.vorname:
+        name_parts.append(contact.vorname)
+    if contact.nachname:
+        name_parts.append(contact.nachname)
+    name = " ".join(name_parts) if name_parts else (contact.name or "Unbekannt")
+    if contact.firma:
+        name = f"{name} ({contact.firma})"
+
+    # Build address
+    address_parts = []
+    if contact.strasse:
+        address_parts.append(contact.strasse)
+    if contact.plz or contact.stadt:
+        address_parts.append(f"{contact.plz or ''} {contact.stadt or ''}".strip())
+    address = "\n".join(address_parts) if address_parts else contact.address
+
+    # Build notes from topics, message, object address
+    notes_parts = []
+    if contact.rolle:
+        notes_parts.append(f"Rolle: {contact.rolle}")
+    if contact.topics:
+        notes_parts.append(f"Themen: {', '.join(contact.topics)}")
+    msg = contact.nachricht or contact.message
+    if msg:
+        notes_parts.append(f"Nachricht: {msg}")
+    if contact.objstrasse:
+        obj_addr = f"Objektadresse: {contact.objstrasse}"
+        if contact.objplz or contact.objstadt:
+            obj_addr += f", {contact.objplz or ''} {contact.objstadt or ''}".strip()
+        if contact.objvorname or contact.objnachname:
+            obj_addr += f" (Kontakt: {contact.objvorname or ''} {contact.objnachname or ''})".strip()
+        if contact.objprojektnr:
+            obj_addr += f" [Projekt-Nr: {contact.objprojektnr}]"
+        notes_parts.append(obj_addr)
+    if contact.website:
+        notes_parts.append(f"Website: {contact.website}")
+
+    # Map rolle to customer_type
+    rolle_map = {
+        "Eigentümer/Vermieter": "Vermieter",
+        "Hausverwaltung": "Hausverwaltung",
+        "Mieter": "Mieter",
+        "Interessent Tischlerarbeiten": "Privat"
+    }
+    customer_type = rolle_map.get(contact.rolle, "Privat")
+
     customer = Customer(
-        name=contact.name,
-        email=contact.email,
-        phone=contact.phone,
-        address=contact.address,
-        notes=contact.message,
-        photos=contact.photos
+        name=name,
+        email=contact.email or "",
+        phone=contact.telefon or contact.phone or "",
+        address=address,
+        notes="\n".join(notes_parts),
+        photos=contact.photos,
+        customer_type=customer_type
     )
     await db.customers.insert_one(customer.model_dump())
-    logger.info(f"Neue Kundenanfrage über Webhook: {contact.name}")
-    
-    # Send push notification
+    logger.info(f"Neue Kundenanfrage über Webhook: {name} ({customer_type})")
+
+    # Build push message
+    push_body = f"{name}"
+    if contact.topics:
+        push_body += f" - {', '.join(contact.topics[:3])}"
+    elif msg:
+        push_body += f": {msg[:80]}"
+
     await send_push_to_all(
         title="Neue Kundenanfrage",
-        body=f"{contact.name}: {contact.message[:100] if contact.message else 'Neue Anfrage'}",
+        body=push_body,
         url="/customers"
     )
-    
+
     return {"message": "Anfrage erfolgreich empfangen", "customer_id": customer.id}
 
 # ==================== SPEECH TO TEXT ====================

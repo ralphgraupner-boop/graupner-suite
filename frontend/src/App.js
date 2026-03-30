@@ -4235,12 +4235,65 @@ async function sendToGraupner(e) {
 </script>`;
 
   const phpSnippet = `<?php
-// Graupner Suite Webhook - PHP Beispiel
+// === Graupner Suite Webhook ===
+// Diesen Code in Ihre response.php einfügen
+// (oder am Anfang Ihrer bestehenden response.php hinzufügen)
+
+// Formulardaten sammeln
+$topics = isset($_POST["topic"]) ? $_POST["topic"] : [];
 $data = [
-    "name"    => $_POST["name"],
+    "rolle"      => isset($_POST["rolle"]) ? $_POST["rolle"] : "",
+    "anrede"     => isset($_POST["anrede"]) ? $_POST["anrede"] : "",
+    "vorname"    => isset($_POST["vorname"]) ? $_POST["vorname"] : "",
+    "nachname"   => isset($_POST["nachname"]) ? $_POST["nachname"] : "",
+    "firma"      => isset($_POST["firma"]) ? $_POST["firma"] : "",
+    "email"      => isset($_POST["email"]) ? $_POST["email"] : "",
+    "telefon"    => isset($_POST["telefon"]) ? $_POST["telefon"] : "",
+    "website"    => isset($_POST["website"]) ? $_POST["website"] : "",
+    "strasse"    => isset($_POST["strasse"]) ? $_POST["strasse"] : "",
+    "plz"        => isset($_POST["plz"]) ? $_POST["plz"] : "",
+    "stadt"      => isset($_POST["stadt"]) ? $_POST["stadt"] : "",
+    "topics"     => is_array($topics) ? $topics : [$topics],
+    "nachricht"  => isset($_POST["nachricht"]) ? $_POST["nachricht"] : "",
+    // Objektadresse (falls vorhanden)
+    "objanrede"    => isset($_POST["objanrede"]) ? $_POST["objanrede"] : "",
+    "objvorname"   => isset($_POST["objvorname"]) ? $_POST["objvorname"] : "",
+    "objnachname"  => isset($_POST["objnachname"]) ? $_POST["objnachname"] : "",
+    "objtelefon"   => isset($_POST["objtelefon"]) ? $_POST["objtelefon"] : "",
+    "objemail"     => isset($_POST["objemail"]) ? $_POST["objemail"] : "",
+    "objstrasse"   => isset($_POST["objstrasse"]) ? $_POST["objstrasse"] : "",
+    "objplz"       => isset($_POST["objplz"]) ? $_POST["objplz"] : "",
+    "objstadt"     => isset($_POST["objstadt"]) ? $_POST["objstadt"] : "",
+    "objprojektnr" => isset($_POST["objprojektnr"]) ? $_POST["objprojektnr"] : ""
+];
+
+// An Graupner Suite senden
+$ch = curl_init("${webhookUrl}");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json"
+]);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+// Optional: Ergebnis loggen
+// error_log("Graupner Suite Webhook: " . $httpCode . " - " . $response);
+
+// Ihre bestehende response.php Logik hier weiter...
+?>`;
+
+  const phpSnippetSimple = `<?php
+// Einfache Version - nur die wichtigsten Felder
+$data = [
+    "name"    => $_POST["vorname"] . " " . $_POST["nachname"],
     "email"   => $_POST["email"],
-    "phone"   => $_POST["phone"],
-    "message" => $_POST["message"]
+    "phone"   => $_POST["telefon"],
+    "address" => $_POST["strasse"] . ", " . $_POST["plz"] . " " . $_POST["stadt"],
+    "message" => $_POST["nachricht"]
 ];
 
 $ch = curl_init("${webhookUrl}");
@@ -4248,14 +4301,8 @@ curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$response = curl_exec($ch);
+curl_exec($ch);
 curl_close($ch);
-
-if ($response) {
-    echo "Anfrage erfolgreich weitergeleitet!";
-} else {
-    echo "Fehler bei der Weiterleitung.";
-}
 ?>`;
 
   return (
@@ -4352,7 +4399,7 @@ Content-Type: application/json
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold flex items-center gap-2">
                 <Code className="w-5 h-5 text-indigo-500" />
-                PHP Beispiel
+                Ihre response.php anpassen
               </h3>
               <Button variant="outline" size="sm" onClick={() => copyToClipboard(phpSnippet, "php")}>
                 <Copy className="w-4 h-4" />
@@ -4360,7 +4407,8 @@ Content-Type: application/json
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
-              Falls Ihre Website PHP verwendet (z.B. WordPress), nutzen Sie diesen Code:
+              Fügen Sie diesen Code <strong>am Anfang</strong> Ihrer bestehenden <code className="bg-slate-100 px-1 rounded">response.php</code> ein. 
+              Er leitet alle Formularfelder (Rolle, Name, Adresse, Themen, Nachricht, Objektdaten) an die Graupner Suite weiter.
             </p>
             <pre className="bg-slate-900 text-slate-100 rounded-sm p-4 text-xs overflow-x-auto max-h-64 overflow-y-auto">
               {phpSnippet}
