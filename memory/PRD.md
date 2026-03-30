@@ -161,6 +161,15 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - Mobile Layout unverändert (Dropdowns statt Sidebars)
 - Testing: 100% bestanden (iteration_4.json + iteration_5.json, 31 Backend + alle Frontend-Tests)
 
+### Öffentliches Kontaktformular-Relay (Fertiggestellt 30.03.2026)
+- Öffentliche Kontaktseite unter /api/kontakt (kein Login nötig)
+- Exakt gleiche Felder wie Original-Formular (Rolle, Anrede, Name, Firma, Adresse, Themen, Nachricht, Bilder)
+- Speichert Kunde direkt in Graupner Suite + Push-Benachrichtigung
+- Leitet alle Daten 1:1 an original response.php weiter (Graupner-Intern + E-Mail bleibt)
+- Multi-value Checkboxes (Themen) korrekt behandelt
+- Fallback-Seite bei Weiterleitungsfehler
+- Kein Zugriff auf Evanzo-Server nötig
+
 ## Next Tasks
 1. E-Mail-Integration mit Resend API Key
 2. Dashboard mit Charts und Echtzeit-Daten verbessern
