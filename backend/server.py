@@ -900,7 +900,12 @@ async def send_push_to_all(title: str, body: str, url: str = "/"):
             logger.info(f"Push sent successfully to {sub['endpoint'][:50]}")
         except WebPushException as e:
             logger.error(f"Push failed for {sub['endpoint'][:50]}: {e}")
-            if e.response and e.response.status_code in (404, 410):
+            is_gone = False
+            if hasattr(e, 'response') and e.response is not None and hasattr(e.response, 'status_code'):
+                is_gone = e.response.status_code in (404, 410)
+            if not is_gone and ("410" in str(e) or "Gone" in str(e) or "expired" in str(e)):
+                is_gone = True
+            if is_gone:
                 await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
                 logger.info(f"Removed expired subscription: {sub['endpoint'][:50]}")
         except Exception as e:
@@ -1245,8 +1250,10 @@ async def kontakt_relay(request: Request):
     except Exception as e:
         logger.error(f"Fehler beim Speichern in Graupner Suite: {e}")
     
-    # 2. Forward EVERYTHING to original response.php
+    # 2. Forward EVERYTHING to original response.php (in background thread)
     try:
+        import requests as sync_requests
+        
         # Build form data for forwarding (handle multi-value fields like topic[])
         forward_items = []
         for key, value in form_dict.items():
@@ -1256,11 +1263,31 @@ async def kontakt_relay(request: Request):
             else:
                 forward_items.append((key, value))
         
-        async with httpx.AsyncClient(timeout=15, verify=False) as client:
-            if files_list:
-                resp = await client.post(ORIGINAL_FORM_URL, data=forward_items, files=files_list)
-            else:
-                resp = await client.post(ORIGINAL_FORM_URL, data=forward_items)
+        forward_files = []
+        for key, (filename, content, content_type) in files_list:
+            forward_files.append((key, (filename, content, content_type)))
+        
+        def do_forward():
+            try:
+                if forward_files:
+                    resp = sync_requests.post(ORIGINAL_FORM_URL, data=forward_items, files=forward_files, timeout=15, verify=False)
+                else:
+                    resp = sync_requests.post(ORIGINAL_FORM_URL, data=forward_items, timeout=15, verify=False)
+                logger.info(f"Weiterleitung an response.php: HTTP {resp.status_code}")
+                return resp
+            except Exception as ex:
+                logger.error(f"Forward-Fehler: {ex}")
+                return None
+        
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            future = pool.submit(do_forward)
+            resp = future.result(timeout=20)
+        
+        if resp and resp.status_code == 200:
+            return HTMLResponse(content=resp.text, status_code=resp.status_code)
+        else:
+            raise Exception(f"response.php returned {resp.status_code if resp else 'None'}")
             
             return HTMLResponse(content=resp.text, status_code=resp.status_code)
     except Exception as e:
