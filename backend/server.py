@@ -127,6 +127,7 @@ class Article(BaseModel):
     description: str = ""
     unit: str = "Stück"
     price_net: float
+    purchase_price: float = 0.0
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ArticleCreate(BaseModel):
@@ -134,6 +135,7 @@ class ArticleCreate(BaseModel):
     description: str = ""
     unit: str = "Stück"
     price_net: float
+    purchase_price: float = 0.0
 
 class Service(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -141,6 +143,7 @@ class Service(BaseModel):
     description: str = ""
     unit: str = "Stunde"
     price_net: float
+    purchase_price: float = 0.0
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ServiceCreate(BaseModel):
@@ -148,6 +151,7 @@ class ServiceCreate(BaseModel):
     description: str = ""
     unit: str = "Stunde"
     price_net: float
+    purchase_price: float = 0.0
 
 class Position(BaseModel):
     pos_nr: int
@@ -217,6 +221,8 @@ class Invoice(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     due_date: str = ""
     paid_at: Optional[str] = None
+    dunning_level: int = 0
+    last_dunned_at: Optional[str] = None
 
 class InvoiceCreate(BaseModel):
     customer_id: str
@@ -687,6 +693,27 @@ async def get_invoices():
     invoices = await db.invoices.find({}, {"_id": 0}).to_list(1000)
     return invoices
 
+@api_router.get("/invoices/overdue")
+async def get_overdue_invoices(user=Depends(get_current_user)):
+    """Überfällige Rechnungen ermitteln - MUST be before /invoices/{invoice_id}"""
+    now = datetime.now(timezone.utc)
+    invoices = await db.invoices.find({"status": {"$in": ["Offen", "Gesendet", "Überfällig"]}}, {"_id": 0}).to_list(1000)
+    overdue = []
+    for inv in invoices:
+        if inv.get("due_date"):
+            try:
+                due = datetime.fromisoformat(inv["due_date"])
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                if now > due:
+                    days_overdue = (now - due).days
+                    inv["days_overdue"] = days_overdue
+                    overdue.append(inv)
+            except (ValueError, TypeError):
+                pass
+    overdue.sort(key=lambda x: x.get("days_overdue", 0), reverse=True)
+    return overdue
+
 @api_router.get("/invoices/{invoice_id}", response_model=Invoice)
 async def get_invoice(invoice_id: str):
     invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
@@ -826,6 +853,52 @@ async def delete_invoice(invoice_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
     return {"message": "Rechnung gelöscht"}
+
+# ==================== MAHNWESEN ====================
+
+@api_router.post("/invoices/{invoice_id}/dunning")
+async def advance_dunning(invoice_id: str, user=Depends(get_current_user)):
+    """Mahnstufe erhöhen"""
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    
+    current_level = invoice.get("dunning_level", 0)
+    if current_level >= 3:
+        raise HTTPException(status_code=400, detail="Maximale Mahnstufe (3) bereits erreicht")
+    
+    new_level = current_level + 1
+    now_str = datetime.now(timezone.utc).isoformat()
+    
+    await db.invoices.update_one({"id": invoice_id}, {"$set": {
+        "dunning_level": new_level,
+        "last_dunned_at": now_str,
+        "status": "Überfällig"
+    }})
+    
+    dunning_names = {1: "Zahlungserinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung"}
+    return {"message": f"{dunning_names.get(new_level, 'Mahnung')} erstellt", "dunning_level": new_level}
+
+@api_router.get("/pdf/dunning/{invoice_id}")
+async def get_dunning_pdf(invoice_id: str):
+    """PDF für Zahlungserinnerung / Mahnung generieren"""
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    level = invoice.get("dunning_level", 1)
+    
+    pdf_buffer = generate_dunning_pdf(invoice, settings, level)
+    
+    dunning_names = {1: "Zahlungserinnerung", 2: "Mahnung_1", 3: "Letzte_Mahnung"}
+    filename = f"{dunning_names.get(level, 'Mahnung')}_{invoice.get('invoice_number', '')}.pdf"
+    
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 # ==================== SETTINGS ====================
 
@@ -1537,6 +1610,130 @@ Wichtig:
 
 # ==================== PDF GENERATION ====================
 
+def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
+    """Generiert Mahnungs-PDF"""
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    primary_color = HexColor("#14532D")
+    text_color = HexColor("#0F172A")
+    muted_color = HexColor("#64748B")
+    red_color = HexColor("#DC2626")
+    
+    titles = {1: "ZAHLUNGSERINNERUNG", 2: "1. MAHNUNG", 3: "LETZTE MAHNUNG"}
+    title = titles.get(level, "MAHNUNG")
+    
+    c.setFillColor(red_color if level >= 2 else primary_color)
+    c.setFont("Helvetica-Bold", 20)
+    c.drawString(2*cm, height - 2*cm, title)
+    
+    c.setFillColor(text_color)
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, height - 2.8*cm, f"Zu Rechnung: {invoice.get('invoice_number', '')}")
+    c.drawString(2*cm, height - 3.3*cm, f"Datum: {datetime.now(timezone.utc).strftime('%d.%m.%Y')}")
+    
+    # Company info
+    c.setFont("Helvetica-Bold", 11)
+    c.drawRightString(width - 2*cm, height - 2*cm, settings.get("company_name", "Tischlerei Graupner"))
+    c.setFont("Helvetica", 9)
+    y_pos = height - 2.5*cm
+    if settings.get("address"):
+        for line in settings["address"].split("\n"):
+            c.drawRightString(width - 2*cm, y_pos, line)
+            y_pos -= 0.4*cm
+    
+    # Customer
+    c.setFillColor(text_color)
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, height - 5*cm, invoice.get("customer_name", ""))
+    y_addr = height - 5.5*cm
+    if invoice.get("customer_address"):
+        for line in invoice["customer_address"].split("\n"):
+            c.drawString(2*cm, y_addr, line)
+            y_addr -= 0.4*cm
+    
+    # Body text
+    y_pos = height - 7.5*cm
+    c.setFont("Helvetica", 10)
+    
+    messages = {
+        1: [
+            "Sehr geehrte Damen und Herren,",
+            "",
+            "bei Durchsicht unserer Unterlagen haben wir festgestellt, dass die Rechnung",
+            f"Nr. {invoice.get('invoice_number', '')} vom {datetime.fromisoformat(invoice.get('created_at', datetime.now(timezone.utc).isoformat())).strftime('%d.%m.%Y')}",
+            f"über {invoice.get('total_gross', 0):.2f} EUR noch nicht beglichen wurde.",
+            "",
+            "Sicherlich handelt es sich um ein Versehen. Wir bitten Sie, den offenen",
+            "Betrag innerhalb der nächsten 7 Tage zu überweisen.",
+        ],
+        2: [
+            "Sehr geehrte Damen und Herren,",
+            "",
+            f"trotz unserer Zahlungserinnerung ist die Rechnung Nr. {invoice.get('invoice_number', '')}",
+            f"über {invoice.get('total_gross', 0):.2f} EUR weiterhin unbeglichen.",
+            "",
+            "Wir fordern Sie hiermit auf, den Betrag innerhalb von 7 Tagen",
+            "auf unser Konto zu überweisen.",
+        ],
+        3: [
+            "Sehr geehrte Damen und Herren,",
+            "",
+            f"trotz mehrfacher Aufforderung ist die Rechnung Nr. {invoice.get('invoice_number', '')}",
+            f"über {invoice.get('total_gross', 0):.2f} EUR immer noch nicht beglichen.",
+            "",
+            "Dies ist unsere letzte Mahnung. Sollte der Betrag nicht innerhalb",
+            "von 5 Tagen bei uns eingehen, werden wir weitere rechtliche Schritte",
+            "einleiten.",
+        ]
+    }
+    
+    for line in messages.get(level, messages[1]):
+        c.drawString(2*cm, y_pos, line)
+        y_pos -= 0.45*cm
+    
+    # Amount box
+    y_pos -= 0.5*cm
+    c.setStrokeColor(red_color if level >= 2 else primary_color)
+    c.setLineWidth(1.5)
+    c.rect(2*cm, y_pos - 1.2*cm, 8*cm, 1.5*cm)
+    c.setFont("Helvetica-Bold", 12)
+    c.setFillColor(red_color if level >= 2 else text_color)
+    c.drawString(2.5*cm, y_pos - 0.3*cm, f"Offener Betrag: {invoice.get('total_gross', 0):.2f} EUR")
+    if invoice.get("due_date"):
+        try:
+            c.setFont("Helvetica", 9)
+            due = datetime.fromisoformat(invoice["due_date"]).strftime('%d.%m.%Y')
+            c.drawString(2.5*cm, y_pos - 0.8*cm, f"Ursprünglich fällig: {due}")
+        except (ValueError, TypeError):
+            pass
+    
+    # Closing
+    y_pos -= 2.5*cm
+    c.setFillColor(text_color)
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, y_pos, "Mit freundlichen Grüßen")
+    y_pos -= 0.6*cm
+    c.drawString(2*cm, y_pos, settings.get("company_name", "Tischlerei Graupner"))
+    
+    # Bank details footer
+    c.setFillColor(muted_color)
+    c.setFont("Helvetica", 7)
+    fy = 2.5*cm
+    c.line(2*cm, fy + 0.3*cm, width - 2*cm, fy + 0.3*cm)
+    if settings.get("iban"):
+        bank_text = f"{settings.get('bank_name', '')} | IBAN: {settings['iban']}"
+        if settings.get("bic"):
+            bank_text += f" | BIC: {settings['bic']}"
+        c.drawString(2*cm, fy, bank_text)
+    if settings.get("tax_id"):
+        c.drawString(2*cm, fy - 0.35*cm, f"St.-Nr.: {settings['tax_id']}")
+    
+    c.save()
+    buffer.seek(0)
+    return buffer
+
 def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     """Generiert PDF für Angebot, Auftragsbestätigung oder Rechnung"""
     buffer = BytesIO()
@@ -1675,24 +1872,73 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             c.drawString(2*cm, y_pos, line[:80])
             y_pos -= 0.4*cm
     
-    # Footer for invoice - bank details
-    if doc_type == "invoice" and settings.get("iban"):
-        y_pos = 3*cm
-        c.setFillColor(muted_color)
-        c.setFont("Helvetica", 8)
-        c.drawString(2*cm, y_pos, "Bankverbindung:")
-        c.setFillColor(text_color)
-        c.drawString(5*cm, y_pos, f"{settings.get('bank_name', '')} | IBAN: {settings.get('iban', '')} | BIC: {settings.get('bic', '')}")
-        
-        if data.get("due_date"):
-            due = datetime.fromisoformat(data["due_date"]).strftime('%d.%m.%Y')
-            c.drawString(2*cm, y_pos - 0.5*cm, f"Zahlbar bis: {due}")
+    # Footer - company details on ALL document types
+    footer_y = 3.5*cm
+    c.setStrokeColor(HexColor("#E2E8F0"))
+    c.line(2*cm, footer_y + 0.3*cm, width - 2*cm, footer_y + 0.3*cm)
     
-    # Tax ID
+    c.setFillColor(muted_color)
+    c.setFont("Helvetica", 7)
+    
+    # Left column: Company
+    col1_x = 2*cm
+    c.setFont("Helvetica-Bold", 7)
+    c.drawString(col1_x, footer_y, settings.get("company_name", "Tischlerei Graupner"))
+    c.setFont("Helvetica", 7)
+    fy = footer_y - 0.35*cm
+    if settings.get("owner_name"):
+        c.drawString(col1_x, fy, f"Inh. {settings['owner_name']}")
+        fy -= 0.35*cm
+    if settings.get("address"):
+        for line in settings["address"].split("\n")[:2]:
+            c.drawString(col1_x, fy, line.strip())
+            fy -= 0.35*cm
+    
+    # Middle column: Contact + Tax
+    col2_x = 7.5*cm
+    fy2 = footer_y
+    if settings.get("phone"):
+        c.drawString(col2_x, fy2, f"Tel: {settings['phone']}")
+        fy2 -= 0.35*cm
+    if settings.get("email"):
+        c.drawString(col2_x, fy2, settings["email"])
+        fy2 -= 0.35*cm
     if settings.get("tax_id"):
-        c.setFillColor(muted_color)
-        c.setFont("Helvetica", 8)
-        c.drawString(2*cm, 1.5*cm, f"Steuernummer: {settings['tax_id']}")
+        c.drawString(col2_x, fy2, f"St.-Nr.: {settings['tax_id']}")
+        fy2 -= 0.35*cm
+    
+    # Right column: Bank details
+    col3_x = 13*cm
+    fy3 = footer_y
+    if settings.get("iban"):
+        if settings.get("bank_name"):
+            c.drawString(col3_x, fy3, settings["bank_name"])
+            fy3 -= 0.35*cm
+        c.drawString(col3_x, fy3, f"IBAN: {settings['iban']}")
+        fy3 -= 0.35*cm
+        if settings.get("bic"):
+            c.drawString(col3_x, fy3, f"BIC: {settings['bic']}")
+            fy3 -= 0.35*cm
+    
+    # Due date for invoices
+    if doc_type == "invoice" and data.get("due_date"):
+        try:
+            due = datetime.fromisoformat(data["due_date"]).strftime('%d.%m.%Y')
+            c.setFillColor(text_color)
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(2*cm, footer_y + 0.8*cm, f"Zahlbar bis: {due}")
+        except (ValueError, TypeError):
+            pass
+    
+    # Valid until for quotes
+    if doc_type == "quote" and data.get("valid_until"):
+        try:
+            valid = datetime.fromisoformat(data["valid_until"]).strftime('%d.%m.%Y')
+            c.setFillColor(text_color)
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(2*cm, footer_y + 0.8*cm, f"Gültig bis: {valid}")
+        except (ValueError, TypeError):
+            pass
     
     c.save()
     buffer.seek(0)
@@ -1894,6 +2140,59 @@ async def get_dashboard_stats():
     # Recent anfragen (last 5)
     recent_anfragen = sorted(anfragen, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
     
+    # Monthly revenue (last 6 months)
+    from collections import defaultdict
+    monthly_revenue = defaultdict(float)
+    monthly_quotes = defaultdict(float)
+    now = datetime.now(timezone.utc)
+    for inv in invoices:
+        try:
+            created = datetime.fromisoformat(inv.get("created_at", ""))
+            month_key = created.strftime("%Y-%m")
+            monthly_revenue[month_key] += inv.get("total_gross", 0)
+        except (ValueError, TypeError):
+            pass
+    for q in quotes:
+        try:
+            created = datetime.fromisoformat(q.get("created_at", ""))
+            month_key = created.strftime("%Y-%m")
+            monthly_quotes[month_key] += q.get("total_gross", 0)
+        except (ValueError, TypeError):
+            pass
+    
+    # Build last 6 months
+    months_data = []
+    for i in range(5, -1, -1):
+        from datetime import timedelta
+        d = now - timedelta(days=i * 30)
+        mk = d.strftime("%Y-%m")
+        month_label = d.strftime("%b %Y")
+        months_data.append({
+            "month": month_label,
+            "rechnungen": round(monthly_revenue.get(mk, 0), 2),
+            "angebote": round(monthly_quotes.get(mk, 0), 2)
+        })
+    
+    # Invoice status breakdown
+    invoice_statuses = {"Offen": 0, "Gesendet": 0, "Bezahlt": 0, "Überfällig": 0}
+    for inv in invoices:
+        s = inv.get("status", "Offen")
+        if s in invoice_statuses:
+            invoice_statuses[s] += 1
+    
+    # Overdue count
+    overdue_count = 0
+    for inv in invoices:
+        if inv.get("status") in ("Offen", "Gesendet", "Überfällig") and inv.get("due_date"):
+            try:
+                due = datetime.fromisoformat(inv["due_date"])
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                if now > due:
+                    overdue_count += 1
+            except (ValueError, TypeError):
+                pass
+    
     return {
         "customers_count": customers,
         "quotes": {
@@ -1915,7 +2214,10 @@ async def get_dashboard_stats():
             "total": len(anfragen),
             "by_category": anfragen_by_category,
             "recent": recent_anfragen
-        }
+        },
+        "monthly": months_data,
+        "invoice_statuses": invoice_statuses,
+        "overdue_count": overdue_count
     }
 
 # ==================== ROOT ====================

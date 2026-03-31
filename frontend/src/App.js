@@ -3,13 +3,14 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import {
   LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package,
   Settings, LogOut, Plus, Mic, MicOff, Download, Mail, Trash2, Edit,
   ChevronRight, Euro, TrendingUp, Clock, CheckCircle, Search, X, Save,
   Wrench, Printer, Eye, ArrowLeft, Menu, Bell, BellOff, Copy, ExternalLink,
   Code, Globe, Send, GripVertical, Calculator, Percent, ChevronDown, ChevronUp,
-  Bookmark, BookmarkCheck, FileSearch, Inbox, UserCheck, Filter
+  Bookmark, BookmarkCheck, FileSearch, Inbox, UserCheck, Filter, AlertTriangle
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -814,16 +815,20 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const addFromStamm = (item, isService = false) => {
+    const newIdx = positions.length;
     setPositions([
       ...positions,
       {
-        pos_nr: positions.length + 1,
+        pos_nr: newIdx + 1,
         description: item.name + (item.description ? ` - ${item.description}` : ""),
         quantity: 1,
         unit: item.unit,
         price_net: item.price_net
       }
     ]);
+    if (item.purchase_price > 0) {
+      setCostPrices(prev => ({ ...prev, [newIdx]: item.purchase_price }));
+    }
   };
 
   // Drag & Drop handlers
@@ -2143,6 +2148,75 @@ const DashboardPage = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Umsatz-Chart */}
+        <Card className="p-6" data-testid="dashboard-revenue-chart">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            Umsatz (letzte 6 Monate)
+          </h3>
+          {(stats?.monthly || []).length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={stats.monthly} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v) => `${v.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €`} />
+                <Bar dataKey="angebote" name="Angebote" fill="#14532D" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="rechnungen" name="Rechnungen" fill="#F97316" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-muted-foreground text-sm py-8 text-center">Noch keine Daten vorhanden</p>
+          )}
+        </Card>
+
+        {/* Rechnungsstatus-Chart */}
+        <Card className="p-6" data-testid="dashboard-invoice-status">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-primary" />
+            Rechnungsstatus
+          </h3>
+          {stats?.invoices?.total > 0 ? (() => {
+            const pieData = Object.entries(stats?.invoice_statuses || {}).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }));
+            const COLORS = { Offen: "#f59e0b", Gesendet: "#3b82f6", Bezahlt: "#22c55e", "Überfällig": "#ef4444" };
+            return (
+              <div className="flex items-center gap-4">
+                <ResponsiveContainer width="50%" height={200}>
+                  <PieChart>
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="value" paddingAngle={3}>
+                      {pieData.map((entry) => (
+                        <Cell key={entry.name} fill={COLORS[entry.name] || "#94a3b8"} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2 flex-1">
+                  {pieData.map((entry) => (
+                    <div key={entry.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[entry.name] || "#94a3b8" }} />
+                        <span className="text-sm">{entry.name}</span>
+                      </div>
+                      <span className="font-mono font-semibold text-sm">{entry.value}</span>
+                    </div>
+                  ))}
+                  {(stats?.overdue_count || 0) > 0 && (
+                    <div className="pt-2 border-t mt-2">
+                      <Link to="/invoices" className="text-sm text-red-600 flex items-center gap-1 hover:underline">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        {stats.overdue_count} überfällig
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })() : (
+            <p className="text-muted-foreground text-sm py-8 text-center">Noch keine Rechnungen vorhanden</p>
+          )}
+        </Card>
+
         {/* Neue Anfragen Widget */}
         <Card className="p-6" data-testid="dashboard-recent-anfragen">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -2158,8 +2232,8 @@ const DashboardPage = () => {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{a.name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      {(a.categories || []).map((c) => (
-                        <span key={c} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{c}</span>
+                      {(a.categories || []).map((cat) => (
+                        <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
                       ))}
                     </div>
                   </div>
@@ -2182,58 +2256,25 @@ const DashboardPage = () => {
             <Euro className="w-5 h-5 text-primary" />
             Umsatzübersicht
           </h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-muted/50 rounded-sm">
-              <span className="text-muted-foreground">Angebotswert gesamt</span>
-              <span className="text-xl font-mono font-semibold">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-sm">
+              <span className="text-sm text-muted-foreground">Angebotswert</span>
+              <span className="text-lg font-mono font-semibold">
                 {(stats?.quotes?.total_value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
               </span>
             </div>
-            <div className="flex justify-between items-center p-4 bg-muted/50 rounded-sm">
-              <span className="text-muted-foreground">Rechnungswert gesamt</span>
-              <span className="text-xl font-mono font-semibold">
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-sm">
+              <span className="text-sm text-muted-foreground">Rechnungswert</span>
+              <span className="text-lg font-mono font-semibold">
                 {(stats?.invoices?.total_value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
               </span>
             </div>
-            <div className="flex justify-between items-center p-4 bg-green-50 rounded-sm border border-green-200">
-              <span className="text-green-800">Bezahlt</span>
-              <span className="text-xl font-mono font-semibold text-green-700">
+            <div className="flex justify-between items-center p-3 bg-green-50 rounded-sm border border-green-200">
+              <span className="text-sm text-green-800">Bezahlt</span>
+              <span className="text-lg font-mono font-semibold text-green-700">
                 {(stats?.invoices?.paid_value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
               </span>
             </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
-            Schnellaktionen
-          </h3>
-          <div className="grid grid-cols-2 gap-3 lg:gap-4">
-            <Link to="/quotes/new" data-testid="quick-new-quote">
-              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
-                <FileText className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
-                Neues Angebot
-              </Button>
-            </Link>
-            <Link to="/customers/new" data-testid="quick-new-customer">
-              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
-                <Users className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
-                Neuer Kunde
-              </Button>
-            </Link>
-            <Link to="/invoices/new" data-testid="quick-new-invoice">
-              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
-                <Receipt className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
-                Neue Rechnung
-              </Button>
-            </Link>
-            <Link to="/anfragen" data-testid="quick-anfragen">
-              <Button variant="outline" className="w-full h-16 lg:h-24 flex-col text-xs lg:text-sm">
-                <Inbox className="w-5 h-5 lg:w-6 lg:h-6 mb-1 lg:mb-2" />
-                Anfragen
-              </Button>
-            </Link>
           </div>
         </Card>
       </div>
@@ -3635,6 +3676,8 @@ const InvoicesPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewInvoice, setPreviewInvoice] = useState(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [overdueInvoices, setOverdueInvoices] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -3643,8 +3686,12 @@ const InvoicesPage = () => {
 
   const loadInvoices = async () => {
     try {
-      const res = await api.get("/invoices");
-      setInvoices(res.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+      const [invRes, overdueRes] = await Promise.all([
+        api.get("/invoices"),
+        api.get("/invoices/overdue")
+      ]);
+      setInvoices(invRes.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+      setOverdueInvoices(overdueRes.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Rechnungen");
     } finally {
@@ -3707,9 +3754,42 @@ const InvoicesPage = () => {
     return <Badge variant={variants[status] || "default"}>{status}</Badge>;
   };
 
+  const handleDunning = async (id, e) => {
+    e?.stopPropagation();
+    try {
+      const res = await api.post(`/invoices/${id}/dunning`);
+      toast.success(res.data.message);
+      loadInvoices();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Mahnen");
+    }
+  };
+
+  const handleDownloadDunning = async (id, number, e) => {
+    e?.stopPropagation();
+    try {
+      const res = await axios.get(`${API}/pdf/dunning/${id}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Mahnung_${number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Mahnung PDF heruntergeladen");
+    } catch (err) {
+      toast.error("Fehler beim PDF-Download");
+    }
+  };
+
+  const getDunningLabel = (level) => {
+    const labels = { 0: "Keine", 1: "Erinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung" };
+    return labels[level] || "Keine";
+  };
+
   return (
     <div data-testid="invoices-page">
-      <div className="flex items-center justify-between mb-4 lg:mb-8">
+      <div className="flex items-center justify-between mb-4 lg:mb-6">
         <div>
           <h1 className="text-2xl lg:text-4xl font-bold">Rechnungen</h1>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{invoices.length} Rechnungen gesamt</p>
@@ -3721,7 +3801,97 @@ const InvoicesPage = () => {
         </Button>
       </div>
 
-      {loading ? (
+      {/* Tabs: Alle / Mahnwesen */}
+      <div className="flex gap-1 mb-4 bg-muted p-1 rounded-sm w-fit" data-testid="invoices-tabs">
+        <button
+          onClick={() => setActiveTab("all")}
+          className={`px-4 py-2 rounded-sm text-sm font-medium transition-all ${
+            activeTab === "all" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+          data-testid="tab-all-invoices"
+        >
+          Alle Rechnungen
+        </button>
+        <button
+          onClick={() => setActiveTab("dunning")}
+          className={`px-4 py-2 rounded-sm text-sm font-medium transition-all flex items-center gap-2 ${
+            activeTab === "dunning" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+          data-testid="tab-dunning"
+        >
+          <AlertTriangle className="w-4 h-4" />
+          Mahnwesen
+          {overdueInvoices.length > 0 && (
+            <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{overdueInvoices.length}</span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === "dunning" ? (
+        /* Mahnwesen Tab */
+        <div data-testid="dunning-section">
+          {overdueInvoices.length === 0 ? (
+            <Card className="p-8 lg:p-12 text-center">
+              <CheckCircle className="w-10 h-10 lg:w-12 lg:h-12 mx-auto text-green-500 mb-4" />
+              <h3 className="text-base lg:text-lg font-semibold">Keine überfälligen Rechnungen</h3>
+              <p className="text-muted-foreground mt-2 text-sm">Alle Rechnungen sind im grünen Bereich</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {overdueInvoices.map((inv) => (
+                <Card key={inv.id} className="p-4 lg:p-5 border-l-4 border-l-red-500" data-testid={`dunning-card-${inv.id}`}>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm">{inv.invoice_number}</span>
+                        <span className="font-semibold">{inv.customer_name}</span>
+                        <Badge variant="danger">{inv.days_overdue} Tage überfällig</Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+                        <span>Betrag: <strong className="text-foreground">{inv.total_gross?.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</strong></span>
+                        <span>Fällig: {new Date(inv.due_date).toLocaleDateString("de-DE")}</span>
+                        <span>Mahnstufe: <strong className={inv.dunning_level >= 2 ? "text-red-600" : "text-foreground"}>{getDunningLabel(inv.dunning_level || 0)}</strong></span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      {(inv.dunning_level || 0) > 0 && (
+                        <button
+                          onClick={(e) => handleDownloadDunning(inv.id, inv.invoice_number, e)}
+                          className="p-2.5 bg-muted hover:bg-muted/80 rounded-sm"
+                          title="Mahnung PDF herunterladen"
+                          data-testid={`btn-download-dunning-${inv.id}`}
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      )}
+                      {(inv.dunning_level || 0) < 3 && (
+                        <button
+                          onClick={(e) => handleDunning(inv.id, e)}
+                          className="p-2.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-sm"
+                          title={`${getDunningLabel((inv.dunning_level || 0) + 1)} erstellen`}
+                          data-testid={`btn-dunning-${inv.id}`}
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => handleMarkPaid(inv.id, e)}
+                        className="p-2.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-sm"
+                        title="Als bezahlt markieren"
+                        data-testid={`btn-dunning-paid-${inv.id}`}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+
+      loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -3846,6 +4016,7 @@ const InvoicesPage = () => {
           </div>
         </Card>
         </>
+      )
       )}
 
       <DocumentPreview
@@ -4273,9 +4444,16 @@ const ArticlesPage = () => {
               </div>
               <div className="mt-4 pt-4 border-t flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{article.unit}</span>
-                <span className="text-lg font-mono font-semibold">
-                  {article.price_net.toFixed(2)} €
-                </span>
+                <div className="text-right">
+                  <span className="text-lg font-mono font-semibold">
+                    {article.price_net.toFixed(2)} €
+                  </span>
+                  {article.purchase_price > 0 && (
+                    <span className="block text-xs text-muted-foreground font-mono">
+                      EK: {article.purchase_price.toFixed(2)} € ({((1 - article.purchase_price / article.price_net) * 100).toFixed(0)}%)
+                    </span>
+                  )}
+                </div>
               </div>
             </Card>
           ))}
@@ -4300,7 +4478,8 @@ const ArticleModal = ({ isOpen, onClose, article, onSave }) => {
     name: "",
     description: "",
     unit: "Stück",
-    price_net: 0
+    price_net: 0,
+    purchase_price: 0
   });
   const [loading, setLoading] = useState(false);
 
@@ -4310,10 +4489,11 @@ const ArticleModal = ({ isOpen, onClose, article, onSave }) => {
         name: article.name || "",
         description: article.description || "",
         unit: article.unit || "Stück",
-        price_net: article.price_net || 0
+        price_net: article.price_net || 0,
+        purchase_price: article.purchase_price || 0
       });
     } else {
-      setForm({ name: "", description: "", unit: "Stück", price_net: 0 });
+      setForm({ name: "", description: "", unit: "Stück", price_net: 0, purchase_price: 0 });
     }
   }, [article]);
 
@@ -4376,7 +4556,7 @@ const ArticleModal = ({ isOpen, onClose, article, onSave }) => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Preis (Netto €)</label>
+            <label className="block text-sm font-medium mb-2">VK-Preis (Netto €)</label>
             <Input
               data-testid="input-article-price"
               type="number"
@@ -4384,6 +4564,26 @@ const ArticleModal = ({ isOpen, onClose, article, onSave }) => {
               value={form.price_net}
               onChange={(e) => setForm({ ...form, price_net: parseFloat(e.target.value) || 0 })}
             />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">EK-Preis (Netto €)</label>
+            <Input
+              data-testid="input-article-purchase-price"
+              type="number"
+              step="0.01"
+              value={form.purchase_price}
+              onChange={(e) => setForm({ ...form, purchase_price: parseFloat(e.target.value) || 0 })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Marge</label>
+            <div className="h-10 flex items-center px-3 rounded-sm border border-input bg-muted/50 font-mono text-sm">
+              {form.price_net > 0 && form.purchase_price > 0
+                ? `${((1 - form.purchase_price / form.price_net) * 100).toFixed(1)}%`
+                : "—"}
+            </div>
           </div>
         </div>
         <div className="flex justify-end gap-4 pt-4">
@@ -4496,9 +4696,16 @@ const ServicesPage = () => {
               </div>
               <div className="mt-4 pt-4 border-t flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{service.unit}</span>
-                <span className="text-lg font-mono font-semibold">
-                  {service.price_net.toFixed(2)} €
-                </span>
+                <div className="text-right">
+                  <span className="text-lg font-mono font-semibold">
+                    {service.price_net.toFixed(2)} €
+                  </span>
+                  {service.purchase_price > 0 && (
+                    <span className="block text-xs text-muted-foreground font-mono">
+                      EK: {service.purchase_price.toFixed(2)} € ({((1 - service.purchase_price / service.price_net) * 100).toFixed(0)}%)
+                    </span>
+                  )}
+                </div>
               </div>
             </Card>
           ))}
@@ -4523,7 +4730,8 @@ const ServiceModal = ({ isOpen, onClose, service, onSave }) => {
     name: "",
     description: "",
     unit: "Stunde",
-    price_net: 0
+    price_net: 0,
+    purchase_price: 0
   });
   const [loading, setLoading] = useState(false);
 
@@ -4533,10 +4741,11 @@ const ServiceModal = ({ isOpen, onClose, service, onSave }) => {
         name: service.name || "",
         description: service.description || "",
         unit: service.unit || "Stunde",
-        price_net: service.price_net || 0
+        price_net: service.price_net || 0,
+        purchase_price: service.purchase_price || 0
       });
     } else {
-      setForm({ name: "", description: "", unit: "Stunde", price_net: 0 });
+      setForm({ name: "", description: "", unit: "Stunde", price_net: 0, purchase_price: 0 });
     }
   }, [service]);
 
@@ -4599,7 +4808,7 @@ const ServiceModal = ({ isOpen, onClose, service, onSave }) => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Preis (Netto €)</label>
+            <label className="block text-sm font-medium mb-2">VK-Preis (Netto €)</label>
             <Input
               data-testid="input-service-price"
               type="number"
@@ -4607,6 +4816,26 @@ const ServiceModal = ({ isOpen, onClose, service, onSave }) => {
               value={form.price_net}
               onChange={(e) => setForm({ ...form, price_net: parseFloat(e.target.value) || 0 })}
             />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">EK-Preis (Netto €)</label>
+            <Input
+              data-testid="input-service-purchase-price"
+              type="number"
+              step="0.01"
+              value={form.purchase_price}
+              onChange={(e) => setForm({ ...form, purchase_price: parseFloat(e.target.value) || 0 })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Marge</label>
+            <div className="h-10 flex items-center px-3 rounded-sm border border-input bg-muted/50 font-mono text-sm">
+              {form.price_net > 0 && form.purchase_price > 0
+                ? `${((1 - form.purchase_price / form.price_net) * 100).toFixed(1)}%`
+                : "—"}
+            </div>
           </div>
         </div>
         <div className="flex justify-end gap-4 pt-4">

@@ -1,0 +1,98 @@
+{
+  "summary": "Comprehensive testing of 4 new features for Graupner Suite: Mahnwesen (Dunning), Dashboard Charts, EK-Preise (Purchase Prices), and PDF improvements. Fixed critical route ordering bug in /api/invoices/overdue endpoint. All 15 backend tests passed (100%). All frontend features verified working.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "fixed": [
+      {
+        "endpoint": "/api/invoices/overdue",
+        "issue": "Route was defined AFTER /api/invoices/{invoice_id}, causing 'overdue' to be matched as invoice_id and returning 404",
+        "fix": "Moved /api/invoices/overdue route definition BEFORE /api/invoices/{invoice_id} in server.py",
+        "priority": "HIGH"
+      }
+    ]
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/invoices/overdue returns overdue invoices with days_overdue field",
+    "Backend: POST /api/invoices/{id}/dunning advances dunning level (1->2->3)",
+    "Backend: Dunning level cannot exceed 3 (returns 400 error)",
+    "Backend: GET /api/pdf/dunning/{id} returns PDF for dunning letter",
+    "Backend: GET /api/dashboard/stats includes monthly revenue data (6 months)",
+    "Backend: GET /api/dashboard/stats includes invoice_statuses breakdown (Offen, Gesendet, Bezahlt, Überfällig)",
+    "Backend: GET /api/dashboard/stats includes overdue_count",
+    "Backend: POST /api/articles with purchase_price field saves correctly",
+    "Backend: POST /api/services with purchase_price field saves correctly",
+    "Backend: GET /api/articles returns purchase_price field",
+    "Backend: GET /api/services returns purchase_price field",
+    "Backend: PUT /api/articles/{id} updates purchase_price correctly",
+    "Backend: GET /api/pdf/quote/{id} returns valid PDF",
+    "Backend: GET /api/pdf/invoice/{id} returns valid PDF",
+    "Backend: Invoice overdue workflow (create -> verify due_date -> dunning_level 0)",
+    "Frontend: Dashboard shows BarChart 'Umsatz (letzte 6 Monate)' with monthly revenue",
+    "Frontend: Dashboard shows PieChart 'Rechnungsstatus' with status breakdown",
+    "Frontend: Dashboard shows '1 überfällig' indicator",
+    "Frontend: Invoices page has 'Mahnwesen' tab with overdue count badge (1)",
+    "Frontend: Mahnwesen tab shows overdue invoice with days_overdue, Mahnstufe, download/paid buttons",
+    "Frontend: Article modal has 'EK-Preis (Netto €)' field and 'Marge' display",
+    "Frontend: Article cards show 'EK: 65.00 € (46%)' for articles with purchase_price",
+    "Frontend: Service modal has 'EK-Preis (Netto €)' field and 'Marge' display"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/pytest/pytest_new_features.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "FIXED: Route ordering bug - /api/invoices/overdue must be defined BEFORE /api/invoices/{invoice_id} to prevent FastAPI from matching 'overdue' as an invoice_id",
+    "All 4 new features properly implemented: Mahnwesen, Dashboard Charts, EK-Preise, PDF improvements",
+    "Dunning workflow correctly advances levels 1->2->3 with proper status updates",
+    "Dashboard stats endpoint returns comprehensive data for charts (monthly, invoice_statuses, overdue_count)",
+    "Purchase price field properly integrated in Article and Service models with margin calculation"
+  ],
+
+  "updated_files": [
+    "/app/backend/server.py",
+    "/app/backend/tests/test_new_features.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all features verified)"
+  },
+
+  "test_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+
+  "seed_data_creation": "Test articles and services created and cleaned up during testing",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "4 new features fully tested and working: 1) Mahnwesen - GET /api/invoices/overdue, POST /api/invoices/{id}/dunning, GET /api/pdf/dunning/{id}. 2) Dashboard Charts - GET /api/dashboard/stats returns monthly, invoice_statuses, overdue_count. 3) EK-Preise - purchase_price field in Article/Service models, displayed in cards and modals with margin calculation. 4) PDF improvements - company footer in all PDF documents. Route ordering fix applied to server.py.",
+
+  "rca_of_the_issue": {
+    "issue": "/api/invoices/overdue returning 404 'Rechnung nicht gefunden'",
+    "root_cause": "FastAPI route ordering - /api/invoices/{invoice_id} was defined at line 696, while /api/invoices/overdue was defined at line 838. FastAPI matches routes in order, so 'overdue' was being treated as an invoice_id parameter.",
+    "reproduction_steps": [
+      "1. Call GET /api/invoices/overdue",
+      "2. FastAPI matches /api/invoices/{invoice_id} first",
+      "3. 'overdue' is passed as invoice_id",
+      "4. Database lookup fails, returns 404"
+    ],
+    "mitigation": "Moved /api/invoices/overdue route definition to be BEFORE /api/invoices/{invoice_id} in server.py (now at line 696, before the parameterized route)"
+  }
+}
