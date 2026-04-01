@@ -419,6 +419,29 @@ async def delete_customer(customer_id: str):
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
     return {"message": "Kunde gelöscht"}
 
+@api_router.post("/customers/{customer_id}/to-anfrage")
+async def customer_to_anfrage(customer_id: str, user=Depends(get_current_user)):
+    """Kunde zurück in Anfrage umwandeln"""
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+    
+    anfrage = Anfrage(
+        name=customer.get("name", ""),
+        email=customer.get("email", ""),
+        phone=customer.get("phone", ""),
+        address=customer.get("address", ""),
+        notes=customer.get("notes", ""),
+        photos=customer.get("photos", []),
+        categories=customer.get("categories", []),
+        customer_type=customer.get("customer_type", "Privat"),
+        source="rueckstufung"
+    )
+    await db.anfragen.insert_one(anfrage.model_dump())
+    await db.customers.delete_one({"id": customer_id})
+    
+    return {"message": "Kunde zurück in Anfrage umgewandelt", "anfrage_id": anfrage.id}
+
 # ==================== ARTICLES ====================
 
 @api_router.get("/articles", response_model=List[Article])

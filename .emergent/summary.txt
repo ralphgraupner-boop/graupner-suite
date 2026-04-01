@@ -1,121 +1,130 @@
-<analysis>**original_problem_statement**: Complete craftsman management software (Graupner Suite) for a carpentry business. Replaces old disconnected software. Needs customer management, WYSIWYG document editor with a 3-column layout (Drag & Drop services, Document, Kalkulation), AI voice quotes, financials, and a seamless Lead-Relay-System that connects their Jimdo website to the app while concurrently forwarding data to their legacy Graupner-Intern PHP system.
+<analysis>**original_problem_statement**: Complete craftsman management software (Graupner Suite) for a carpentry business. Replaces old disconnected software. Needs customer management, WYSIWYG document editor with a 3-column layout (Drag & Drop services, Document, Kalkulation), AI voice quotes, financials, and a seamless Lead-Relay-System that connects their Jimdo website to the app while concurrently forwarding data to their legacy Graupner-Intern PHP system. 
 
 **User's preferred language**: German (INSTRUCT NEXT AGENT TO RESPOND IN GERMAN ONLY)
 
 **what currently exists?** 
-A stable full-stack application (React/FastAPI/MongoDB). It features a robust 3-column WYSIWYG editor on Desktop (Left: Drag & Drop services/articles, Center: Document, Right: Calculation/Marge and Template Suggestions). The app has a custom standalone HTML Relay Form served at an API endpoint that captures leads, saves them to the DB, triggers a Push Notification, and successfully forwards the  payload to the user's legacy external CRM without breaking their existing workflows. 
+A highly functional, stable full-stack application (React/FastAPI/MongoDB). It features a 3-column WYSIWYG editor, a custom relay contact form, an Anfragen (Inquiries) inbox system for lead management, automated travel cost calculations (via OpenStreetMap), a dunning/overdue invoice system (Mahnwesen), automatic quote follow-ups, SMTP-based email sending, and a dashboard with charts. The codebase is currently monolithic and heavily relies on  and .
 
 **Last working item**:
-- **Last item agent was working**: Slimming down the public HTML Relay Contact Form. The user requested removing the Rolle field, adding a checkbox to copy contact data to object address, slimming down the topics, increasing the max upload limit to 50MB, and making the privacy checkbox larger. The agent performed a  in  to update the HTML string.
-- **Status**: USER VERIFICATION PENDING (Code edited, but not tested or confirmed by user).
+- **Last item agent was working**: Implementing a feature to revert a Customer back to an Inquiry (Kunde auf Anfrage zurücksetzen). The agent added the backend endpoint  and added a Zurück zu Anfrage button to the customer cards in the frontend, but the session ended immediately after the file edit.
+- **Status**: TESTING PENDING
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: manual testing by curl / screenshot (Verify the served HTML page visually and submit a test payload to ensure the JS copy address logic and backend forwarding still work with the removed/altered fields).
+- **Which testing method agent to use?**: Both (Screenshot for UI to see the button, then backend/frontend testing via testing subagent or curl to ensure the customer is successfully moved to  collection and removed from  collection).
 - **User Testing Done**: N
 
-**All Pending/In progress Issue list**: 
-  - **Issue 1 (P0)**: Test and verify the newly slimmed-down Relay Contact Form.
-     - **Attempted fixes**: Agent updated the HTML block inside  (specifically the  endpoint).
-     - **Next debug checklist**: Open the relay contact form URL. Verify UI matches user request (no roles, address copy button works, topics slimmed, 50MB note visible, big privacy checkbox). Fill out and submit the form to ensure the backend relay () still successfully parses the payload and forwards it to the legacy  system without throwing  or HTTP 500s due to missing fields (like Rolle).
-     - **Why fix this issue and what will be achieved with the fix?**: It was the final user request before the session ended. Ensures lead generation works flawlessly and looks exactly as the user wants.
+**All Pending/In progress Issue list**:
+  - **Issue 1 (P0)**: Test and verify the Revert Customer to Inquiry feature.
+     - **Attempted fixes**: Agent used  to add the API endpoint in  and the UI button in .
+     - **Next debug checklist**: Check if the frontend compiles successfully. Click the Zurück zu Anfrage button on a Customer. Verify if a  request to  is triggered, the customer disappears from the Customers list, and correctly reappears in the Anfragen (Inquiries) list.
+     - **Why fix this issue and what will be achieved with the fix?**: It was the exact last request from the user. Ensures flexible lead management.
      - **Status**: TESTING PENDING
      - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Both (Screenshot for UI, backend submission for data forwarding).
+     - **Should Test frontend/backend/both after fix?**: Both
      - **Blocked on other issue**: None
 
-**In progress Task List**: None currently active.
+**In progress Task List**: None. 
 
 **Upcoming and Future Tasks**
-  - **(P1) Email Sending**: Implement frontend controls to trigger backend email sending using Resend. (Requires User API Key).
-  - **(P2) Dynamic Dashboard**: Connect dashboard widgets to real backend data (e.g., total value of open quotes, overdue invoices) with Charts.
-  - **(P2) Dunning Process (Mahnwesen)**: Implement a system to track overdue invoices and generate payment reminders.
-  - **(P2) Purchase Prices (EK-Preise) in Master Data**: Add EK-Price fields to Article/Service master data so the Kalkulation tab in the WYSIWYG editor populates costs automatically.
-  - **(P3) Company Settings PDF Integration**: Ensure company details (address, tax ID, bank info) from Settings populate generated PDF documents.
+  - **(P0) Code Refactoring**:  is over 6300 lines long, and  is over 2600 lines. They urgently need to be split into modular components/routes before adding more complex features.
+  - **(P2) Bank Integration**: User requested N26 bank integration (CSV-Import / Open Banking) to automatically match and detect paid invoices.
+  - **(P3) Windows Desktop App**: User asked about creating an installation routine (e.g., Electron wrapper) for Windows in the future.
 
 **Completed work in this session**
-- Test-Website Webhook Integration via PHP snippet () (DONE)
-- 3-Column WYSIWYG Editor on Desktop with Drag & Drop, Detail-View, and Calculation tab (DONE)
-- Template system / Similar Document suggestions via API (DONE)
-- Public Contact Form Relay endpoint that mimics legacy form and forwards  to external  (DONE)
-- Cleaned up expired WebPush subscriptions to prevent backend spam logs (DONE)
+- Anfragen-System (Inquiries) with 5 specific categories, separate inbox, and 1-click conversion to Customer (Iteration 6) (DONE)
+- Contact form updated with the workshop background image from the login page (DONE)
+- Mahnwesen (Dunning Process), Dashboard Charts, EK-Preise (Purchase prices), and Firmendaten in PDFs (Iteration 7) (DONE)
+- Fälligkeits-Warnsystem (Due-date warning) with Push Notifications (Iteration 8) (DONE)
+- E-Mail-Versand via custom Jimdo SMTP () replacing Resend (Iteration 8) (DONE)
+- E-Mail-Protokoll (Email Log page) & Document-level Email History (Iteration 9) (DONE)
+- Quote Follow-up (Automatische Wiedervorlage) after 7 days (Iteration 10) (DONE)
+- Customer Status tracking, OpenStreetMap button, Staggered Dashboard Overview, and Automatic Distance/Travel Cost calculations using Nominatim/OSRM (Iteration 11) (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-- None. The agent addressed all user concerns.
+- None. Agent successfully resolved all user requests except testing the very last one.
 
 **Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork**: Cloudflare 520 errors on Production URL after deployment.
-- **Recurrence count**: 2
-- **Status**: RESOLVED (Agent educated the user that this is a temporary infrastructure delay after clicking Redeploy changes and advised using the Preview URL for immediate testing). Next agent should remember to steer user to Preview URL if Production is temporarily down.
+- **Issue recurrence in previous fork**: Route ordering bugs in FastAPI.
+- **Recurrence count**: 2 (Testing agent fixed  and  being shadowed by parameterized routes like ).
+- **Status**: RESOLVED (Keep in mind for future backend routes: always place specific routes before  parameter routes).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend**: React, Tailwind CSS, Drag and Drop handlers, Responsive UI (3-column on Desktop, standard on mobile).
-- **Backend**: FastAPI, Motor (async MongoDB),  (used for synchronous forwarding of multipart forms to avoid async event loop blocking).
-- **Relay System**: The backend serves raw HTML for a contact form to bypass the need for a frontend build. Submissions are saved to MongoDB and immediately ed to a legacy external CRM.
+- **Frontend**: React, Tailwind CSS, Recharts (added this session).
+- **Backend**: FastAPI, Motor (async MongoDB).
+- **Email**:  and  connected to custom SMTP (Jimdo/emailsrvr) with user credentials.
+- **Distance Calculation**: Uses  (Nominatim) for geocoding and  (OSRM public API) for routing/distance. Does NOT require Google API keys.
+- **Relay System**: Backend serves raw HTML for the public contact form and forwards payloads to legacy CRM.
 
 **key DB schema**
-- **customers**: 
-- **quotes/orders/invoices**: Added  (boolean) to allow marking documents as reusable templates.
+- **anfragen**: 
+- **customers**: Added  (Neu, In Arbeit, Angebot geschrieben, Auftrag erteilt, Abgeschlossen)
+- **settings**: Added , , , 
+- **invoices**: Added , 
+- **email_logs**: 
 
 **changes in tech stack**
-- None structurally, but extensive reliance on  for bridging modern FastAPI with legacy PHP CRM systems.
+- Added  for Dashboard charts.
+- Removed Resend integration; replaced with native Python SMTP () using user-provided credentials.
+- Added  and  for OpenStreetMap travel distance calculations.
 
 **All files of reference**
-- : Contains complex 3-column Editor layout, calculation logic, and drag-and-drop state.
-- : Contains the Relay Form HTML, the forwarding logic, and the  API.
--  & : Test results for the Editor layout changes.
-- : Created to store auth credentials for testing subagents.
+- : Contains all UI, now including charts, email modals, and new buttons.
+- : Contains new endpoints for Mahnwesen, distances, email sending, reverting customers.
+- : Actively updated with new feature sets and backlog.
+-  through : Extensive test logs verifying all new features up to the last working item.
 
 **Areas that need refactoring**:
--  is extremely large (>5200 lines). It urgently needs to be split into separate page/component files.
--  is bloated. Should be split using FastAPI routers.
+-  (CRITICAL: >6300 lines)
+-  (CRITICAL: >2600 lines)
 
 **key api endpoints**
--  (GET): Serves the public HTML Relay form.
--  (POST): Processes form, saves to DB, sends WebPush, and forwards to legacy CRM.
--  (GET): Returns templates and similar past documents for the Editor sidebar.
+-  (POST): Calculates driving distance/time using OSRM.
+-  (POST): Sends emails via SMTP and logs them.
+-  (POST): Reverts a customer back to an Inquiry (Anfrage).
 
 **Critical Info for New Agent**
-- **Form Field Strictness**: The  form forwards data to an external legacy PHP system (). You **MUST NOT** change the  attributes of specific fields (like , , ) because the legacy system strictly expects these exact names to process leads successfully.
-- **Relay Mechanism**: The forwarding uses  /  synchronously because  had bugs with  multipart streaming in this specific setup. Do not refactor this back to async unless you thoroughly test file uploads.
+- **Contact Form Categories**: The user changed categories to exactly 5 strictly defined strings: Schiebetür, Fenster, Innentür, Eingangstür, Sonstige Reparaturen. These are synced across the contact form, Inquiries, and Customers.
+- **Email Integration**: Do not ask the user for a Resend API key. The agent successfully integrated the user's IMAP/SMTP credentials (, Port 465).
+- **Travel Cost**: Travel costs () rely on  stored in . The calculation uses free open-source APIs (Nominatim/OSRM). Do not prompt the user for a Google Maps API Key.
 
 **documents and test reports created in this job**
-- 
-- 
+-  to 
 - 
 - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. **User (PENDING)**: Requested slimming down the newly created Relay Form (Remove roles, add copy address feature, 50MB upload limit, larger privacy checkbox). *Agent implemented but did not test or respond.*
-2. **User**: Confirmed the Relay Form worked, but requested replacing the raw Jep backend response with a beautiful success/thank you page. (Resolved)
-3. **User**: Reported that the form goes to a Jep gray screen and nothing seems to happen. (Resolved - Agent verified it actually worked and explained the Jep was from the legacy system).
-4. **User**: Reported that data lands in Anfragen instead of Kontakte in their legacy CRM. (Resolved - Agent fixed the checkbox  array format).
-5. **User**: Reported that Graupner-Intern (legacy CRM) didn't receive the relayed data. (Resolved - Agent fixed an async httpx bug).
-6. **User**: Asked if they should test on Preview since Prod is down. (Resolved).
-7. **User**: Reminded agent not to break the Graupner-Intern flow and shared the URL for it. (Resolved).
-8. **User**: Stated they don't have hosting access to  and asked for a middleman/relay solution. (Resolved).
-9. **User**: Asked who hosts . (Resolved).
-10. **User**: Provided main Jimdo URL to integrate the contact form. (Resolved - Led to the Relay Form architecture).
+1. **User (PENDING)**: Requested the ability to revert a customer back to an inquiry. *Agent implemented code but didn't verify it before session end.*
+2. **User**: Said yes to automatically adding travel costs.
+3. **User**: Confirmed they want to set the company address in the Settings page for travel costs.
+4. **User**: Clarified they don't have a Google API key, Windows installation can wait, but wants staggered overview (Anfragen, Kunden, Leistung) and OpenStreetMap distance calculation.
+5. **User**: Said ja 1a + 2c (approving follow-ups for quotes).
+6. **User**: Said ja to the Follow-up suggestion.
+7. **User**: Said ja bitte to the Email-Log suggestion.
+8. **User**: Provided IMAP/SMTP host , user  and password for email configuration.
+9. **User**: Said weis nicht genau... when asked what a Resend API key is.
+10. **User**: Confirmed d (meaning starting the Fälligkeits-Warnsystem).
 
 **Project Health Check:**
-- **Broken**: None. 
-- **Mocked**: Email sending (Resend requires key).
+- **Broken**: None known.
+- **Mocked**: None.
 
 **3rd Party Integrations**
 - **OpenAI GPT-5.2 & Whisper** — uses Emergent LLM Key.
-- **Resend (Email)** — requires User API Key.
+- **SMTP Email Sending** — requires User Credentials (already integrated and working).
+- **OpenStreetMap (Nominatim/OSRM)** — Free, no key required.
 - **WebPush (VAPID)** — requires internal generated keys.
-- **Legacy Graupner-Intern CRM** — Hardcoded POST forwarding to user's external PHP script.
+- **Legacy Graupner-Intern CRM** — Hardcoded POST forwarding.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES (Iteration 4 & 5).
+- **Testing agent used after significant changes**: YES (Iterations 6 through 11).
 - **Troubleshoot agent used after agent stuck in loop**: NO.
 - **Test files created**: None.
-- **Known regressions**: None.
+- **Known regressions**: Route ordering (parameterized routes shadowing static routes) was an issue but was fixed by the Testing Agent. Keep an eye out for this when adding new routes.
 
 **Credentials to test flow:**
 See . (Username: , Password: ).
 
 **What agent forgot to execute**
-- The agent updated the raw HTML string inside  to fulfill the user's latest UI request (slimming the form), but the session ended before the agent could test it, take a screenshot, and ask the user for confirmation.</analysis>
+- The agent applied the final  to add the  to the frontend, but the session ended immediately before the agent could compile, take a screenshot, and call the testing agent. Needs immediate verification.</analysis>

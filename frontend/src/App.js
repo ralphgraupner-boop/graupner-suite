@@ -2928,7 +2928,22 @@ const CustomersPage = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-1 ml-4">
+                  <button
+                    data-testid={`btn-to-anfrage-${customer.id}`}
+                    onClick={async () => {
+                      if (!window.confirm(`${customer.name} zurück in Anfragen verschieben?`)) return;
+                      try {
+                        await api.post(`/customers/${customer.id}/to-anfrage`);
+                        toast.success("Kunde zurück in Anfragen verschoben");
+                        loadCustomers();
+                      } catch (err) { toast.error("Fehler beim Zurückstufen"); }
+                    }}
+                    className="p-2 hover:bg-amber-50 hover:text-amber-700 rounded-sm"
+                    title="Zurück zu Anfragen"
+                  >
+                    <Inbox className="w-4 h-4" />
+                  </button>
                   <button
                     data-testid={`btn-edit-customer-${customer.id}`}
                     onClick={() => {
