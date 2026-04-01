@@ -2170,10 +2170,14 @@ const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dueSoon, setDueSoon] = useState([]);
+  const [followupQuotes, setFollowupQuotes] = useState([]);
+  const [overviewView, setOverviewView] = useState("anfragen");
+  const [overviewData, setOverviewData] = useState(null);
 
   useEffect(() => {
     loadStats();
     checkDueInvoices();
+    checkFollowups();
   }, []);
 
   const loadStats = async () => {
@@ -2194,6 +2198,27 @@ const DashboardPage = () => {
         api.get("/invoices/due-soon")
       ]);
       setDueSoon(dueSoonRes.data);
+    } catch {}
+  };
+
+  const checkFollowups = async () => {
+    try {
+      const [checkRes, followupRes] = await Promise.all([
+        api.post("/quotes/check-followup"),
+        api.get("/quotes/followup")
+      ]);
+      setFollowupQuotes(followupRes.data);
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadOverview();
+  }, [overviewView]);
+
+  const loadOverview = async () => {
+    try {
+      const res = await api.get(`/stats/overview?view=${overviewView}`);
+      setOverviewData(res.data);
     } catch {}
   };
 
@@ -2243,6 +2268,23 @@ const DashboardPage = () => {
               <Link to="/invoices">
                 <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-100 shrink-0" data-testid="btn-view-overdue">
                   Mahnwesen
+                </Button>
+              </Link>
+            </div>
+          )}
+          {followupQuotes.length > 0 && (
+            <div className="flex items-center gap-3 p-3 lg:p-4 bg-blue-50 border border-blue-200 rounded-sm">
+              <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-blue-800">
+                  {followupQuotes.length === 1
+                    ? `Angebot ${followupQuotes[0].quote_number} an ${followupQuotes[0].customer_name} wartet seit ${followupQuotes[0].days_waiting} Tagen`
+                    : `${followupQuotes.length} Angebote seit 7+ Tagen ohne Rückmeldung`}
+                </p>
+              </div>
+              <Link to="/quotes">
+                <Button variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100 shrink-0" data-testid="btn-view-followup">
+                  Wiedervorlage
                 </Button>
               </Link>
             </div>
@@ -2430,12 +2472,69 @@ const DashboardPage = () => {
           </div>
         </Card>
       </div>
+
+      {/* Gestaffelte Übersicht */}
+      <Card className="p-6 mt-6" data-testid="dashboard-overview">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Eye className="w-5 h-5 text-primary" />
+            Übersicht
+          </h3>
+          <div className="flex gap-1 bg-muted p-1 rounded-sm">
+            {[
+              { key: "anfragen", label: "Anfragen" },
+              { key: "kunden", label: "Kunden" },
+              { key: "leistungen", label: "Leistungen" }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setOverviewView(tab.key)}
+                className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-all ${
+                  overviewView === tab.key ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid={`overview-tab-${tab.key}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {overviewData && (
+          <div>
+            <p className="text-sm text-muted-foreground mb-3">Gesamt: {overviewData.total}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {Object.entries(overviewData.groups || {}).map(([group, data]) => (
+                <div key={group} className="border rounded-sm p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold">{group}</span>
+                    <span className="text-lg font-mono font-bold text-primary">{data.count}</span>
+                  </div>
+                  {(data.items || []).length > 0 && (
+                    <div className="space-y-1">
+                      {data.items.slice(0, 3).map((item, i) => (
+                        <p key={i} className="text-xs text-muted-foreground truncate">
+                          {item.name} {item.price_net ? `— ${item.price_net.toFixed(2)} €` : ""}
+                        </p>
+                      ))}
+                      {data.items.length > 3 && (
+                        <p className="text-xs text-muted-foreground">+{data.items.length - 3} weitere</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
 
 // ==================== ANFRAGEN ====================
 const CATEGORIES = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"];
+const CUSTOMER_STATUSES = ["Neu", "In Arbeit", "Angebot geschrieben", "Auftrag erteilt", "Abgeschlossen"];
 
 const AnfragenPage = () => {
   const [anfragen, setAnfragen] = useState([]);
@@ -2629,6 +2728,7 @@ const CustomersPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editCustomer, setEditCustomer] = useState(null);
   const navigate = useNavigate();
@@ -2663,7 +2763,8 @@ const CustomersPage = () => {
     (c) =>
       (c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email?.toLowerCase().includes(search.toLowerCase())) &&
-      (!categoryFilter || (c.categories || []).includes(categoryFilter))
+      (!categoryFilter || (c.categories || []).includes(categoryFilter)) &&
+      (!statusFilter || (c.status || "Neu") === statusFilter)
   );
 
   return (
@@ -2728,6 +2829,29 @@ const CustomersPage = () => {
         ))}
       </div>
 
+      {/* Status filter pills */}
+      <div className="flex flex-wrap gap-2 mb-4" data-testid="customers-status-filter">
+        <button
+          onClick={() => setStatusFilter("")}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+            !statusFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          Alle Status
+        </button>
+        {CUSTOMER_STATUSES.map((st) => (
+          <button
+            key={st}
+            onClick={() => setStatusFilter(statusFilter === st ? "" : st)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {st}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -2757,6 +2881,11 @@ const CustomersPage = () => {
                   )}
                   {customer.phone && (
                     <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                  )}
+                  {customer.status && customer.status !== "Neu" && (
+                    <Badge variant={customer.status === "Abgeschlossen" ? "success" : customer.status === "Auftrag erteilt" ? "info" : "warning"} className="mt-1 text-xs">
+                      {customer.status}
+                    </Badge>
                   )}
                   {(customer.categories || []).length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -2826,7 +2955,8 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
     address: "",
     notes: "",
     customer_type: "Privat",
-    categories: []
+    categories: [],
+    status: "Neu"
   });
   const [loading, setLoading] = useState(false);
 
@@ -2839,10 +2969,11 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
         address: customer.address || "",
         notes: customer.notes || "",
         customer_type: customer.customer_type || "Privat",
-        categories: customer.categories || []
+        categories: customer.categories || [],
+        status: customer.status || "Neu"
       });
     } else {
-      setForm({ name: "", email: "", phone: "", address: "", notes: "", customer_type: "Privat", categories: [] });
+      setForm({ name: "", email: "", phone: "", address: "", notes: "", customer_type: "Privat", categories: [], status: "Neu" });
     }
   }, [customer]);
 
@@ -2939,6 +3070,19 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
           </div>
         </div>
         <div>
+          <label className="block text-sm font-medium mb-2">Status</label>
+          <select
+            data-testid="select-customer-status"
+            className="w-full h-10 px-3 rounded-sm border border-input bg-background text-sm"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+          >
+            {CUSTOMER_STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label className="block text-sm font-medium mb-2">Adresse</label>
           <Textarea
             data-testid="input-customer-address"
@@ -2946,6 +3090,18 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
             onChange={(e) => setForm({ ...form, address: e.target.value })}
             rows={3}
           />
+          {form.address && (
+            <a
+              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(form.address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
+              data-testid="btn-map-link"
+            >
+              <Globe className="w-3 h-3" />
+              Auf Karte anzeigen
+            </a>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">Notizen</label>
@@ -5263,7 +5419,13 @@ const SettingsPage = () => {
     iban: "",
     bic: "",
     default_vat_rate: 19,
-    is_small_business: false
+    is_small_business: false,
+    km_rate: 0.30,
+    hourly_travel_rate: 45.0,
+    company_address: "",
+    default_due_days: 14,
+    default_quote_validity_days: 30,
+    email_signature: ""
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -5433,6 +5595,82 @@ const SettingsPage = () => {
               <label htmlFor="small-business" className="text-sm">
                 Kleinunternehmerregelung (§19 UStG)
               </label>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Fahrtkosten & Zahlungsziele */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-6">
+        <Card className="p-4 lg:p-6">
+          <h3 className="text-lg font-semibold mb-4">Fahrtkosten</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Firmenstandort (für Entfernungsberechnung)</label>
+              <Input
+                data-testid="input-company-address-calc"
+                value={settings.company_address}
+                onChange={(e) => setSettings({ ...settings, company_address: e.target.value })}
+                placeholder="z.B. Musterstraße 1, 12345 Musterstadt"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">km-Satz (€)</label>
+                <Input
+                  data-testid="input-km-rate"
+                  type="number"
+                  step="0.01"
+                  value={settings.km_rate}
+                  onChange={(e) => setSettings({ ...settings, km_rate: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Stundensatz Fahrt (€)</label>
+                <Input
+                  data-testid="input-hourly-travel"
+                  type="number"
+                  step="0.5"
+                  value={settings.hourly_travel_rate}
+                  onChange={(e) => setSettings({ ...settings, hourly_travel_rate: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 lg:p-6">
+          <h3 className="text-lg font-semibold mb-4">Zahlungsziele & Standards</h3>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Zahlungsziel (Tage)</label>
+                <Input
+                  data-testid="input-due-days"
+                  type="number"
+                  value={settings.default_due_days}
+                  onChange={(e) => setSettings({ ...settings, default_due_days: parseInt(e.target.value) || 14 })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Angebots-Gültigkeit (Tage)</label>
+                <Input
+                  data-testid="input-quote-validity"
+                  type="number"
+                  value={settings.default_quote_validity_days}
+                  onChange={(e) => setSettings({ ...settings, default_quote_validity_days: parseInt(e.target.value) || 30 })}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">E-Mail-Signatur</label>
+              <Textarea
+                data-testid="input-email-signature"
+                value={settings.email_signature}
+                onChange={(e) => setSettings({ ...settings, email_signature: e.target.value })}
+                placeholder="Mit freundlichen Grüßen&#10;Tischlerei Graupner"
+                rows={3}
+              />
             </div>
           </div>
         </Card>

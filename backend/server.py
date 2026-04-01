@@ -86,6 +86,7 @@ class TokenResponse(BaseModel):
     username: str
 
 CATEGORIES = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"]
+CUSTOMER_STATUSES = ["Neu", "In Arbeit", "Angebot geschrieben", "Auftrag erteilt", "Abgeschlossen"]
 
 class Customer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -95,8 +96,9 @@ class Customer(BaseModel):
     address: str = ""
     notes: str = ""
     photos: List[str] = []
-    customer_type: str = "Privat"  # Privat, Vermieter, Mieter, Gewerblich, Hausverwaltung
+    customer_type: str = "Privat"
     categories: List[str] = []
+    status: str = "Neu"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CustomerCreate(BaseModel):
@@ -108,6 +110,7 @@ class CustomerCreate(BaseModel):
     photos: List[str] = []
     customer_type: str = "Privat"
     categories: List[str] = []
+    status: str = "Neu"
 
 class Anfrage(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -124,6 +127,11 @@ class Anfrage(BaseModel):
     obj_address: str = ""
     nachricht: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class EmailRequest(BaseModel):
+    to_email: str
+    subject: str
+    message: str = ""
 
 class Article(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -251,6 +259,15 @@ class CompanySettings(BaseModel):
     default_vat_rate: float = 19.0
     is_small_business: bool = False
     logo_base64: str = ""
+    # Fahrtkosten
+    km_rate: float = 0.30
+    hourly_travel_rate: float = 45.0
+    company_address: str = ""
+    # Zahlungsziele
+    default_due_days: int = 14
+    default_quote_validity_days: int = 30
+    # E-Mail
+    email_signature: str = ""
 
 class WebhookContact(BaseModel):
     # Basic fields (backward compatible)
@@ -478,6 +495,67 @@ async def get_quotes():
     quotes = await db.quotes.find({}, {"_id": 0}).to_list(1000)
     return quotes
 
+# IMPORTANT: followup routes MUST be before {quote_id} to avoid route conflict
+FOLLOWUP_DAYS = 7
+
+@api_router.get("/quotes/followup")
+async def get_followup_quotes(user=Depends(get_current_user)):
+    """Angebote die seit 7+ Tagen auf Antwort warten"""
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    threshold = now - timedelta(days=FOLLOWUP_DAYS)
+    
+    quotes = await db.quotes.find(
+        {"status": {"$in": ["Gesendet", "Entwurf"]}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    followup = []
+    for q in quotes:
+        try:
+            created = datetime.fromisoformat(q.get("created_at", ""))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if created < threshold:
+                q["days_waiting"] = (now - created).days
+                followup.append(q)
+        except (ValueError, TypeError):
+            pass
+    
+    followup.sort(key=lambda x: x.get("days_waiting", 0), reverse=True)
+    return followup
+
+@api_router.post("/quotes/check-followup")
+async def check_followup_quotes(user=Depends(get_current_user)):
+    """Prüft Angebote auf Wiedervorlage und sendet Push"""
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    threshold = now - timedelta(days=FOLLOWUP_DAYS)
+    
+    quotes = await db.quotes.find(
+        {"status": {"$in": ["Gesendet", "Entwurf"]}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    followup = []
+    for q in quotes:
+        try:
+            created = datetime.fromisoformat(q.get("created_at", ""))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if created < threshold:
+                followup.append(q)
+        except (ValueError, TypeError):
+            pass
+    
+    if followup:
+        body = f"{len(followup)} Angebot(e) seit {FOLLOWUP_DAYS}+ Tagen ohne Rückmeldung"
+        if len(followup) == 1:
+            body = f"Angebot {followup[0].get('quote_number','')} an {followup[0].get('customer_name','')} wartet seit {FOLLOWUP_DAYS}+ Tagen"
+        await send_push_to_all(title="Wiedervorlage", body=body, url="/quotes")
+    
+    return {"followup_count": len(followup)}
+
 @api_router.get("/quotes/{quote_id}", response_model=Quote)
 async def get_quote(quote_id: str):
     quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
@@ -571,6 +649,56 @@ async def delete_quote(quote_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
     return {"message": "Angebot gelöscht"}
+
+# ==================== QUOTE FOLLOW-UP EMAIL ====================
+
+@api_router.post("/email/followup/{quote_id}")
+async def send_followup_email(quote_id: str, req: EmailRequest, user=Depends(get_current_user)):
+    """Follow-up E-Mail für ein Angebot senden"""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
+    
+    company_name = settings.get("company_name", "Tischlerei Graupner")
+    quote_number = quote.get("quote_number", "")
+    
+    pdf_buffer = generate_document_pdf("quote", quote, settings)
+    pdf_data = pdf_buffer.read()
+    
+    custom_msg = f"<p>{req.message}</p>" if req.message else ""
+    
+    body_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #14532D;">Ihr Angebot {quote_number}</h2>
+        <p>Sehr geehrte Damen und Herren,</p>
+        {custom_msg if custom_msg else "<p>vor einiger Zeit haben wir Ihnen unser Angebot Nr. " + quote_number + " zugesandt. Gerne möchten wir nachfragen, ob Sie noch Interesse haben oder ob wir Ihnen weiterhelfen können.</p>"}
+        <p>Zur Erinnerung finden Sie das Angebot nochmals anbei.</p>
+        <p>Wir freuen uns auf Ihre Rückmeldung!</p>
+        <br>
+        <p>Mit freundlichen Grüßen<br><strong>{company_name}</strong></p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
+        <p style="font-size: 12px; color: #64748B;">
+            {company_name}<br>
+            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
+            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
+        </p>
+    </div>
+    """
+    
+    try:
+        send_email(
+            to_email=req.to_email,
+            subject=req.subject or f"Nachfrage zu Angebot {quote_number} - {company_name}",
+            body_html=body_html,
+            attachments=[{"filename": f"Angebot_{quote_number}.pdf", "data": pdf_data}]
+        )
+        await log_email(req.to_email, req.subject or f"Follow-up: Angebot {quote_number}", "quote", quote_id, quote_number, quote.get("customer_name", ""), "gesendet")
+        return {"message": f"Follow-up E-Mail erfolgreich an {req.to_email} gesendet"}
+    except Exception as e:
+        logger.error(f"Follow-up E-Mail fehlgeschlagen: {e}")
+        await log_email(req.to_email, f"Follow-up: Angebot {quote_number}", "quote", quote_id, quote_number, quote.get("customer_name", ""), "fehlgeschlagen")
+        raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {str(e)}")
 
 # ==================== ORDERS ====================
 
@@ -986,11 +1114,6 @@ def send_email(to_email: str, subject: str, body_html: str, attachments: list = 
     with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
         server.login(SMTP_USER, SMTP_PASSWORD)
         server.send_message(msg)
-
-class EmailRequest(BaseModel):
-    to_email: str
-    subject: str
-    message: str = ""
 
 async def log_email(to_email: str, subject: str, doc_type: str, doc_id: str, doc_number: str, customer_name: str, status: str = "gesendet"):
     """E-Mail ins Protokoll schreiben"""
@@ -2214,6 +2337,39 @@ async def get_invoice_pdf(invoice_id: str):
     )
 
 # ==================== DASHBOARD ====================
+
+@api_router.get("/stats/overview")
+async def get_overview_stats(view: str = "anfragen", user=Depends(get_current_user)):
+    """Gestaffelte Übersicht nach Anfragen, Kunden oder Leistungen"""
+    if view == "anfragen":
+        anfragen = await db.anfragen.find({}, {"_id": 0}).to_list(1000)
+        by_category = {}
+        for cat in CATEGORIES:
+            items = [a for a in anfragen if cat in a.get("categories", [])]
+            by_category[cat] = {"count": len(items), "items": sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)[:5]}
+        return {"view": "anfragen", "total": len(anfragen), "groups": by_category}
+    
+    elif view == "kunden":
+        customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+        by_status = {}
+        for st in CUSTOMER_STATUSES:
+            items = [c for c in customers if c.get("status", "Neu") == st]
+            by_status[st] = {"count": len(items), "items": sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)[:5]}
+        return {"view": "kunden", "total": len(customers), "groups": by_status}
+    
+    elif view == "leistungen":
+        services = await db.services.find({}, {"_id": 0}).to_list(1000)
+        articles = await db.articles.find({}, {"_id": 0}).to_list(1000)
+        return {
+            "view": "leistungen",
+            "total": len(services) + len(articles),
+            "groups": {
+                "Leistungen": {"count": len(services), "items": services[:10]},
+                "Artikel": {"count": len(articles), "items": articles[:10]}
+            }
+        }
+    
+    return {"view": view, "total": 0, "groups": {}}
 
 @api_router.get("/anfragen")
 async def list_anfragen(category: str = "", user=Depends(get_current_user)):
