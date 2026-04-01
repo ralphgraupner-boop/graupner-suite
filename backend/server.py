@@ -992,6 +992,35 @@ class EmailRequest(BaseModel):
     subject: str
     message: str = ""
 
+async def log_email(to_email: str, subject: str, doc_type: str, doc_id: str, doc_number: str, customer_name: str, status: str = "gesendet"):
+    """E-Mail ins Protokoll schreiben"""
+    entry = {
+        "id": str(uuid.uuid4()),
+        "to_email": to_email,
+        "subject": subject,
+        "doc_type": doc_type,
+        "doc_id": doc_id,
+        "doc_number": doc_number,
+        "customer_name": customer_name,
+        "status": status,
+        "sent_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.email_log.insert_one(entry)
+
+@api_router.get("/email/log")
+async def get_email_log(user=Depends(get_current_user)):
+    """Alle E-Mail-Protokolleinträge"""
+    logs = await db.email_log.find({}, {"_id": 0}).to_list(1000)
+    logs.sort(key=lambda x: x.get("sent_at", ""), reverse=True)
+    return logs
+
+@api_router.get("/email/log/{doc_type}/{doc_id}")
+async def get_email_log_for_doc(doc_type: str, doc_id: str, user=Depends(get_current_user)):
+    """E-Mail-Protokoll für ein bestimmtes Dokument"""
+    logs = await db.email_log.find({"doc_type": doc_type, "doc_id": doc_id}, {"_id": 0}).to_list(100)
+    logs.sort(key=lambda x: x.get("sent_at", ""), reverse=True)
+    return logs
+
 @api_router.post("/email/document/{doc_type}/{doc_id}")
 async def email_document(doc_type: str, doc_id: str, req: EmailRequest, user=Depends(get_current_user)):
     """Dokument als PDF per E-Mail senden"""
@@ -1043,9 +1072,11 @@ async def email_document(doc_type: str, doc_id: str, req: EmailRequest, user=Dep
             body_html=body_html,
             attachments=[{"filename": filename, "data": pdf_data}]
         )
+        await log_email(req.to_email, req.subject or f"{type_label} {doc_number}", doc_type, doc_id, doc_number, doc.get("customer_name", ""), "gesendet")
         return {"message": f"{type_label} erfolgreich an {req.to_email} gesendet"}
     except Exception as e:
         logger.error(f"E-Mail-Versand fehlgeschlagen: {e}")
+        await log_email(req.to_email, req.subject or f"{type_label} {doc_number}", doc_type, doc_id, doc_number, doc.get("customer_name", ""), "fehlgeschlagen")
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {str(e)}")
 
 @api_router.post("/email/dunning/{invoice_id}")
@@ -1083,9 +1114,11 @@ async def email_dunning(invoice_id: str, req: EmailRequest, user=Depends(get_cur
             body_html=body_html,
             attachments=[{"filename": filename, "data": pdf_data}]
         )
+        await log_email(req.to_email, req.subject or f"{dunning_label}", "dunning", invoice_id, invoice.get("invoice_number", ""), invoice.get("customer_name", ""), "gesendet")
         return {"message": f"{dunning_label} erfolgreich an {req.to_email} gesendet"}
     except Exception as e:
         logger.error(f"E-Mail-Versand fehlgeschlagen: {e}")
+        await log_email(req.to_email, req.subject or f"{dunning_label}", "dunning", invoice_id, invoice.get("invoice_number", ""), invoice.get("customer_name", ""), "fehlgeschlagen")
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {str(e)}")
 
 # ==================== SETTINGS ====================
