@@ -479,6 +479,72 @@ async def delete_service(service_id: str):
         raise HTTPException(status_code=404, detail="Leistung nicht gefunden")
     return {"message": "Leistung gelöscht"}
 
+# ==================== DISTANCE CALCULATION ====================
+
+@api_router.post("/calculate-distance")
+async def calculate_distance(data: dict, user=Depends(get_current_user)):
+    """Entfernung und Fahrtkosten zwischen Firmenstandort und Kundenadresse berechnen"""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    from_address = data.get("from_address") or settings.get("company_address", "")
+    to_address = data.get("to_address", "")
+    
+    if not from_address or not to_address:
+        raise HTTPException(status_code=400, detail="Start- und Zieladresse benötigt. Bitte Firmenstandort in den Einstellungen hinterlegen.")
+    
+    async def geocode(address):
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": address, "format": "json", "limit": 1},
+                headers={"User-Agent": "GraupnerSuite/1.0"}
+            )
+            results = res.json()
+            if not results:
+                return None
+            return float(results[0]["lat"]), float(results[0]["lon"])
+    
+    from_coords = await geocode(from_address)
+    to_coords = await geocode(to_address)
+    
+    if not from_coords:
+        raise HTTPException(status_code=400, detail=f"Startadresse nicht gefunden: {from_address}")
+    if not to_coords:
+        raise HTTPException(status_code=400, detail=f"Zieladresse nicht gefunden: {to_address}")
+    
+    # OSRM route calculation (free, no API key)
+    async with httpx.AsyncClient() as client:
+        res = await client.get(
+            f"https://router.project-osrm.org/route/v1/driving/{from_coords[1]},{from_coords[0]};{to_coords[1]},{to_coords[0]}",
+            params={"overview": "false"}
+        )
+        route_data = res.json()
+    
+    if route_data.get("code") != "Ok" or not route_data.get("routes"):
+        raise HTTPException(status_code=400, detail="Route konnte nicht berechnet werden")
+    
+    route = route_data["routes"][0]
+    distance_km = round(route["distance"] / 1000, 1)
+    duration_min = round(route["duration"] / 60)
+    
+    km_rate = settings.get("km_rate", 0.30)
+    hourly_rate = settings.get("hourly_travel_rate", 45.0)
+    
+    km_cost = round(distance_km * km_rate, 2)
+    time_cost = round((duration_min / 60) * hourly_rate, 2)
+    total_cost = round(km_cost + time_cost, 2)
+    
+    return {
+        "from_address": from_address,
+        "to_address": to_address,
+        "distance_km": distance_km,
+        "duration_minutes": duration_min,
+        "km_rate": km_rate,
+        "hourly_rate": hourly_rate,
+        "km_cost": km_cost,
+        "time_cost": time_cost,
+        "total_cost": total_cost
+    }
+
 # ==================== QUOTES ====================
 
 async def get_next_quote_number():

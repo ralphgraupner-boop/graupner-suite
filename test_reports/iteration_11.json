@@ -1,0 +1,63 @@
+{
+  "summary": "Backend testing for Distance Calculation (Fahrtkosten) feature. All 10 tests passed (100%). The /api/calculate-distance endpoint correctly uses Nominatim for geocoding and OSRM for routing. Settings fields (company_address, km_rate, hourly_travel_rate) work correctly.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "POST /api/calculate-distance with to_address returns distance_km, duration_minutes, km_cost, time_cost, total_cost (Berlin->Hamburg: 289.3km, 178min, 220.29€)",
+    "POST /api/calculate-distance uses company_address from settings as from_address when not provided (Berlin->Munich verified)",
+    "POST /api/calculate-distance returns 400 if no company_address in settings and no from_address provided (German error message)",
+    "POST /api/calculate-distance with explicit from_address overrides settings (Frankfurt->Cologne: 190.2km)",
+    "POST /api/calculate-distance requires authentication (401 without token)",
+    "POST /api/calculate-distance returns 400 for invalid/unfindable address",
+    "POST /api/calculate-distance returns 400 when to_address is missing",
+    "Settings endpoint returns company_address, km_rate, hourly_travel_rate fields",
+    "Settings endpoint accepts and stores company_address, km_rate, hourly_travel_rate fields (verified persistence)",
+    "Distance calculation uses km_rate and hourly_travel_rate from settings (verified with custom rates 0.50€/km, 60€/h)"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_distance_calculation.py",
+    "/app/test_reports/pytest/pytest_distance.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Distance calculation endpoint correctly implements the formula: total_cost = (distance_km × km_rate) + (duration_minutes/60 × hourly_travel_rate)",
+    "External APIs (Nominatim + OSRM) are working correctly - no mocking needed",
+    "Error handling is proper with German error messages for missing addresses",
+    "Settings fields for Fahrtkosten (company_address, km_rate, hourly_travel_rate) are properly stored and retrieved"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_distance_calculation.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "Not tested (backend only requested)"
+  },
+
+  "test_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+
+  "seed_data_creation": "Used existing settings: company_address='Berlin, Germany', km_rate=0.30, hourly_travel_rate=45.0",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "Distance calculation feature fully tested. Key endpoint: POST /api/calculate-distance accepts {to_address, from_address(optional)}. Uses company_address from settings if from_address not provided. Returns {from_address, to_address, distance_km, duration_minutes, km_rate, hourly_rate, km_cost, time_cost, total_cost}. Uses external APIs: Nominatim (geocoding) and OSRM (routing). Settings fields: company_address, km_rate (default 0.30), hourly_travel_rate (default 45.0). Frontend has 'Fahrtkosten berechnen' button in WYSIWYG editor that adds 'Fahrtkostenanteil' position."
+}
