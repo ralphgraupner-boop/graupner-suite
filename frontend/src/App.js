@@ -240,6 +240,10 @@ const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
 
 // ==================== DOCUMENT PREVIEW ====================
 const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }) => {
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
+  const [sending, setSending] = useState(false);
+
   if (!isOpen || !document) return null;
 
   const titles = {
@@ -255,6 +259,25 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
   };
 
   const docNumber = document.quote_number || document.order_number || document.invoice_number;
+
+  const handleSendEmail = async () => {
+    if (!emailForm.to_email) { toast.error("Bitte E-Mail-Adresse eingeben"); return; }
+    setSending(true);
+    try {
+      await api.post(`/email/document/${type}/${document.id}`, {
+        to_email: emailForm.to_email,
+        subject: emailForm.subject || `${titles[type]} ${docNumber}`,
+        message: emailForm.message
+      });
+      toast.success(`${titles[type]} per E-Mail gesendet`);
+      setShowEmailDialog(false);
+      setEmailForm({ to_email: "", subject: "", message: "" });
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "E-Mail konnte nicht gesendet werden");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -275,6 +298,17 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
                 Bearbeiten
               </Button>
             )}
+            <Button variant="outline" size="sm" onClick={() => {
+              setEmailForm({
+                to_email: document.customer_email || "",
+                subject: `${titles[type]} ${docNumber}`,
+                message: ""
+              });
+              setShowEmailDialog(true);
+            }} data-testid="btn-email-document">
+              <Mail className="w-4 h-4" />
+              E-Mail
+            </Button>
             <Button variant="outline" size="sm" onClick={() => onDownload(document.id, docNumber)}>
               <Download className="w-4 h-4" />
               PDF
@@ -284,6 +318,45 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
             </button>
           </div>
         </div>
+
+        {/* Email Dialog */}
+        {showEmailDialog && (
+          <div className="p-4 border-b bg-blue-50" data-testid="email-dialog">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              {titles[type]} per E-Mail senden
+            </h3>
+            <div className="space-y-2">
+              <Input
+                data-testid="input-email-to"
+                placeholder="E-Mail-Adresse des Empfängers"
+                value={emailForm.to_email}
+                onChange={(e) => setEmailForm({ ...emailForm, to_email: e.target.value })}
+                type="email"
+              />
+              <Input
+                data-testid="input-email-subject"
+                placeholder="Betreff (optional)"
+                value={emailForm.subject}
+                onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+              />
+              <Textarea
+                data-testid="input-email-message"
+                placeholder="Persönliche Nachricht (optional)"
+                value={emailForm.message}
+                onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
+                rows={2}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(false)}>Abbrechen</Button>
+                <Button size="sm" onClick={handleSendEmail} disabled={sending} data-testid="btn-send-email">
+                  {sending ? "Senden..." : "Senden"}
+                  <Send className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Document Content */}
         <div className="p-8 bg-white">
@@ -3832,6 +3905,23 @@ const InvoicesPage = () => {
     }
   };
 
+  const handleEmailDunning = async (inv, e) => {
+    e?.stopPropagation();
+    const email = window.prompt("E-Mail-Adresse des Kunden:", inv.customer_email || "");
+    if (!email) return;
+    try {
+      const level = inv.dunning_level || 1;
+      const dunningNames = {1: "Zahlungserinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung"};
+      await api.post(`/email/dunning/${inv.id}`, {
+        to_email: email,
+        subject: `${dunningNames[level] || "Mahnung"} - Rechnung ${inv.invoice_number}`
+      });
+      toast.success(`Mahnung per E-Mail an ${email} gesendet`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "E-Mail-Versand fehlgeschlagen");
+    }
+  };
+
   const getDunningLabel = (level) => {
     const labels = { 0: "Keine", 1: "Erinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung" };
     return labels[level] || "Keine";
@@ -3912,6 +4002,16 @@ const InvoicesPage = () => {
                           data-testid={`btn-download-dunning-${inv.id}`}
                         >
                           <Download className="w-4 h-4" />
+                        </button>
+                      )}
+                      {(inv.dunning_level || 0) > 0 && (
+                        <button
+                          onClick={(e) => handleEmailDunning(inv, e)}
+                          className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-sm"
+                          title="Mahnung per E-Mail senden"
+                          data-testid={`btn-email-dunning-${inv.id}`}
+                        >
+                          <Mail className="w-4 h-4" />
                         </button>
                       )}
                       {(inv.dunning_level || 0) < 3 && (

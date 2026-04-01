@@ -6,7 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
@@ -34,7 +34,10 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.llm.openai import OpenAISpeechToText
 
 # Email
-import resend
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -49,14 +52,15 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 JWT_SECRET = os.environ.get('JWT_SECRET')
 if not JWT_SECRET:
     JWT_SECRET = 'graupner-suite-secret-' + os.environ.get('DB_NAME', 'default')
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 
-# Initialize Resend
-if RESEND_API_KEY:
-    resend.api_key = RESEND_API_KEY
+# SMTP Config
+SMTP_SERVER = os.environ.get('SMTP_SERVER', '')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '465'))
+SMTP_USER = os.environ.get('SMTP_USER', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+SMTP_FROM = os.environ.get('SMTP_FROM', '')
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -311,12 +315,6 @@ class InvoiceUpdate(BaseModel):
     is_template: Optional[bool] = None
     custom_total: Optional[float] = None
     deposit_amount: float = 0.0
-
-class EmailRequest(BaseModel):
-    recipient_email: EmailStr
-    subject: str
-    document_type: str  # "quote", "order", "invoice"
-    document_id: str
 
 # ==================== AUTH ====================
 
@@ -966,6 +964,129 @@ async def get_dunning_pdf(invoice_id: str):
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+# ==================== EMAIL ====================
+
+def send_email(to_email: str, subject: str, body_html: str, attachments: list = None):
+    """E-Mail über SMTP senden"""
+    if not SMTP_SERVER or not SMTP_USER:
+        raise Exception("SMTP nicht konfiguriert")
+    
+    msg = MIMEMultipart()
+    msg["From"] = SMTP_FROM
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body_html, "html"))
+    
+    for att in (attachments or []):
+        part = MIMEApplication(att["data"], Name=att["filename"])
+        part["Content-Disposition"] = f'attachment; filename="{att["filename"]}"'
+        msg.attach(part)
+    
+    with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)
+
+class EmailRequest(BaseModel):
+    to_email: str
+    subject: str
+    message: str = ""
+
+@api_router.post("/email/document/{doc_type}/{doc_id}")
+async def email_document(doc_type: str, doc_id: str, req: EmailRequest, user=Depends(get_current_user)):
+    """Dokument als PDF per E-Mail senden"""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    company_name = settings.get("company_name", "Tischlerei Graupner")
+    
+    collection_map = {"quote": "quotes", "order": "orders", "invoice": "invoices"}
+    collection = collection_map.get(doc_type)
+    if not collection:
+        raise HTTPException(status_code=400, detail="Ungültiger Dokumenttyp")
+    
+    doc = await db[collection].find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+    
+    pdf_buffer = generate_document_pdf(doc_type, doc, settings)
+    pdf_data = pdf_buffer.read()
+    
+    type_labels = {"quote": "Angebot", "order": "Auftragsbestätigung", "invoice": "Rechnung"}
+    type_label = type_labels.get(doc_type, "Dokument")
+    doc_number = doc.get("quote_number", doc.get("order_number", doc.get("invoice_number", "")))
+    filename = f"{type_label}_{doc_number}.pdf"
+    
+    custom_msg = f"<p>{req.message}</p>" if req.message else ""
+    
+    body_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #14532D;">{type_label} {doc_number}</h2>
+        <p>Sehr geehrte Damen und Herren,</p>
+        {custom_msg}
+        <p>anbei erhalten Sie {('Ihr ' + type_label) if doc_type != 'invoice' else 'Ihre Rechnung'} Nr. {doc_number} als PDF-Dokument.</p>
+        <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+        <br>
+        <p>Mit freundlichen Grüßen<br><strong>{company_name}</strong></p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
+        <p style="font-size: 12px; color: #64748B;">
+            {company_name}<br>
+            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
+            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
+            {('<br>' + settings['email']) if settings.get('email') else ''}
+        </p>
+    </div>
+    """
+    
+    try:
+        send_email(
+            to_email=req.to_email,
+            subject=req.subject or f"{type_label} {doc_number} - {company_name}",
+            body_html=body_html,
+            attachments=[{"filename": filename, "data": pdf_data}]
+        )
+        return {"message": f"{type_label} erfolgreich an {req.to_email} gesendet"}
+    except Exception as e:
+        logger.error(f"E-Mail-Versand fehlgeschlagen: {e}")
+        raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {str(e)}")
+
+@api_router.post("/email/dunning/{invoice_id}")
+async def email_dunning(invoice_id: str, req: EmailRequest, user=Depends(get_current_user)):
+    """Mahnung per E-Mail senden"""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    
+    level = invoice.get("dunning_level", 1)
+    dunning_names = {1: "Zahlungserinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung"}
+    dunning_label = dunning_names.get(level, "Mahnung")
+    
+    pdf_buffer = generate_dunning_pdf(invoice, settings, level)
+    pdf_data = pdf_buffer.read()
+    filename = f"{dunning_label.replace(' ', '_')}_{invoice.get('invoice_number', '')}.pdf"
+    
+    company_name = settings.get("company_name", "Tischlerei Graupner")
+    body_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #DC2626;">{dunning_label}</h2>
+        <p>Sehr geehrte Damen und Herren,</p>
+        <p>anbei erhalten Sie unsere {dunning_label} zur Rechnung Nr. {invoice.get('invoice_number', '')}.</p>
+        <p>Bitte begleichen Sie den offenen Betrag zeitnah.</p>
+        <br>
+        <p>Mit freundlichen Grüßen<br><strong>{company_name}</strong></p>
+    </div>
+    """
+    
+    try:
+        send_email(
+            to_email=req.to_email,
+            subject=req.subject or f"{dunning_label} - Rechnung {invoice.get('invoice_number', '')}",
+            body_html=body_html,
+            attachments=[{"filename": filename, "data": pdf_data}]
+        )
+        return {"message": f"{dunning_label} erfolgreich an {req.to_email} gesendet"}
+    except Exception as e:
+        logger.error(f"E-Mail-Versand fehlgeschlagen: {e}")
+        raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {str(e)}")
 
 # ==================== SETTINGS ====================
 
@@ -2058,83 +2179,6 @@ async def get_invoice_pdf(invoice_id: str):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=Rechnung_{invoice['invoice_number']}.pdf"}
     )
-
-# ==================== EMAIL ====================
-
-@api_router.post("/email/send")
-async def send_email(request: EmailRequest):
-    """E-Mail mit Dokument-PDF versenden"""
-    if not RESEND_API_KEY:
-        raise HTTPException(status_code=500, detail="E-Mail nicht konfiguriert. Bitte RESEND_API_KEY in Einstellungen hinterlegen.")
-    
-    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
-    
-    # Get document
-    if request.document_type == "quote":
-        doc = await db.quotes.find_one({"id": request.document_id}, {"_id": 0})
-        doc_number = doc.get("quote_number", "") if doc else ""
-        filename = f"Angebot_{doc_number}.pdf"
-        doc_title = "Angebot"
-    elif request.document_type == "order":
-        doc = await db.orders.find_one({"id": request.document_id}, {"_id": 0})
-        doc_number = doc.get("order_number", "") if doc else ""
-        filename = f"Auftragsbestaetigung_{doc_number}.pdf"
-        doc_title = "Auftragsbestätigung"
-    elif request.document_type == "invoice":
-        doc = await db.invoices.find_one({"id": request.document_id}, {"_id": 0})
-        doc_number = doc.get("invoice_number", "") if doc else ""
-        filename = f"Rechnung_{doc_number}.pdf"
-        doc_title = "Rechnung"
-    else:
-        raise HTTPException(status_code=400, detail="Ungültiger Dokumenttyp")
-    
-    if not doc:
-        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
-    
-    # Generate PDF
-    pdf_buffer = generate_document_pdf(request.document_type, doc, settings)
-    pdf_base64 = base64.b64encode(pdf_buffer.read()).decode()
-    
-    company_name = settings.get("company_name", "Tischlerei Graupner")
-    
-    html_content = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; color: #333;">
-        <h2 style="color: #14532D;">{company_name}</h2>
-        <p>Sehr geehrte Damen und Herren,</p>
-        <p>anbei erhalten Sie {doc_title} Nr. <strong>{doc_number}</strong>.</p>
-        <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-        <br>
-        <p>Mit freundlichen Grüßen</p>
-        <p><strong>{settings.get('owner_name', company_name)}</strong></p>
-        <p style="color: #666; font-size: 12px;">{settings.get('phone', '')}<br>{settings.get('email', '')}</p>
-    </body>
-    </html>
-    """
-    
-    params = {
-        "from": SENDER_EMAIL,
-        "to": [request.recipient_email],
-        "subject": request.subject,
-        "html": html_content,
-        "attachments": [
-            {
-                "filename": filename,
-                "content": pdf_base64
-            }
-        ]
-    }
-    
-    try:
-        email = await asyncio.to_thread(resend.Emails.send, params)
-        return {
-            "status": "success",
-            "message": f"E-Mail an {request.recipient_email} gesendet",
-            "email_id": email.get("id")
-        }
-    except Exception as e:
-        logger.error(f"Email send error: {e}")
-        raise HTTPException(status_code=500, detail=f"E-Mail konnte nicht gesendet werden: {str(e)}")
 
 # ==================== DASHBOARD ====================
 

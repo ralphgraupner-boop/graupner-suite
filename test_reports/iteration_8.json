@@ -1,0 +1,89 @@
+{
+  "summary": "Comprehensive testing of Email and Due-Date Warning features for Graupner Suite (Iteration 8). All 16 backend tests passed (100%). All frontend features verified working: Dashboard due warnings (amber/red), DocumentPreview email dialog, Mahnwesen email button, SMTP email sending.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/invoices/due-soon returns 200 with list of invoices due within 3 days",
+    "Backend: Due-soon invoices have days_until_due field",
+    "Backend: POST /api/invoices/check-due returns 200 with due_soon, overdue, notifications_sent counts",
+    "Backend: Check-due updates overdue invoices to 'Überfällig' status",
+    "Backend: POST /api/email/document/invoice/{id} sends invoice PDF via SMTP email successfully",
+    "Backend: POST /api/email/document/quote/{id} sends quote PDF via SMTP email successfully",
+    "Backend: POST /api/email/document/invalid/{id} returns 400 for invalid doc type",
+    "Backend: POST /api/email/document/invoice/nonexistent returns 404",
+    "Backend: POST /api/email/dunning/{id} sends dunning PDF via SMTP email successfully",
+    "Backend: POST /api/email/dunning/nonexistent returns 404",
+    "Backend: GET /api/invoices/overdue returns 200 with list of overdue invoices",
+    "Backend: Overdue invoices have days_overdue and dunning_level fields",
+    "Backend: Email document endpoint requires authentication (401 without token)",
+    "Backend: Email dunning endpoint requires authentication (401 without token)",
+    "Backend: Due-soon endpoint requires authentication (401 without token)",
+    "Backend: Check-due endpoint requires authentication (401 without token)",
+    "Frontend: Dashboard shows red overdue warning banner '4 Rechnung(en) überfällig!'",
+    "Frontend: Dashboard overdue warning has 'Mahnwesen' button linking to /invoices",
+    "Frontend: Invoices page has 'Mahnwesen' tab with badge showing overdue count (4)",
+    "Frontend: Mahnwesen tab shows overdue invoices with days_overdue, Mahnstufe, action buttons",
+    "Frontend: Mahnwesen tab shows email button (Mail icon) for invoices with dunning_level > 0",
+    "Frontend: DocumentPreview has 'E-Mail' button in header",
+    "Frontend: Email dialog opens with to_email, subject, message fields and Send button",
+    "Frontend: Email dialog successfully sends invoice via SMTP (toast: 'Rechnung per E-Mail gesendet')",
+    "Frontend: Quote preview also has 'E-Mail' button for sending quotes via email"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_email_due_features.py",
+    "/app/test_reports/pytest/pytest_email_due.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "SMTP email integration is REAL and working (not mocked) - uses secure.emailsrvr.com:465 SSL",
+    "Email endpoints properly require authentication via token parameter",
+    "Due-soon endpoint correctly filters invoices due within 3 days with days_until_due field",
+    "Check-due endpoint properly updates overdue invoice status to 'Überfällig'",
+    "DocumentPreview component correctly shared across quotes, orders, and invoices with email functionality",
+    "Mahnwesen email button only shows for invoices with dunning_level > 0 (correct behavior)",
+    "Dashboard due warnings use correct color coding: amber for due-soon, red for overdue"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_email_due_features.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (all features verified)"
+  },
+
+  "test_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+
+  "seed_data_creation": "Used existing test data: 4 overdue invoices, 0 due-soon invoices, 1 invoice with dunning_level=3 (Letzte Mahnung)",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "Email and due-date warning features fully tested and working. Key endpoints: GET /api/invoices/due-soon (invoices due within 3 days), POST /api/invoices/check-due (triggers push notifications, updates status), POST /api/email/document/{type}/{id} (sends document PDF via SMTP), POST /api/email/dunning/{id} (sends dunning PDF via SMTP). SMTP is REAL (not mocked) using secure.emailsrvr.com:465 SSL with service24@tischlerei-graupner.de. Frontend: Dashboard shows amber (due-soon) and red (overdue) warning banners, DocumentPreview has email dialog, Mahnwesen tab has email button for dunned invoices.",
+
+  "smtp_configuration": {
+    "server": "secure.emailsrvr.com",
+    "port": 465,
+    "protocol": "SSL/TLS",
+    "user": "service24@tischlerei-graupner.de",
+    "status": "WORKING - emails sent successfully during testing"
+  }
+}
