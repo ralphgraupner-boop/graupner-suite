@@ -6,7 +6,7 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - KI-gestützte Angebotserstellung per Spracheingabe
 - WYSIWYG-Dokumenteneditor (3-Spalten: Leistungen, Dokument, Kalkulation)
 - Mahnwesen für überfällige Rechnungen
-- E-Mail-Versand (SMTP)
+- E-Mail-Versand (SMTP) mit Protokoll
 - Dashboard mit Charts & Fälligkeitswarnungen
 - Lead-Relay-System für Jimdo-Website → Graupner-Intern CRM
 
@@ -24,29 +24,27 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - Eigener "Anfragen"-Reiter, 5 Kategorien, Ein-Klick-Übernahme, Filter
 
 ### Mahnwesen (31.03.2026)
-- 3 Mahnstufen, Mahnungs-PDF, Tab auf Rechnungsseite mit Badge
+- 3 Mahnstufen, Mahnungs-PDF, Tab auf Rechnungsseite
 
 ### Dashboard Charts (31.03.2026)
-- BarChart (Umsatz 6 Monate), PieChart (Rechnungsstatus), Statistik-Kacheln
+- BarChart (Umsatz 6 Monate), PieChart (Rechnungsstatus)
 
 ### EK-Preise in Stammdaten (31.03.2026)
-- Einkaufspreise bei Artikeln/Leistungen, Marge-Berechnung, Auto-fill im Editor
+- Einkaufspreise, Marge-Berechnung, Auto-fill im Editor
 
 ### Firmendaten in PDFs (31.03.2026)
 - 3-Spalten-Fußzeile auf allen Dokumenttypen
 
 ### Fälligkeits-Warnsystem (01.04.2026)
-- Automatische Erkennung bald fälliger Rechnungen (3 Tage)
-- Push-Benachrichtigungen bei fälligen/überfälligen Rechnungen
-- Warn-Banner auf Dashboard (Amber=bald fällig, Rot=überfällig)
-- Auto-Status-Update auf "Überfällig"
+- Push-Benachrichtigungen, Warn-Banner auf Dashboard
 
 ### E-Mail-Versand (01.04.2026)
-- SMTP-Integration (secure.emailsrvr.com:465 SSL)
-- Dokumente (Angebote, Aufträge, Rechnungen) als PDF per E-Mail
-- Mahnungen per E-Mail
-- E-Mail-Button in Dokumentenvorschau mit Empfänger/Betreff/Nachricht
-- E-Mail-Button im Mahnwesen-Tab
+- SMTP-Integration, Dokumente + Mahnungen als PDF per E-Mail
+
+### E-Mail-Protokoll (01.04.2026)
+- Eigener Reiter "E-Mail-Protokoll" mit Gesamtübersicht + Suche
+- Versandhistorie in DocumentPreview (bei jedem Dokument)
+- Automatisches Logging bei jedem Versand (Status: gesendet/fehlgeschlagen)
 
 ### Weitere Features (bereits implementiert)
 - JWT Auth, Kundenmanagement mit Kategorien
@@ -54,13 +52,12 @@ Komplette Handwerker-Management-Software für eine Tischlerei (Graupner). Ersetz
 - Angebote, Aufträge, Rechnungen (CRUD + PDF)
 - WYSIWYG-3-Spalten-Editor mit Drag & Drop
 - KI-Spracheingabe (GPT-5.2 + Whisper)
-- Kontaktformular-Relay (Weiterleitung an Graupner-Intern)
-- Webhook, Push-Benachrichtigungen, PWA
+- Kontaktformular-Relay, Webhook, Push, PWA
 
 ## Prioritized Backlog
 
 ### P2
-- [ ] Code-Refactoring (App.js 5900+ Zeilen, server.py 2400+ Zeilen aufteilen)
+- [ ] Code-Refactoring (App.js + server.py aufteilen)
 
 ### P3 (Zukunft)
 - [ ] Bankanbindung (CSV-Import oder Open Banking)
