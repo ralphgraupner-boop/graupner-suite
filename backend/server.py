@@ -714,6 +714,73 @@ async def get_overdue_invoices(user=Depends(get_current_user)):
     overdue.sort(key=lambda x: x.get("days_overdue", 0), reverse=True)
     return overdue
 
+@api_router.get("/invoices/due-soon")
+async def get_due_soon_invoices(user=Depends(get_current_user)):
+    """Rechnungen die in den nächsten 3 Tagen fällig werden"""
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    in_3_days = now + timedelta(days=3)
+    invoices = await db.invoices.find({"status": {"$in": ["Offen", "Gesendet"]}}, {"_id": 0}).to_list(1000)
+    due_soon = []
+    for inv in invoices:
+        if inv.get("due_date"):
+            try:
+                due = datetime.fromisoformat(inv["due_date"])
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                if now <= due <= in_3_days:
+                    inv["days_until_due"] = (due - now).days
+                    due_soon.append(inv)
+            except (ValueError, TypeError):
+                pass
+    due_soon.sort(key=lambda x: x.get("days_until_due", 0))
+    return due_soon
+
+@api_router.post("/invoices/check-due")
+async def check_due_invoices(user=Depends(get_current_user)):
+    """Prüft fällige Rechnungen und sendet Push-Benachrichtigungen"""
+    now = datetime.now(timezone.utc)
+    from datetime import timedelta
+    in_3_days = now + timedelta(days=3)
+    invoices = await db.invoices.find({"status": {"$in": ["Offen", "Gesendet"]}}, {"_id": 0}).to_list(1000)
+    
+    due_soon = []
+    overdue = []
+    for inv in invoices:
+        if inv.get("due_date"):
+            try:
+                due = datetime.fromisoformat(inv["due_date"])
+                if due.tzinfo is None:
+                    due = due.replace(tzinfo=timezone.utc)
+                if now > due:
+                    overdue.append(inv)
+                elif due <= in_3_days:
+                    due_soon.append(inv)
+            except (ValueError, TypeError):
+                pass
+    
+    notifications_sent = 0
+    if due_soon:
+        body = f"{len(due_soon)} Rechnung(en) in den nächsten 3 Tagen fällig"
+        if len(due_soon) == 1:
+            body = f"Rechnung {due_soon[0].get('invoice_number','')} an {due_soon[0].get('customer_name','')} bald fällig"
+        await send_push_to_all(title="Fälligkeits-Warnung", body=body, url="/invoices")
+        notifications_sent += 1
+    
+    if overdue:
+        for inv in overdue:
+            if inv.get("status") != "Überfällig":
+                await db.invoices.update_one({"id": inv["id"]}, {"$set": {"status": "Überfällig"}})
+        body = f"{len(overdue)} Rechnung(en) überfällig!"
+        await send_push_to_all(title="Überfällige Rechnungen", body=body, url="/invoices")
+        notifications_sent += 1
+    
+    return {
+        "due_soon": len(due_soon),
+        "overdue": len(overdue),
+        "notifications_sent": notifications_sent
+    }
+
 @api_router.get("/invoices/{invoice_id}", response_model=Invoice)
 async def get_invoice(invoice_id: str):
     invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
