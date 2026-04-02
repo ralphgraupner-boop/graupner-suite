@@ -165,11 +165,14 @@ const TextbausteineTab = () => {
   };
 
   const handleSave = async () => {
-    if (!form.title.trim() || !form.content.trim()) { toast.error("Titel und Inhalt erforderlich"); return; }
+    if (!form.title.trim()) { toast.error("Titel erforderlich"); return; }
+    // Bei Betreff: content = title
+    const payload = { ...form, content: form.text_type === "betreff" ? form.title : form.content };
+    if (form.text_type !== "betreff" && !payload.content.trim()) { toast.error("Inhalt erforderlich"); return; }
     setSaving(true);
     try {
-      if (editTemplate === "new") { await api.post("/text-templates", form); toast.success("Textbaustein erstellt"); }
-      else { await api.put(`/text-templates/${editTemplate}`, form); toast.success("Aktualisiert"); }
+      if (editTemplate === "new") { await api.post("/text-templates", payload); toast.success("Textbaustein erstellt"); }
+      else { await api.put(`/text-templates/${editTemplate}`, payload); toast.success("Aktualisiert"); }
       setEditTemplate(null); loadTemplates();
     } catch { toast.error("Fehler"); } finally { setSaving(false); }
   };
@@ -180,6 +183,74 @@ const TextbausteineTab = () => {
   };
 
   const filtered = templates.filter((t) => t.doc_type === activeDocType);
+
+  // Simplified Betreff section - just titles, inline add/edit
+  const [newBetreff, setNewBetreff] = useState("");
+  const [editBetreffId, setEditBetreffId] = useState(null);
+  const [editBetreffTitle, setEditBetreffTitle] = useState("");
+
+  const handleAddBetreff = async () => {
+    if (!newBetreff.trim()) return;
+    try {
+      await api.post("/text-templates", { doc_type: activeDocType, text_type: "betreff", title: newBetreff.trim(), content: newBetreff.trim() });
+      toast.success("Betreff gespeichert");
+      setNewBetreff("");
+      loadTemplates();
+    } catch { toast.error("Fehler"); }
+  };
+
+  const handleUpdateBetreff = async (id) => {
+    if (!editBetreffTitle.trim()) return;
+    try {
+      await api.put(`/text-templates/${id}`, { doc_type: activeDocType, text_type: "betreff", title: editBetreffTitle.trim(), content: editBetreffTitle.trim() });
+      toast.success("Aktualisiert");
+      setEditBetreffId(null);
+      loadTemplates();
+    } catch { toast.error("Fehler"); }
+  };
+
+  const renderBetreffSection = () => {
+    const items = filtered.filter((t) => t.text_type === "betreff");
+    return (
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold mb-2">Betreff-Zeilen</h4>
+        <div className="space-y-2 mb-3">
+          {items.map((t) => (
+            <div key={t.id} className="flex items-center gap-2" data-testid={`betreff-${t.id}`}>
+              {editBetreffId === t.id ? (
+                <>
+                  <Input value={editBetreffTitle} onChange={(e) => setEditBetreffTitle(e.target.value)} className="flex-1 h-9 text-sm"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleUpdateBetreff(t.id); if (e.key === "Escape") setEditBetreffId(null); }}
+                    autoFocus
+                  />
+                  <Button size="sm" variant="outline" onClick={() => handleUpdateBetreff(t.id)} className="h-9 px-3"><Save className="w-3.5 h-3.5" /></Button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm py-1.5 px-3 bg-muted/30 rounded-sm border">{t.title}</span>
+                  <button onClick={() => { setEditBetreffId(t.id); setEditBetreffTitle(t.title); }} className="p-1.5 hover:bg-muted rounded-sm"><Pencil className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handleDelete(t.id)} className={`p-1.5 rounded-sm transition-colors ${confirmDeleteId === t.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}>
+                    {confirmDeleteId === t.id ? <span className="text-[10px] font-bold">OK?</span> : <Trash2 className="w-3.5 h-3.5" />}
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input value={newBetreff} onChange={(e) => setNewBetreff(e.target.value)} placeholder="Neue Betreff-Zeile eingeben..."
+            className="flex-1 h-9 text-sm"
+            onKeyDown={(e) => { if (e.key === "Enter") handleAddBetreff(); }}
+            data-testid="input-new-betreff"
+          />
+          <Button size="sm" variant="outline" onClick={handleAddBetreff} disabled={!newBetreff.trim()} className="h-9" data-testid="btn-add-betreff">
+            <Plus className="w-3.5 h-3.5" /> Hinzufügen
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   const renderSection = (textType, label) => {
     const items = filtered.filter((t) => t.text_type === textType);
     return (
@@ -230,7 +301,7 @@ const TextbausteineTab = () => {
         ))}
       </div>
 
-      {renderSection("betreff", "Betreff-Zeilen")}
+      {renderBetreffSection()}
       {renderSection("vortext", "Vortexte")}
       {renderSection("schlusstext", "Schlusstexte")}
       {renderSection("bemerkung", "Bemerkungen")}
@@ -240,7 +311,6 @@ const TextbausteineTab = () => {
           <div>
             <label className="block text-sm font-medium mb-1">Typ</label>
             <select value={form.text_type} onChange={(e) => setForm({ ...form, text_type: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
-              <option value="betreff">Betreff</option>
               <option value="vortext">Vortext</option>
               <option value="schlusstext">Schlusstext</option>
               <option value="bemerkung">Bemerkung</option>
