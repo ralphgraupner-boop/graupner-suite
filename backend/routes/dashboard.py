@@ -93,7 +93,9 @@ async def convert_anfrage(anfrage_id: str, user=Depends(get_current_user)):
         notes=anfrage.get("notes", ""),
         photos=anfrage.get("photos", []),
         customer_type=anfrage.get("customer_type", "Privat"),
-        categories=anfrage.get("categories", [])
+        categories=anfrage.get("categories", []),
+        firma=anfrage.get("firma", ""),
+        anrede=anfrage.get("anrede", "")
     )
     await db.customers.insert_one(customer.model_dump())
     await db.anfragen.delete_one({"id": anfrage_id})

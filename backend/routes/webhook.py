@@ -432,6 +432,7 @@ async def kontakt_relay(request: Request):
             categories=topics,
             customer_type=customer_type,
             firma=form_dict.get("firma", ""),
+            anrede=anrede,
             source="kontaktformular",
             obj_address=obj_addr,
             nachricht=form_dict.get("nachricht", "")

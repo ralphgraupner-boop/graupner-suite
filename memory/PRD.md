@@ -60,6 +60,7 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
 - [x] Anfragen bearbeitbar (Edit-Modal + PUT-Endpoint)
 - [x] Schnellnotiz-Funktion (Inline-Eingabe direkt in Anfragen-Liste)
 - [x] Textbausteine (Vortext/Schlusstext) mit Aliase-System für Angebote, Aufträge, Rechnungen — 02.04.2026
+- [x] Automatische Anrede-Auflösung: {anrede_brief} → "Sehr geehrter Herr/Sehr geehrte Frau [Nachname]" — 02.04.2026
 
 ## Implementierte Features (Aktuell)
 - [x] Anfragen bearbeitbar (PUT /api/anfragen/{id}, Edit-Modal mit allen Feldern) — 02.04.2026

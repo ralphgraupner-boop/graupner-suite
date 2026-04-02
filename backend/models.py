@@ -31,6 +31,7 @@ class Customer(BaseModel):
     customer_type: str = "Privat"
     categories: List[str] = []
     firma: str = ""
+    anrede: str = ""
     status: str = "Neu"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -44,6 +45,7 @@ class CustomerCreate(BaseModel):
     customer_type: str = "Privat"
     categories: List[str] = []
     firma: str = ""
+    anrede: str = ""
     status: str = "Neu"
 
 
@@ -58,6 +60,7 @@ class Anfrage(BaseModel):
     categories: List[str] = []
     customer_type: str = "Privat"
     firma: str = ""
+    anrede: str = ""
     source: str = "manual"
     obj_address: str = ""
     nachricht: str = ""
@@ -75,6 +78,7 @@ class AnfrageUpdate(BaseModel):
     categories: Optional[List[str]] = None
     customer_type: Optional[str] = None
     firma: Optional[str] = None
+    anrede: Optional[str] = None
 
 
 class TextTemplate(BaseModel):

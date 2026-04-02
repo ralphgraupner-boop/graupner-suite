@@ -10,6 +10,7 @@ VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext"]
 
 PLACEHOLDERS = [
+    {"alias": "{anrede_brief}", "beschreibung": "Sehr geehrter Herr/Sehr geehrte Frau + Name"},
     {"alias": "{kunde_name}", "beschreibung": "Name des Kunden"},
     {"alias": "{kunde_adresse}", "beschreibung": "Adresse des Kunden"},
     {"alias": "{kunde_email}", "beschreibung": "E-Mail des Kunden"},

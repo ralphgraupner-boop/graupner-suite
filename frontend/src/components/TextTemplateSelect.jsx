@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 
 const PLACEHOLDERS = [
+  { alias: "{anrede_brief}", desc: "Sehr geehrter Herr/Frau + Name" },
   { alias: "{kunde_name}", desc: "Kundenname" },
   { alias: "{kunde_adresse}", desc: "Kundenadresse" },
   { alias: "{kunde_email}", desc: "Kunden-E-Mail" },
@@ -12,10 +13,29 @@ const PLACEHOLDERS = [
   { alias: "{dokument_nr}", desc: "Dokument-Nr." },
 ];
 
+const getAnredeBrief = (customer) => {
+  if (!customer) return "Sehr geehrte Damen und Herren";
+  const anrede = customer.anrede || "";
+  // Nachname extrahieren: letztes Wort des Namens (ohne Herr/Frau-Prefix)
+  const fullName = customer.name || "";
+  const cleanName = fullName.replace(/^(Herr|Frau|Divers)\s+/i, "").trim();
+  const nameParts = cleanName.split(/\s+/);
+  const nachname = nameParts.length > 1 ? nameParts[nameParts.length - 1] : cleanName;
+
+  if (anrede === "Herr" || fullName.startsWith("Herr ")) {
+    return `Sehr geehrter Herr ${nachname}`;
+  } else if (anrede === "Frau" || fullName.startsWith("Frau ")) {
+    return `Sehr geehrte Frau ${nachname}`;
+  } else {
+    return `Sehr geehrte/r ${cleanName}`;
+  }
+};
+
 const resolvePlaceholders = (text, customer, settings, docNumber) => {
   if (!text) return "";
   const now = new Date();
   return text
+    .replace(/\{anrede_brief\}/g, getAnredeBrief(customer))
     .replace(/\{kunde_name\}/g, customer?.name || "")
     .replace(/\{kunde_adresse\}/g, customer?.address || "")
     .replace(/\{kunde_email\}/g, customer?.email || "")
