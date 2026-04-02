@@ -133,6 +133,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setPositions(updated);
   };
 
+  const movePosition = (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= positions.length) return;
+    const updated = [...positions];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    updated.forEach((p, i) => (p.pos_nr = i + 1));
+    setPositions(updated);
+  };
+
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
   const addFromStamm = (item) => {
     const newIdx = positions.length;
     setPositions([
@@ -736,7 +748,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 {positions.map((pos, idx) => (
                   <div key={idx} className="border rounded-sm p-3 bg-white">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-mono text-muted-foreground">Pos. {pos.pos_nr}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col">
+                          {idx > 0 && <button onClick={() => movePosition(idx, idx - 1)} className="p-0.5 hover:bg-muted rounded text-muted-foreground"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg></button>}
+                          {idx < positions.length - 1 && <button onClick={() => movePosition(idx, idx + 1)} className="p-0.5 hover:bg-muted rounded text-muted-foreground"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></button>}
+                        </div>
+                        <span className="text-xs font-mono text-muted-foreground">Pos. {pos.pos_nr}</span>
+                      </div>
                       <button onClick={() => removePosition(idx)} className="p-1 hover:bg-destructive/10 rounded-sm">
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </button>
@@ -782,6 +800,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               <table className="hidden lg:table w-full">
                 <thead>
                   <tr className="border-b-2 border-primary/30">
+                    <th className="w-8"></th>
                     <th className="text-left py-3 text-sm font-semibold text-primary w-12">Pos</th>
                     <th className="text-left py-3 text-sm font-semibold text-primary">Beschreibung</th>
                     <th className="text-right py-3 text-sm font-semibold text-primary w-24">Menge</th>
@@ -793,7 +812,20 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 </thead>
                 <tbody>
                   {positions.map((pos, idx) => (
-                    <tr key={idx} className="border-b border-slate-100 group">
+                    <tr key={idx}
+                      draggable
+                      onDragStart={() => setDragIndex(idx)}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                      onDragLeave={() => setDragOverIndex(null)}
+                      onDrop={() => { movePosition(dragIndex, idx); setDragIndex(null); setDragOverIndex(null); }}
+                      onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                      className={`border-b border-slate-100 group transition-colors ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
+                    >
+                      <td className="py-2 align-top">
+                        <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground">
+                          <GripVertical className="w-4 h-4" />
+                        </div>
+                      </td>
                       <td className="py-3 text-sm text-muted-foreground align-top">{pos.pos_nr}</td>
                       <td className="py-2">
                         <textarea value={pos.description}
