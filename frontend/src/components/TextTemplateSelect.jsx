@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -48,10 +48,18 @@ const resolvePlaceholders = (text, customer, settings, docNumber) => {
 const TextTemplateSelect = ({ docType, textType, value, onChange, customer, settings, docNumber }) => {
   const [templates, setTemplates] = useState([]);
   const [open, setOpen] = useState(false);
+  const textareaRef = useRef(null);
 
-  useEffect(() => {
-    loadTemplates();
-  }, [docType, textType]);
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.max(56, el.scrollHeight) + "px";
+    }
+  }, []);
+
+  useEffect(() => { loadTemplates(); }, [docType, textType]);
+  useEffect(() => { autoResize(); }, [value, autoResize]);
 
   const loadTemplates = async () => {
     try {
@@ -104,12 +112,14 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
         )}
       </div>
       <textarea
+        ref={textareaRef}
         data-testid={`input-${textType}`}
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); autoResize(); }}
         placeholder={`${label} eingeben oder aus Textbausteinen wählen...`}
-        rows={3}
-        className="flex min-h-[72px] w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        rows={2}
+        className="flex w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none overflow-hidden"
+        style={{ minHeight: "56px" }}
       />
       {!value && (
         <div className="flex flex-wrap gap-1 mt-1">
