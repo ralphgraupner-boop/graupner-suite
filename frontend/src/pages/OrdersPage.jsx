@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardCheck, Receipt, Download, Edit } from "lucide-react";
+import { ClipboardCheck, Receipt, Download, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { Card, Badge } from "@/components/common";
@@ -61,6 +61,18 @@ const OrdersPage = () => {
     navigate(`/orders/edit/${order.id}`);
   };
 
+  const handleDelete = async (id, e) => {
+    e?.stopPropagation();
+    if (!window.confirm("Auftrag wirklich löschen?")) return;
+    try {
+      await api.delete(`/orders/${id}`);
+      toast.success("Auftrag gelöscht");
+      loadOrders();
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
   const getStatusBadge = (status) => {
     const variants = {
       Offen: "warning",
@@ -115,6 +127,7 @@ const OrdersPage = () => {
                   {order.status !== "Abgerechnet" && (
                     <button onClick={(e) => handleCreateInvoice(order.id, e)} className="p-2 hover:bg-primary/10 text-primary rounded-sm"><Receipt className="w-4 h-4" /></button>
                   )}
+                  <button data-testid={`btn-delete-order-${order.id}`} onClick={(e) => handleDelete(order.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm" title="Löschen"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </Card>
             ))}
@@ -178,6 +191,14 @@ const OrdersPage = () => {
                             <Receipt className="w-4 h-4" />
                           </button>
                         )}
+                        <button
+                          data-testid={`btn-delete-order-${order.id}`}
+                          onClick={(e) => handleDelete(order.id, e)}
+                          className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"
+                          title="Löschen"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
