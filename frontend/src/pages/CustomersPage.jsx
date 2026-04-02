@@ -156,11 +156,16 @@ const CustomersPage = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           {filtered.map((customer) => (
-            <Card key={customer.id} className="p-4 lg:p-6 card-hover">
+            <Card
+              key={customer.id}
+              className="p-4 lg:p-6 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg hover:border-primary/40 hover:z-10 cursor-pointer group relative"
+              onClick={() => { setEditCustomer(customer); setShowModal(true); }}
+              data-testid={`customer-card-${customer.id}`}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold truncate">{customer.name}</h3>
+                    <h3 className="font-semibold truncate group-hover:text-primary transition-colors">{customer.name}</h3>
                     {customer.customer_type && customer.customer_type !== "Privat" && (
                       <Badge variant="default" className="text-xs">{customer.customer_type}</Badge>
                     )}
@@ -171,35 +176,26 @@ const CustomersPage = () => {
                   {customer.phone && (
                     <p className="text-sm text-muted-foreground">{customer.phone}</p>
                   )}
+                  {customer.address && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1 group-hover:line-clamp-3 transition-all">{customer.address}</p>
+                  )}
                   {customer.status && customer.status !== "Neu" && (
-                    <Badge variant={customer.status === "Abgeschlossen" ? "success" : customer.status === "Auftrag erteilt" ? "info" : "warning"} className="mt-1 text-xs">
+                    <Badge variant={customer.status === "Abgeschlossen" ? "success" : customer.status === "Auftrag erteilt" ? "info" : "warning"} className="mt-2 text-xs">
                       {customer.status}
                     </Badge>
                   )}
                   {(customer.categories || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex flex-wrap gap-1 mt-2">
                       {customer.categories.map((cat) => (
                         <span key={cat} className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
                       ))}
                     </div>
                   )}
+                  {customer.notes && (
+                    <p className="text-xs text-muted-foreground mt-2 hidden group-hover:block line-clamp-2 italic">{customer.notes}</p>
+                  )}
                 </div>
-                <div className="flex gap-1 ml-4">
-                  <button
-                    data-testid={`btn-to-anfrage-${customer.id}`}
-                    onClick={async () => {
-                      if (!window.confirm(`${customer.name} zurück in Anfragen verschieben?`)) return;
-                      try {
-                        await api.post(`/customers/${customer.id}/to-anfrage`);
-                        toast.success("Kunde zurück in Anfragen verschoben");
-                        loadCustomers();
-                      } catch (err) { toast.error("Fehler beim Zurückstufen"); }
-                    }}
-                    className="p-2 hover:bg-amber-50 hover:text-amber-700 rounded-sm"
-                    title="Zurück zu Anfragen"
-                  >
-                    <Inbox className="w-4 h-4" />
-                  </button>
+                <div className="flex flex-col gap-1 ml-3" onClick={(e) => e.stopPropagation()}>
                   <button
                     data-testid={`btn-edit-customer-${customer.id}`}
                     onClick={() => {
@@ -207,28 +203,46 @@ const CustomersPage = () => {
                       setShowModal(true);
                     }}
                     className="p-2 hover:bg-muted rounded-sm"
+                    title="Bearbeiten"
                   >
                     <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    data-testid={`btn-to-anfrage-${customer.id}`}
+                    onClick={async () => {
+                      if (confirmDeleteId === `revert-${customer.id}`) {
+                        try {
+                          await api.post(`/customers/${customer.id}/to-anfrage`);
+                          toast.success("Kunde zurück in Anfragen verschoben");
+                          setConfirmDeleteId(null);
+                          loadCustomers();
+                        } catch (err) { toast.error("Fehler beim Zurückstufen"); }
+                      } else {
+                        setConfirmDeleteId(`revert-${customer.id}`);
+                        setTimeout(() => setConfirmDeleteId(null), 3000);
+                      }
+                    }}
+                    className={`p-2 rounded-sm transition-colors ${confirmDeleteId === `revert-${customer.id}` ? 'bg-amber-500 text-white' : 'hover:bg-amber-50 hover:text-amber-700'}`}
+                    title={confirmDeleteId === `revert-${customer.id}` ? "Nochmal klicken" : "Zurück zu Anfragen"}
+                  >
+                    {confirmDeleteId === `revert-${customer.id}` ? <span className="text-xs font-bold">Zurück?</span> : <Inbox className="w-4 h-4" />}
                   </button>
                   <button
                     data-testid={`btn-delete-customer-${customer.id}`}
                     onClick={() => handleDelete(customer.id)}
                     className={`p-2 rounded-sm transition-colors ${confirmDeleteId === customer.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
-                    title={confirmDeleteId === customer.id ? "Nochmal klicken zum Löschen" : "Kunde löschen"}
+                    title={confirmDeleteId === customer.id ? "Nochmal klicken zum Löschen" : "Löschen"}
                   >
-                    {confirmDeleteId === customer.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
+                    {confirmDeleteId === customer.id ? <span className="text-xs font-bold">Löschen?</span> : <Trash2 className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
-              {customer.address && (
-                <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{customer.address}</p>
-              )}
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">Klicken zum Bearbeiten</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full"
-                  onClick={() => navigate(`/quotes/new?customer=${customer.id}`)}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/quotes/new?customer=${customer.id}`); }}
                 >
                   Angebot erstellen
                   <ChevronRight className="w-4 h-4" />
