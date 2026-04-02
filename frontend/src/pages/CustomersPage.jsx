@@ -232,14 +232,12 @@ const CustomersPage = () => {
                           <div>
                             <span className="text-sm font-medium">Adresse:</span>
                             <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{customer.address}</p>
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`, '_blank', 'noopener')}
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                             >
                               <Globe className="w-3 h-3" /> Auf Karte zeigen
-                            </a>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -465,16 +463,14 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
             rows={3}
           />
           {form.address && (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`, '_blank', 'noopener')}
               className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
               data-testid="btn-map-link"
             >
               <Globe className="w-3 h-3" />
               Auf Karte anzeigen
-            </a>
+            </button>
           )}
         </div>
         <div>

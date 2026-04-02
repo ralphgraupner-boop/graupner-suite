@@ -220,14 +220,12 @@ const AnfragenPage = () => {
                             <div>
                               <span className="text-sm font-medium">Adresse:</span>
                               <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{anfrage.address}</p>
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.address)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.address)}`, '_blank', 'noopener')}
                                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                               >
                                 <Globe className="w-3 h-3" /> Auf Karte zeigen
-                              </a>
+                              </button>
                             </div>
                           )}
                           {anfrage.firma && <p className="text-sm"><span className="font-medium">Firma:</span> {anfrage.firma}</p>}
@@ -259,14 +257,12 @@ const AnfragenPage = () => {
                           <div className="mt-3">
                             <span className="text-sm font-medium">Objektadresse:</span>
                             <p className="text-sm text-muted-foreground mt-0.5">{anfrage.obj_address}</p>
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.obj_address)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.obj_address)}`, '_blank', 'noopener')}
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                             >
                               <Globe className="w-3 h-3" /> Auf Karte zeigen
-                            </a>
+                            </button>
                           </div>
                         )}
                       </div>
