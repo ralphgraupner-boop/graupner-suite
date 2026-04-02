@@ -11,6 +11,7 @@ const QuotesPage = () => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewQuote, setPreviewQuote] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,10 +31,15 @@ const QuotesPage = () => {
 
   const handleDelete = async (id, e) => {
     e?.stopPropagation();
-    if (!window.confirm("Angebot wirklich löschen?")) return;
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      setTimeout(() => setConfirmDeleteId(null), 3000);
+      return;
+    }
     try {
       await api.delete(`/quotes/${id}`);
       toast.success("Angebot gelöscht");
+      setConfirmDeleteId(null);
       loadQuotes();
     } catch (err) {
       toast.error("Fehler beim Löschen");
@@ -134,7 +140,9 @@ const QuotesPage = () => {
                   {quote.status === "Entwurf" && (
                     <button onClick={(e) => handleCreateOrder(quote.id, e)} className="p-2 hover:bg-primary/10 text-primary rounded-sm"><CheckCircle className="w-4 h-4" /></button>
                   )}
-                  <button onClick={(e) => handleDelete(quote.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={(e) => handleDelete(quote.id, e)} className={`p-2 rounded-sm transition-colors ${confirmDeleteId === quote.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}>
+                    {confirmDeleteId === quote.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
+                  </button>
                 </div>
               </Card>
             ))}
@@ -201,10 +209,10 @@ const QuotesPage = () => {
                         <button
                           data-testid={`btn-delete-quote-${quote.id}`}
                           onClick={(e) => handleDelete(quote.id, e)}
-                          className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"
-                          title="Löschen"
+                          className={`p-2 rounded-sm transition-colors ${confirmDeleteId === quote.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                          title={confirmDeleteId === quote.id ? "Nochmal klicken zum Löschen" : "Löschen"}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {confirmDeleteId === quote.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>
                     </td>

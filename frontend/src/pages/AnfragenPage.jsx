@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, X, Inbox, UserCheck, Filter } from "lucide-react";
+import { Search, X, Inbox, UserCheck, Filter, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -10,6 +10,7 @@ const AnfragenPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("");
   const [search, setSearch] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
     loadAnfragen();
@@ -38,10 +39,15 @@ const AnfragenPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Anfrage wirklich löschen?")) return;
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      setTimeout(() => setConfirmDeleteId(null), 3000);
+      return;
+    }
     try {
       await api.delete(`/anfragen/${id}`);
       toast.success("Anfrage gelöscht");
+      setConfirmDeleteId(null);
       loadAnfragen();
     } catch (err) {
       toast.error("Fehler beim Löschen");
@@ -176,10 +182,10 @@ const AnfragenPage = () => {
                   <button
                     onClick={() => handleDelete(anfrage.id)}
                     data-testid={`btn-delete-anfrage-${anfrage.id}`}
-                    className="p-2.5 hover:bg-destructive/10 hover:text-destructive rounded-sm transition-colors"
-                    title="Anfrage löschen"
+                    className={`p-2.5 rounded-sm transition-colors ${confirmDeleteId === anfrage.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                    title={confirmDeleteId === anfrage.id ? "Nochmal klicken zum Löschen" : "Anfrage löschen"}
                   >
-                    <X className="w-5 h-5" />
+                    {confirmDeleteId === anfrage.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-5 h-5" />}
                   </button>
                 </div>
               </div>

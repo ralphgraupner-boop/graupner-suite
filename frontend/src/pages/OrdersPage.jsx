@@ -11,6 +11,7 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewOrder, setPreviewOrder] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,10 +64,15 @@ const OrdersPage = () => {
 
   const handleDelete = async (id, e) => {
     e?.stopPropagation();
-    if (!window.confirm("Auftrag wirklich löschen?")) return;
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      setTimeout(() => setConfirmDeleteId(null), 3000);
+      return;
+    }
     try {
       await api.delete(`/orders/${id}`);
       toast.success("Auftrag gelöscht");
+      setConfirmDeleteId(null);
       loadOrders();
     } catch (err) {
       toast.error("Fehler beim Löschen");
@@ -127,7 +133,9 @@ const OrdersPage = () => {
                   {order.status !== "Abgerechnet" && (
                     <button onClick={(e) => handleCreateInvoice(order.id, e)} className="p-2 hover:bg-primary/10 text-primary rounded-sm"><Receipt className="w-4 h-4" /></button>
                   )}
-                  <button data-testid={`btn-delete-order-${order.id}`} onClick={(e) => handleDelete(order.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm" title="Löschen"><Trash2 className="w-4 h-4" /></button>
+                  <button data-testid={`btn-delete-order-${order.id}`} onClick={(e) => handleDelete(order.id, e)} className={`p-2 rounded-sm transition-colors ${confirmDeleteId === order.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`} title={confirmDeleteId === order.id ? "Nochmal klicken" : "Löschen"}>
+                    {confirmDeleteId === order.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
+                  </button>
                 </div>
               </Card>
             ))}
@@ -194,10 +202,10 @@ const OrdersPage = () => {
                         <button
                           data-testid={`btn-delete-order-${order.id}`}
                           onClick={(e) => handleDelete(order.id, e)}
-                          className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"
-                          title="Löschen"
+                          className={`p-2 rounded-sm transition-colors ${confirmDeleteId === order.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                          title={confirmDeleteId === order.id ? "Nochmal klicken zum Löschen" : "Löschen"}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {confirmDeleteId === order.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>
                     </td>

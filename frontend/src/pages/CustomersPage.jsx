@@ -14,6 +14,7 @@ const CustomersPage = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editCustomer, setEditCustomer] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,10 +33,15 @@ const CustomersPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Kunde wirklich löschen?")) return;
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      setTimeout(() => setConfirmDeleteId(null), 3000);
+      return;
+    }
     try {
       await api.delete(`/customers/${id}`);
       toast.success("Kunde gelöscht");
+      setConfirmDeleteId(null);
       loadCustomers();
     } catch (err) {
       toast.error("Fehler beim Löschen");
@@ -207,9 +213,10 @@ const CustomersPage = () => {
                   <button
                     data-testid={`btn-delete-customer-${customer.id}`}
                     onClick={() => handleDelete(customer.id)}
-                    className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"
+                    className={`p-2 rounded-sm transition-colors ${confirmDeleteId === customer.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                    title={confirmDeleteId === customer.id ? "Nochmal klicken zum Löschen" : "Kunde löschen"}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {confirmDeleteId === customer.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
