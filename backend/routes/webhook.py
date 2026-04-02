@@ -154,6 +154,7 @@ body>*{{position:relative;z-index:1}}
 .field{{flex:1;min-width:160px}}
 label{{display:block;font-size:12px;font-weight:500;margin-bottom:3px;color:#555}}
 input[type=text],input[type=email],input[type=tel],textarea{{width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;transition:border-color 0.2s}}
+input:invalid{{border-color:#e74c3c}}
 input:focus,textarea:focus{{outline:none;border-color:#1a1a2e;box-shadow:0 0 0 3px rgba(26,26,46,0.08)}}
 textarea{{resize:vertical;min-height:80px}}
 .radio-group{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}}
@@ -198,7 +199,7 @@ input[type=file]{{padding:7px;font-size:13px}}
 <p>Fenster und T&uuml;ren reparieren seit 1960</p>
 </div>
 <div class="container">
-<form action="{backend_url}/api/kontakt/submit" method="POST" enctype="multipart/form-data">
+<form action="{backend_url}/api/kontakt/submit" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
 <input type="hidden" name="rolle" value="Eigent&uuml;mer/Vermieter">
 <div class="card">
 <h2>Kontaktdaten</h2>
@@ -225,7 +226,7 @@ input[type=file]{{padding:7px;font-size:13px}}
 <div class="field"><label class="required">E-Mail</label><input type="email" name="email" required></div>
 </div>
 <div class="row">
-<div class="field"><label class="required">Stra&szlig;e, Nr.</label><input type="text" name="strasse" id="k_strasse" required></div>
+<div class="field"><label class="required">Stra&szlig;e, Nr.</label><input type="text" name="strasse" id="k_strasse" required minlength="5" placeholder="z.B. Musterstra&szlig;e 12" pattern=".*\\d+.*" title="Bitte Stra&szlig;e mit Hausnummer eingeben"></div>
 <div class="field" style="max-width:100px"><label class="required">PLZ</label><input type="text" name="plz" id="k_plz" required></div>
 <div class="field"><label class="required">Stadt</label><input type="text" name="stadt" id="k_stadt" required></div>
 </div>
@@ -296,6 +297,20 @@ Kontaktdaten als Objektadresse &uuml;bernehmen
 </form>
 </div>
 <script>
+function validateForm(){{
+  var strasse=document.getElementById('k_strasse').value.trim();
+  if(!strasse||strasse.length<5){{
+    alert('Bitte geben Sie eine Stra\u00dfe mit Hausnummer ein.');
+    document.getElementById('k_strasse').focus();
+    return false;
+  }}
+  if(!/\d/.test(strasse)){{
+    alert('Bitte geben Sie auch die Hausnummer ein (z.B. Musterstra\u00dfe 12).');
+    document.getElementById('k_strasse').focus();
+    return false;
+  }}
+  return true;
+}}
 function toggleFirma(){{
   var isFirma=document.querySelector('input[name="kundentyp"][value="Firma"]').checked;
   var field=document.getElementById('firmaField');
