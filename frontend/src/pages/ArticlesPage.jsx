@@ -123,11 +123,8 @@ const ArtikelPage = () => {
                     <span className="font-mono font-semibold">{(item.price_net || 0).toFixed(2)} €</span>
                   </div>
                   {item.ek_preis > 0 && (
-                    <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
+                    <div className="mt-1 text-xs text-muted-foreground">
                       <div className="flex justify-between"><span>EK:</span><span className="font-mono">{item.ek_preis.toFixed(2)} €</span></div>
-                      {item.vk_preis_1 > 0 && <div className="flex justify-between"><span>VK1 ({item.aufschlag_1}%):</span><span className="font-mono font-medium text-foreground">{item.vk_preis_1.toFixed(2)} €</span></div>}
-                      {item.vk_preis_2 > 0 && <div className="flex justify-between"><span>VK2 ({item.aufschlag_2}%):</span><span className="font-mono font-medium text-foreground">{item.vk_preis_2.toFixed(2)} €</span></div>}
-                      {item.vk_preis_3 > 0 && <div className="flex justify-between"><span>VK3 ({item.aufschlag_3}%):</span><span className="font-mono font-medium text-foreground">{item.vk_preis_3.toFixed(2)} €</span></div>}
                     </div>
                   )}
                 </div>
