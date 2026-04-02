@@ -58,9 +58,11 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
 - [x] Code-Refactoring Backend (65 Zeilen server.py)
 - [x] Code-Refactoring Frontend (77 Zeilen App.js)
 - [x] Anfragen bearbeitbar (Edit-Modal + PUT-Endpoint)
+- [x] Schnellnotiz-Funktion (Inline-Eingabe direkt in Anfragen-Liste)
 
 ## Implementierte Features (Aktuell)
 - [x] Anfragen bearbeitbar (PUT /api/anfragen/{id}, Edit-Modal mit allen Feldern) — 02.04.2026
+- [x] Schnellnotiz-Funktion (Inline-Eingabe mit Timestamp in Anfragen-Liste) — 02.04.2026
 
 ## Backlog
 - [ ] N26 Bankanbindung (CSV-Import / Open Banking)

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, X } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
@@ -15,6 +15,9 @@ const AnfragenPage = () => {
   const [editAnfrage, setEditAnfrage] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [quickNoteId, setQuickNoteId] = useState(null);
+  const [quickNoteText, setQuickNoteText] = useState("");
+  const [quickNoteSaving, setQuickNoteSaving] = useState(false);
 
   useEffect(() => {
     loadAnfragen();
@@ -96,6 +99,32 @@ const AnfragenPage = () => {
         ? prev.categories.filter((c) => c !== cat)
         : [...prev.categories, cat],
     }));
+  };
+
+  const openQuickNote = (anfrage) => {
+    setQuickNoteId(anfrage.id);
+    setQuickNoteText("");
+  };
+
+  const saveQuickNote = async (anfrage) => {
+    if (!quickNoteText.trim()) { setQuickNoteId(null); return; }
+    setQuickNoteSaving(true);
+    try {
+      const timestamp = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      const existing = anfrage.notes || "";
+      const newNotes = existing
+        ? `${existing}\n[${timestamp}] ${quickNoteText.trim()}`
+        : `[${timestamp}] ${quickNoteText.trim()}`;
+      await api.put(`/anfragen/${anfrage.id}`, { notes: newNotes });
+      toast.success("Notiz gespeichert");
+      setQuickNoteId(null);
+      setQuickNoteText("");
+      loadAnfragen();
+    } catch (err) {
+      toast.error("Fehler beim Speichern der Notiz");
+    } finally {
+      setQuickNoteSaving(false);
+    }
   };
 
   const parseNotes = (notes) => {
@@ -225,6 +254,14 @@ const AnfragenPage = () => {
                   )}
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
+                      onClick={() => openQuickNote(anfrage)}
+                      data-testid={`btn-quicknote-${anfrage.id}`}
+                      className={`p-2 rounded-sm transition-colors ${quickNoteId === anfrage.id ? 'bg-amber-200 text-amber-800' : 'bg-amber-50 hover:bg-amber-100 text-amber-700'}`}
+                      title="Schnellnotiz"
+                    >
+                      <MessageSquarePlus className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => openEdit(anfrage)}
                       data-testid={`btn-edit-anfrage-${anfrage.id}`}
                       className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-sm transition-colors"
@@ -251,6 +288,38 @@ const AnfragenPage = () => {
                   </div>
                   <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
+
+                {/* Schnellnotiz Inline */}
+                {quickNoteId === anfrage.id && (
+                  <div className="border-t bg-amber-50/60 px-4 py-2 flex items-center gap-2 animate-in slide-in-from-top-1 duration-150" data-testid={`quicknote-bar-${anfrage.id}`} onClick={(e) => e.stopPropagation()}>
+                    <MessageSquarePlus className="w-4 h-4 text-amber-600 shrink-0" />
+                    <input
+                      autoFocus
+                      data-testid={`quicknote-input-${anfrage.id}`}
+                      className="flex-1 bg-white border border-amber-200 rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      placeholder="Schnellnotiz eingeben..."
+                      value={quickNoteText}
+                      onChange={(e) => setQuickNoteText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveQuickNote(anfrage); if (e.key === "Escape") setQuickNoteId(null); }}
+                      disabled={quickNoteSaving}
+                    />
+                    <button
+                      onClick={() => saveQuickNote(anfrage)}
+                      disabled={quickNoteSaving || !quickNoteText.trim()}
+                      data-testid={`quicknote-save-${anfrage.id}`}
+                      className="p-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-sm transition-colors disabled:opacity-40"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setQuickNoteId(null)}
+                      data-testid={`quicknote-cancel-${anfrage.id}`}
+                      className="text-xs text-muted-foreground hover:text-foreground px-2 py-1"
+                    >
+                      Esc
+                    </button>
+                  </div>
+                )}
 
                 {/* Aufgeklappte Detail-Ansicht */}
                 {isExpanded && (
