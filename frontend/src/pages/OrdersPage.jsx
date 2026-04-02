@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ClipboardCheck, Receipt, Download, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import { Card, Badge } from "@/components/common";
-import { api, API } from "@/lib/api";
+import { api } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
 const OrdersPage = () => {
@@ -43,7 +42,7 @@ const OrdersPage = () => {
   const handleDownloadPDF = async (id, number, e) => {
     e?.stopPropagation();
     try {
-      const res = await axios.get(`${API}/pdf/order/${id}`, { responseType: "blob" });
+      const res = await api.get(`/pdf/order/${id}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;

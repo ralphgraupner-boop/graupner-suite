@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import { Button, Card, Badge } from "@/components/common";
-import { api, API } from "@/lib/api";
+import { api } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
 const InvoicesPage = () => {
@@ -48,7 +47,7 @@ const InvoicesPage = () => {
   const handleDownloadPDF = async (id, number, e) => {
     e?.stopPropagation();
     try {
-      const res = await axios.get(`${API}/pdf/invoice/${id}`, { responseType: "blob" });
+      const res = await api.get(`/pdf/invoice/${id}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -103,7 +102,7 @@ const InvoicesPage = () => {
   const handleDownloadDunning = async (id, number, e) => {
     e?.stopPropagation();
     try {
-      const res = await axios.get(`${API}/pdf/dunning/${id}`, { responseType: "blob" });
+      const res = await api.get(`/pdf/dunning/${id}`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
