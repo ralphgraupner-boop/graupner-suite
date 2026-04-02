@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Plus, Mail, Trash2, Edit, ChevronRight, Search, Globe, Inbox } from "lucide-react";
+import { Users, Plus, Mail, Trash2, Edit, ChevronRight, Search, Globe, Inbox, ChevronDown, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -15,6 +15,7 @@ const CustomersPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editCustomer, setEditCustomer] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -154,102 +155,156 @@ const CustomersPage = () => {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-          {filtered.map((customer) => (
+        <div className="flex flex-col gap-2">
+          {filtered.map((customer) => {
+            const isExpanded = expandedId === customer.id;
+            return (
             <Card
               key={customer.id}
-              className="p-4 lg:p-6 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg hover:border-primary/40 hover:z-10 cursor-pointer group relative"
-              onClick={() => { setEditCustomer(customer); setShowModal(true); }}
+              className={`transition-all duration-200 cursor-pointer overflow-hidden ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md hover:border-primary/20'}`}
               data-testid={`customer-card-${customer.id}`}
             >
-              <div className="flex items-start justify-between">
+              {/* Kompakte Listenzeile */}
+              <div
+                className="flex items-center gap-4 p-3 lg:p-4"
+                onClick={() => setExpandedId(isExpanded ? null : customer.id)}
+              >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
+                  {customer.name?.charAt(0)?.toUpperCase() || "?"}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold truncate group-hover:text-primary transition-colors">{customer.name}</h3>
+                    <span className="font-semibold truncate">{customer.name}</span>
                     {customer.customer_type && customer.customer_type !== "Privat" && (
                       <Badge variant="default" className="text-xs">{customer.customer_type}</Badge>
                     )}
+                    {customer.status && customer.status !== "Neu" && (
+                      <Badge variant={customer.status === "Abgeschlossen" ? "success" : customer.status === "Auftrag erteilt" ? "info" : "warning"} className="text-xs">
+                        {customer.status}
+                      </Badge>
+                    )}
                   </div>
-                  {customer.email && (
-                    <p className="text-sm text-muted-foreground truncate">{customer.email}</p>
-                  )}
-                  {customer.phone && (
-                    <p className="text-sm text-muted-foreground">{customer.phone}</p>
-                  )}
-                  {customer.address && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1 group-hover:line-clamp-3 transition-all">{customer.address}</p>
-                  )}
-                  {customer.status && customer.status !== "Neu" && (
-                    <Badge variant={customer.status === "Abgeschlossen" ? "success" : customer.status === "Auftrag erteilt" ? "info" : "warning"} className="mt-2 text-xs">
-                      {customer.status}
-                    </Badge>
-                  )}
-                  {(customer.categories || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {customer.categories.map((cat) => (
-                        <span key={cat} className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
-                      ))}
-                    </div>
-                  )}
-                  {customer.notes && (
-                    <p className="text-xs text-muted-foreground mt-2 hidden group-hover:block line-clamp-2 italic">{customer.notes}</p>
-                  )}
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    {customer.phone && <span>{customer.phone}</span>}
+                    {customer.email && <span className="truncate hidden sm:inline">{customer.email}</span>}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1 ml-3" onClick={(e) => e.stopPropagation()}>
+                {(customer.categories || []).length > 0 && (
+                  <div className="hidden lg:flex flex-wrap gap-1">
+                    {customer.categories.map((cat) => (
+                      <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     data-testid={`btn-edit-customer-${customer.id}`}
-                    onClick={() => {
-                      setEditCustomer(customer);
-                      setShowModal(true);
-                    }}
+                    onClick={() => { setEditCustomer(customer); setShowModal(true); }}
                     className="p-2 hover:bg-muted rounded-sm"
                     title="Bearbeiten"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    data-testid={`btn-to-anfrage-${customer.id}`}
-                    onClick={async () => {
-                      if (confirmDeleteId === `revert-${customer.id}`) {
-                        try {
-                          await api.post(`/customers/${customer.id}/to-anfrage`);
-                          toast.success("Kunde zurück in Anfragen verschoben");
-                          setConfirmDeleteId(null);
-                          loadCustomers();
-                        } catch (err) { toast.error("Fehler beim Zurückstufen"); }
-                      } else {
-                        setConfirmDeleteId(`revert-${customer.id}`);
-                        setTimeout(() => setConfirmDeleteId(null), 3000);
-                      }
-                    }}
-                    className={`p-2 rounded-sm transition-colors ${confirmDeleteId === `revert-${customer.id}` ? 'bg-amber-500 text-white' : 'hover:bg-amber-50 hover:text-amber-700'}`}
-                    title={confirmDeleteId === `revert-${customer.id}` ? "Nochmal klicken" : "Zurück zu Anfragen"}
-                  >
-                    {confirmDeleteId === `revert-${customer.id}` ? <span className="text-xs font-bold">Zurück?</span> : <Inbox className="w-4 h-4" />}
-                  </button>
-                  <button
                     data-testid={`btn-delete-customer-${customer.id}`}
                     onClick={() => handleDelete(customer.id)}
                     className={`p-2 rounded-sm transition-colors ${confirmDeleteId === customer.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
-                    title={confirmDeleteId === customer.id ? "Nochmal klicken zum Löschen" : "Löschen"}
+                    title={confirmDeleteId === customer.id ? "Nochmal klicken" : "Löschen"}
                   >
                     {confirmDeleteId === customer.id ? <span className="text-xs font-bold">Löschen?</span> : <Trash2 className="w-4 h-4" />}
                   </button>
                 </div>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
               </div>
-              <div className="mt-3 pt-3 border-t flex items-center justify-between">
-                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">Klicken zum Bearbeiten</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); navigate(`/quotes/new?customer=${customer.id}`); }}
-                >
-                  Angebot erstellen
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
+
+              {/* Aufgeklappte Detail-Ansicht */}
+              {isExpanded && (
+                <div className="border-t bg-muted/30 p-4 lg:p-6 animate-in slide-in-from-top-2 duration-200">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Kontaktdaten */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Kontaktdaten</h4>
+                      <div className="space-y-2">
+                        <p className="text-sm"><span className="font-medium">Name:</span> {customer.name}</p>
+                        {customer.email && <p className="text-sm"><span className="font-medium">E-Mail:</span> {customer.email}</p>}
+                        {customer.phone && <p className="text-sm"><span className="font-medium">Telefon:</span> {customer.phone}</p>}
+                        {customer.address && (
+                          <div>
+                            <span className="text-sm font-medium">Adresse:</span>
+                            <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{customer.address}</p>
+                            <a
+                              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(customer.address)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                            >
+                              <Globe className="w-3 h-3" /> Auf Karte zeigen
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Kategorien & Status */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Details</h4>
+                      <div className="space-y-2">
+                        <p className="text-sm"><span className="font-medium">Typ:</span> {customer.customer_type || "Privat"}</p>
+                        <p className="text-sm"><span className="font-medium">Status:</span> {customer.status || "Neu"}</p>
+                        {(customer.categories || []).length > 0 && (
+                          <div>
+                            <span className="text-sm font-medium">Kategorien:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {customer.categories.map((cat) => (
+                                <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notizen */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Notizen</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">{customer.notes || "Keine Notizen"}</p>
+                    </div>
+                  </div>
+
+                  {/* Aktionen */}
+                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                    <Button size="sm" onClick={() => { setEditCustomer(customer); setShowModal(true); }}>
+                      <Edit className="w-4 h-4" /> Bearbeiten
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/quotes/new?customer=${customer.id}`)}>
+                      <FileText className="w-4 h-4" /> Angebot erstellen
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      data-testid={`btn-to-anfrage-${customer.id}`}
+                      onClick={async () => {
+                        if (confirmDeleteId === `revert-${customer.id}`) {
+                          try {
+                            await api.post(`/customers/${customer.id}/to-anfrage`);
+                            toast.success("Kunde zurück in Anfragen verschoben");
+                            setConfirmDeleteId(null);
+                            loadCustomers();
+                          } catch (err) { toast.error("Fehler beim Zurückstufen"); }
+                        } else {
+                          setConfirmDeleteId(`revert-${customer.id}`);
+                          setTimeout(() => setConfirmDeleteId(null), 3000);
+                        }
+                      }}
+                      className={confirmDeleteId === `revert-${customer.id}` ? 'bg-amber-500 text-white border-amber-500' : ''}
+                    >
+                      <Inbox className="w-4 h-4" /> {confirmDeleteId === `revert-${customer.id}` ? "Nochmal klicken!" : "Zurück zu Anfragen"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
-          ))}
+          );})}
         </div>
       )}
 

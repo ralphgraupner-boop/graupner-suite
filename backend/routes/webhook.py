@@ -159,10 +159,18 @@ textarea{{resize:vertical;min-height:80px}}
 .radio-group{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}}
 .radio-group label{{display:flex;align-items:center;gap:5px;padding:7px 12px;border:1.5px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s}}
 .radio-group label:has(input:checked){{border-color:#1a1a2e;background:#f0f0ff}}
-.topic-grid{{display:flex;flex-wrap:wrap;gap:6px}}
-.topic-grid label{{display:flex;align-items:center;gap:5px;padding:6px 10px;border:1.5px solid #ddd;border-radius:20px;cursor:pointer;font-size:12px;transition:all 0.2s;white-space:nowrap}}
-.topic-grid label:has(input:checked){{border-color:#1a1a2e;background:#1a1a2e;color:#fff}}
-.topic-grid input{{display:none}}
+.topic-grid{{display:flex;flex-direction:column;gap:8px}}
+.topic-item{{border:1.5px solid #ddd;border-radius:10px;overflow:hidden;transition:all 0.3s}}
+.topic-item.active{{border-color:#1a1a2e;background:#fafbff}}
+.topic-header{{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s;user-select:none}}
+.topic-header:hover{{background:#f8f9fa}}
+.topic-check{{width:18px;height:18px;border-radius:50%;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}}
+.topic-item.active .topic-check{{background:#1a1a2e;border-color:#1a1a2e}}
+.topic-item.active .topic-check::after{{content:'';width:6px;height:6px;background:#fff;border-radius:50%}}
+.topic-desc{{max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease;padding:0 14px}}
+.topic-item.active .topic-desc{{max-height:200px;padding:0 14px 14px}}
+.topic-desc textarea{{width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;min-height:60px;resize:vertical;transition:border-color 0.2s}}
+.topic-desc textarea:focus{{outline:none;border-color:#1a1a2e;box-shadow:0 0 0 3px rgba(26,26,46,0.08)}}
 .copy-check{{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f4ff;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:12px;border:1.5px solid transparent;transition:all 0.2s}}
 .copy-check:has(input:checked){{border-color:#1a1a2e;background:#e8ecff}}
 .copy-check input{{width:16px;height:16px}}
@@ -229,12 +237,32 @@ Kontaktdaten als Objektadresse &uuml;bernehmen
 </div>
 <div class="card">
 <h2>Was wird ben&ouml;tigt?</h2>
-<div class="topic-grid">
-<label><input type="checkbox" name="topic[]" value="Schiebet&uuml;r">Schiebet&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Fenster">Fenster</label>
-<label><input type="checkbox" name="topic[]" value="Innent&uuml;r">Innent&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Eingangst&uuml;r">Eingangst&uuml;r</label>
-<label><input type="checkbox" name="topic[]" value="Sonstige Reparaturen">Sonstige Reparaturen</label>
+<div class="topic-grid" id="topicGrid">
+<div class="topic-item" data-topic="Schiebet&uuml;r">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Schiebet&uuml;r</span></div>
+<div class="topic-desc"><textarea name="desc_schiebetuer" placeholder="Beschreiben Sie das Problem oder den Wunsch zur Schiebet&uuml;r..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Fenster">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Fenster</span></div>
+<div class="topic-desc"><textarea name="desc_fenster" placeholder="Beschreiben Sie das Problem oder den Wunsch zum Fenster..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Innent&uuml;r">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Innent&uuml;r</span></div>
+<div class="topic-desc"><textarea name="desc_innentuer" placeholder="Beschreiben Sie das Problem oder den Wunsch zur Innent&uuml;r..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Eingangst&uuml;r">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Eingangst&uuml;r</span></div>
+<div class="topic-desc"><textarea name="desc_eingangstuer" placeholder="Beschreiben Sie das Problem oder den Wunsch zur Eingangst&uuml;r..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Sonstige Reparaturen">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Sonstige Reparaturen</span></div>
+<div class="topic-desc"><textarea name="desc_sonstige" placeholder="Beschreiben Sie was repariert werden soll..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
 </div>
 </div>
 <div class="card">
@@ -254,6 +282,21 @@ Kontaktdaten als Objektadresse &uuml;bernehmen
 </form>
 </div>
 <script>
+function toggleTopic(header){{
+  var item=header.parentElement;
+  var isActive=item.classList.contains('active');
+  var hiddenInput=item.querySelector('.topic-val');
+  var topic=item.getAttribute('data-topic');
+  if(isActive){{
+    item.classList.remove('active');
+    hiddenInput.value='';
+  }}else{{
+    item.classList.add('active');
+    hiddenInput.value=topic;
+    var ta=item.querySelector('textarea');
+    if(ta)setTimeout(function(){{ta.focus();}},300);
+  }}
+}}
 function toggleCopy(){{
   var c=document.getElementById('copyAddr').checked;
   var pairs=[['k_vorname','o_vorname'],['k_nachname','o_nachname'],['k_telefon','o_telefon'],['k_strasse','o_strasse'],['k_plz','o_plz'],['k_stadt','o_stadt']];
@@ -298,6 +341,7 @@ async def kontakt_relay(request: Request):
         topics = form_dict.get("topic[]", form_dict.get("topic", []))
         if isinstance(topics, str):
             topics = [topics]
+        topics = [t for t in topics if t and t.strip()]
 
         anrede = form_dict.get("anrede", "")
         vorname = form_dict.get("vorname", "")
@@ -313,7 +357,19 @@ async def kontakt_relay(request: Request):
         if form_dict.get("firma"):
             notes_parts.append(f"Firma: {form_dict['firma']}")
         if topics:
-            notes_parts.append(f"Themen: {', '.join(topics)}")
+            notes_parts.append(f"Themen: {', '.join(t for t in topics if t)}")
+        # Beschreibungen pro Kategorie
+        desc_fields = {
+            "Schiebetür": "desc_schiebetuer",
+            "Fenster": "desc_fenster",
+            "Innentür": "desc_innentuer",
+            "Eingangstür": "desc_eingangstuer",
+            "Sonstige Reparaturen": "desc_sonstige"
+        }
+        for topic_name, field_name in desc_fields.items():
+            desc_val = form_dict.get(field_name, "")
+            if desc_val and desc_val.strip():
+                notes_parts.append(f"{topic_name}: {desc_val.strip()}")
         obj_parts = [form_dict.get("objstrasse", ""), form_dict.get("objplz", ""), form_dict.get("objstadt", "")]
         obj_addr = ", ".join(p for p in obj_parts if p)
         if obj_addr:
