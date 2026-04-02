@@ -1,0 +1,78 @@
+{
+  "summary": "Tested Text Templates (Textbausteine) feature for Vortext/Schlusstext. All features working correctly. Backend API 100% passing (16/16 tests). Frontend WysiwygDocumentEditor now has vortext/schlusstext fields with TextTemplateSelect integration. Settings page TextTemplateManagement working correctly with CRUD operations.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/text-templates returns templates",
+    "Backend: GET /api/text-templates?doc_type=angebot filters correctly",
+    "Backend: GET /api/text-templates?text_type=vortext filters correctly",
+    "Backend: GET /api/text-templates/placeholders returns 7 placeholders",
+    "Backend: POST /api/text-templates creates template",
+    "Backend: POST /api/text-templates with invalid doc_type returns 400",
+    "Backend: POST /api/text-templates with invalid text_type returns 400",
+    "Backend: PUT /api/text-templates/{id} updates template",
+    "Backend: PUT /api/text-templates/non-existent returns 404",
+    "Backend: DELETE /api/text-templates/{id} deletes template",
+    "Backend: DELETE /api/text-templates/non-existent returns 404",
+    "Backend: POST /api/quotes accepts vortext and schlusstext",
+    "Backend: PUT /api/quotes/{id} saves vortext and schlusstext",
+    "Backend: POST /api/invoices accepts vortext and schlusstext",
+    "Backend: PUT /api/invoices/{id} saves vortext and schlusstext",
+    "Frontend WysiwygDocumentEditor: Vortext field visible (data-testid=input-vortext)",
+    "Frontend WysiwygDocumentEditor: Schlusstext field visible (data-testid=input-schlusstext)",
+    "Frontend WysiwygDocumentEditor: Template dropdown button for vortext (data-testid=btn-template-dropdown-vortext)",
+    "Frontend WysiwygDocumentEditor: Template dropdown button for schlusstext (data-testid=btn-template-dropdown-schlusstext)",
+    "Frontend WysiwygDocumentEditor: Template dropdown shows available templates",
+    "Frontend WysiwygDocumentEditor: Selecting template fills text field with resolved placeholders",
+    "Frontend WysiwygDocumentEditor: Placeholder {kunde_name} resolved correctly to customer name",
+    "Frontend WysiwygDocumentEditor: Vortext/Schlusstext visible on /quotes/new",
+    "Frontend WysiwygDocumentEditor: Vortext/Schlusstext visible on /invoices/new",
+    "Frontend WysiwygDocumentEditor: Saved vortext/schlusstext loaded when editing existing quote",
+    "Frontend Settings: TextTemplateManagement section visible (data-testid=text-template-management)",
+    "Frontend Settings: Tabs for Angebot/Auftragsbestätigung/Rechnung work correctly",
+    "Frontend Settings: Can create new template via modal",
+    "Frontend Settings: Template modal has title, content fields and placeholder buttons",
+    "Frontend Settings: Edit and delete buttons visible on templates"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_text_templates.py",
+    "/app/test_reports/pytest/pytest_text_templates_v15.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [],
+
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (all vortext/schlusstext features working)"
+  },
+
+  "test_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+
+  "seed_data_creation": "Created and deleted TEST quote and TEST_Rechnung Vortext template during testing",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Text Templates feature fully implemented and working. WysiwygDocumentEditor now has vortext/schlusstext fields with TextTemplateSelect component. Settings page has TextTemplateManagement at the bottom with tabs for Angebot/Auftragsbestätigung/Rechnung. Existing templates: 2 Vortexte for Angebot (Frau/Herr versions), 1 Schlusstext for Angebot. No templates for Auftragsbestätigung or Rechnung by default. Placeholder resolution works correctly ({kunde_name}, {kunde_adresse}, {kunde_email}, {kunde_telefon}, {firma}, {datum}, {dokument_nr}).",
+
+  "rca_of_the_issue": "Previous iteration_14 found that WysiwygDocumentEditor was missing vortext/schlusstext fields. Main agent fixed this by integrating TextTemplateSelect component into WysiwygDocumentEditor.jsx. The fix was successful - all vortext/schlusstext functionality now works correctly in the document editor."
+}

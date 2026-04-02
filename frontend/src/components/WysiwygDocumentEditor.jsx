@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
+import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const navigate = useNavigate();
@@ -26,6 +27,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     { pos_nr: 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
   ]);
   const [notes, setNotes] = useState("");
+  const [vortext, setVortext] = useState("");
+  const [schlusstext, setSchlusstext] = useState("");
   const [vatRate, setVatRate] = useState(19);
   const [status, setStatus] = useState(type === "quote" ? "Entwurf" : type === "order" ? "Offen" : "Offen");
   const [depositAmount, setDepositAmount] = useState(0);
@@ -51,6 +54,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
+  const docTypeMap = { quote: "angebot", order: "auftrag", invoice: "rechnung" };
 
   useEffect(() => {
     loadData();
@@ -78,6 +82,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         setCustomer({ name: doc.customer_name, address: doc.customer_address });
         setPositions(doc.positions || []);
         setNotes(doc.notes || "");
+        setVortext(doc.vortext || "");
+        setSchlusstext(doc.schlusstext || "");
         setVatRate(doc.vat_rate || 19);
         setStatus(doc.status || "");
         setDepositAmount(doc.deposit_amount || 0);
@@ -317,6 +323,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           customer_id: selectedCustomerId,
           positions: positions.filter(p => p.description),
           notes,
+          vortext,
+          schlusstext,
           vat_rate: vatRate,
           ...(type === "quote" && { valid_days: 30 }),
           ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount })
@@ -327,6 +335,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const payload = {
           positions: positions.filter(p => p.description),
           notes,
+          vortext,
+          schlusstext,
           vat_rate: vatRate,
           status,
           ...(type === "invoice" && { deposit_amount: depositAmount })
@@ -698,6 +708,19 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               )}
             </div>
 
+            {/* Vortext */}
+            <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
+              <TextTemplateSelect
+                docType={docTypeMap[type]}
+                textType="vortext"
+                value={vortext}
+                onChange={setVortext}
+                customer={customer}
+                settings={settings}
+                docNumber={docNumber}
+              />
+            </div>
+
             {/* Positions Table - Editable */}
             <div className="px-4 lg:px-10 py-4 lg:py-8">
               {/* Mobile Positions - Card Layout */}
@@ -872,6 +895,19 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Zusätzliche Anmerkungen..."
                 className="w-full bg-slate-50 border rounded-sm px-3 lg:px-4 py-2 lg:py-3 text-sm min-h-[60px] lg:min-h-[80px] focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            {/* Schlusstext */}
+            <div className="px-4 lg:px-10 py-3 lg:py-4 border-t">
+              <TextTemplateSelect
+                docType={docTypeMap[type]}
+                textType="schlusstext"
+                value={schlusstext}
+                onChange={setSchlusstext}
+                customer={customer}
+                settings={settings}
+                docNumber={docNumber}
               />
             </div>
 
