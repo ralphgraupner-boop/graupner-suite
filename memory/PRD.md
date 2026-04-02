@@ -59,10 +59,12 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
 - [x] Code-Refactoring Frontend (77 Zeilen App.js)
 - [x] Anfragen bearbeitbar (Edit-Modal + PUT-Endpoint)
 - [x] Schnellnotiz-Funktion (Inline-Eingabe direkt in Anfragen-Liste)
+- [x] Textbausteine (Vortext/Schlusstext) mit Aliase-System für Angebote, Aufträge, Rechnungen — 02.04.2026
 
 ## Implementierte Features (Aktuell)
 - [x] Anfragen bearbeitbar (PUT /api/anfragen/{id}, Edit-Modal mit allen Feldern) — 02.04.2026
 - [x] Schnellnotiz-Funktion (Inline-Eingabe mit Timestamp in Anfragen-Liste) — 02.04.2026
+- [x] Textbausteine-System: Zentrale Verwaltung in Einstellungen (CRUD pro Dokumenttyp), Vortext/Schlusstext-Auswahl im WYSIWYG-Editor, Aliase ({kunde_name}, {firma}, {datum} etc.) mit automatischer Auflösung — 02.04.2026
 
 ## Backlog
 - [ ] N26 Bankanbindung (CSV-Import / Open Banking)
