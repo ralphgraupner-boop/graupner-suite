@@ -794,7 +794,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 <tbody>
                   {positions.map((pos, idx) => (
                     <tr key={idx} className="border-b border-slate-100 group">
-                      <td className="py-3 text-sm text-muted-foreground">{pos.pos_nr}</td>
+                      <td className="py-3 text-sm text-muted-foreground align-top">{pos.pos_nr}</td>
                       <td className="py-2">
                         <textarea value={pos.description}
                           onChange={(e) => updatePosition(idx, "description", e.target.value)}
