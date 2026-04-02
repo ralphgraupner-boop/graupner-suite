@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
@@ -18,6 +18,7 @@ const AnfragenPage = () => {
   const [quickNoteId, setQuickNoteId] = useState(null);
   const [quickNoteText, setQuickNoteText] = useState("");
   const [quickNoteSaving, setQuickNoteSaving] = useState(false);
+  const [vcfUploading, setVcfUploading] = useState(false);
 
   useEffect(() => {
     loadAnfragen();
@@ -127,6 +128,24 @@ const AnfragenPage = () => {
     }
   };
 
+  const handleVcfUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVcfUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await api.post("/anfragen/import-vcf", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success(`VCF importiert: ${file.name}`);
+      loadAnfragen();
+    } catch (err) {
+      toast.error("Fehler beim VCF-Import");
+    } finally {
+      setVcfUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const parseNotes = (notes) => {
     if (!notes) return {};
     const result = {};
@@ -155,6 +174,11 @@ const AnfragenPage = () => {
           <h1 className="text-2xl lg:text-4xl font-bold">Anfragen</h1>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{anfragen.length} Anfragen gesamt</p>
         </div>
+        <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import">
+          <Upload className="w-4 h-4" />
+          {vcfUploading ? "Importiere..." : "VCF importieren"}
+          <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" disabled={vcfUploading} />
+        </label>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4" data-testid="anfragen-category-filter">

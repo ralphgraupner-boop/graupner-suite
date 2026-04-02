@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 from models import Customer, Anfrage, AnfrageUpdate
 from database import db, CATEGORIES, CUSTOMER_STATUSES
 from auth import get_current_user
+import re
 
 router = APIRouter()
 
@@ -101,6 +102,116 @@ async def convert_anfrage(anfrage_id: str, user=Depends(get_current_user)):
     await db.anfragen.delete_one({"id": anfrage_id})
 
     return {"message": "Anfrage in Kunde umgewandelt", "customer_id": customer.id}
+
+
+def parse_vcf(content: str) -> dict:
+    """Parse a VCF/vCard file content into a dictionary"""
+    data = {"name": "", "email": "", "phone": "", "address": "", "anrede": "",
+            "firma": "", "nachricht": "", "categories": [], "customer_type": "Privat",
+            "notes": "", "source": "vcf-import"}
+
+    lines = content.replace("\r\n ", "").replace("\r\n\t", "").split("\r\n")
+    if len(lines) <= 1:
+        lines = content.replace("\n ", "").replace("\n\t", "").split("\n")
+
+    for line in lines:
+        line = line.strip()
+        if not line or line in ("BEGIN:VCARD", "END:VCARD"):
+            continue
+
+        if line.startswith("N:") or line.startswith("N;"):
+            parts = line.split(":", 1)[1].split(";")
+            family = parts[0] if len(parts) > 0 else ""
+            given = parts[1] if len(parts) > 1 else ""
+            prefix = parts[3] if len(parts) > 3 else ""
+            if prefix in ("Herr", "Frau"):
+                data["anrede"] = prefix
+            data["name"] = f"{given} {family}".strip()
+
+        elif line.startswith("FN:") or line.startswith("FN;"):
+            fn = line.split(":", 1)[1].strip()
+            if not data["name"]:
+                data["name"] = fn
+
+        elif line.startswith("EMAIL"):
+            data["email"] = line.split(":", 1)[1].strip()
+
+        elif line.startswith("TEL"):
+            tel = line.split(":", 1)[1].strip()
+            if tel:
+                if "mobile" in line.lower():
+                    data["phone"] = tel
+                elif not data["phone"]:
+                    data["phone"] = tel
+
+        elif line.startswith("ADR"):
+            parts = line.split(":", 1)[1].split(";")
+            street = parts[2] if len(parts) > 2 else ""
+            city = parts[3] if len(parts) > 3 else ""
+            plz = parts[5] if len(parts) > 5 else ""
+            country = parts[6] if len(parts) > 6 else ""
+            addr_parts = [p for p in [street, f"{plz} {city}".strip(), country] if p]
+            data["address"] = ", ".join(addr_parts)
+
+        elif line.startswith("ORG:"):
+            org = line.split(":", 1)[1].strip()
+            if org and org not in ("Herr", "Frau", "Divers"):
+                data["firma"] = org
+
+        elif line.startswith("ROLE:"):
+            data["notes"] = line.split(":", 1)[1].strip()
+
+        elif line.startswith("NOTE:"):
+            note_text = line.split(":", 1)[1].strip()
+            betrifft = re.search(r"Betrifft:\s*([^,\n]+(?:,\s*[^,\n]+)*)", note_text)
+            if betrifft:
+                cats = [c.strip() for c in betrifft.group(1).split(",") if c.strip()]
+                data["categories"] = [c for c in cats if c in CATEGORIES]
+            nachricht = re.search(r"Nachricht:\s*(.+)", note_text, re.DOTALL)
+            if nachricht:
+                data["nachricht"] = nachricht.group(1).strip()
+            elif not betrifft:
+                data["nachricht"] = note_text
+
+        elif line.startswith("CATEGORIES:"):
+            cat_val = line.split(":", 1)[1].strip()
+            if cat_val.lower() in ("privat", "private"):
+                data["customer_type"] = "Privat"
+            elif cat_val.lower() in ("firma", "business", "work"):
+                data["customer_type"] = "Firma"
+
+    return data
+
+
+@router.post("/anfragen/import-vcf")
+async def import_vcf(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Import a VCF/vCard file as a new Anfrage"""
+    if not file.filename.lower().endswith(".vcf"):
+        raise HTTPException(status_code=400, detail="Nur .vcf Dateien erlaubt")
+
+    content = (await file.read()).decode("utf-8", errors="ignore")
+    data = parse_vcf(content)
+
+    if not data["name"]:
+        raise HTTPException(status_code=400, detail="Kein Name in der VCF-Datei gefunden")
+
+    anfrage = Anfrage(
+        name=data["name"],
+        email=data["email"],
+        phone=data["phone"],
+        address=data["address"],
+        anrede=data["anrede"],
+        firma=data["firma"],
+        nachricht=data["nachricht"],
+        categories=data["categories"],
+        customer_type=data["customer_type"],
+        notes=data["notes"],
+        source="vcf-import"
+    )
+    await db.anfragen.insert_one(anfrage.model_dump())
+    result = anfrage.model_dump()
+    result.pop("_id", None)
+    return result
 
 
 @router.get("/dashboard/stats")
