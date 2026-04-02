@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kontaktformular - Tischlerei Graupner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;line-height:1.6;min-height:100vh;background:url('https://images.unsplash.com/photo-1755237449468-e70840025313?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxjYXJwZW50ZXIlMjB3b3JraW5nJTIwd29vZCUyMHdvcmtzaG9wJTIwZGV0YWlsZWR8ZW58MHx8fHwxNzczNzQwODAyfDA&ixlib=rb-4.1.0&q=85') center/cover fixed no-repeat;}
+body::before{content:'';position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:0}
+body>*{position:relative;z-index:1}
+.header{background:rgba(26,26,46,0.85);backdrop-filter:blur(8px);color:#fff;padding:20px 0;text-align:center}
+.header h1{font-size:20px;font-weight:600}
+.header p{font-size:13px;opacity:0.7;margin-top:2px}
+.container{max-width:640px;margin:24px auto;padding:0 16px}
+.card{background:rgba(255,255,255,0.95);backdrop-filter:blur(6px);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.12);padding:24px;margin-bottom:16px}
+.card h2{font-size:15px;font-weight:600;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid #eee;color:#1a1a2e}
+.row{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.field{flex:1;min-width:160px}
+label{display:block;font-size:12px;font-weight:500;margin-bottom:3px;color:#555}
+input[type=text],input[type=email],input[type=tel],textarea{width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;transition:border-color 0.2s}
+input:invalid{border-color:#e74c3c}
+input:focus,textarea:focus{outline:none;border-color:#1a1a2e;box-shadow:0 0 0 3px rgba(26,26,46,0.08)}
+textarea{resize:vertical;min-height:80px}
+.radio-group{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.radio-group label{display:flex;align-items:center;gap:5px;padding:7px 12px;border:1.5px solid #ddd;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s}
+.radio-group label:has(input:checked){border-color:#1a1a2e;background:#f0f0ff}
+.topic-grid{display:flex;flex-direction:column;gap:8px}
+.topic-item{border:1.5px solid #ddd;border-radius:10px;overflow:hidden;transition:all 0.3s}
+.topic-item.active{border-color:#1a1a2e;background:#fafbff}
+.topic-header{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s;user-select:none}
+.topic-header:hover{background:#f8f9fa}
+.topic-check{width:18px;height:18px;border-radius:50%;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+.topic-item.active .topic-check{background:#1a1a2e;border-color:#1a1a2e}
+.topic-item.active .topic-check::after{content:'';width:6px;height:6px;background:#fff;border-radius:50%}
+.topic-desc{max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease;padding:0 14px}
+.topic-item.active .topic-desc{max-height:200px;padding:0 14px 14px}
+.topic-desc textarea{width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;min-height:60px;resize:vertical;transition:border-color 0.2s}
+.topic-desc textarea:focus{outline:none;border-color:#1a1a2e;box-shadow:0 0 0 3px rgba(26,26,46,0.08)}
+.copy-check{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f4ff;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:12px;border:1.5px solid transparent;transition:all 0.2s}
+.copy-check:has(input:checked){border-color:#1a1a2e;background:#e8ecff}
+.copy-check input{width:16px;height:16px}
+.obj-fields{transition:opacity 0.3s;}
+.btn{display:block;width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s}
+.btn:hover{background:#2a2a4e}
+.required::after{content:" *";color:#e74c3c}
+.privacy{display:flex;align-items:start;gap:10px;padding:14px 16px;background:rgba(255,255,255,0.95);backdrop-filter:blur(6px);border-radius:10px;border:1.5px solid #ddd;cursor:pointer;font-size:14px;margin-bottom:16px}
+.privacy input{width:20px;height:20px;margin-top:1px;flex-shrink:0;cursor:pointer}
+.file-info{font-size:11px;color:#888;margin-top:3px}
+input[type=file]{padding:7px;font-size:13px}
+.type-toggle{display:flex;gap:0;margin-bottom:12px;border:1.5px solid #ddd;border-radius:8px;overflow:hidden}
+.type-toggle label{flex:1;text-align:center;padding:9px 12px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s;border-right:1px solid #ddd}
+.type-toggle label:last-child{border-right:none}
+.type-toggle label.privat-label:has(input:checked){background:#14532D;color:#fff}
+.type-toggle label.firma-label:has(input:checked){background:#1e40af;color:#fff}
+.type-toggle input{display:none}
+.firma-field{max-height:0;overflow:hidden;transition:max-height 0.3s ease;margin-bottom:0}
+.firma-field.show{max-height:60px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>Tischlerei Graupner</h1>
+<p>Fenster und T&uuml;ren reparieren seit 1960</p>
+</div>
+<div class="container">
+
+<!-- ============================================================ -->
+<!-- WICHTIG: Nur diese eine Zeile ändern wenn die App-URL wechselt -->
+<!-- ============================================================ -->
+<form id="kontaktForm" action="https://craft-editor-2.preview.emergentagent.com/api/kontakt/submit" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+
+<input type="hidden" name="rolle" value="Eigent&uuml;mer/Vermieter">
+<div class="card">
+<h2>Kontaktdaten</h2>
+<div class="type-toggle">
+<label class="privat-label"><input type="radio" name="kundentyp" value="Privat" checked onchange="toggleFirma()"><span>Privat</span></label>
+<label class="firma-label"><input type="radio" name="kundentyp" value="Firma" onchange="toggleFirma()"><span>Firma</span></label>
+</div>
+<div class="firma-field" id="firmaField">
+<div class="field"><label class="required">Firmenname</label><input type="text" name="firma" id="firmaInput" placeholder="Name der Firma"></div>
+</div>
+<div class="radio-group">
+<label><input type="radio" name="anrede" value="Herr"><span>Herr</span></label>
+<label><input type="radio" name="anrede" value="Frau"><span>Frau</span></label>
+<label><input type="radio" name="anrede" value="Divers"><span>Divers</span></label>
+</div>
+<div class="row">
+<div class="field"><label>Vorname</label><input type="text" name="vorname" id="k_vorname"></div>
+<div class="field"><label class="required">Nachname</label><input type="text" name="nachname" id="k_nachname" required></div>
+</div>
+<div class="row">
+<div class="field"><label class="required">Telefon</label><input type="tel" name="telefon" id="k_telefon" required></div>
+</div>
+<div class="row">
+<div class="field"><label class="required">E-Mail</label><input type="email" name="email" required></div>
+</div>
+<div class="row">
+<div class="field"><label class="required">Stra&szlig;e, Nr.</label><input type="text" name="strasse" id="k_strasse" required minlength="5" placeholder="z.B. Musterstra&szlig;e 12" pattern=".*\d+.*" title="Bitte Stra&szlig;e mit Hausnummer eingeben"></div>
+<div class="field" style="max-width:100px"><label class="required">PLZ</label><input type="text" name="plz" id="k_plz" required></div>
+<div class="field"><label class="required">Stadt</label><input type="text" name="stadt" id="k_stadt" required></div>
+</div>
+</div>
+<div class="card">
+<h2>Objektadresse</h2>
+<label class="copy-check">
+<input type="checkbox" id="copyAddr" onchange="toggleCopy()">
+Kontaktdaten als Objektadresse &uuml;bernehmen
+</label>
+<div class="obj-fields" id="objFields">
+<div class="row">
+<div class="field"><label>Vorname</label><input type="text" name="objvorname" id="o_vorname"></div>
+<div class="field"><label>Nachname</label><input type="text" name="objnachname" id="o_nachname"></div>
+<div class="field"><label>Telefon</label><input type="tel" name="objtelefon" id="o_telefon"></div>
+</div>
+<div class="row">
+<div class="field"><label>Stra&szlig;e</label><input type="text" name="objstrasse" id="o_strasse"></div>
+<div class="field" style="max-width:100px"><label>PLZ</label><input type="text" name="objplz" id="o_plz"></div>
+<div class="field"><label>Stadt</label><input type="text" name="objstadt" id="o_stadt"></div>
+</div>
+</div>
+</div>
+<div class="card">
+<h2>Was wird ben&ouml;tigt?</h2>
+<div class="topic-grid" id="topicGrid">
+<div class="topic-item" data-topic="Schiebet&uuml;r">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Schiebet&uuml;r</span></div>
+<div class="topic-desc"><textarea name="desc_schiebetuer" placeholder="Beschreiben Sie das Problem oder den Wunsch zur Schiebet&uuml;r..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Fenster">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Fenster</span></div>
+<div class="topic-desc"><textarea name="desc_fenster" placeholder="Beschreiben Sie das Problem oder den Wunsch zum Fenster..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Innent&uuml;r">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Innent&uuml;r</span></div>
+<div class="topic-desc"><textarea name="desc_innentuer" placeholder="Beschreiben Sie das Problem oder den Wunsch zur Innent&uuml;r..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Eingangst&uuml;r">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Eingangst&uuml;r</span></div>
+<div class="topic-desc"><textarea name="desc_eingangstuer" placeholder="Beschreiben Sie das Problem oder den Wunsch zur Eingangst&uuml;r..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+<div class="topic-item" data-topic="Sonstige Reparaturen">
+<div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span>Sonstige Reparaturen</span></div>
+<div class="topic-desc"><textarea name="desc_sonstige" placeholder="Beschreiben Sie was repariert werden soll..."></textarea></div>
+<input type="hidden" name="topic[]" value="" class="topic-val">
+</div>
+</div>
+</div>
+<div class="card">
+<h2>Nachricht &amp; Bilder</h2>
+<textarea name="nachricht" placeholder="Beschreiben Sie Ihr Anliegen..." rows="4"></textarea>
+<div style="margin-top:10px">
+<label>Bilder hochladen</label>
+<input type="file" name="upload_file1" accept="image/*" multiple>
+<p class="file-info">Optional: Fotos vom Objekt (max. 50 MB)</p>
+</div>
+</div>
+<label class="privacy">
+<input type="checkbox" name="dataprivacy" required>
+<span>Ich habe die <a href="https://www.tischlerei-graupner.de/j/privacy" target="_blank" style="color:#1a1a2e;font-weight:600;text-decoration:underline;">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.</span>
+</label>
+<button type="submit" class="btn">Anfrage absenden</button>
+</form>
+</div>
+<script>
+function validateForm(){
+  var strasse=document.getElementById('k_strasse').value.trim();
+  if(!strasse||strasse.length<5){
+    alert('Bitte geben Sie eine Stra\u00dfe mit Hausnummer ein.');
+    document.getElementById('k_strasse').focus();
+    return false;
+  }
+  if(!/\d/.test(strasse)){
+    alert('Bitte geben Sie auch die Hausnummer ein (z.B. Musterstra\u00dfe 12).');
+    document.getElementById('k_strasse').focus();
+    return false;
+  }
+  return true;
+}
+function toggleFirma(){
+  var isFirma=document.querySelector('input[name="kundentyp"][value="Firma"]').checked;
+  var field=document.getElementById('firmaField');
+  var input=document.getElementById('firmaInput');
+  if(isFirma){
+    field.classList.add('show');
+    input.required=true;
+    setTimeout(function(){input.focus();},300);
+  }else{
+    field.classList.remove('show');
+    input.required=false;
+    input.value='';
+  }
+}
+function toggleTopic(header){
+  var item=header.parentElement;
+  var isActive=item.classList.contains('active');
+  var hiddenInput=item.querySelector('.topic-val');
+  var topic=item.getAttribute('data-topic');
+  if(isActive){
+    item.classList.remove('active');
+    hiddenInput.value='';
+  }else{
+    item.classList.add('active');
+    hiddenInput.value=topic;
+    var ta=item.querySelector('textarea');
+    if(ta)setTimeout(function(){ta.focus();},300);
+  }
+}
+function toggleCopy(){
+  var c=document.getElementById('copyAddr').checked;
+  var pairs=[['k_vorname','o_vorname'],['k_nachname','o_nachname'],['k_telefon','o_telefon'],['k_strasse','o_strasse'],['k_plz','o_plz'],['k_stadt','o_stadt']];
+  var fields=document.getElementById('objFields');
+  if(c){
+    pairs.forEach(function(p){document.getElementById(p[1]).value=document.getElementById(p[0]).value;});
+    fields.style.opacity='0.4';
+    fields.querySelectorAll('input').forEach(function(i){i.readOnly=true;});
+  }else{
+    fields.style.opacity='1';
+    fields.querySelectorAll('input').forEach(function(i){i.readOnly=false;});
+  }
+}
+</script>
+</body>
+</html>
