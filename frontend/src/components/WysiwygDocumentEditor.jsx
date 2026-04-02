@@ -689,7 +689,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 <div className="mt-3">
                   <p className="font-semibold text-lg">{customer.name}</p>
                   {customer.address && (
-                    <p className="text-muted-foreground whitespace-pre-line">{customer.address}</p>
+                    <p className="text-muted-foreground whitespace-pre-line">{customer.address.split(/,\s*/).join("\n")}</p>
                   )}
                   {customer.address && (
                     <button
