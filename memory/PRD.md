@@ -57,6 +57,10 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
 - [x] PDF-Generierung für alle Dokumenttypen
 - [x] Code-Refactoring Backend (65 Zeilen server.py)
 - [x] Code-Refactoring Frontend (77 Zeilen App.js)
+- [x] Anfragen bearbeitbar (Edit-Modal + PUT-Endpoint)
+
+## Implementierte Features (Aktuell)
+- [x] Anfragen bearbeitbar (PUT /api/anfragen/{id}, Edit-Modal mit allen Feldern) — 02.04.2026
 
 ## Backlog
 - [ ] N26 Bankanbindung (CSV-Import / Open Banking)
