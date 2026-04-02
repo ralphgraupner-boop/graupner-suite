@@ -64,6 +64,19 @@ class Anfrage(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
+class AnfrageUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    obj_address: Optional[str] = None
+    notes: Optional[str] = None
+    nachricht: Optional[str] = None
+    categories: Optional[List[str]] = None
+    customer_type: Optional[str] = None
+    firma: Optional[str] = None
+
+
 class EmailRequest(BaseModel):
     to_email: str
     subject: str = ""

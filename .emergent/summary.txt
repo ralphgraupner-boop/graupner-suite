@@ -1,130 +1,19 @@
-<analysis>**original_problem_statement**: Complete craftsman management software (Graupner Suite) for a carpentry business. Replaces old disconnected software. Needs customer management, WYSIWYG document editor with a 3-column layout (Drag & Drop services, Document, Kalkulation), AI voice quotes, financials, and a seamless Lead-Relay-System that connects their Jimdo website to the app while concurrently forwarding data to their legacy Graupner-Intern PHP system. 
-
-**User's preferred language**: German (INSTRUCT NEXT AGENT TO RESPOND IN GERMAN ONLY)
-
-**what currently exists?** 
-A highly functional, stable full-stack application (React/FastAPI/MongoDB). It features a 3-column WYSIWYG editor, a custom relay contact form, an Anfragen (Inquiries) inbox system for lead management, automated travel cost calculations (via OpenStreetMap), a dunning/overdue invoice system (Mahnwesen), automatic quote follow-ups, SMTP-based email sending, and a dashboard with charts. The codebase is currently monolithic and heavily relies on  and .
-
-**Last working item**:
-- **Last item agent was working**: Implementing a feature to revert a Customer back to an Inquiry (Kunde auf Anfrage zurücksetzen). The agent added the backend endpoint  and added a Zurück zu Anfrage button to the customer cards in the frontend, but the session ended immediately after the file edit.
-- **Status**: TESTING PENDING
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: Both (Screenshot for UI to see the button, then backend/frontend testing via testing subagent or curl to ensure the customer is successfully moved to  collection and removed from  collection).
-- **User Testing Done**: N
-
-**All Pending/In progress Issue list**:
-  - **Issue 1 (P0)**: Test and verify the Revert Customer to Inquiry feature.
-     - **Attempted fixes**: Agent used  to add the API endpoint in  and the UI button in .
-     - **Next debug checklist**: Check if the frontend compiles successfully. Click the Zurück zu Anfrage button on a Customer. Verify if a  request to  is triggered, the customer disappears from the Customers list, and correctly reappears in the Anfragen (Inquiries) list.
-     - **Why fix this issue and what will be achieved with the fix?**: It was the exact last request from the user. Ensures flexible lead management.
-     - **Status**: TESTING PENDING
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: Both
-     - **Blocked on other issue**: None
-
-**In progress Task List**: None. 
-
-**Upcoming and Future Tasks**
-  - **(P0) Code Refactoring**:  is over 6300 lines long, and  is over 2600 lines. They urgently need to be split into modular components/routes before adding more complex features.
-  - **(P2) Bank Integration**: User requested N26 bank integration (CSV-Import / Open Banking) to automatically match and detect paid invoices.
-  - **(P3) Windows Desktop App**: User asked about creating an installation routine (e.g., Electron wrapper) for Windows in the future.
-
-**Completed work in this session**
-- Anfragen-System (Inquiries) with 5 specific categories, separate inbox, and 1-click conversion to Customer (Iteration 6) (DONE)
-- Contact form updated with the workshop background image from the login page (DONE)
-- Mahnwesen (Dunning Process), Dashboard Charts, EK-Preise (Purchase prices), and Firmendaten in PDFs (Iteration 7) (DONE)
-- Fälligkeits-Warnsystem (Due-date warning) with Push Notifications (Iteration 8) (DONE)
-- E-Mail-Versand via custom Jimdo SMTP () replacing Resend (Iteration 8) (DONE)
-- E-Mail-Protokoll (Email Log page) & Document-level Email History (Iteration 9) (DONE)
-- Quote Follow-up (Automatische Wiedervorlage) after 7 days (Iteration 10) (DONE)
-- Customer Status tracking, OpenStreetMap button, Staggered Dashboard Overview, and Automatic Distance/Travel Cost calculations using Nominatim/OSRM (Iteration 11) (DONE)
-
-**Earlier issues found/mentioned but not fixed**
-- None. Agent successfully resolved all user requests except testing the very last one.
-
-**Known issue recurrence from previous fork**
-- **Issue recurrence in previous fork**: Route ordering bugs in FastAPI.
-- **Recurrence count**: 2 (Testing agent fixed  and  being shadowed by parameterized routes like ).
-- **Status**: RESOLVED (Keep in mind for future backend routes: always place specific routes before  parameter routes).
-
-**Code Architecture**
-
-
-**Key Technical Concepts**
-- **Frontend**: React, Tailwind CSS, Recharts (added this session).
-- **Backend**: FastAPI, Motor (async MongoDB).
-- **Email**:  and  connected to custom SMTP (Jimdo/emailsrvr) with user credentials.
-- **Distance Calculation**: Uses  (Nominatim) for geocoding and  (OSRM public API) for routing/distance. Does NOT require Google API keys.
-- **Relay System**: Backend serves raw HTML for the public contact form and forwards payloads to legacy CRM.
-
-**key DB schema**
-- **anfragen**: 
-- **customers**: Added  (Neu, In Arbeit, Angebot geschrieben, Auftrag erteilt, Abgeschlossen)
-- **settings**: Added , , , 
-- **invoices**: Added , 
-- **email_logs**: 
-
-**changes in tech stack**
-- Added  for Dashboard charts.
-- Removed Resend integration; replaced with native Python SMTP () using user-provided credentials.
-- Added  and  for OpenStreetMap travel distance calculations.
-
-**All files of reference**
-- : Contains all UI, now including charts, email modals, and new buttons.
-- : Contains new endpoints for Mahnwesen, distances, email sending, reverting customers.
-- : Actively updated with new feature sets and backlog.
--  through : Extensive test logs verifying all new features up to the last working item.
-
-**Areas that need refactoring**:
--  (CRITICAL: >6300 lines)
--  (CRITICAL: >2600 lines)
-
-**key api endpoints**
--  (POST): Calculates driving distance/time using OSRM.
--  (POST): Sends emails via SMTP and logs them.
--  (POST): Reverts a customer back to an Inquiry (Anfrage).
-
-**Critical Info for New Agent**
-- **Contact Form Categories**: The user changed categories to exactly 5 strictly defined strings: Schiebetür, Fenster, Innentür, Eingangstür, Sonstige Reparaturen. These are synced across the contact form, Inquiries, and Customers.
-- **Email Integration**: Do not ask the user for a Resend API key. The agent successfully integrated the user's IMAP/SMTP credentials (, Port 465).
-- **Travel Cost**: Travel costs () rely on  stored in . The calculation uses free open-source APIs (Nominatim/OSRM). Do not prompt the user for a Google Maps API Key.
-
-**documents and test reports created in this job**
--  to 
-- 
-- 
-
-**Last 10 User Messages and any pending HUMAN messages** 
-1. **User (PENDING)**: Requested the ability to revert a customer back to an inquiry. *Agent implemented code but didn't verify it before session end.*
-2. **User**: Said yes to automatically adding travel costs.
-3. **User**: Confirmed they want to set the company address in the Settings page for travel costs.
-4. **User**: Clarified they don't have a Google API key, Windows installation can wait, but wants staggered overview (Anfragen, Kunden, Leistung) and OpenStreetMap distance calculation.
-5. **User**: Said ja 1a + 2c (approving follow-ups for quotes).
-6. **User**: Said ja to the Follow-up suggestion.
-7. **User**: Said ja bitte to the Email-Log suggestion.
-8. **User**: Provided IMAP/SMTP host , user  and password for email configuration.
-9. **User**: Said weis nicht genau... when asked what a Resend API key is.
-10. **User**: Confirmed d (meaning starting the Fälligkeits-Warnsystem).
-
-**Project Health Check:**
-- **Broken**: None known.
-- **Mocked**: None.
-
-**3rd Party Integrations**
-- **OpenAI GPT-5.2 & Whisper** — uses Emergent LLM Key.
-- **SMTP Email Sending** — requires User Credentials (already integrated and working).
-- **OpenStreetMap (Nominatim/OSRM)** — Free, no key required.
-- **WebPush (VAPID)** — requires internal generated keys.
-- **Legacy Graupner-Intern CRM** — Hardcoded POST forwarding.
-
-**Testing status**
-- **Testing agent used after significant changes**: YES (Iterations 6 through 11).
-- **Troubleshoot agent used after agent stuck in loop**: NO.
-- **Test files created**: None.
-- **Known regressions**: Route ordering (parameterized routes shadowing static routes) was an issue but was fixed by the Testing Agent. Keep an eye out for this when adding new routes.
-
-**Credentials to test flow:**
-See . (Username: , Password: ).
-
-**What agent forgot to execute**
-- The agent applied the final  to add the  to the frontend, but the session ended immediately before the agent could compile, take a screenshot, and call the testing agent. Needs immediate verification.</analysis>
+<analysis>routes/dashboard.pyPUT /api/anfragen/{id}/app/backend/routes/anfragen.py/app/frontend/src/pages/AnfragenPage.jsxserver.py/routesApp.js/pages/componentswindow.confirm()window.confirm()ERR_BLOCKED_BY_RESPONSEwindow.confirm()<a target=_blank>
+/app/
+├── backend/
+│   ├── server.py         # Slim entry point (65 lines)
+│   ├── database.py       # MongoDB setup
+│   ├── models.py         # Pydantic models
+│   ├── utils/            
+│   └── routes/           # Modularized endpoints (auth, customers, ai, invoices, webhook, etc.)
+├── frontend/
+│   ├── public/
+│   └── src/
+│       ├── App.js        # Slim routing file
+│       ├── components/   # common (buttons, modals), layout (navigation)
+│       ├── lib/          # api.js, utils.js, push.js
+│       └── pages/        # AnfragenPage, CustomersPage, DashboardPage, etc.
+└── memory/
+    ├── PRD.md
+    └── test_credentials.md
+smtplibemail.mime/api/webhook/contact{id, name, email, phone, address, obj_address, notes, source, nachricht, categories: [], customer_type, created_at}{id, name, email, phone, address, status, categories: [], ...}/app/backend/routes/dashboard.py/app/backend/routes/anfragen.py/app/frontend/src/pages/AnfragenPage.jsx/app/backend/routes/webhook.py/app/memory/PRD.md/app/test_reports/iteration_12.jsonGET /api/anfragenPOST /api/webhook/contactPOST /api/webhook/contact/submitwindow.confirm()ERR_BLOCKED_BY_RESPONSE/api/webhook/contactserver.pyApp.js/routes/pages/app/test_reports/iteration_12.json/app/memory/PRD.md/app/memory/test_credentials.mditeration_12.jsonwindow.confirm/app/memory/test_credentials.mdadminadmin123</analysis>

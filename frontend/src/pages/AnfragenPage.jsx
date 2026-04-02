@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, MapPin, FileText } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
-import { Input, Card, Badge, Button } from "@/components/common";
+import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
 import { CATEGORIES } from "@/lib/constants";
 
@@ -12,6 +12,9 @@ const AnfragenPage = () => {
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [editAnfrage, setEditAnfrage] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadAnfragen();
@@ -53,6 +56,46 @@ const AnfragenPage = () => {
     } catch (err) {
       toast.error("Fehler beim Löschen");
     }
+  };
+
+  const openEdit = (anfrage) => {
+    setEditAnfrage(anfrage);
+    setEditForm({
+      name: anfrage.name || "",
+      email: anfrage.email || "",
+      phone: anfrage.phone || "",
+      address: anfrage.address || "",
+      obj_address: anfrage.obj_address || "",
+      firma: anfrage.firma || "",
+      customer_type: anfrage.customer_type || "Privat",
+      nachricht: anfrage.nachricht || "",
+      notes: anfrage.notes || "",
+      categories: anfrage.categories || [],
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editAnfrage) return;
+    setSaving(true);
+    try {
+      await api.put(`/anfragen/${editAnfrage.id}`, editForm);
+      toast.success("Anfrage aktualisiert");
+      setEditAnfrage(null);
+      loadAnfragen();
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleCategory = (cat) => {
+    setEditForm((prev) => ({
+      ...prev,
+      categories: prev.categories.includes(cat)
+        ? prev.categories.filter((c) => c !== cat)
+        : [...prev.categories, cat],
+    }));
   };
 
   const parseNotes = (notes) => {
@@ -182,6 +225,14 @@ const AnfragenPage = () => {
                   )}
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
+                      onClick={() => openEdit(anfrage)}
+                      data-testid={`btn-edit-anfrage-${anfrage.id}`}
+                      className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-sm transition-colors"
+                      title="Bearbeiten"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleConvert(anfrage.id)}
                       data-testid={`btn-convert-${anfrage.id}`}
                       className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-sm transition-colors"
@@ -285,7 +336,6 @@ const AnfragenPage = () => {
                         ) : (
                           <p className="text-sm text-muted-foreground">Keine Nachricht</p>
                         )}
-                        {/* Parsed notes - show remaining entries not matching categories */}
                         {Object.entries(parsed).filter(([key]) => 
                           !CATEGORIES.includes(key) && 
                           key !== "Themen" && 
@@ -311,6 +361,9 @@ const AnfragenPage = () => {
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                      <Button size="sm" variant="outline" onClick={() => openEdit(anfrage)} data-testid={`btn-edit-expanded-${anfrage.id}`}>
+                        <Pencil className="w-4 h-4" /> Bearbeiten
+                      </Button>
                       <Button size="sm" onClick={() => handleConvert(anfrage.id)} data-testid={`btn-convert-expanded-${anfrage.id}`}>
                         <UserCheck className="w-4 h-4" /> Als Kunde übernehmen
                       </Button>
@@ -330,6 +383,150 @@ const AnfragenPage = () => {
           })}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Modal isOpen={!!editAnfrage} onClose={() => setEditAnfrage(null)} title="Anfrage bearbeiten" size="lg">
+        <div className="space-y-4" data-testid="edit-anfrage-modal">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Name *</label>
+              <Input
+                data-testid="edit-anfrage-name"
+                value={editForm.name || ""}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">E-Mail</label>
+              <Input
+                data-testid="edit-anfrage-email"
+                type="email"
+                value={editForm.email || ""}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="E-Mail"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Telefon</label>
+              <Input
+                data-testid="edit-anfrage-phone"
+                value={editForm.phone || ""}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                placeholder="Telefon"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Firma</label>
+              <Input
+                data-testid="edit-anfrage-firma"
+                value={editForm.firma || ""}
+                onChange={(e) => setEditForm({ ...editForm, firma: e.target.value })}
+                placeholder="Firma"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Adresse</label>
+            <Input
+              data-testid="edit-anfrage-address"
+              value={editForm.address || ""}
+              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+              placeholder="Straße, PLZ Ort"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Objektadresse</label>
+            <Input
+              data-testid="edit-anfrage-obj-address"
+              value={editForm.obj_address || ""}
+              onChange={(e) => setEditForm({ ...editForm, obj_address: e.target.value })}
+              placeholder="Objektadresse (falls abweichend)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Typ</label>
+            <div className="flex gap-2" data-testid="edit-anfrage-type">
+              <button
+                type="button"
+                onClick={() => setEditForm({ ...editForm, customer_type: "Privat" })}
+                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all ${
+                  editForm.customer_type === "Privat"
+                    ? "bg-green-600 text-white shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Privat
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditForm({ ...editForm, customer_type: "Firma" })}
+                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all ${
+                  editForm.customer_type === "Firma"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                Firma
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Kategorien</label>
+            <div className="flex flex-wrap gap-2" data-testid="edit-anfrage-categories">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => toggleCategory(cat)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    (editForm.categories || []).includes(cat)
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Nachricht</label>
+            <Textarea
+              data-testid="edit-anfrage-nachricht"
+              value={editForm.nachricht || ""}
+              onChange={(e) => setEditForm({ ...editForm, nachricht: e.target.value })}
+              placeholder="Nachricht des Kunden"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Notizen</label>
+            <Textarea
+              data-testid="edit-anfrage-notes"
+              value={editForm.notes || ""}
+              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+              placeholder="Interne Notizen"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setEditAnfrage(null)} data-testid="edit-anfrage-cancel">
+              Abbrechen
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={saving || !editForm.name} data-testid="edit-anfrage-save">
+              {saving ? "Speichern..." : "Speichern"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
