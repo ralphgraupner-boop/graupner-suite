@@ -221,7 +221,7 @@ const AnfragenPage = () => {
                               <span className="text-sm font-medium">Adresse:</span>
                               <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{anfrage.address}</p>
                               <a
-                                href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(anfrage.address)}`}
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.address)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
@@ -260,7 +260,7 @@ const AnfragenPage = () => {
                             <span className="text-sm font-medium">Objektadresse:</span>
                             <p className="text-sm text-muted-foreground mt-0.5">{anfrage.obj_address}</p>
                             <a
-                              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(anfrage.obj_address)}`}
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.obj_address)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"

@@ -233,7 +233,7 @@ const CustomersPage = () => {
                             <span className="text-sm font-medium">Adresse:</span>
                             <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{customer.address}</p>
                             <a
-                              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(customer.address)}`}
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
@@ -466,7 +466,7 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
           />
           {form.address && (
             <a
-              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(form.address)}`}
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
