@@ -1,0 +1,174 @@
+from fastapi import APIRouter, HTTPException, Depends, Body
+from typing import List
+from datetime import datetime, timezone, timedelta
+from models import Quote, QuoteCreate, QuoteUpdate, Position
+from database import db
+from auth import get_current_user
+
+router = APIRouter()
+
+
+async def get_next_quote_number():
+    counter = await db.counters.find_one_and_update(
+        {"_id": "quote_number"},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+    return f"A-{datetime.now().year}-{str(counter['seq']).zfill(4)}"
+
+
+@router.get("/quotes", response_model=List[Quote])
+async def get_quotes():
+    quotes = await db.quotes.find({}, {"_id": 0}).to_list(1000)
+    return quotes
+
+
+@router.get("/quotes/followup")
+async def get_followup_quotes(user=Depends(get_current_user)):
+    """Angebote die zur Wiedervorlage fällig sind (>7 Tage ohne Antwort)"""
+    now = datetime.now(timezone.utc)
+    threshold = now - timedelta(days=7)
+    quotes = await db.quotes.find(
+        {"status": {"$in": ["Entwurf", "Gesendet"]}, "followup_sent": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(1000)
+
+    followup = []
+    for q in quotes:
+        try:
+            created = datetime.fromisoformat(q.get("created_at", ""))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if created < threshold:
+                q["days_since_created"] = (now - created).days
+                followup.append(q)
+        except (ValueError, TypeError):
+            pass
+    followup.sort(key=lambda x: x.get("days_since_created", 0), reverse=True)
+    return followup
+
+
+@router.post("/quotes/check-followup")
+async def check_followup_quotes(user=Depends(get_current_user)):
+    """Prüft Angebote für automatische Wiedervorlage und sendet Push"""
+    from routes.push import send_push_to_all
+    now = datetime.now(timezone.utc)
+    threshold = now - timedelta(days=7)
+    quotes = await db.quotes.find(
+        {"status": {"$in": ["Entwurf", "Gesendet"]}, "followup_sent": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(1000)
+
+    followup = []
+    for q in quotes:
+        try:
+            created = datetime.fromisoformat(q.get("created_at", ""))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if created < threshold:
+                followup.append(q)
+        except (ValueError, TypeError):
+            pass
+
+    if followup:
+        body = f"{len(followup)} Angebot(e) zur Wiedervorlage fällig"
+        if len(followup) == 1:
+            body = f"Angebot {followup[0].get('quote_number','')} an {followup[0].get('customer_name','')} nachfassen"
+        await send_push_to_all(title="Angebots-Wiedervorlage", body=body, url="/quotes")
+
+    return {"followup_count": len(followup), "quotes": followup}
+
+
+@router.get("/quotes/{quote_id}", response_model=Quote)
+async def get_quote(quote_id: str):
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
+    return quote
+
+
+@router.post("/quotes", response_model=Quote)
+async def create_quote(quote: QuoteCreate):
+    customer = await db.customers.find_one({"id": quote.customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    quote_number = await get_next_quote_number()
+
+    subtotal_net = sum(p.quantity * p.price_net for p in quote.positions)
+    vat_amount = subtotal_net * (quote.vat_rate / 100) if quote.vat_rate > 0 else 0
+    total_gross = subtotal_net + vat_amount
+
+    valid_until = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+
+    quote_obj = Quote(
+        quote_number=quote_number,
+        customer_id=quote.customer_id,
+        customer_name=customer["name"],
+        customer_address=customer.get("address", ""),
+        positions=[p.model_dump() for p in quote.positions],
+        notes=quote.notes,
+        vat_rate=quote.vat_rate,
+        subtotal_net=round(subtotal_net, 2),
+        vat_amount=round(vat_amount, 2),
+        total_gross=round(total_gross, 2),
+        valid_until=valid_until
+    )
+
+    await db.quotes.insert_one(quote_obj.model_dump())
+    return quote_obj
+
+
+@router.put("/quotes/{quote_id}", response_model=Quote)
+async def update_quote(quote_id: str, update: QuoteUpdate):
+    """Angebot bearbeiten mit optionaler Gesamtsummen-Anpassung"""
+    existing = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
+
+    positions = update.positions
+
+    if update.custom_total is not None and update.custom_total > 0:
+        current_total = sum(p.quantity * p.price_net for p in positions)
+        if current_total > 0:
+            target_net = update.custom_total / (1 + update.vat_rate / 100)
+            factor = target_net / current_total
+            for p in positions:
+                p.price_net = round(p.price_net * factor, 2)
+
+    subtotal_net = sum(p.quantity * p.price_net for p in positions)
+    vat_amount = subtotal_net * (update.vat_rate / 100) if update.vat_rate > 0 else 0
+    total_gross = subtotal_net + vat_amount
+
+    update_data = {
+        "positions": [p.model_dump() for p in positions],
+        "notes": update.notes,
+        "vat_rate": update.vat_rate,
+        "subtotal_net": round(subtotal_net, 2),
+        "vat_amount": round(vat_amount, 2),
+        "total_gross": round(total_gross, 2)
+    }
+
+    if update.status:
+        update_data["status"] = update.status
+
+    await db.quotes.update_one({"id": quote_id}, {"$set": update_data})
+    updated = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    return updated
+
+
+@router.put("/quotes/{quote_id}/status")
+async def update_quote_status(quote_id: str, status: str = Body(..., embed=True)):
+    result = await db.quotes.update_one({"id": quote_id}, {"$set": {"status": status}})
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
+    return {"message": "Status aktualisiert"}
+
+
+@router.delete("/quotes/{quote_id}")
+async def delete_quote(quote_id: str):
+    result = await db.quotes.delete_one({"id": quote_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
+    return {"message": "Angebot gelöscht"}
