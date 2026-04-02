@@ -165,10 +165,10 @@ const TextbausteineTab = () => {
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) { toast.error("Titel erforderlich"); return; }
-    // Bei Betreff: content = title
-    const payload = { ...form, content: form.text_type === "betreff" ? form.title : form.content };
-    if (form.text_type !== "betreff" && !payload.content.trim()) { toast.error("Inhalt erforderlich"); return; }
+    if (!form.content.trim()) { toast.error("Inhalt erforderlich"); return; }
+    // Auto-generate title from content
+    const autoTitle = form.content.trim().substring(0, 40) + (form.content.trim().length > 40 ? "..." : "");
+    const payload = { ...form, title: autoTitle };
     setSaving(true);
     try {
       if (editTemplate === "new") { await api.post("/text-templates", payload); toast.success("Textbaustein erstellt"); }
@@ -268,8 +268,7 @@ const TextbausteineTab = () => {
             {items.map((t) => (
               <div key={t.id} className="flex items-start gap-2 p-3 bg-muted/30 rounded-sm border" data-testid={`template-${t.id}`}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{t.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-line line-clamp-2">{t.content}</p>
+                  <p className="text-sm whitespace-pre-line line-clamp-3">{t.content}</p>
                 </div>
                 <button onClick={() => openEdit(t)} className="p-1.5 hover:bg-muted rounded-sm shrink-0"><Pencil className="w-3.5 h-3.5" /></button>
                 <button onClick={() => handleDelete(t.id)} className={`p-1.5 rounded-sm shrink-0 transition-colors ${confirmDeleteId === t.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}>
@@ -308,18 +307,6 @@ const TextbausteineTab = () => {
 
       <Modal isOpen={!!editTemplate} onClose={() => setEditTemplate(null)} title={editTemplate === "new" ? "Neuer Textbaustein" : "Textbaustein bearbeiten"}>
         <div className="space-y-4" data-testid="template-edit-modal">
-          <div>
-            <label className="block text-sm font-medium mb-1">Typ</label>
-            <select value={form.text_type} onChange={(e) => setForm({ ...form, text_type: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
-              <option value="vortext">Vortext</option>
-              <option value="schlusstext">Schlusstext</option>
-              <option value="bemerkung">Bemerkung</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Titel</label>
-            <Input data-testid="template-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. Standard Angebot Vortext" />
-          </div>
           <div>
             <label className="block text-sm font-medium mb-1">Inhalt</label>
             <Textarea data-testid="template-content" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder={"Sehr geehrte/r {kunde_name},\n\nvielen Dank..."} rows={6} />
