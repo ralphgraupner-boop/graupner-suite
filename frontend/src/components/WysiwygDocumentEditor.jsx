@@ -423,6 +423,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           </div>
           <div className="flex items-center gap-1.5 lg:gap-3 shrink-0">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/settings")}
+              data-testid="btn-settings-topbar"
+            >
+              <Wrench className="w-4 h-4" />
+              <span className="hidden sm:inline">Einstellungen</span>
+            </Button>
+            <Button
               variant={isRecording ? "destructive" : "outline"}
               size="sm"
               onClick={isRecording ? stopRecording : startRecording}
