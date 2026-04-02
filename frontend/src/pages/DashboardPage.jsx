@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, Clock, Eye, Inbox, Filter, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
@@ -133,34 +133,44 @@ const DashboardPage = () => {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
-        <StatCard
-          title="Neue Anfragen"
-          value={stats?.anfragen?.total || 0}
-          icon={Inbox}
-        />
-        <StatCard
-          title="Kunden"
-          value={stats?.customers_count || 0}
-          icon={Users}
-        />
-        <StatCard
-          title="Offene Angebote"
-          value={stats?.quotes?.open || 0}
-          subtitle={`Gesamt: ${stats?.quotes?.total || 0}`}
-          icon={FileText}
-        />
-        <StatCard
-          title="Offene Aufträge"
-          value={stats?.orders?.open || 0}
-          subtitle={`Gesamt: ${stats?.orders?.total || 0}`}
-          icon={ClipboardCheck}
-        />
-        <StatCard
-          title="Unbezahlte Rechnungen"
-          value={stats?.invoices?.unpaid || 0}
-          subtitle={`Gesamt: ${stats?.invoices?.total || 0}`}
-          icon={Receipt}
-        />
+        <Link to="/anfragen" className="block" data-testid="stat-link-anfragen">
+          <StatCard
+            title="Neue Anfragen"
+            value={stats?.anfragen?.total || 0}
+            icon={Inbox}
+          />
+        </Link>
+        <Link to="/customers" className="block" data-testid="stat-link-kunden">
+          <StatCard
+            title="Kunden"
+            value={stats?.customers_count || 0}
+            icon={Users}
+          />
+        </Link>
+        <Link to="/quotes" className="block" data-testid="stat-link-angebote">
+          <StatCard
+            title="Offene Angebote"
+            value={stats?.quotes?.open || 0}
+            subtitle={`Gesamt: ${stats?.quotes?.total || 0}`}
+            icon={FileText}
+          />
+        </Link>
+        <Link to="/orders" className="block" data-testid="stat-link-auftraege">
+          <StatCard
+            title="Offene Aufträge"
+            value={stats?.orders?.open || 0}
+            subtitle={`Gesamt: ${stats?.orders?.total || 0}`}
+            icon={ClipboardCheck}
+          />
+        </Link>
+        <Link to="/invoices" className="block" data-testid="stat-link-rechnungen">
+          <StatCard
+            title="Unbezahlte Rechnungen"
+            value={stats?.invoices?.unpaid || 0}
+            subtitle={`Gesamt: ${stats?.invoices?.total || 0}`}
+            icon={Receipt}
+          />
+        </Link>
       </div>
 
       {/* Anfragen nach Kategorie */}
@@ -172,10 +182,12 @@ const DashboardPage = () => {
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {Object.entries(stats?.anfragen?.by_category || {}).map(([cat, count]) => (
-              <div key={cat} className="flex items-center justify-between p-3 bg-muted/50 rounded-sm">
-                <span className="text-sm font-medium truncate mr-2">{cat}</span>
-                <span className="text-lg font-bold font-mono text-primary">{count}</span>
-              </div>
+              <Link to={`/anfragen?category=${encodeURIComponent(cat)}`} key={cat} className="block">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors cursor-pointer">
+                  <span className="text-sm font-medium truncate mr-2">{cat}</span>
+                  <span className="text-lg font-bold font-mono text-primary">{count}</span>
+                </div>
+              </Link>
             ))}
           </div>
         </Card>
