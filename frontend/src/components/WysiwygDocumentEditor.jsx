@@ -741,12 +741,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </button>
                     </div>
-                    <input
-                      type="text"
+                    <textarea
                       value={pos.description}
                       onChange={(e) => updatePosition(idx, "description", e.target.value)}
                       placeholder="Beschreibung..."
-                      className="w-full border rounded px-2 py-1.5 text-sm mb-2"
+                      rows={1}
+                      className="w-full border rounded px-2 py-1.5 text-sm mb-2 resize-none overflow-hidden"
+                      style={{ minHeight: "36px" }}
+                      onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(36, e.target.scrollHeight) + "px"; }}
+                      ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(36, el.scrollHeight) + "px"; } }}
                     />
                     <div className="grid grid-cols-3 gap-2">
                       <div>
@@ -793,10 +796,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     <tr key={idx} className="border-b border-slate-100 group">
                       <td className="py-3 text-sm text-muted-foreground">{pos.pos_nr}</td>
                       <td className="py-2">
-                        <input type="text" value={pos.description}
+                        <textarea value={pos.description}
                           onChange={(e) => updatePosition(idx, "description", e.target.value)}
                           placeholder="Beschreibung eingeben..."
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm" />
+                          rows={1}
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm resize-none overflow-hidden"
+                          style={{ minHeight: "32px" }}
+                          onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(32, e.target.scrollHeight) + "px"; }}
+                          ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(32, el.scrollHeight) + "px"; } }}
+                        />
                       </td>
                       <td className="py-2">
                         <input type="number" step="0.01" value={pos.quantity}
