@@ -249,17 +249,29 @@ const ArtikelModal = ({ isOpen, onClose, item, onSave }) => {
                 <div>
                   <label className="block text-[10px] text-muted-foreground mb-1">Aufschlag 1 (%)</label>
                   <Input data-testid="input-aufschlag-1" type="number" step="0.1" value={form.aufschlag_1 || ""} onChange={(e) => setForm({ ...form, aufschlag_1: parseFloat(e.target.value) || 0 })} placeholder="%" className="h-8 text-sm" />
-                  {vk1 > 0 && <p className="text-xs font-mono font-semibold text-primary mt-1">= {vk1.toFixed(2)} €</p>}
+                  {vk1 > 0 && (
+                    <button type="button" onClick={() => setForm({ ...form, price_net: vk1 })} data-testid="btn-uebernehmen-1" className="mt-1 w-full text-[10px] font-semibold bg-primary/10 hover:bg-primary/20 text-primary py-1 rounded-sm transition-colors">
+                      {vk1.toFixed(2)} € übernehmen
+                    </button>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] text-muted-foreground mb-1">Aufschlag 2 (%)</label>
                   <Input data-testid="input-aufschlag-2" type="number" step="0.1" value={form.aufschlag_2 || ""} onChange={(e) => setForm({ ...form, aufschlag_2: parseFloat(e.target.value) || 0 })} placeholder="%" className="h-8 text-sm" />
-                  {vk2 > 0 && <p className="text-xs font-mono font-semibold text-primary mt-1">= {vk2.toFixed(2)} €</p>}
+                  {vk2 > 0 && (
+                    <button type="button" onClick={() => setForm({ ...form, price_net: vk2 })} data-testid="btn-uebernehmen-2" className="mt-1 w-full text-[10px] font-semibold bg-primary/10 hover:bg-primary/20 text-primary py-1 rounded-sm transition-colors">
+                      {vk2.toFixed(2)} € übernehmen
+                    </button>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[10px] text-muted-foreground mb-1">Aufschlag 3 (%)</label>
                   <Input data-testid="input-aufschlag-3" type="number" step="0.1" value={form.aufschlag_3 || ""} onChange={(e) => setForm({ ...form, aufschlag_3: parseFloat(e.target.value) || 0 })} placeholder="%" className="h-8 text-sm" />
-                  {vk3 > 0 && <p className="text-xs font-mono font-semibold text-primary mt-1">= {vk3.toFixed(2)} €</p>}
+                  {vk3 > 0 && (
+                    <button type="button" onClick={() => setForm({ ...form, price_net: vk3 })} data-testid="btn-uebernehmen-3" className="mt-1 w-full text-[10px] font-semibold bg-primary/10 hover:bg-primary/20 text-primary py-1 rounded-sm transition-colors">
+                      {vk3.toFixed(2)} € übernehmen
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
