@@ -70,8 +70,22 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
 - [x] Schnellnotiz-Funktion (Inline-Eingabe mit Timestamp in Anfragen-Liste) — 02.04.2026
 - [x] Textbausteine-System: Zentrale Verwaltung in Einstellungen (CRUD pro Dokumenttyp), Vortext/Schlusstext-Auswahl im WYSIWYG-Editor, Aliase ({kunde_name}, {firma}, {datum} etc.) mit automatischer Auflösung — 02.04.2026
 
+## Implementierte Features (Landing Page)
+- [x] Standalone Landing Page (`/app/landing_page/index.html`) für `schiebetür-reparatur-hamburg.de` — 02.04.2026
+  - Hero-Sektion mit Hintergrundbild, CTAs und Statistiken (60+ Jahre, Hamburg, 24h)
+  - 4 Leistungen: Schiebetür-Reparatur, Fenster & Türen, Schiebekipptüren, Wartung
+  - Über-uns-Sektion mit Werkstatt-Bild und USPs (Meisterbetrieb, Reaktionszeit, Faire Preise)
+  - Kontaktformular mit Themen-Auswahl (POST an Graupner Suite API)
+  - CORS-Fallback via Bild-Beacon bei externem Hosting
+  - Impressum & Datenschutz als Modals
+  - Responsive Design (Desktop, Tablet, Mobil)
+  - Backend-Preview unter `/api/landing-page`
+  - Datei bereit für IONOS FTP-Upload
+
 ## Backlog
+- [ ] E-Mail-Empfang via IMAP (service24@tischlerei-graupner.de → Anfragen)
 - [ ] N26 Bankanbindung (CSV-Import / Open Banking)
 - [ ] Windows Desktop App (Electron)
 - [ ] Auftrags-Status-Workflow
 - [ ] Druckansicht für Dokumente
+- [ ] PDF Textbausteine (Vortext/Schlusstext in PDFs)

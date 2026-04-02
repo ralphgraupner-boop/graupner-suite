@@ -129,6 +129,18 @@ async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str
     return StreamingResponse(BytesIO(pixel), media_type="image/gif")
 
 
+@router.get("/landing-page", response_class=HTMLResponse)
+async def landing_page_preview():
+    """Preview of the standalone Landing Page for schiebetuer-reparatur-hamburg.de"""
+    landing_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "landing_page", "index.html")
+    try:
+        with open(landing_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Landing page not found")
+
+
+
 @router.get("/kontakt", response_class=HTMLResponse)
 async def kontakt_form_page():
     """Public contact form page - no auth required"""
