@@ -76,7 +76,9 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
     setOpen(false);
   };
 
-  const label = textType === "vortext" ? "Vortext" : "Schlusstext";
+  const labels = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung" };
+  const label = labels[textType] || textType;
+  const isBetreff = textType === "betreff";
 
   return (
     <div data-testid={`template-select-${textType}-${docType}`}>
@@ -111,17 +113,28 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
           </div>
         )}
       </div>
-      <textarea
-        ref={textareaRef}
-        data-testid={`input-${textType}`}
-        value={value || ""}
-        onChange={(e) => { onChange(e.target.value); autoResize(); }}
-        placeholder={`${label} eingeben oder aus Textbausteinen wählen...`}
-        rows={2}
-        className="flex w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none overflow-hidden"
-        style={{ minHeight: "56px" }}
-      />
-      {!value && (
+      {isBetreff ? (
+        <input
+          type="text"
+          data-testid={`input-${textType}`}
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="z.B. Angebot für Schiebetür-Reparatur"
+          className="flex w-full h-10 rounded-sm border border-input bg-background px-3 py-2 text-sm font-semibold ring-offset-background placeholder:text-muted-foreground placeholder:font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      ) : (
+        <textarea
+          ref={textareaRef}
+          data-testid={`input-${textType}`}
+          value={value || ""}
+          onChange={(e) => { onChange(e.target.value); autoResize(); }}
+          placeholder={`${label} eingeben oder aus Textbausteinen wählen...`}
+          rows={2}
+          className="flex w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none overflow-hidden"
+          style={{ minHeight: "56px" }}
+        />
+      )}
+      {!value && !isBetreff && (
         <div className="flex flex-wrap gap-1 mt-1">
           {PLACEHOLDERS.slice(0, 4).map((p) => (
             <span key={p.alias} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title={p.desc}>{p.alias}</span>

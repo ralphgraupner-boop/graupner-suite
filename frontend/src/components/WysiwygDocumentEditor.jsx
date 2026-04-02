@@ -29,6 +29,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [notes, setNotes] = useState("");
   const [vortext, setVortext] = useState("");
   const [schlusstext, setSchlusstext] = useState("");
+  const [betreff, setBetreff] = useState("");
   const [vatRate, setVatRate] = useState(19);
   const [status, setStatus] = useState(type === "quote" ? "Entwurf" : type === "order" ? "Offen" : "Offen");
   const [depositAmount, setDepositAmount] = useState(0);
@@ -83,6 +84,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         setNotes(doc.notes || "");
         setVortext(doc.vortext || "");
         setSchlusstext(doc.schlusstext || "");
+        setBetreff(doc.betreff || "");
         setVatRate(doc.vat_rate || 19);
         setStatus(doc.status || "");
         setDepositAmount(doc.deposit_amount || 0);
@@ -339,6 +341,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           notes,
           vortext,
           schlusstext,
+          betreff,
           vat_rate: vatRate,
           ...(type === "quote" && { valid_days: 30 }),
           ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount })
@@ -351,6 +354,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           notes,
           vortext,
           schlusstext,
+          betreff,
           vat_rate: vatRate,
           status,
           ...(type === "invoice" && { deposit_amount: depositAmount })
@@ -726,6 +730,19 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Betreff */}
+            <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
+              <TextTemplateSelect
+                docType={docTypeMap[type]}
+                textType="betreff"
+                value={betreff}
+                onChange={setBetreff}
+                customer={customer}
+                settings={settings}
+                docNumber={docNumber}
+              />
             </div>
 
             {/* Vortext */}

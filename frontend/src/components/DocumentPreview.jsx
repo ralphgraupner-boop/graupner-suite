@@ -156,11 +156,21 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
               <p className="font-semibold text-lg">{document.customer_name}</p>
               {document.customer_address && (
                 <p className="text-muted-foreground whitespace-pre-line text-sm">
-                  {document.customer_address}
+                  {document.customer_address.split(/,\s*/).join("\n")}
                 </p>
               )}
             </div>
           </div>
+
+          {/* Betreff */}
+          {document.betreff && (
+            <p className="font-bold text-base mb-4 border-b pb-2">{document.betreff}</p>
+          )}
+
+          {/* Vortext */}
+          {document.vortext && (
+            <p className="text-sm text-muted-foreground mb-4 whitespace-pre-line">{document.vortext}</p>
+          )}
 
           {/* Positions Table */}
           <table className="w-full mb-6">

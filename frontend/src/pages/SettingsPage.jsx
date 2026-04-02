@@ -230,6 +230,7 @@ const TextbausteineTab = () => {
         ))}
       </div>
 
+      {renderSection("betreff", "Betreff-Zeilen")}
       {renderSection("vortext", "Vortexte")}
       {renderSection("schlusstext", "Schlusstexte")}
       {renderSection("bemerkung", "Bemerkungen")}
@@ -239,6 +240,7 @@ const TextbausteineTab = () => {
           <div>
             <label className="block text-sm font-medium mb-1">Typ</label>
             <select value={form.text_type} onChange={(e) => setForm({ ...form, text_type: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
+              <option value="betreff">Betreff</option>
               <option value="vortext">Vortext</option>
               <option value="schlusstext">Schlusstext</option>
               <option value="bemerkung">Bemerkung</option>
