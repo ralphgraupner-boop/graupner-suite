@@ -257,6 +257,24 @@ class CompanySettings(BaseModel):
     km_rate: float = 0.30
     hourly_travel_rate: float = 45.0
     due_days: int = 14
+    default_vat_rate: float = 19.0
+    is_small_business: bool = False
+    default_due_days: int = 14
+    default_quote_validity_days: int = 30
+    email_signature: str = ""
+    # SMTP Settings
+    smtp_server: str = ""
+    smtp_port: int = 465
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    # PDF Layout Settings
+    pdf_header_text: str = ""
+    pdf_footer_text: str = ""
+    pdf_show_logo: bool = True
+    pdf_accent_color: str = "#1a1a2e"
+    pdf_font_size: str = "normal"
+    pdf_bemerkung_default: str = ""
 
 
 class WebhookContact(BaseModel):

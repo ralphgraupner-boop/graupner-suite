@@ -82,6 +82,18 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
   - Backend-Preview unter `/api/landing-page`
   - Datei bereit für IONOS FTP-Upload
 
+## Implementierte Features (Einstellungen Umbau)
+- [x] Tab-basierte Einstellungen mit 5 Bereichen — 02.04.2026
+  - Firmendaten: Firmendaten, Bankverbindung, Steuer, Fahrtkosten, Zahlungsziele
+  - Textbausteine: Vortext/Schlusstext/Bemerkung pro Dokumenttyp (NEU: Bemerkungsfeld)
+  - E-Mail: SMTP-Konfiguration über UI (mit Verbindungstest) + Push-Benachrichtigungen
+  - Benutzer-Verwaltung: Benutzer anlegen, Passwort ändern, löschen
+  - Dokument-Vorlagen: PDF-Layout (Kopf-/Fußzeile, Bemerkung, Farbe, Schriftgröße, Logo)
+- [x] Backend-Erweiterung: GET/POST/DELETE /api/users, PUT /api/users/{username}/password
+- [x] Backend-Erweiterung: POST /api/settings/smtp-test
+- [x] CompanySettings Model erweitert um SMTP, PDF-Layout und Bemerkungsfelder
+- [x] PDF-Download Bug behoben: Token wird korrekt mitgesendet (api.get statt axios.get)
+
 ## Backlog
 - [ ] E-Mail-Empfang via IMAP (service24@tischlerei-graupner.de → Anfragen)
 - [ ] N26 Bankanbindung (CSV-Import / Open Banking)
