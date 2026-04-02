@@ -422,6 +422,37 @@ const AnfragenPage = () => {
                             }
                           </div>
                         )}
+
+                        {/* Schnellnotizen anzeigen */}
+                        {(() => {
+                          const quickNotes = (anfrage.notes || "").split("\n").filter(l => l.match(/^\[[\d.,: ]+\]/));
+                          if (quickNotes.length === 0) return null;
+                          return (
+                            <div className="mt-4" data-testid={`notizen-section-${anfrage.id}`}>
+                              <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide flex items-center gap-1">
+                                <MessageSquarePlus className="w-3.5 h-3.5" /> Notizen
+                              </h4>
+                              <div className="space-y-1.5">
+                                {quickNotes.map((note, i) => {
+                                  const tsMatch = note.match(/^\[(.*?)\]\s*(.*)/);
+                                  return (
+                                    <div key={i} className="bg-amber-50 border border-amber-200 rounded-sm px-3 py-2 text-sm">
+                                      {tsMatch ? (
+                                        <>
+                                          <span className="text-xs text-amber-600 font-medium">{tsMatch[1]}</span>
+                                          <p className="text-foreground mt-0.5">{tsMatch[2]}</p>
+                                        </>
+                                      ) : (
+                                        <p>{note}</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         <p className="text-xs text-muted-foreground mt-3">
                           Quelle: {anfrage.source || "manuell"} | Erstellt: {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </p>
@@ -430,6 +461,9 @@ const AnfragenPage = () => {
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                      <Button size="sm" variant="outline" onClick={() => openQuickNote(anfrage)} data-testid={`btn-quicknote-expanded-${anfrage.id}`}>
+                        <MessageSquarePlus className="w-4 h-4" /> Schnellnotiz
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => openEdit(anfrage)} data-testid={`btn-edit-expanded-${anfrage.id}`}>
                         <Pencil className="w-4 h-4" /> Bearbeiten
                       </Button>
