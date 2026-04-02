@@ -182,7 +182,13 @@ textarea{{resize:vertical;min-height:80px}}
 .privacy input{{width:20px;height:20px;margin-top:1px;flex-shrink:0;cursor:pointer}}
 .file-info{{font-size:11px;color:#888;margin-top:3px}}
 input[type=file]{{padding:7px;font-size:13px}}
-.hidden{{display:none}}
+.type-toggle{{display:flex;gap:0;margin-bottom:12px;border:1.5px solid #ddd;border-radius:8px;overflow:hidden}}
+.type-toggle label{{flex:1;text-align:center;padding:9px 12px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s;border-right:1px solid #ddd}}
+.type-toggle label:last-child{{border-right:none}}
+.type-toggle label:has(input:checked){{background:#1a1a2e;color:#fff}}
+.type-toggle input{{display:none}}
+.firma-field{{max-height:0;overflow:hidden;transition:max-height 0.3s ease;margin-bottom:0}}
+.firma-field.show{{max-height:60px;margin-bottom:10px}}
 </style>
 </head>
 <body>
@@ -195,6 +201,13 @@ input[type=file]{{padding:7px;font-size:13px}}
 <input type="hidden" name="rolle" value="Eigent&uuml;mer/Vermieter">
 <div class="card">
 <h2>Kontaktdaten</h2>
+<div class="type-toggle">
+<label><input type="radio" name="kundentyp" value="Privat" checked onchange="toggleFirma()"><span>Privat</span></label>
+<label><input type="radio" name="kundentyp" value="Firma" onchange="toggleFirma()"><span>Firma</span></label>
+</div>
+<div class="firma-field" id="firmaField">
+<div class="field"><label class="required">Firmenname</label><input type="text" name="firma" id="firmaInput" placeholder="Name der Firma"></div>
+</div>
 <div class="radio-group">
 <label><input type="radio" name="anrede" value="Herr"><span>Herr</span></label>
 <label><input type="radio" name="anrede" value="Frau"><span>Frau</span></label>
@@ -204,7 +217,6 @@ input[type=file]{{padding:7px;font-size:13px}}
 <div class="field"><label class="required">Nachname</label><input type="text" name="nachname" id="k_nachname" required></div>
 </div>
 <div class="row">
-<div class="field"><label>Firma</label><input type="text" name="firma"></div>
 <div class="field"><label class="required">Telefon</label><input type="tel" name="telefon" id="k_telefon" required></div>
 </div>
 <div class="row">
@@ -282,6 +294,20 @@ Kontaktdaten als Objektadresse &uuml;bernehmen
 </form>
 </div>
 <script>
+function toggleFirma(){{
+  var isFirma=document.querySelector('input[name="kundentyp"][value="Firma"]').checked;
+  var field=document.getElementById('firmaField');
+  var input=document.getElementById('firmaInput');
+  if(isFirma){{
+    field.classList.add('show');
+    input.required=true;
+    setTimeout(function(){{input.focus();}},300);
+  }}else{{
+    field.classList.remove('show');
+    input.required=false;
+    input.value='';
+  }}
+}}
 function toggleTopic(header){{
   var item=header.parentElement;
   var isActive=item.classList.contains('active');
