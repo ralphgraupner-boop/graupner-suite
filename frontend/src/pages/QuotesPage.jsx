@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FileText, Plus, Download, Trash2, Edit, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
-import { api } from "@/lib/api";
+import { api, API } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
 const QuotesPage = () => {
@@ -47,19 +47,8 @@ const QuotesPage = () => {
 
   const handleDownloadPDF = async (id, number, e) => {
     e?.stopPropagation();
-    try {
-      const res = await api.get(`/pdf/quote/${id}`, { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `Angebot_${number}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("PDF heruntergeladen");
-    } catch (err) {
-      toast.error("Fehler beim PDF-Download");
-    }
+    const token = localStorage.getItem("token");
+    window.open(`${API}/pdf/quote/${id}?token=${token}`, "_blank");
   };
 
   const handleCreateOrder = async (quoteId, e) => {

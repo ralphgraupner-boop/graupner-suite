@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
-import { api } from "@/lib/api";
+import { api, API } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
 const InvoicesPage = () => {
@@ -46,19 +46,8 @@ const InvoicesPage = () => {
 
   const handleDownloadPDF = async (id, number, e) => {
     e?.stopPropagation();
-    try {
-      const res = await api.get(`/pdf/invoice/${id}`, { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `Rechnung_${number}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("PDF heruntergeladen");
-    } catch (err) {
-      toast.error("Fehler beim PDF-Download");
-    }
+    const token = localStorage.getItem("token");
+    window.open(`${API}/pdf/invoice/${id}?token=${token}`, "_blank");
   };
 
   const handleDelete = async (id, e) => {
@@ -101,19 +90,8 @@ const InvoicesPage = () => {
 
   const handleDownloadDunning = async (id, number, e) => {
     e?.stopPropagation();
-    try {
-      const res = await api.get(`/pdf/dunning/${id}`, { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `Mahnung_${number}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("Mahnung PDF heruntergeladen");
-    } catch (err) {
-      toast.error("Fehler beim PDF-Download");
-    }
+    const token = localStorage.getItem("token");
+    window.open(`${API}/pdf/dunning/${id}?token=${token}`, "_blank");
   };
 
   const handleEmailDunning = async (inv, e) => {
