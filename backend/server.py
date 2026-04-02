@@ -19,6 +19,7 @@ from routes.distance import router as distance_router
 from routes.ai import router as ai_router
 from routes.pdf import router as pdf_router
 from routes.dashboard import router as dashboard_router
+from routes.text_templates import router as text_templates_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -41,6 +42,7 @@ api_router.include_router(distance_router)
 api_router.include_router(ai_router)
 api_router.include_router(pdf_router)
 api_router.include_router(dashboard_router)
+api_router.include_router(text_templates_router)
 
 
 @api_router.get("/")

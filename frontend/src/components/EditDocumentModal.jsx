@@ -3,10 +3,13 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Modal } from "@/components/common";
 import { api, API } from "@/lib/api";
+import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
 const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
   const [positions, setPositions] = useState([]);
   const [notes, setNotes] = useState("");
+  const [vortext, setVortext] = useState("");
+  const [schlusstext, setSchlusstext] = useState("");
   const [vatRate, setVatRate] = useState(19);
   const [status, setStatus] = useState("");
   const [customTotal, setCustomTotal] = useState("");
@@ -14,6 +17,7 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState([]);
   const [services, setServices] = useState([]);
+  const [companySettings, setCompanySettings] = useState({});
 
   const titles = { quote: "Angebot", order: "Auftrag", invoice: "Rechnung" };
   const statusOptions = {
@@ -22,10 +26,14 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
     invoice: ["Offen", "Gesendet", "Bezahlt", "Überfällig"]
   };
 
+  const docTypeMap = { quote: "angebot", order: "auftrag", invoice: "rechnung" };
+
   useEffect(() => {
     if (document) {
       setPositions(document.positions || []);
       setNotes(document.notes || "");
+      setVortext(document.vortext || "");
+      setSchlusstext(document.schlusstext || "");
       setVatRate(document.vat_rate || 19);
       setStatus(document.status || "");
       setCustomTotal("");
@@ -36,12 +44,14 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
 
   const loadStammdaten = async () => {
     try {
-      const [articlesRes, servicesRes] = await Promise.all([
+      const [articlesRes, servicesRes, settingsRes] = await Promise.all([
         api.get("/articles"),
-        api.get("/services")
+        api.get("/services"),
+        api.get("/settings")
       ]);
       setArticles(articlesRes.data);
       setServices(servicesRes.data);
+      setCompanySettings(settingsRes.data);
     } catch (err) {
       console.error("Fehler beim Laden der Stammdaten");
     }
@@ -115,6 +125,8 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
       const payload = {
         positions,
         notes,
+        vortext,
+        schlusstext,
         vat_rate: vatRate,
         status: status || undefined,
         custom_total: customTotal ? parseFloat(customTotal) : undefined
@@ -160,6 +172,17 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
             ))}
           </select>
         </div>
+
+        {/* Vortext */}
+        <TextTemplateSelect
+          docType={docTypeMap[type]}
+          textType="vortext"
+          value={vortext}
+          onChange={setVortext}
+          customer={{ name: document?.customer_name, address: document?.customer_address }}
+          settings={companySettings}
+          docNumber={docNumber}
+        />
 
         {/* Positions */}
         <div>
@@ -261,6 +284,17 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
             rows={2}
           />
         </div>
+
+        {/* Schlusstext */}
+        <TextTemplateSelect
+          docType={docTypeMap[type]}
+          textType="schlusstext"
+          value={schlusstext}
+          onChange={setSchlusstext}
+          customer={{ name: document?.customer_name, address: document?.customer_address }}
+          settings={companySettings}
+          docNumber={docNumber}
+        />
 
         {/* VAT, Custom Total & Deposit */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

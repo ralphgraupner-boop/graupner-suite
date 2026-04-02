@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Mail, CheckCircle, Save, Bell, BellOff } from "lucide-react";
+import { Mail, CheckCircle, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, Textarea, Card } from "@/components/common";
+import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api, API } from "@/lib/api";
-import { subscribeToPush, unsubscribeFromPush } from "@/lib/push";
+import { subscribeToPush, unsubscribeFromPush, ensureVapidKey } from "@/lib/push";
+import { PLACEHOLDERS } from "@/components/TextTemplateSelect";
 
 // ==================== PUSH NOTIFICATION SETTINGS ====================
 const PushNotificationSettings = () => {
@@ -127,6 +128,218 @@ const PushNotificationSettings = () => {
     </Card>
   );
 };
+
+// ==================== TEXT TEMPLATE MANAGEMENT ====================
+const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftragsbestätigung", rechnung: "Rechnung" };
+const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext" };
+
+const TextTemplateManagement = () => {
+  const [templates, setTemplates] = useState([]);
+  const [activeDocType, setActiveDocType] = useState("angebot");
+  const [editTemplate, setEditTemplate] = useState(null);
+  const [form, setForm] = useState({ title: "", content: "", text_type: "vortext", doc_type: "angebot" });
+  const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  useEffect(() => { loadTemplates(); }, []);
+
+  const loadTemplates = async () => {
+    try {
+      const res = await api.get("/text-templates");
+      setTemplates(res.data);
+    } catch (err) {
+      toast.error("Fehler beim Laden der Textbausteine");
+    }
+  };
+
+  const openNew = (docType, textType) => {
+    setForm({ title: "", content: "", text_type: textType, doc_type: docType });
+    setEditTemplate("new");
+  };
+
+  const openEdit = (t) => {
+    setForm({ title: t.title, content: t.content, text_type: t.text_type, doc_type: t.doc_type });
+    setEditTemplate(t.id);
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.content.trim()) { toast.error("Titel und Inhalt erforderlich"); return; }
+    setSaving(true);
+    try {
+      if (editTemplate === "new") {
+        await api.post("/text-templates", form);
+        toast.success("Textbaustein erstellt");
+      } else {
+        await api.put(`/text-templates/${editTemplate}`, form);
+        toast.success("Textbaustein aktualisiert");
+      }
+      setEditTemplate(null);
+      loadTemplates();
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (confirmDeleteId !== id) { setConfirmDeleteId(id); setTimeout(() => setConfirmDeleteId(null), 3000); return; }
+    try {
+      await api.delete(`/text-templates/${id}`);
+      toast.success("Textbaustein gelöscht");
+      setConfirmDeleteId(null);
+      loadTemplates();
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
+  const filtered = templates.filter((t) => t.doc_type === activeDocType);
+  const vortexte = filtered.filter((t) => t.text_type === "vortext");
+  const schlusstexte = filtered.filter((t) => t.text_type === "schlusstext");
+
+  return (
+    <Card className="p-4 lg:p-6 mt-6" data-testid="text-template-management">
+      <h3 className="text-base lg:text-lg font-semibold mb-4 flex items-center gap-2">
+        <FileText className="w-5 h-5 text-primary" />
+        Textbausteine (Vortext / Schlusstext)
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Erstellen Sie vorgefertigte Texte mit Platzhaltern. Verfügbare Aliase:
+      </p>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {PLACEHOLDERS.map((p) => (
+          <span key={p.alias} className="text-xs bg-muted px-2 py-1 rounded font-mono" title={p.desc}>
+            {p.alias} = {p.desc}
+          </span>
+        ))}
+      </div>
+
+      {/* Doc Type Tabs */}
+      <div className="flex gap-2 mb-4 border-b" data-testid="template-doc-type-tabs">
+        {Object.entries(DOC_TYPE_LABELS).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActiveDocType(key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-[1px] ${
+              activeDocType === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+            data-testid={`tab-${key}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Vortext Section */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold">Vortexte</h4>
+          <Button variant="outline" size="sm" onClick={() => openNew(activeDocType, "vortext")} data-testid="btn-add-vortext">
+            <Plus className="w-3 h-3" /> Vortext
+          </Button>
+        </div>
+        {vortexte.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">Noch keine Vortexte für {DOC_TYPE_LABELS[activeDocType]}</p>
+        ) : (
+          <div className="space-y-2">
+            {vortexte.map((t) => (
+              <div key={t.id} className="flex items-start gap-2 p-3 bg-muted/30 rounded-sm border" data-testid={`template-${t.id}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{t.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-line line-clamp-2">{t.content}</p>
+                </div>
+                <button onClick={() => openEdit(t)} className="p-1.5 hover:bg-muted rounded-sm shrink-0"><Pencil className="w-3.5 h-3.5" /></button>
+                <button
+                  onClick={() => handleDelete(t.id)}
+                  className={`p-1.5 rounded-sm shrink-0 transition-colors ${confirmDeleteId === t.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                >
+                  {confirmDeleteId === t.id ? <span className="text-[10px] font-bold">OK?</span> : <Trash2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Schlusstext Section */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold">Schlusstexte</h4>
+          <Button variant="outline" size="sm" onClick={() => openNew(activeDocType, "schlusstext")} data-testid="btn-add-schlusstext">
+            <Plus className="w-3 h-3" /> Schlusstext
+          </Button>
+        </div>
+        {schlusstexte.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">Noch keine Schlusstexte für {DOC_TYPE_LABELS[activeDocType]}</p>
+        ) : (
+          <div className="space-y-2">
+            {schlusstexte.map((t) => (
+              <div key={t.id} className="flex items-start gap-2 p-3 bg-muted/30 rounded-sm border" data-testid={`template-${t.id}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{t.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-line line-clamp-2">{t.content}</p>
+                </div>
+                <button onClick={() => openEdit(t)} className="p-1.5 hover:bg-muted rounded-sm shrink-0"><Pencil className="w-3.5 h-3.5" /></button>
+                <button
+                  onClick={() => handleDelete(t.id)}
+                  className={`p-1.5 rounded-sm shrink-0 transition-colors ${confirmDeleteId === t.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                >
+                  {confirmDeleteId === t.id ? <span className="text-[10px] font-bold">OK?</span> : <Trash2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Edit/Create Modal */}
+      <Modal isOpen={!!editTemplate} onClose={() => setEditTemplate(null)} title={editTemplate === "new" ? "Neuer Textbaustein" : "Textbaustein bearbeiten"}>
+        <div className="space-y-4" data-testid="template-edit-modal">
+          <div>
+            <label className="block text-sm font-medium mb-1">Titel</label>
+            <Input
+              data-testid="template-title"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="z.B. Standard Angebot Vortext"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Inhalt (Aliase verwenden!)</label>
+            <Textarea
+              data-testid="template-content"
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              placeholder="Sehr geehrte/r {kunde_name},&#10;&#10;vielen Dank für Ihre Anfrage..."
+              rows={6}
+            />
+            <div className="flex flex-wrap gap-1 mt-2">
+              {PLACEHOLDERS.map((p) => (
+                <button
+                  key={p.alias}
+                  type="button"
+                  onClick={() => setForm({ ...form, content: form.content + p.alias })}
+                  className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded hover:bg-primary/20 transition-colors font-mono"
+                  title={`${p.desc} einfügen`}
+                >
+                  {p.alias}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setEditTemplate(null)}>Abbrechen</Button>
+            <Button onClick={handleSave} disabled={saving} data-testid="btn-save-template">
+              {saving ? "Speichern..." : "Speichern"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </Card>
+  );
+};
+
 
 const SettingsPage = () => {
   const [settings, setSettings] = useState({
@@ -406,6 +619,9 @@ const SettingsPage = () => {
 
       {/* Push Notifications Section */}
       <PushNotificationSettings />
+
+      {/* Textbausteine Section */}
+      <TextTemplateManagement />
     </div>
   );
 };

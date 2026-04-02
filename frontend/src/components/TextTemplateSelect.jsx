@@ -1,0 +1,105 @@
+import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
+import { api } from "@/lib/api";
+
+const PLACEHOLDERS = [
+  { alias: "{kunde_name}", desc: "Kundenname" },
+  { alias: "{kunde_adresse}", desc: "Kundenadresse" },
+  { alias: "{kunde_email}", desc: "Kunden-E-Mail" },
+  { alias: "{kunde_telefon}", desc: "Kundentelefon" },
+  { alias: "{firma}", desc: "Firmenname" },
+  { alias: "{datum}", desc: "Heutiges Datum" },
+  { alias: "{dokument_nr}", desc: "Dokument-Nr." },
+];
+
+const resolvePlaceholders = (text, customer, settings, docNumber) => {
+  if (!text) return "";
+  const now = new Date();
+  return text
+    .replace(/\{kunde_name\}/g, customer?.name || "")
+    .replace(/\{kunde_adresse\}/g, customer?.address || "")
+    .replace(/\{kunde_email\}/g, customer?.email || "")
+    .replace(/\{kunde_telefon\}/g, customer?.phone || "")
+    .replace(/\{firma\}/g, settings?.company_name || "")
+    .replace(/\{datum\}/g, now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }))
+    .replace(/\{dokument_nr\}/g, docNumber || "");
+};
+
+const TextTemplateSelect = ({ docType, textType, value, onChange, customer, settings, docNumber }) => {
+  const [templates, setTemplates] = useState([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [docType, textType]);
+
+  const loadTemplates = async () => {
+    try {
+      const res = await api.get("/text-templates", { params: { doc_type: docType, text_type: textType } });
+      setTemplates(res.data);
+    } catch (err) {
+      // silent
+    }
+  };
+
+  const handleSelect = (template) => {
+    const resolved = resolvePlaceholders(template.content, customer, settings, docNumber);
+    onChange(resolved);
+    setOpen(false);
+  };
+
+  const label = textType === "vortext" ? "Vortext" : "Schlusstext";
+
+  return (
+    <div data-testid={`template-select-${textType}-${docType}`}>
+      <div className="flex items-center justify-between mb-1">
+        <label className="block text-sm font-medium">{label}</label>
+        {templates.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpen(!open)}
+              data-testid={`btn-template-dropdown-${textType}`}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded-sm hover:bg-primary/5 transition-colors"
+            >
+              Textbaustein <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+            {open && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[240px] max-h-48 overflow-y-auto">
+                {templates.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleSelect(t)}
+                    data-testid={`template-option-${t.id}`}
+                    className="block w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b last:border-b-0"
+                  >
+                    <span className="font-medium">{t.title}</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5 truncate">{t.content.substring(0, 60)}...</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <textarea
+        data-testid={`input-${textType}`}
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={`${label} eingeben oder aus Textbausteinen wählen...`}
+        rows={3}
+        className="flex min-h-[72px] w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      {!value && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {PLACEHOLDERS.slice(0, 4).map((p) => (
+            <span key={p.alias} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title={p.desc}>{p.alias}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export { TextTemplateSelect, resolvePlaceholders, PLACEHOLDERS };

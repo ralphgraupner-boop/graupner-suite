@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card } from "@/components/common";
 import { api, API } from "@/lib/api";
+import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
 const NewInvoicePage = () => {
   const [customers, setCustomers] = useState([]);
@@ -12,9 +13,12 @@ const NewInvoicePage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [positions, setPositions] = useState([]);
   const [notes, setNotes] = useState("");
+  const [vortext, setVortext] = useState("");
+  const [schlusstext, setSchlusstext] = useState("");
   const [vatRate, setVatRate] = useState(19);
   const [dueDays, setDueDays] = useState(14);
   const [loading, setLoading] = useState(false);
+  const [companySettings, setCompanySettings] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,14 +27,16 @@ const NewInvoicePage = () => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, servicesRes] = await Promise.all([
+      const [customersRes, articlesRes, servicesRes, settingsRes] = await Promise.all([
         api.get("/customers"),
         api.get("/articles"),
-        api.get("/services")
+        api.get("/services"),
+        api.get("/settings")
       ]);
       setCustomers(customersRes.data);
       setArticles(articlesRes.data);
       setServices(servicesRes.data);
+      setCompanySettings(settingsRes.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Daten");
     }
@@ -104,6 +110,8 @@ const NewInvoicePage = () => {
         customer_id: selectedCustomer,
         positions,
         notes,
+        vortext,
+        schlusstext,
         vat_rate: vatRate,
         due_days: dueDays
       });
@@ -142,6 +150,18 @@ const NewInvoicePage = () => {
                 </option>
               ))}
             </select>
+          </Card>
+
+          {/* Vortext */}
+          <Card className="p-6">
+            <TextTemplateSelect
+              docType="rechnung"
+              textType="vortext"
+              value={vortext}
+              onChange={setVortext}
+              customer={customers.find((c) => c.id === selectedCustomer)}
+              settings={companySettings}
+            />
           </Card>
 
           <Card className="p-6">
@@ -255,6 +275,18 @@ const NewInvoicePage = () => {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Zusätzliche Anmerkungen zur Rechnung..."
               rows={4}
+            />
+          </Card>
+
+          {/* Schlusstext */}
+          <Card className="p-6">
+            <TextTemplateSelect
+              docType="rechnung"
+              textType="schlusstext"
+              value={schlusstext}
+              onChange={setSchlusstext}
+              customer={customers.find((c) => c.id === selectedCustomer)}
+              settings={companySettings}
             />
           </Card>
         </div>

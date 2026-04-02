@@ -47,6 +47,8 @@ async def create_order_from_quote(quote_id: str):
         customer_address=quote["customer_address"],
         positions=quote["positions"],
         notes=quote.get("notes", ""),
+        vortext=quote.get("vortext", ""),
+        schlusstext=quote.get("schlusstext", ""),
         vat_rate=quote["vat_rate"],
         subtotal_net=quote["subtotal_net"],
         vat_amount=quote["vat_amount"],
@@ -91,6 +93,8 @@ async def update_order(order_id: str, update: OrderUpdate):
     update_data = {
         "positions": [p.model_dump() for p in positions],
         "notes": update.notes,
+        "vortext": update.vortext,
+        "schlusstext": update.schlusstext,
         "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),

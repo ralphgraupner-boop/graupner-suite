@@ -77,6 +77,15 @@ class AnfrageUpdate(BaseModel):
     firma: Optional[str] = None
 
 
+class TextTemplate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    doc_type: str  # angebot, auftrag, rechnung
+    text_type: str  # vortext, schlusstext
+    title: str
+    content: str
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
 class EmailRequest(BaseModel):
     to_email: str
     subject: str = ""
@@ -132,6 +141,8 @@ class Quote(BaseModel):
     customer_address: str = ""
     positions: List[dict] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
     subtotal_net: float = 0
     vat_amount: float = 0
@@ -146,6 +157,8 @@ class QuoteCreate(BaseModel):
     customer_id: str
     positions: List[Position] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
 
 class Order(BaseModel):
@@ -157,6 +170,8 @@ class Order(BaseModel):
     customer_address: str = ""
     positions: List[dict] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
     subtotal_net: float = 0
     vat_amount: float = 0
@@ -174,6 +189,8 @@ class Invoice(BaseModel):
     customer_address: str = ""
     positions: List[dict] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
     subtotal_net: float = 0
     vat_amount: float = 0
@@ -194,6 +211,8 @@ class InvoiceCreate(BaseModel):
     order_id: str = ""
     positions: List[Position] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
     deposit_amount: float = 0
     due_days: int = 14
@@ -254,6 +273,8 @@ class AIQuoteRequest(BaseModel):
 class QuoteUpdate(BaseModel):
     positions: List[Position] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
     status: str = ""
     custom_total: Optional[float] = None
@@ -261,6 +282,8 @@ class QuoteUpdate(BaseModel):
 class OrderUpdate(BaseModel):
     positions: List[Position] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
     status: str = ""
     custom_total: Optional[float] = None
@@ -268,6 +291,8 @@ class OrderUpdate(BaseModel):
 class InvoiceUpdate(BaseModel):
     positions: List[Position] = []
     notes: str = ""
+    vortext: str = ""
+    schlusstext: str = ""
     vat_rate: float = 19
     status: str = ""
     deposit_amount: float = 0

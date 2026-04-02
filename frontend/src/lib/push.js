@@ -18,7 +18,7 @@ function arrayBufferToBase64Url(buffer) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function ensureVapidKey() {
+export async function ensureVapidKey() {
   if (VAPID_PUBLIC_KEY) return VAPID_PUBLIC_KEY;
   try {
     const res = await api.get('/push/vapid-key');

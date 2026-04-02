@@ -1,0 +1,106 @@
+{
+  "summary": "Tested Text Templates (Textbausteine) feature for Vortext/Schlusstext. Backend API 100% working (16/16 tests passed). Frontend Settings page Text Template Management working correctly. CRITICAL ISSUE: NewQuotePage.jsx and NewInvoicePage.jsx with TextTemplateSelect are NOT being used - routes use WysiwygDocumentEditor which lacks vortext/schlusstext fields.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "NewQuotePage with TextTemplateSelect",
+        "issue": "NewQuotePage.jsx is NOT used - route /quotes/new uses WysiwygDocumentEditor instead",
+        "affected_selectors": ["input-vortext", "input-schlusstext", "btn-template-dropdown-vortext", "btn-template-dropdown-schlusstext"],
+        "priority": "HIGH"
+      },
+      {
+        "flow": "NewInvoicePage with TextTemplateSelect",
+        "issue": "NewInvoicePage.jsx is NOT used - route /invoices/new uses WysiwygDocumentEditor instead",
+        "affected_selectors": ["template-select-vortext-rechnung", "template-select-schlusstext-rechnung"],
+        "priority": "HIGH"
+      },
+      {
+        "flow": "EditDocumentModal",
+        "issue": "EditDocumentModal.jsx is defined but NOT imported or used anywhere in the app",
+        "affected_selectors": [],
+        "priority": "MEDIUM"
+      },
+      {
+        "flow": "WysiwygDocumentEditor missing vortext/schlusstext",
+        "issue": "WysiwygDocumentEditor (used for /quotes/new, /invoices/new, /orders/new) does not have vortext/schlusstext fields",
+        "affected_selectors": [],
+        "priority": "HIGH"
+      }
+    ],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/text-templates returns templates",
+    "Backend: GET /api/text-templates?doc_type=angebot filters correctly",
+    "Backend: GET /api/text-templates?text_type=vortext filters correctly",
+    "Backend: GET /api/text-templates/placeholders returns 7 placeholders",
+    "Backend: POST /api/text-templates creates Vortext template",
+    "Backend: POST /api/text-templates creates Schlusstext template",
+    "Backend: POST /api/text-templates with invalid doc_type returns 400",
+    "Backend: POST /api/text-templates with invalid text_type returns 400",
+    "Backend: PUT /api/text-templates/{id} updates template",
+    "Backend: PUT /api/text-templates/non-existent returns 404",
+    "Backend: DELETE /api/text-templates/{id} deletes template",
+    "Backend: DELETE /api/text-templates/non-existent returns 404",
+    "Backend: POST /api/quotes accepts vortext and schlusstext",
+    "Backend: PUT /api/quotes/{id} saves vortext and schlusstext",
+    "Backend: POST /api/invoices accepts vortext and schlusstext",
+    "Backend: PUT /api/invoices/{id} saves vortext and schlusstext",
+    "Frontend Settings: Text Template Management section visible",
+    "Frontend Settings: Tabs for Angebot/Auftragsbestätigung/Rechnung switch correctly",
+    "Frontend Settings: Can create new Schlusstext template",
+    "Frontend Settings: Modal has title, content, save button and placeholder buttons"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_text_templates.py",
+    "/app/test_reports/pytest/pytest_text_templates.xml"
+  ],
+
+  "action_items": [
+    "CRITICAL: Either update App.js routes to use NewQuotePage/NewInvoicePage instead of WysiwygDocumentEditor, OR add vortext/schlusstext fields with TextTemplateSelect to WysiwygDocumentEditor",
+    "Import and use EditDocumentModal in QuotesPage/InvoicesPage/OrdersPage for editing documents, OR remove the unused component",
+    "The TextTemplateSelect component is fully implemented but not accessible to users due to routing"
+  ],
+
+  "critical_code_review_comments": [
+    "NewQuotePage.jsx and NewInvoicePage.jsx are orphaned - they have TextTemplateSelect but are not used in routing",
+    "WysiwygDocumentEditor.jsx (1158 lines) is used for all document creation but lacks vortext/schlusstext support",
+    "EditDocumentModal.jsx has TextTemplateSelect but is never imported anywhere",
+    "App.js routes /quotes/new, /invoices/new, /orders/new all to WysiwygDocumentEditor"
+  ],
+
+  "updated_files": [
+    "/app/frontend/src/pages/NewInvoicePage.jsx - Added missing companySettings state and vortext/schlusstext to API payload",
+    "/app/frontend/src/components/EditDocumentModal.jsx - Fixed duplicate export and added settings loading",
+    "/app/backend/tests/test_text_templates.py - Created comprehensive test file"
+  ],
+
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "Settings page 100%, Document creation pages 0% (vortext/schlusstext not accessible)"
+  },
+
+  "test_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+
+  "seed_data_creation": "Created and deleted TEST_Schlusstext Angebot template during testing",
+
+  "retest_needed": true,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Text Templates backend API fully working. Settings page TextTemplateManagement component works. CRITICAL: The vortext/schlusstext fields with TextTemplateSelect are implemented in NewQuotePage.jsx, NewInvoicePage.jsx, and EditDocumentModal.jsx but NONE of these are used in the app routing. The app uses WysiwygDocumentEditor for document creation which does NOT have vortext/schlusstext fields. Main agent needs to either: (1) Update routes to use NewQuotePage/NewInvoicePage, or (2) Add vortext/schlusstext with TextTemplateSelect to WysiwygDocumentEditor.",
+
+  "rca_of_the_issue": "The TextTemplateSelect component and vortext/schlusstext fields were added to NewQuotePage.jsx, NewInvoicePage.jsx, and EditDocumentModal.jsx, but the App.js routing was not updated to use these components. Instead, routes still point to WysiwygDocumentEditor which was the original document editor without vortext/schlusstext support. This is a routing/integration issue, not a component implementation issue."
+}

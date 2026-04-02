@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { Button, Input, Textarea, Card } from "@/components/common";
 import { api, API } from "@/lib/api";
+import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
 const NewQuotePage = () => {
   const [customers, setCustomers] = useState([]);
@@ -13,11 +14,14 @@ const NewQuotePage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [positions, setPositions] = useState([]);
   const [notes, setNotes] = useState("");
+  const [vortext, setVortext] = useState("");
+  const [schlusstext, setSchlusstext] = useState("");
   const [vatRate, setVatRate] = useState(19);
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [companySettings, setCompanySettings] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
   const mediaRecorderRef = { current: null };
@@ -32,14 +36,16 @@ const NewQuotePage = () => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, servicesRes] = await Promise.all([
+      const [customersRes, articlesRes, servicesRes, settingsRes] = await Promise.all([
         api.get("/customers"),
         api.get("/articles"),
-        api.get("/services")
+        api.get("/services"),
+        api.get("/settings")
       ]);
       setCustomers(customersRes.data);
       setArticles(articlesRes.data);
       setServices(servicesRes.data);
+      setCompanySettings(settingsRes.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Daten");
     }
@@ -183,6 +189,8 @@ const NewQuotePage = () => {
         customer_id: selectedCustomer,
         positions,
         notes,
+        vortext,
+        schlusstext,
         vat_rate: vatRate,
         valid_days: 30
       });
@@ -266,6 +274,18 @@ const NewQuotePage = () => {
                 <p className="text-sm">{transcript}</p>
               </div>
             )}
+          </Card>
+
+          {/* Vortext */}
+          <Card className="p-6">
+            <TextTemplateSelect
+              docType="angebot"
+              textType="vortext"
+              value={vortext}
+              onChange={setVortext}
+              customer={customers.find((c) => c.id === selectedCustomer)}
+              settings={companySettings}
+            />
           </Card>
 
           {/* Positions */}
@@ -388,6 +408,18 @@ const NewQuotePage = () => {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Zusätzliche Anmerkungen zum Angebot..."
               rows={4}
+            />
+          </Card>
+
+          {/* Schlusstext */}
+          <Card className="p-6">
+            <TextTemplateSelect
+              docType="angebot"
+              textType="schlusstext"
+              value={schlusstext}
+              onChange={setSchlusstext}
+              customer={customers.find((c) => c.id === selectedCustomer)}
+              settings={companySettings}
             />
           </Card>
         </div>

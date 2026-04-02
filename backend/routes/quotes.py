@@ -109,6 +109,8 @@ async def create_quote(quote: QuoteCreate):
         customer_address=customer.get("address", ""),
         positions=[p.model_dump() for p in quote.positions],
         notes=quote.notes,
+        vortext=quote.vortext,
+        schlusstext=quote.schlusstext,
         vat_rate=quote.vat_rate,
         subtotal_net=round(subtotal_net, 2),
         vat_amount=round(vat_amount, 2),
@@ -144,6 +146,8 @@ async def update_quote(quote_id: str, update: QuoteUpdate):
     update_data = {
         "positions": [p.model_dump() for p in positions],
         "notes": update.notes,
+        "vortext": update.vortext,
+        "schlusstext": update.schlusstext,
         "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),
