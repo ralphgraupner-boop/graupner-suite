@@ -185,7 +185,8 @@ input[type=file]{{padding:7px;font-size:13px}}
 .type-toggle{{display:flex;gap:0;margin-bottom:12px;border:1.5px solid #ddd;border-radius:8px;overflow:hidden}}
 .type-toggle label{{flex:1;text-align:center;padding:9px 12px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s;border-right:1px solid #ddd}}
 .type-toggle label:last-child{{border-right:none}}
-.type-toggle label:has(input:checked){{background:#1a1a2e;color:#fff}}
+.type-toggle label.privat-label:has(input:checked){{background:#14532D;color:#fff}}
+.type-toggle label.firma-label:has(input:checked){{background:#1e40af;color:#fff}}
 .type-toggle input{{display:none}}
 .firma-field{{max-height:0;overflow:hidden;transition:max-height 0.3s ease;margin-bottom:0}}
 .firma-field.show{{max-height:60px;margin-bottom:10px}}
@@ -202,8 +203,8 @@ input[type=file]{{padding:7px;font-size:13px}}
 <div class="card">
 <h2>Kontaktdaten</h2>
 <div class="type-toggle">
-<label><input type="radio" name="kundentyp" value="Privat" checked onchange="toggleFirma()"><span>Privat</span></label>
-<label><input type="radio" name="kundentyp" value="Firma" onchange="toggleFirma()"><span>Firma</span></label>
+<label class="privat-label"><input type="radio" name="kundentyp" value="Privat" checked onchange="toggleFirma()"><span>Privat</span></label>
+<label class="firma-label"><input type="radio" name="kundentyp" value="Firma" onchange="toggleFirma()"><span>Firma</span></label>
 </div>
 <div class="firma-field" id="firmaField">
 <div class="field"><label class="required">Firmenname</label><input type="text" name="firma" id="firmaInput" placeholder="Name der Firma"></div>
