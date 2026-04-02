@@ -100,17 +100,35 @@ class Article(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str = ""
+    typ: str = "Artikel"  # Artikel, Leistung, Fremdleistung
     price_net: float = 0
-    ek_price: float = 0
+    ek_preis: float = 0
+    aufschlag_1: float = 0
+    aufschlag_2: float = 0
+    aufschlag_3: float = 0
+    vk_preis_1: float = 0
+    vk_preis_2: float = 0
+    vk_preis_3: float = 0
     unit: str = "Stück"
+    subunternehmer: str = ""
+    purchase_price: float = 0
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class ArticleCreate(BaseModel):
     name: str
     description: str = ""
+    typ: str = "Artikel"
     price_net: float = 0
-    ek_price: float = 0
+    ek_preis: float = 0
+    aufschlag_1: float = 0
+    aufschlag_2: float = 0
+    aufschlag_3: float = 0
+    vk_preis_1: float = 0
+    vk_preis_2: float = 0
+    vk_preis_3: float = 0
     unit: str = "Stück"
+    subunternehmer: str = ""
+    purchase_price: float = 0
 
 
 class Service(BaseModel):

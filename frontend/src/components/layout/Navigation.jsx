@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Wrench, Menu, Globe, Inbox, MailCheck } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, MailCheck } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -10,7 +10,6 @@ const navItems = [
   { path: "/orders", icon: ClipboardCheck, label: "Aufträge" },
   { path: "/invoices", icon: Receipt, label: "Rechnungen" },
   { path: "/articles", icon: Package, label: "Artikel" },
-  { path: "/services", icon: Wrench, label: "Leistungen" },
   { path: "/email-log", icon: MailCheck, label: "E-Mail-Protokoll" },
   { path: "/webhook", icon: Globe, label: "Website-Integration" },
   { path: "/settings", icon: Settings, label: "Einstellungen" }

@@ -13,8 +13,7 @@ import { CustomersPage } from "@/pages/CustomersPage";
 import { QuotesPage } from "@/pages/QuotesPage";
 import { OrdersPage } from "@/pages/OrdersPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
-import { ArticlesPage } from "@/pages/ArticlesPage";
-import { ServicesPage } from "@/pages/ServicesPage";
+import { ArtikelPage } from "@/pages/ArticlesPage";
 import { EmailLogPage } from "@/pages/EmailLogPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { WebhookDocPage } from "@/pages/WebhookDocPage";
@@ -59,8 +58,8 @@ function App() {
               <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
               <Route path="/invoices/new" element={<WysiwygDocumentEditor type="invoice" />} />
               <Route path="/invoices/edit/:id" element={<WysiwygDocumentEditor type="invoice" />} />
-              <Route path="/articles" element={<MainLayout onLogout={logout}><ArticlesPage /></MainLayout>} />
-              <Route path="/services" element={<MainLayout onLogout={logout}><ServicesPage /></MainLayout>} />
+              <Route path="/articles" element={<MainLayout onLogout={logout}><ArtikelPage /></MainLayout>} />
+              <Route path="/services" element={<Navigate to="/articles" replace />} />
               <Route path="/email-log" element={<MainLayout onLogout={logout}><EmailLogPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
               <Route path="/webhook" element={<MainLayout onLogout={logout}><WebhookDocPage /></MainLayout>} />

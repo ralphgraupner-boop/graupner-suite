@@ -46,11 +46,11 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
     try {
       const [articlesRes, servicesRes, settingsRes] = await Promise.all([
         api.get("/articles"),
-        api.get("/services"),
+        api.get("/articles", { params: { typ: "" } }),
         api.get("/settings")
       ]);
       setArticles(articlesRes.data);
-      setServices(servicesRes.data);
+      setServices(articlesRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setCompanySettings(settingsRes.data);
     } catch (err) {
       console.error("Fehler beim Laden der Stammdaten");

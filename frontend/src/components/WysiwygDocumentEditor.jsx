@@ -62,15 +62,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, servicesRes, settingsRes] = await Promise.all([
+      const [customersRes, articlesRes, settingsRes] = await Promise.all([
         api.get("/customers"),
         api.get("/articles"),
-        api.get("/services"),
         api.get("/settings")
       ]);
       setCustomers(customersRes.data);
       setArticles(articlesRes.data);
-      setServices(servicesRes.data);
+      setServices(articlesRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setSettings(settingsRes.data);
 
       // Load existing document if editing
@@ -134,7 +133,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setPositions(updated);
   };
 
-  const addFromStamm = (item, isService = false) => {
+  const addFromStamm = (item) => {
     const newIdx = positions.length;
     setPositions([
       ...positions,
@@ -146,8 +145,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         price_net: item.price_net
       }
     ]);
-    if (item.purchase_price > 0) {
-      setCostPrices(prev => ({ ...prev, [newIdx]: item.purchase_price }));
+    const ekPrice = item.ek_preis || item.purchase_price || 0;
+    if (ekPrice > 0) {
+      setCostPrices(prev => ({ ...prev, [newIdx]: ekPrice }));
     }
   };
 
@@ -185,13 +185,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   // Filter items for sidebar search
-  const filteredServices = services.filter(s =>
-    s.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
-    (s.description || "").toLowerCase().includes(sidebarSearch.toLowerCase())
+  const filteredServices = articles.filter(a =>
+    (a.typ === "Leistung" || a.typ === "Fremdleistung") &&
+    (a.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
+    (a.description || "").toLowerCase().includes(sidebarSearch.toLowerCase()))
   );
   const filteredArticles = articles.filter(a =>
-    a.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
-    (a.description || "").toLowerCase().includes(sidebarSearch.toLowerCase())
+    a.typ === "Artikel" &&
+    (a.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
+    (a.description || "").toLowerCase().includes(sidebarSearch.toLowerCase()))
   );
 
   // Load templates & similar docs
@@ -484,13 +486,24 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     >
                       <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium truncate">{item.name}</p>
+                          {item.typ === "Fremdleistung" && (
+                            <span className="text-[9px] bg-orange-100 text-orange-700 px-1 py-0 rounded font-medium shrink-0">Sub</span>
+                          )}
+                        </div>
                         {item.description && (
                           <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        )}
+                        {item.subunternehmer && (
+                          <p className="text-[10px] text-orange-600 truncate">{item.subunternehmer}</p>
                         )}
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs font-mono font-semibold text-primary">{item.price_net.toFixed(2)} €</span>
                           <span className="text-[10px] text-muted-foreground">/ {item.unit}</span>
+                          {item.ek_preis > 0 && (
+                            <span className="text-[10px] text-muted-foreground font-mono">EK: {item.ek_preis.toFixed(2)}</span>
+                          )}
                         </div>
                       </div>
                       <ChevronDown className={`w-4 h-4 text-muted-foreground/40 shrink-0 mt-0.5 transition-transform ${selectedItem?.id === item.id ? "rotate-180 text-primary" : ""}`} />
@@ -526,7 +539,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                             Ins Dokument
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); navigate(sidebarTab === "services" ? `/services` : `/articles`); }}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/articles`); }}
                             className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-input bg-card text-sm font-medium hover:bg-muted transition-colors"
                             data-testid={`btn-edit-item-${item.id}`}
                           >
@@ -555,28 +568,23 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             <select
               value=""
               onChange={(e) => {
-                const service = services.find(s => s.id === e.target.value);
-                if (service) addFromStamm(service, true);
+                const item = articles.find(a => a.id === e.target.value);
+                if (item) { addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); }
               }}
               className="h-8 rounded-sm border border-input bg-card px-2 text-xs flex-1 min-w-0"
+              data-testid="mobile-add-item"
             >
-              <option value="">+ Leistung</option>
-              {services.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.price_net}€)</option>
-              ))}
-            </select>
-            <select
-              value=""
-              onChange={(e) => {
-                const article = articles.find(a => a.id === e.target.value);
-                if (article) addFromStamm(article, false);
-              }}
-              className="h-8 rounded-sm border border-input bg-card px-2 text-xs flex-1 min-w-0"
-            >
-              <option value="">+ Artikel</option>
-              {articles.map(a => (
-                <option key={a.id} value={a.id}>{a.name} ({a.price_net}€)</option>
-              ))}
+              <option value="">+ Aus Stammdaten</option>
+              <optgroup label="Leistungen">
+                {articles.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung").map(a => (
+                  <option key={a.id} value={a.id}>{a.name} ({a.price_net}€){a.typ === "Fremdleistung" ? " [Sub]" : ""}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Artikel">
+                {articles.filter(a => a.typ === "Artikel").map(a => (
+                  <option key={a.id} value={a.id}>{a.name} ({a.price_net}€)</option>
+                ))}
+              </optgroup>
             </select>
             </div>
             {/* Status Dropdown (all screen sizes) */}

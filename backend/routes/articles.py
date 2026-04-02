@@ -5,16 +5,33 @@ from database import db
 
 router = APIRouter()
 
+VALID_TYPES = ["Artikel", "Leistung", "Fremdleistung"]
+
+
+def calc_vk(ek: float, aufschlag: float) -> float:
+    if ek <= 0 or aufschlag <= 0:
+        return 0
+    return round(ek * (1 + aufschlag / 100), 2)
+
 
 @router.get("/articles", response_model=List[Article])
-async def get_articles():
-    articles = await db.articles.find({}, {"_id": 0}).to_list(1000)
+async def get_articles(typ: str = ""):
+    query = {}
+    if typ and typ in VALID_TYPES:
+        query["typ"] = typ
+    articles = await db.articles.find(query, {"_id": 0}).to_list(1000)
     return articles
 
 
 @router.post("/articles", response_model=Article)
 async def create_article(article: ArticleCreate):
-    article_obj = Article(**article.model_dump())
+    data = article.model_dump()
+    data["vk_preis_1"] = calc_vk(data["ek_preis"], data["aufschlag_1"])
+    data["vk_preis_2"] = calc_vk(data["ek_preis"], data["aufschlag_2"])
+    data["vk_preis_3"] = calc_vk(data["ek_preis"], data["aufschlag_3"])
+    if data["typ"] not in VALID_TYPES:
+        data["typ"] = "Artikel"
+    article_obj = Article(**data)
     await db.articles.insert_one(article_obj.model_dump())
     return article_obj
 
@@ -24,7 +41,13 @@ async def update_article(article_id: str, article: ArticleCreate):
     existing = await db.articles.find_one({"id": article_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
-    updated = {**existing, **article.model_dump()}
+    data = article.model_dump()
+    data["vk_preis_1"] = calc_vk(data["ek_preis"], data["aufschlag_1"])
+    data["vk_preis_2"] = calc_vk(data["ek_preis"], data["aufschlag_2"])
+    data["vk_preis_3"] = calc_vk(data["ek_preis"], data["aufschlag_3"])
+    if data["typ"] not in VALID_TYPES:
+        data["typ"] = "Artikel"
+    updated = {**existing, **data}
     await db.articles.update_one({"id": article_id}, {"$set": updated})
     return updated
 
@@ -35,3 +58,36 @@ async def delete_article(article_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
     return {"message": "Artikel gelöscht"}
+
+
+@router.post("/articles/migrate")
+async def migrate_articles():
+    """Migrate old services into articles collection as typ=Leistung"""
+    services = await db.services.find({}, {"_id": 0}).to_list(1000)
+    migrated = 0
+    for svc in services:
+        existing = await db.articles.find_one({"name": svc["name"], "typ": "Leistung"})
+        if existing:
+            continue
+        article = Article(
+            name=svc["name"],
+            description=svc.get("description", ""),
+            typ="Leistung",
+            price_net=svc.get("price_net", 0),
+            ek_preis=svc.get("ek_price", svc.get("purchase_price", 0)),
+            unit=svc.get("unit", "Stunde"),
+        )
+        await db.articles.insert_one(article.model_dump())
+        migrated += 1
+
+    # Set typ=Artikel for old articles without typ
+    await db.articles.update_many(
+        {"typ": {"$exists": False}},
+        {"$set": {"typ": "Artikel", "ek_preis": 0, "aufschlag_1": 0, "aufschlag_2": 0, "aufschlag_3": 0, "vk_preis_1": 0, "vk_preis_2": 0, "vk_preis_3": 0, "subunternehmer": ""}}
+    )
+    await db.articles.update_many(
+        {"typ": ""},
+        {"$set": {"typ": "Artikel"}}
+    )
+
+    return {"message": f"{migrated} Leistungen migriert", "migrated": migrated}

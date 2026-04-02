@@ -1,0 +1,72 @@
+{
+  "summary": "Tested unified Artikel/Leistung/Fremdleistung feature. All backend APIs (11/11 tests) and frontend features working correctly. Migration complete with 7 items (4 Artikel + 3 Leistung). VK price calculation, type filtering, subunternehmer field, and WYSIWYG sidebar integration all functional.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: GET /api/articles returns all 7 items (4 Artikel + 3 Leistung)",
+    "Backend: GET /api/articles?typ=Artikel filters correctly (4 items)",
+    "Backend: GET /api/articles?typ=Leistung filters correctly (3 items)",
+    "Backend: GET /api/articles?typ=Fremdleistung filters correctly (0 items)",
+    "Backend: POST /api/articles creates item with calculated VK prices (ek * (1 + aufschlag/100))",
+    "Backend: POST /api/articles with typ=Fremdleistung saves subunternehmer field",
+    "Backend: PUT /api/articles/{id} updates item and recalculates VK prices",
+    "Backend: DELETE /api/articles/{id} deletes item successfully",
+    "Backend: DELETE /api/articles/nonexistent returns 404",
+    "Backend: VK calculation returns 0 when ek_preis is 0",
+    "Backend: /api/services endpoint still works (backward compatibility)",
+    "Frontend: Artikel page loads with unified list (data-testid=artikel-page)",
+    "Frontend: Type filter tabs work (Alle, Artikel, Leistung, Fremdleistung)",
+    "Frontend: Create modal has Typ selection buttons (Artikel/Leistung/Fremdleistung)",
+    "Frontend: Subunternehmer field appears only for Fremdleistung type",
+    "Frontend: EK-Preis + 3 Aufschlag % inputs with live VK calculation",
+    "Frontend: Navigation shows single 'Artikel' item (no 'Leistungen')",
+    "Frontend: /services redirects to /articles",
+    "Frontend WYSIWYG: Sidebar has Leistungen (3) and Artikel (4) tabs",
+    "Frontend WYSIWYG: Clicking item opens detail panel with price info",
+    "Frontend WYSIWYG: 'Ins Dokument' button adds position to document with correct price",
+    "Frontend WYSIWYG: Toast notification confirms item added"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_unified_articles.py",
+    "/app/test_reports/pytest/pytest_unified_articles.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_unified_articles.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100% (all unified Artikel features working)"
+  },
+
+  "test_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+
+  "seed_data_creation": "Created and deleted TEST items during backend testing (TEST_VK_Calculation, TEST_Fremdleistung, TEST_Update_VK, TEST_Delete_Item, TEST_Zero_VK)",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Unified Artikel/Leistung/Fremdleistung feature fully implemented and working. 7 items exist in database (4 Artikel + 3 Leistung, 0 Fremdleistung). VK price calculation formula: ek_preis * (1 + aufschlag/100). Subunternehmer field only visible for Fremdleistung type. WYSIWYG sidebar shows unified data with Leistungen and Artikel tabs. 'Ins Dokument' button (data-testid=btn-add-item-{id}) adds position to document. Navigation has single 'Artikel' item, /services redirects to /articles.",
+
+  "rca_of_the_issue": "N/A - All features working correctly as implemented"
+}

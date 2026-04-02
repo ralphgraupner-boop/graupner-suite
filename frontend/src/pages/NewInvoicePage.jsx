@@ -27,15 +27,14 @@ const NewInvoicePage = () => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, servicesRes, settingsRes] = await Promise.all([
+      const [customersRes, articlesRes, settingsRes] = await Promise.all([
         api.get("/customers"),
         api.get("/articles"),
-        api.get("/services"),
         api.get("/settings")
       ]);
       setCustomers(customersRes.data);
       setArticles(articlesRes.data);
-      setServices(servicesRes.data);
+      setServices(articlesRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setCompanySettings(settingsRes.data);
     } catch (err) {
       toast.error("Fehler beim Laden der Daten");
