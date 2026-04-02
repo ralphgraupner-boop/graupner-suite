@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Search, X, Inbox, UserCheck, Filter, Trash2 } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, MapPin, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { Input, Card, Badge } from "@/components/common";
-import { api, API } from "@/lib/api";
-import { CATEGORIES, CUSTOMER_STATUSES } from "@/lib/constants";
+import { Input, Card, Badge, Button } from "@/components/common";
+import { api } from "@/lib/api";
+import { CATEGORIES } from "@/lib/constants";
 
 const AnfragenPage = () => {
   const [anfragen, setAnfragen] = useState([]);
@@ -11,6 +11,7 @@ const AnfragenPage = () => {
   const [activeCategory, setActiveCategory] = useState("");
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     loadAnfragen();
@@ -54,6 +55,20 @@ const AnfragenPage = () => {
     }
   };
 
+  const parseNotes = (notes) => {
+    if (!notes) return {};
+    const result = {};
+    for (const line of notes.split("\n")) {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx > 0) {
+        const key = line.substring(0, colonIdx).trim();
+        const val = line.substring(colonIdx + 1).trim();
+        if (val) result[key] = val;
+      }
+    }
+    return result;
+  };
+
   const filtered = anfragen.filter(
     (a) =>
       a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,7 +85,6 @@ const AnfragenPage = () => {
         </div>
       </div>
 
-      {/* Category filter pills */}
       <div className="flex flex-wrap gap-2 mb-4" data-testid="anfragen-category-filter">
         <button
           onClick={() => { setActiveCategory(""); setLoading(true); }}
@@ -125,77 +139,195 @@ const AnfragenPage = () => {
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((anfrage) => (
-            <Card key={anfrage.id} className="p-4 lg:p-5" data-testid={`anfrage-card-${anfrage.id}`}>
-              <div className="flex items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-base">{anfrage.name}</h3>
-                    {anfrage.firma && (
-                      <Badge variant="info" className="text-xs">{anfrage.firma}</Badge>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </span>
+        <div className="flex flex-col gap-2">
+          {filtered.map((anfrage) => {
+            const isExpanded = expandedId === anfrage.id;
+            const parsed = parseNotes(anfrage.notes);
+            return (
+              <Card
+                key={anfrage.id}
+                className={`transition-all duration-200 cursor-pointer overflow-hidden ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md hover:border-primary/20'}`}
+                data-testid={`anfrage-card-${anfrage.id}`}
+              >
+                {/* Kompakte Listenzeile */}
+                <div
+                  className="flex items-center gap-4 p-3 lg:p-4"
+                  onClick={() => setExpandedId(isExpanded ? null : anfrage.id)}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
+                    {anfrage.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
-
-                  {/* Categories */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold truncate">{anfrage.name}</span>
+                      {anfrage.firma && <Badge variant="info" className="text-xs">{anfrage.firma}</Badge>}
+                      {anfrage.source && anfrage.source !== "manual" && (
+                        <Badge variant="default" className="text-xs">{anfrage.source}</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      {anfrage.phone && <span><Phone className="w-3 h-3 inline mr-1" />{anfrage.phone}</span>}
+                      {anfrage.email && <span className="truncate hidden sm:inline"><Mail className="w-3 h-3 inline mr-1" />{anfrage.email}</span>}
+                      <span className="text-xs">
+                        {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </div>
                   {(anfrage.categories || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
+                    <div className="hidden lg:flex flex-wrap gap-1">
                       {anfrage.categories.map((cat) => (
-                        <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
-                          {cat}
-                        </span>
+                        <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
                       ))}
                     </div>
                   )}
-
-                  {/* Contact details */}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
-                    {anfrage.email && <span>{anfrage.email}</span>}
-                    {anfrage.phone && <span>{anfrage.phone}</span>}
-                    {anfrage.address && <span>{anfrage.address}</span>}
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleConvert(anfrage.id)}
+                      data-testid={`btn-convert-${anfrage.id}`}
+                      className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-sm transition-colors"
+                      title="Als Kunde übernehmen"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(anfrage.id)}
+                      data-testid={`btn-delete-anfrage-${anfrage.id}`}
+                      className={`p-2 rounded-sm transition-colors ${confirmDeleteId === anfrage.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                      title={confirmDeleteId === anfrage.id ? "Nochmal klicken" : "Löschen"}
+                    >
+                      {confirmDeleteId === anfrage.id ? <span className="text-xs font-bold">Löschen?</span> : <Trash2 className="w-4 h-4" />}
+                    </button>
                   </div>
-
-                  {/* Message */}
-                  {anfrage.nachricht && (
-                    <p className="mt-2 text-sm bg-muted/50 p-3 rounded-sm line-clamp-3">{anfrage.nachricht}</p>
-                  )}
-
-                  {/* Object address */}
-                  {anfrage.obj_address && (
-                    <p className="mt-1 text-xs text-muted-foreground">Objektadresse: {anfrage.obj_address}</p>
-                  )}
+                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
 
-                {/* Action buttons */}
-                <div className="flex flex-col gap-2 shrink-0">
-                  <button
-                    onClick={() => handleConvert(anfrage.id)}
-                    data-testid={`btn-convert-${anfrage.id}`}
-                    className="p-2.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-sm transition-colors"
-                    title="Als Kunde übernehmen"
-                  >
-                    <UserCheck className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(anfrage.id)}
-                    data-testid={`btn-delete-anfrage-${anfrage.id}`}
-                    className={`p-2.5 rounded-sm transition-colors ${confirmDeleteId === anfrage.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
-                    title={confirmDeleteId === anfrage.id ? "Nochmal klicken zum Löschen" : "Anfrage löschen"}
-                  >
-                    {confirmDeleteId === anfrage.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))}
+                {/* Aufgeklappte Detail-Ansicht */}
+                {isExpanded && (
+                  <div className="border-t bg-muted/30 p-4 lg:p-6 animate-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Kontaktdaten */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Kontaktdaten</h4>
+                        <div className="space-y-2">
+                          <p className="text-sm"><span className="font-medium">Name:</span> {anfrage.name}</p>
+                          {anfrage.email && (
+                            <p className="text-sm"><span className="font-medium">E-Mail:</span> <a href={`mailto:${anfrage.email}`} className="text-primary hover:underline">{anfrage.email}</a></p>
+                          )}
+                          {anfrage.phone && (
+                            <p className="text-sm"><span className="font-medium">Telefon:</span> <a href={`tel:${anfrage.phone}`} className="text-primary hover:underline">{anfrage.phone}</a></p>
+                          )}
+                          {anfrage.address && (
+                            <div>
+                              <span className="text-sm font-medium">Adresse:</span>
+                              <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{anfrage.address}</p>
+                              <a
+                                href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(anfrage.address)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                              >
+                                <Globe className="w-3 h-3" /> Auf Karte zeigen
+                              </a>
+                            </div>
+                          )}
+                          {anfrage.firma && <p className="text-sm"><span className="font-medium">Firma:</span> {anfrage.firma}</p>}
+                          {anfrage.customer_type && <p className="text-sm"><span className="font-medium">Typ:</span> {anfrage.customer_type}</p>}
+                        </div>
+                      </div>
+
+                      {/* Kategorien & Beschreibungen */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Kategorien & Details</h4>
+                        {(anfrage.categories || []).length > 0 ? (
+                          <div className="space-y-3">
+                            {anfrage.categories.map((cat) => {
+                              const descKey = Object.keys(parsed).find(k => k === cat);
+                              return (
+                                <div key={cat} className="bg-background rounded-sm p-3 border">
+                                  <span className="text-sm font-medium text-primary">{cat}</span>
+                                  {descKey && parsed[descKey] && (
+                                    <p className="text-sm text-muted-foreground mt-1">{parsed[descKey]}</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Keine Kategorien ausgewählt</p>
+                        )}
+                        {anfrage.obj_address && (
+                          <div className="mt-3">
+                            <span className="text-sm font-medium">Objektadresse:</span>
+                            <p className="text-sm text-muted-foreground mt-0.5">{anfrage.obj_address}</p>
+                            <a
+                              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(anfrage.obj_address)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                            >
+                              <Globe className="w-3 h-3" /> Auf Karte zeigen
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Nachricht & Notizen */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Nachricht</h4>
+                        {anfrage.nachricht ? (
+                          <div className="bg-background rounded-sm p-3 border">
+                            <p className="text-sm whitespace-pre-line">{anfrage.nachricht}</p>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Keine Nachricht</p>
+                        )}
+                        {/* Parsed notes - show remaining entries not matching categories */}
+                        {Object.entries(parsed).filter(([key]) => 
+                          !CATEGORIES.includes(key) && 
+                          key !== "Themen" && 
+                          key !== "Nachricht" &&
+                          key !== "Rolle" &&
+                          key !== "Firma"
+                        ).length > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <span className="text-sm font-medium">Weitere Infos:</span>
+                            {Object.entries(parsed)
+                              .filter(([key]) => !CATEGORIES.includes(key) && key !== "Themen" && key !== "Nachricht" && key !== "Rolle" && key !== "Firma")
+                              .map(([key, val]) => (
+                                <p key={key} className="text-sm text-muted-foreground"><span className="font-medium">{key}:</span> {val}</p>
+                              ))
+                            }
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-3">
+                          Quelle: {anfrage.source || "manuell"} | Erstellt: {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Aktionen */}
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                      <Button size="sm" onClick={() => handleConvert(anfrage.id)} data-testid={`btn-convert-expanded-${anfrage.id}`}>
+                        <UserCheck className="w-4 h-4" /> Als Kunde übernehmen
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(anfrage.id)}
+                        className={confirmDeleteId === anfrage.id ? 'bg-red-500 text-white border-red-500' : ''}
+                      >
+                        <Trash2 className="w-4 h-4" /> {confirmDeleteId === anfrage.id ? "Nochmal klicken!" : "Ablehnen"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
   );
 };
-
 
 export { AnfragenPage };
