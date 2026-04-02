@@ -221,10 +221,14 @@ const AnfragenPage = () => {
                               <span className="text-sm font-medium">Adresse:</span>
                               <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{anfrage.address}</p>
                               <button
-                                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.address)}`, '_blank', 'noopener')}
+                                onClick={() => {
+                                  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.address)}`;
+                                  navigator.clipboard.writeText(url);
+                                  toast.success("Maps-Link kopiert! In neuem Tab einfügen.");
+                                }}
                                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                               >
-                                <Globe className="w-3 h-3" /> Auf Karte zeigen
+                                <Globe className="w-3 h-3" /> Karten-Link kopieren
                               </button>
                             </div>
                           )}
@@ -258,10 +262,14 @@ const AnfragenPage = () => {
                             <span className="text-sm font-medium">Objektadresse:</span>
                             <p className="text-sm text-muted-foreground mt-0.5">{anfrage.obj_address}</p>
                             <button
-                              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.obj_address)}`, '_blank', 'noopener')}
+                              onClick={() => {
+                                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.obj_address)}`;
+                                navigator.clipboard.writeText(url);
+                                toast.success("Maps-Link kopiert! In neuem Tab einfügen.");
+                              }}
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                             >
-                              <Globe className="w-3 h-3" /> Auf Karte zeigen
+                              <Globe className="w-3 h-3" /> Karten-Link kopieren
                             </button>
                           </div>
                         )}

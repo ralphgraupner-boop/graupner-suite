@@ -233,10 +233,14 @@ const CustomersPage = () => {
                             <span className="text-sm font-medium">Adresse:</span>
                             <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{customer.address}</p>
                             <button
-                              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`, '_blank', 'noopener')}
+                              onClick={() => {
+                                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`;
+                                navigator.clipboard.writeText(url);
+                                toast.success("Maps-Link kopiert! In neuem Tab einfügen.");
+                              }}
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                             >
-                              <Globe className="w-3 h-3" /> Auf Karte zeigen
+                              <Globe className="w-3 h-3" /> Karten-Link kopieren
                             </button>
                           </div>
                         )}
@@ -464,12 +468,16 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
           />
           {form.address && (
             <button
-              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`, '_blank', 'noopener')}
+              onClick={() => {
+                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`;
+                navigator.clipboard.writeText(url);
+                toast.success("Maps-Link kopiert! In neuem Tab einfügen.");
+              }}
               className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
               data-testid="btn-map-link"
             >
               <Globe className="w-3 h-3" />
-              Auf Karte anzeigen
+              Karten-Link kopieren
             </button>
           )}
         </div>
