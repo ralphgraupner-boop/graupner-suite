@@ -47,8 +47,20 @@ const QuotesPage = () => {
 
   const handleDownloadPDF = async (id, number, e) => {
     e?.stopPropagation();
-    const token = localStorage.getItem("token");
-    window.open(`${API}/pdf/quote/${id}?token=${token}`, "_blank");
+    try {
+      const res = await api.get(`/pdf/quote/${id}`, { responseType: "blob", params: { download: true } });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Angebot_${number}.pdf`;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 200);
+      toast.success("PDF heruntergeladen");
+    } catch (err) {
+      toast.error("Fehler beim PDF-Download");
+    }
   };
 
   const handleCreateOrder = async (quoteId, e) => {

@@ -41,8 +41,20 @@ const OrdersPage = () => {
 
   const handleDownloadPDF = async (id, number, e) => {
     e?.stopPropagation();
-    const token = localStorage.getItem("token");
-    window.open(`${API}/pdf/order/${id}?token=${token}`, "_blank");
+    try {
+      const res = await api.get(`/pdf/order/${id}`, { responseType: "blob", params: { download: true } });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Auftragsbestaetigung_${number}.pdf`;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); }, 200);
+      toast.success("PDF heruntergeladen");
+    } catch (err) {
+      toast.error("Fehler beim PDF-Download");
+    }
   };
 
   const handleEdit = (order, e) => {
