@@ -1,41 +1,65 @@
-# Graupner Suite - Product Requirements Document
+# Graupner Suite - PRD
 
-## Original Problem Statement
-Komplette Handwerker-Management-Software für eine Tischlerei (Graupner).
+## Problemstellung
+Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt alte disconnected Software. Enthält Kundenverwaltung, WYSIWYG-Dokumenteditor, KI-Sprachangebote, Finanzen und ein Lead-Relay-System.
 
-## Tech Stack
-- Frontend: React 19, Tailwind CSS, Recharts, Lucide Icons
-- Backend: FastAPI, Motor (MongoDB), ReportLab (PDF), smtplib (Email), httpx (OSRM/Nominatim)
-- KI: OpenAI GPT-5.2, Whisper via Emergent LLM Key
-- Auth: JWT mit bcrypt
-- DB: MongoDB
-- SMTP: secure.emailsrvr.com:465 SSL
-- Routing: OpenStreetMap Nominatim + OSRM (kostenlos, kein API Key)
+## Architektur
+- **Frontend**: React + Tailwind CSS + Recharts + Shadcn UI
+- **Backend**: FastAPI + Motor (async MongoDB)
+- **Email**: smtplib via Jimdo SMTP (secure.emailsrvr.com)
+- **Entfernungen**: OpenStreetMap (Nominatim + OSRM) - kostenlos
+- **KI**: OpenAI GPT-5.2 & Whisper via Emergent LLM Key
 
-## Completed Features
-- Anfragen-System mit 5 Kategorien (30.03.2026)
-- Mahnwesen mit 3 Mahnstufen + PDF (31.03.2026)
-- Dashboard Charts: BarChart + PieChart (31.03.2026)
-- EK-Preise in Stammdaten mit Marge (31.03.2026)
-- Firmendaten in PDFs (31.03.2026)
-- Fälligkeits-Warnsystem mit Push (01.04.2026)
-- E-Mail-Versand via SMTP (01.04.2026)
-- E-Mail-Protokoll mit Versandhistorie (01.04.2026)
-- Angebots-Wiedervorlage nach 7 Tagen (01.04.2026)
-- Kunden-Statusfeld mit Filter (01.04.2026)
-- OpenStreetMap-Link bei Kundenadresse (01.04.2026)
-- Erweiterte Einstellungen: Fahrtkosten, Zahlungsziele (01.04.2026)
-- Gestaffelte Dashboard-Übersicht (01.04.2026)
-- Automatische Fahrtkostenberechnung: Entfernung + Fahrtzeit → Position im Angebot (01.04.2026)
-- WYSIWYG 3-Spalten-Editor, KI-Spracheingabe, Kontaktformular-Relay, Webhook, Push, PWA
+## Code-Architektur (nach Refactoring v2.0)
+```
+/app/backend/
+├── server.py (65 Zeilen - Entry Point)
+├── database.py (MongoDB, Konfiguration)
+├── models.py (Pydantic Models)
+├── auth.py (JWT Auth Middleware)
+├── routes/
+│   ├── auth.py, customers.py, articles.py
+│   ├── services.py, quotes.py, orders.py
+│   ├── invoices.py, email.py, settings.py
+│   ├── push.py, webhook.py, documents.py
+│   ├── distance.py, ai.py, pdf.py, dashboard.py
+└── utils/
+    ├── __init__.py (send_email)
+    └── pdf_generator.py
 
-## Prioritized Backlog
+/app/frontend/src/
+├── App.js (77 Zeilen - Routing)
+├── lib/ (api, auth, constants, push)
+├── components/
+│   ├── common/index.jsx (Button, Input, Card, Modal, Badge, etc.)
+│   ├── layout/Navigation.jsx (Sidebar, MobileNav)
+│   ├── DocumentPreview.jsx
+│   ├── EditDocumentModal.jsx
+│   └── WysiwygDocumentEditor.jsx
+└── pages/ (14 Page-Komponenten)
+```
 
-### P2
-- [ ] Code-Refactoring (App.js + server.py aufteilen)
+## Implementierte Features
+- [x] Login / Auth (JWT, auto admin-create)
+- [x] Dashboard mit Charts, Warnungen, gestaffelter Übersicht
+- [x] Kundenverwaltung mit Status, Kategorien, Suche/Filter
+- [x] Anfragen-System (5 Kategorien, 1-Click Umwandlung)
+- [x] Kunde auf Anfrage zurücksetzen (Revert)
+- [x] WYSIWYG 3-Spalten Dokumenteditor (Angebote/Aufträge/Rechnungen)
+- [x] KI-Sprachangebote (Whisper + GPT-5.2)
+- [x] Artikel- & Leistungsverwaltung (CRUD)
+- [x] Mahnwesen (3-stufig) mit PDF & E-Mail
+- [x] E-Mail-Versand via SMTP + Protokollierung
+- [x] Automatische Wiedervorlage (7 Tage)
+- [x] Fälligkeits-Warnsystem mit Push-Notifications
+- [x] Fahrtkosten-Berechnung (OpenStreetMap)
+- [x] Website-Integration (Webhook + Relay zu Legacy-System)
+- [x] PDF-Generierung für alle Dokumenttypen
+- [x] Code-Refactoring Backend (65 Zeilen server.py)
+- [x] Code-Refactoring Frontend (77 Zeilen App.js)
 
-### P3 (Zukunft)
-- [ ] Bankanbindung (CSV-Import / Open Banking)
+## Backlog
+- [ ] N26 Bankanbindung (CSV-Import / Open Banking)
 - [ ] Windows Desktop App (Electron)
 - [ ] Auftrags-Status-Workflow
 - [ ] Druckansicht für Dokumente

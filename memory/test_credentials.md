@@ -4,9 +4,9 @@
 - Username: admin
 - Password: admin123
 
-## SMTP Email
+## Email (SMTP)
 - Server: secure.emailsrvr.com
-- Port: 465 (SSL/TLS)
+- Port: 465
 - User: service24@tischlerei-graupner.de
 - Password: Service.24
 - From: service24@tischlerei-graupner.de
