@@ -61,6 +61,8 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
 - [x] Schnellnotiz-Funktion (Inline-Eingabe direkt in Anfragen-Liste)
 - [x] Textbausteine (Vortext/Schlusstext) mit Aliase-System für Angebote, Aufträge, Rechnungen — 02.04.2026
 - [x] Automatische Anrede-Auflösung: {anrede_brief} → "Sehr geehrter Herr/Sehr geehrte Frau [Nachname]" — 02.04.2026
+- [x] Vereinheitlichte Stammdaten-Datenbank: Artikel/Leistung/Fremdleistung mit 3 VK-Preisen (EK + %-Aufschlag), Subunternehmer-Feld, Migration bestehender Daten — 02.04.2026
+- [x] WYSIWYG Sidebar: Stammdaten-Einfügung in Positionen funktioniert — 02.04.2026
 
 ## Implementierte Features (Aktuell)
 - [x] Anfragen bearbeitbar (PUT /api/anfragen/{id}, Edit-Modal mit allen Feldern) — 02.04.2026
