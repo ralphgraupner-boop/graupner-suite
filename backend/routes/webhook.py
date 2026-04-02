@@ -212,6 +212,7 @@ input[type=file]{{padding:7px;font-size:13px}}
 <div class="radio-group">
 <label><input type="radio" name="anrede" value="Herr"><span>Herr</span></label>
 <label><input type="radio" name="anrede" value="Frau"><span>Frau</span></label>
+<label><input type="radio" name="anrede" value="Divers"><span>Divers</span></label>
 </div>
 <div class="row">
 <div class="field"><label>Vorname</label><input type="text" name="vorname" id="k_vorname"></div>
