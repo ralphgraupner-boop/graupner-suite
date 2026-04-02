@@ -359,6 +359,7 @@ function toggleCopy(){{
 
 
 @router.post("/kontakt/submit")
+@router.post("/webhook/contact/submit")
 async def kontakt_relay(request: Request):
     """Receives the public contact form, saves to Graupner Suite, then forwards to original response.php"""
     form_data = await request.form()
