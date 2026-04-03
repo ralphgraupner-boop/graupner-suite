@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Package, Plus, Mic, MicOff, Download, Trash2, Edit, TrendingUp, Search, Save, Wrench, ArrowLeft, Copy, GripVertical, Calculator, ChevronDown, Bookmark, BookmarkCheck, FileSearch, Filter, X, Mail, Printer } from "lucide-react";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import axios from "axios";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect } from "@/components/TextTemplateSelect";
-import { SettingsPage } from "@/pages/SettingsPage";
+const SettingsPage = lazy(() => import("@/pages/SettingsPage").then(m => ({ default: m.SettingsPage })));
 
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const navigate = useNavigate();
@@ -410,16 +410,17 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     return { revenue, costs, margin, marginPercent, hasCosts };
   };
 
-  // Filter items for sidebar search
-  const filteredServices = services.filter(a =>
+  // Filter items for sidebar search (memoized)
+  const filteredServices = useMemo(() => services.filter(a =>
     (a.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(sidebarSearch.toLowerCase()))
-  );
-  const filteredArticles = articles.filter(a =>
+  ), [services, sidebarSearch]);
+
+  const filteredArticles = useMemo(() => articles.filter(a =>
     a.typ === "Artikel" &&
     (a.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(sidebarSearch.toLowerCase()))
-  );
+  ), [articles, sidebarSearch]);
 
   // Load templates & similar docs
   const loadSuggestions = async () => {
@@ -2280,7 +2281,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </div>
             </div>
             <div className="p-6">
-              {settingsTab === "settings" && <SettingsPage />}
+              {settingsTab === "settings" && <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Lade Einstellungen...</div>}><SettingsPage /></Suspense>}
               {settingsTab === "stammdaten" && <StammdatenPanel articles={articles} services={services} onRefresh={loadData} />}
               {settingsTab === "blocks" && <BloeckePanel blocks={leistungsBloecke} onDelete={deleteLeistungsBlock} onRefresh={async () => { const res = await api.get("/leistungsbloecke"); setLeistungsBloecke(res.data); }} />}
             </div>

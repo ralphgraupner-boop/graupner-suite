@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Download, Mail, Edit, CheckCircle, X, Send, MailCheck } from "lucide-react";
+import { Download, Mail, Edit, CheckCircle, X, Send, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 
-const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }) => {
+const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit, onCreateDunning }) => {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
   const [sending, setSending] = useState(false);
@@ -88,6 +88,13 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
               <Download className="w-4 h-4" />
               PDF
             </Button>
+            {onCreateDunning && document.status === "Überfällig" && (
+              <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => { onClose(); onCreateDunning(document); }}
+                data-testid="btn-create-dunning-preview">
+                <AlertTriangle className="w-4 h-4" />
+                Mahnung erstellen
+              </Button>
+            )}
             <button onClick={onClose} className="p-2 hover:bg-muted rounded-sm">
               <X className="w-5 h-5" />
             </button>

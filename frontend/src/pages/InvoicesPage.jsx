@@ -96,13 +96,19 @@ const InvoicesPage = () => {
     3: (inv) => `Sehr geehrte Damen und Herren,\n\ntrotz mehrfacher Aufforderung ist die Rechnung Nr. ${inv.invoice_number}\nüber ${inv.total_gross?.toFixed(2)} EUR immer noch nicht beglichen.\n\nDies ist unsere letzte Mahnung. Sollte der Gesamtbetrag inkl. Mahngebühren\nvon 10,00 EUR nicht innerhalb von 5 Tagen bei uns eingehen, werden wir\nohne weitere Ankündigung rechtliche Schritte einleiten.`
   };
 
-  const openDunningEditor = (inv, e) => {
-    e?.stopPropagation();
+  const openDunningEditor = async (inv, e) => {
+    e?.stopPropagation?.();
     const nextLevel = Math.min((inv.dunning_level || 0) + 1, 3);
+    let templates = [];
+    try {
+      const res = await api.get("/text-templates", { params: { text_type: "mahnung" } });
+      templates = res.data || [];
+    } catch {}
     setDunningEditor({
       invoice: inv,
       level: nextLevel,
       text: dunningTexts[nextLevel]?.(inv) || "",
+      templates,
       saving: false
     });
   };
@@ -228,7 +234,7 @@ const InvoicesPage = () => {
           ) : (
             <div className="space-y-3">
               {overdueInvoices.map((inv) => (
-                <Card key={inv.id} className="p-4 lg:p-5 border-l-4 border-l-red-500" data-testid={`dunning-card-${inv.id}`}>
+                <Card key={inv.id} className="p-4 lg:p-5 border-l-4 border-l-red-500 cursor-pointer hover:shadow-md transition-shadow" data-testid={`dunning-card-${inv.id}`} onClick={() => setPreviewInvoice(inv)}>
                   <div className="flex items-start gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -454,6 +460,7 @@ const InvoicesPage = () => {
         type="invoice"
         onDownload={(id, num) => handleDownloadPDF(id, num)}
         onEdit={(inv) => handleEdit(inv)}
+        onCreateDunning={(inv) => openDunningEditor(inv)}
       />
 
       {/* Mahnungs-Editor Dialog */}
@@ -489,7 +496,37 @@ const InvoicesPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Mahntext</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-medium">Mahntext</label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="text-xs border rounded px-2 py-1 text-muted-foreground"
+                      data-testid="dunning-template-select"
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value === "__default__") {
+                          setDunningEditor(prev => ({ ...prev, text: dunningTexts[prev.level]?.(prev.invoice) || "" }));
+                        } else {
+                          const tpl = dunningEditor.templates?.find(t => t.id === e.target.value);
+                          if (tpl) {
+                            const content = tpl.content
+                              .replace(/\{rechnungs_nr\}/g, dunningEditor.invoice.invoice_number || "")
+                              .replace(/\{betrag\}/g, dunningEditor.invoice.total_gross?.toFixed(2) || "0.00")
+                              .replace(/\{kunde_name\}/g, dunningEditor.invoice.customer_name || "")
+                              .replace(/\{datum\}/g, new Date().toLocaleDateString("de-DE"));
+                            setDunningEditor(prev => ({ ...prev, text: content }));
+                          }
+                        }
+                      }}
+                    >
+                      <option value="">Vorlage wählen...</option>
+                      <option value="__default__">Standardtext (Stufe {dunningEditor.level})</option>
+                      {dunningEditor.templates?.map(t => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <textarea
                   data-testid="dunning-text-area"
                   className="w-full border rounded px-3 py-2 text-sm font-mono"
@@ -497,7 +534,29 @@ const InvoicesPage = () => {
                   value={dunningEditor.text}
                   onChange={(e) => setDunningEditor(prev => ({ ...prev, text: e.target.value }))}
                 />
-                <p className="text-xs text-muted-foreground mt-1">Der Text wird in der Mahnung verwendet. Sie können ihn frei anpassen.</p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-muted-foreground">Text frei anpassbar. Platzhalter: {"{rechnungs_nr}"}, {"{betrag}"}, {"{kunde_name}"}, {"{datum}"}</p>
+                  {dunningEditor.text && (
+                    <button
+                      className="text-xs text-primary hover:underline"
+                      data-testid="btn-save-dunning-template"
+                      onClick={async () => {
+                        const name = prompt("Vorlagenname:");
+                        if (!name) return;
+                        try {
+                          await api.post("/text-templates", {
+                            doc_type: "allgemein", text_type: "mahnung", title: name, content: dunningEditor.text
+                          });
+                          const res = await api.get("/text-templates", { params: { text_type: "mahnung" } });
+                          setDunningEditor(prev => ({ ...prev, templates: res.data || [] }));
+                          toast.success("Mahnvorlage gespeichert");
+                        } catch { toast.error("Fehler beim Speichern"); }
+                      }}
+                    >
+                      Als Vorlage speichern
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="bg-muted/50 rounded p-3 text-sm">
