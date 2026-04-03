@@ -909,56 +909,113 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </button>
             </div>
 
-            {/* Totals */}
+            {/* Totals - using same table layout for alignment */}
             <div className="px-4 lg:px-10 py-4 lg:py-6 border-t">
-              <div className="flex justify-end">
-                <div className="w-full sm:w-72 space-y-2">
-                  <div className="flex justify-between py-2">
-                    <span className="text-muted-foreground">Netto</span>
-                    <span className="font-mono">{subtotal.toFixed(2)} €</span>
-                  </div>
-                  <div className="flex justify-between py-2 items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">MwSt</span>
-                      <select
-                        value={vatRate}
-                        onChange={(e) => setVatRate(parseFloat(e.target.value))}
-                        className="h-7 text-xs border rounded px-1 bg-white"
-                      >
-                        <option value={19}>19%</option>
-                        <option value={7}>7%</option>
-                        <option value={0}>0%</option>
-                      </select>
-                    </div>
-                    <span className="font-mono">{vat.toFixed(2)} €</span>
-                  </div>
-                  <div className="flex justify-between py-3 border-t-2 border-primary font-bold text-lg">
-                    <span>Gesamt</span>
-                    <span className="font-mono">{total.toFixed(2)} €</span>
-                  </div>
+              <table className="hidden lg:table w-full">
+                <tbody>
+                  <tr>
+                    <td className="w-8"></td>
+                    <td className="w-12"></td>
+                    <td></td>
+                    <td style={{ width: "70px" }}></td>
+                    <td style={{ width: "70px" }}></td>
+                    <td className="text-right py-2 text-muted-foreground text-sm" style={{ width: "100px" }}>Netto</td>
+                    <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>{subtotal.toFixed(2)} €</td>
+                    <td className="w-8"></td>
+                  </tr>
+                  <tr>
+                    <td></td><td></td><td></td><td></td><td></td>
+                    <td className="text-right py-2 text-sm">
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-muted-foreground">MwSt</span>
+                        <select value={vatRate} onChange={(e) => setVatRate(parseFloat(e.target.value))}
+                          className="h-6 text-xs border rounded px-1 bg-white">
+                          <option value={19}>19%</option>
+                          <option value={7}>7%</option>
+                          <option value={0}>0%</option>
+                        </select>
+                      </div>
+                    </td>
+                    <td className="text-right py-2 font-mono text-sm">{vat.toFixed(2)} €</td>
+                    <td></td>
+                  </tr>
+                  <tr className="border-t-2 border-primary">
+                    <td></td><td></td><td></td><td></td><td></td>
+                    <td className="text-right py-3 font-bold text-lg">Gesamt</td>
+                    <td className="text-right py-3 font-mono font-bold text-lg">{total.toFixed(2)} €</td>
+                    <td></td>
+                  </tr>
                   {type === "invoice" && (
                     <>
-                      <div className="flex justify-between py-2 items-center">
-                        <span className="text-muted-foreground">Anzahlung</span>
-                        <div className="flex items-center">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={depositAmount}
-                            onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
-                            className="w-20 border rounded px-2 py-1 text-sm text-right font-mono"
-                          />
-                          <span className="ml-1">€</span>
-                        </div>
-                      </div>
+                      <tr>
+                        <td></td><td></td><td></td><td></td><td></td>
+                        <td className="text-right py-2 text-muted-foreground text-sm">Anzahlung</td>
+                        <td className="text-right py-2">
+                          <div className="flex items-center justify-end">
+                            <input type="number" step="0.01" value={depositAmount}
+                              onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
+                              className="w-20 border rounded px-2 py-1 text-sm text-right font-mono" />
+                            <span className="ml-1 text-sm">€</span>
+                          </div>
+                        </td>
+                        <td></td>
+                      </tr>
                       {depositAmount > 0 && (
-                        <div className="flex justify-between py-2 text-primary font-semibold">
-                          <span>Restbetrag</span>
-                          <span className="font-mono">{final.toFixed(2)} €</span>
-                        </div>
+                        <tr>
+                          <td></td><td></td><td></td><td></td><td></td>
+                          <td className="text-right py-2 text-primary font-semibold text-sm">Restbetrag</td>
+                          <td className="text-right py-2 font-mono text-primary font-semibold text-sm">{final.toFixed(2)} €</td>
+                          <td></td>
+                        </tr>
                       )}
                     </>
                   )}
+                </tbody>
+              </table>
+              {/* Mobile Totals */}
+              <div className="lg:hidden">
+                <div className="flex justify-end">
+                  <div className="w-full sm:w-72 space-y-2">
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Netto</span>
+                      <span className="font-mono">{subtotal.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between py-2 items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">MwSt</span>
+                        <select value={vatRate} onChange={(e) => setVatRate(parseFloat(e.target.value))}
+                          className="h-7 text-xs border rounded px-1 bg-white">
+                          <option value={19}>19%</option>
+                          <option value={7}>7%</option>
+                          <option value={0}>0%</option>
+                        </select>
+                      </div>
+                      <span className="font-mono">{vat.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between py-3 border-t-2 border-primary font-bold text-lg">
+                      <span>Gesamt</span>
+                      <span className="font-mono">{total.toFixed(2)} €</span>
+                    </div>
+                    {type === "invoice" && (
+                      <>
+                        <div className="flex justify-between py-2 items-center">
+                          <span className="text-muted-foreground">Anzahlung</span>
+                          <div className="flex items-center">
+                            <input type="number" step="0.01" value={depositAmount}
+                              onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
+                              className="w-20 border rounded px-2 py-1 text-sm text-right font-mono" />
+                            <span className="ml-1">€</span>
+                          </div>
+                        </div>
+                        {depositAmount > 0 && (
+                          <div className="flex justify-between py-2 text-primary font-semibold">
+                            <span>Restbetrag</span>
+                            <span className="font-mono">{final.toFixed(2)} €</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
