@@ -21,6 +21,7 @@ from routes.pdf import router as pdf_router
 from routes.dashboard import router as dashboard_router
 from routes.text_templates import router as text_templates_router
 from routes.leistungsbloecke import router as leistungsbloecke_router
+from routes.portal import router as portal_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -45,6 +46,7 @@ api_router.include_router(pdf_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(text_templates_router)
 api_router.include_router(leistungsbloecke_router)
+api_router.include_router(portal_router)
 
 
 @api_router.get("/")
@@ -54,6 +56,14 @@ async def root():
 
 # Include router and middleware
 app.include_router(api_router)
+
+@app.on_event("startup")
+async def startup_event():
+    try:
+        from utils.storage import init_storage
+        init_storage()
+    except Exception as e:
+        logger.warning(f"Storage init: {e}")
 
 app.add_middleware(
     CORSMiddleware,

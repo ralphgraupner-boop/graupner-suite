@@ -17,6 +17,8 @@ import { ArtikelPage } from "@/pages/ArticlesPage";
 import { EmailLogPage } from "@/pages/EmailLogPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { WebhookDocPage } from "@/pages/WebhookDocPage";
+import { PortalsPage } from "@/pages/PortalsPage";
+import CustomerPortalPage from "@/pages/CustomerPortalPage";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -42,6 +44,8 @@ function App() {
       <Toaster position="top-right" richColors />
       <BrowserRouter>
         <Routes>
+          {/* Public portal route - accessible without login */}
+          <Route path="/portal/:token" element={<CustomerPortalPage />} />
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLogin={login} />} />
           ) : (
@@ -63,6 +67,7 @@ function App() {
               <Route path="/email-log" element={<MainLayout onLogout={logout}><EmailLogPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
               <Route path="/webhook" element={<MainLayout onLogout={logout}><WebhookDocPage /></MainLayout>} />
+              <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </>
