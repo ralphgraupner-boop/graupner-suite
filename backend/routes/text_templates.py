@@ -24,10 +24,12 @@ PLACEHOLDERS = [
 @router.get("/text-templates")
 async def list_templates(doc_type: str = "", text_type: str = "", user=Depends(get_current_user)):
     query = {}
-    if doc_type:
-        query["doc_type"] = doc_type
     if text_type:
         query["text_type"] = text_type
+    # Vortext, Schlusstext, Betreff sollen dokumenttyp-übergreifend verfügbar sein
+    shared_types = {"vortext", "schlusstext", "betreff"}
+    if doc_type and text_type not in shared_types:
+        query["doc_type"] = doc_type
     templates = await db.text_templates.find(query, {"_id": 0}).to_list(500)
     return templates
 

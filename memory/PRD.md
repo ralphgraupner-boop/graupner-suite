@@ -66,6 +66,7 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Mahnungs-Editor: Dialog mit Dringlichkeitswahl (Stufe 1-3), editierbarem Mahntext, Kostenaufstellung, Custom-Text im PDF (2026-04-03)
 - [x] Mahnwesen-Flow: Klick auf Karte → Rechnungsvorschau → "Mahnung erstellen" Button → Editor mit Fertigtext-Vorlagen (2026-04-03)
 - [x] Fußtext (Firma, Bankverbindung, Steuernr.) in Mahnungs-Split-View eingefügt – links (Rechnungsvorschau) und rechts (Editor) (2026-04-03)
+- [x] Bugfix: Vortext/Schlusstext/Betreff-Vorlagen jetzt dokumenttyp-übergreifend verfügbar (Angebot, Auftrag, Rechnung) (2026-04-03)
 - [x] Performance: React.lazy für SettingsPanel, useMemo für Filter-Berechnungen (2026-04-03)
 - [x] Article management page
 - [x] E-Mail protocol
