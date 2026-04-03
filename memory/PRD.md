@@ -68,6 +68,8 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Fußtext (Firma, Bankverbindung, Steuernr.) in Mahnungs-Split-View eingefügt – links (Rechnungsvorschau) und rechts (Editor) (2026-04-03)
 - [x] Bugfix: Vortext/Schlusstext/Betreff-Vorlagen jetzt dokumenttyp-übergreifend verfügbar (Angebot, Auftrag, Rechnung) (2026-04-03)
 - [x] Beschreibungsfeld (Betreff) + Suchfilter in Angebote-, Aufträge- und Rechnungslisten hinzugefügt (2026-04-03)
+- [x] Self-Service-Kundenportal implementiert: Einmallink + Passwort, 8 Wochen gültig, Kunde lädt Bilder hoch, Geschäft stellt Dokumente ein, Emergent Object Storage Integration (2026-04-03)
+- [x] Auth-System verbessert: JWT-Token im Authorization Header (Bearer), Frontend api.js Interceptor (2026-04-03)
 - [x] Performance: React.lazy für SettingsPanel, useMemo für Filter-Berechnungen (2026-04-03)
 - [x] Article management page
 - [x] E-Mail protocol
