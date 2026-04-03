@@ -463,42 +463,160 @@ const InvoicesPage = () => {
         onCreateDunning={(inv) => openDunningEditor(inv)}
       />
 
-      {/* Mahnungs-Editor Dialog */}
+      {/* Mahnungs-Vollbild Split-View */}
       {dunningEditor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDunningEditor(null)} />
-          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-xl mx-4 p-6 max-h-[90vh] overflow-y-auto" data-testid="dunning-editor-dialog">
-            <h3 className="text-lg font-semibold mb-1">Mahnung bearbeiten</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {dunningEditor.invoice.invoice_number} · {dunningEditor.invoice.customer_name} · {dunningEditor.invoice.total_gross?.toFixed(2)} €
-            </p>
+        <div className="fixed inset-0 z-50 bg-white flex flex-col" data-testid="dunning-editor-fullscreen">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-3 border-b bg-muted/30 shrink-0">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <h2 className="text-lg font-semibold">Mahnvorgang — {dunningEditor.invoice.invoice_number}</h2>
+              <span className="text-sm text-muted-foreground">{dunningEditor.invoice.customer_name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setDunningEditor(null)}>Abbrechen</Button>
+              <Button size="sm" onClick={handleDunningSubmit} disabled={dunningEditor.saving}
+                className={dunningEditor.level >= 2 ? "bg-red-600 hover:bg-red-700" : ""}
+                data-testid="btn-submit-dunning">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                {dunningEditor.saving ? "..." : `${getDunningLabel(dunningEditor.level)} erstellen`}
+              </Button>
+            </div>
+          </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Dringlichkeitsstufe</label>
-                <select
-                  data-testid="dunning-level-select"
-                  className="w-full border rounded px-3 py-2 text-sm"
-                  value={dunningEditor.level}
-                  onChange={(e) => {
-                    const newLevel = parseInt(e.target.value);
-                    setDunningEditor(prev => ({
-                      ...prev,
-                      level: newLevel,
-                      text: dunningTexts[newLevel]?.(prev.invoice) || prev.text
-                    }));
-                  }}
-                >
-                  <option value={1}>Stufe 1 — Zahlungserinnerung (keine Gebühr)</option>
-                  <option value={2}>Stufe 2 — 1. Mahnung (5,00 € Gebühr)</option>
-                  <option value={3}>Stufe 3 — Letzte Mahnung (10,00 € Gebühr)</option>
-                </select>
+          {/* Split-View Content */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* LINKE SEITE: Rechnungsvorschau */}
+            <div className="w-1/2 border-r overflow-y-auto p-6 bg-gray-50/50">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Rechnung</h3>
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                {/* Briefkopf Mini */}
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-lg font-bold" style={{ color: "#1a1a1a" }}>Tischlerei</span>
+                      <span className="text-lg font-bold" style={{ color: "#003399" }}>Graupner</span>
+                      <span className="text-[10px] font-semibold ml-1" style={{ color: "#cc0000" }}>seit 1960</span>
+                    </div>
+                    <p className="text-[10px]" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
+                  </div>
+                  <div className="text-right text-[10px]" style={{ color: "#003399" }}>
+                    <p className="font-bold">Rechnungs-Nr.: {dunningEditor.invoice.invoice_number}</p>
+                    <p>Datum: {new Date(dunningEditor.invoice.created_at).toLocaleDateString("de-DE")}</p>
+                    <p>Kd.-Nr.: {(dunningEditor.invoice.customer_id || "").substring(0, 8).toUpperCase()}</p>
+                  </div>
+                </div>
+
+                {/* Kunde */}
+                <div className="mb-4 text-sm">
+                  <p className="font-semibold">{dunningEditor.invoice.customer_name}</p>
+                  <p className="whitespace-pre-line text-muted-foreground">
+                    {dunningEditor.invoice.customer_address?.includes("\n")
+                      ? dunningEditor.invoice.customer_address
+                      : dunningEditor.invoice.customer_address?.split(/,\s*/).join("\n")}
+                  </p>
+                </div>
+
+                {/* Betreff */}
+                {dunningEditor.invoice.betreff && (
+                  <p className="font-bold text-sm mb-3" style={{ color: "#003399" }}>{dunningEditor.invoice.betreff}</p>
+                )}
+
+                {/* Positionen */}
+                <table className="w-full text-xs mb-4">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-1.5 font-semibold w-8">Pos</th>
+                      <th className="text-left py-1.5 font-semibold">Beschreibung</th>
+                      <th className="text-right py-1.5 font-semibold w-12">Menge</th>
+                      <th className="text-right py-1.5 font-semibold w-20">Preis</th>
+                      <th className="text-right py-1.5 font-semibold w-20">Gesamt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dunningEditor.invoice.positions?.map((pos, i) => (
+                      <tr key={i} className="border-b border-dashed">
+                        <td className="py-1.5">{pos.pos_nr}</td>
+                        <td className="py-1.5 whitespace-pre-line">{pos.description}</td>
+                        <td className="py-1.5 text-right font-mono">{pos.quantity}</td>
+                        <td className="py-1.5 text-right font-mono">{pos.price_net?.toFixed(2)} €</td>
+                        <td className="py-1.5 text-right font-mono">{(pos.quantity * pos.price_net)?.toFixed(2)} €</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Summen */}
+                <div className="flex justify-end">
+                  <div className="w-48 text-xs space-y-1">
+                    <div className="flex justify-between"><span>Netto</span><span className="font-mono">{dunningEditor.invoice.subtotal_net?.toFixed(2)} €</span></div>
+                    <div className="flex justify-between"><span>MwSt ({dunningEditor.invoice.vat_rate}%)</span><span className="font-mono">{dunningEditor.invoice.vat_amount?.toFixed(2)} €</span></div>
+                    <div className="flex justify-between font-bold border-t pt-1"><span>Gesamt</span><span className="font-mono">{dunningEditor.invoice.total_gross?.toFixed(2)} €</span></div>
+                  </div>
+                </div>
+
+                {dunningEditor.invoice.due_date && (
+                  <p className="text-xs mt-3 text-red-600 font-semibold">
+                    Zahlbar bis: {new Date(dunningEditor.invoice.due_date).toLocaleDateString("de-DE")}
+                    {dunningEditor.invoice.days_overdue > 0 && ` (${dunningEditor.invoice.days_overdue} Tage überfällig)`}
+                  </p>
+                )}
               </div>
+            </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-medium">Mahntext</label>
-                  <div className="flex items-center gap-2">
+            {/* RECHTE SEITE: Mahnungs-Editor + Verlauf */}
+            <div className="w-1/2 overflow-y-auto p-6">
+              {/* Mahnverlauf (wenn vorhanden) */}
+              {dunningEditor.invoice.dunning_history?.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Bisheriger Mahnverlauf</h3>
+                  <div className="space-y-2">
+                    {dunningEditor.invoice.dunning_history.map((h, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2.5 rounded bg-red-50 border border-red-100 text-sm">
+                        <div className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                          <span className="text-red-700 font-bold text-xs">{h.level}</span>
+                        </div>
+                        <div className="flex-1">
+                          <span className="font-semibold text-red-800">{h.label}</span>
+                          <span className="text-muted-foreground ml-2">{new Date(h.date).toLocaleDateString("de-DE")}</span>
+                        </div>
+                        {h.fee > 0 && <span className="text-red-600 font-mono text-xs">{h.fee.toFixed(2)} € Gebühr</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Neue Mahnung */}
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                {dunningEditor.invoice.dunning_history?.length > 0 ? "Nächste Mahnung" : "Neue Mahnung"}
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Dringlichkeitsstufe</label>
+                  <select
+                    data-testid="dunning-level-select"
+                    className="w-full border rounded px-3 py-2 text-sm"
+                    value={dunningEditor.level}
+                    onChange={(e) => {
+                      const newLevel = parseInt(e.target.value);
+                      setDunningEditor(prev => ({
+                        ...prev,
+                        level: newLevel,
+                        text: dunningTexts[newLevel]?.(prev.invoice) || prev.text
+                      }));
+                    }}
+                  >
+                    <option value={1}>Stufe 1 — Zahlungserinnerung (keine Gebühr)</option>
+                    <option value={2}>Stufe 2 — 1. Mahnung (5,00 € Gebühr)</option>
+                    <option value={3}>Stufe 3 — Letzte Mahnung (10,00 € Gebühr)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm font-medium">Mahntext</label>
                     <select
                       className="text-xs border rounded px-2 py-1 text-muted-foreground"
                       data-testid="dunning-template-select"
@@ -526,67 +644,70 @@ const InvoicesPage = () => {
                       ))}
                     </select>
                   </div>
-                </div>
-                <textarea
-                  data-testid="dunning-text-area"
-                  className="w-full border rounded px-3 py-2 text-sm font-mono"
-                  rows={12}
-                  value={dunningEditor.text}
-                  onChange={(e) => setDunningEditor(prev => ({ ...prev, text: e.target.value }))}
-                />
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-muted-foreground">Text frei anpassbar. Platzhalter: {"{rechnungs_nr}"}, {"{betrag}"}, {"{kunde_name}"}, {"{datum}"}</p>
-                  {dunningEditor.text && (
-                    <button
-                      className="text-xs text-primary hover:underline"
-                      data-testid="btn-save-dunning-template"
-                      onClick={async () => {
-                        const name = prompt("Vorlagenname:");
-                        if (!name) return;
-                        try {
-                          await api.post("/text-templates", {
-                            doc_type: "allgemein", text_type: "mahnung", title: name, content: dunningEditor.text
-                          });
-                          const res = await api.get("/text-templates", { params: { text_type: "mahnung" } });
-                          setDunningEditor(prev => ({ ...prev, templates: res.data || [] }));
-                          toast.success("Mahnvorlage gespeichert");
-                        } catch { toast.error("Fehler beim Speichern"); }
-                      }}
-                    >
-                      Als Vorlage speichern
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-muted/50 rounded p-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Rechnungsbetrag:</span>
-                  <span className="font-mono">{dunningEditor.invoice.total_gross?.toFixed(2)} €</span>
-                </div>
-                {dunningEditor.level >= 2 && (
-                  <div className="flex justify-between text-red-600">
-                    <span>Mahngebühr (Stufe {dunningEditor.level}):</span>
-                    <span className="font-mono">{dunningEditor.level === 2 ? "5,00" : "10,00"} €</span>
+                  <textarea
+                    data-testid="dunning-text-area"
+                    className="w-full border rounded px-3 py-2 text-sm"
+                    rows={10}
+                    value={dunningEditor.text}
+                    onChange={(e) => setDunningEditor(prev => ({ ...prev, text: e.target.value }))}
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-muted-foreground">Platzhalter: {"{rechnungs_nr}"}, {"{betrag}"}, {"{kunde_name}"}, {"{datum}"}</p>
+                    {dunningEditor.text && (
+                      <button
+                        className="text-xs text-primary hover:underline"
+                        data-testid="btn-save-dunning-template"
+                        onClick={async () => {
+                          const name = prompt("Vorlagenname:");
+                          if (!name) return;
+                          try {
+                            await api.post("/text-templates", {
+                              doc_type: "allgemein", text_type: "mahnung", title: name, content: dunningEditor.text
+                            });
+                            const res = await api.get("/text-templates", { params: { text_type: "mahnung" } });
+                            setDunningEditor(prev => ({ ...prev, templates: res.data || [] }));
+                            toast.success("Mahnvorlage gespeichert");
+                          } catch { toast.error("Fehler beim Speichern"); }
+                        }}
+                      >
+                        Als Vorlage speichern
+                      </button>
+                    )}
                   </div>
-                )}
-                <div className="flex justify-between font-bold border-t mt-1 pt-1">
-                  <span>Gesamtbetrag:</span>
-                  <span className="font-mono">
-                    {(dunningEditor.invoice.total_gross + (dunningEditor.level === 2 ? 5 : dunningEditor.level === 3 ? 10 : 0)).toFixed(2)} €
-                  </span>
+                </div>
+
+                {/* Kostenübersicht */}
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  <h4 className="font-semibold mb-2">Kostenübersicht</h4>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>Rechnungsbetrag:</span>
+                      <span className="font-mono">{dunningEditor.invoice.total_gross?.toFixed(2)} €</span>
+                    </div>
+                    {dunningEditor.invoice.dunning_history?.filter(h => h.fee > 0).map((h, i) => (
+                      <div key={i} className="flex justify-between text-muted-foreground">
+                        <span>Gebühr {h.label}:</span>
+                        <span className="font-mono">{h.fee.toFixed(2)} €</span>
+                      </div>
+                    ))}
+                    {dunningEditor.level >= 2 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>+ Mahngebühr (Stufe {dunningEditor.level}):</span>
+                        <span className="font-mono">{dunningEditor.level === 2 ? "5,00" : "10,00"} €</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold border-t pt-2 text-base">
+                      <span>Gesamtforderung:</span>
+                      <span className="font-mono">
+                        {(dunningEditor.invoice.total_gross
+                          + (dunningEditor.invoice.dunning_history?.reduce((s, h) => s + (h.fee || 0), 0) || 0)
+                          + (dunningEditor.level === 2 ? 5 : dunningEditor.level === 3 ? 10 : 0)
+                        ).toFixed(2)} €
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-5">
-              <Button variant="outline" size="sm" onClick={() => setDunningEditor(null)}>Abbrechen</Button>
-              <Button size="sm" onClick={handleDunningSubmit} disabled={dunningEditor.saving}
-                className={dunningEditor.level >= 2 ? "bg-red-600 hover:bg-red-700" : ""}
-                data-testid="btn-submit-dunning">
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                {dunningEditor.saving ? "..." : `${getDunningLabel(dunningEditor.level)} erstellen`}
-              </Button>
             </div>
           </div>
         </div>
