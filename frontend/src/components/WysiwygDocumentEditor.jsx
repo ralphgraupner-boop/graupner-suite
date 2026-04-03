@@ -752,16 +752,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 {/* Left: Briefkopf */}
                 <div>
-                  <div className="flex items-baseline gap-1 mb-0.5">
-                    <span className="text-3xl lg:text-5xl font-bold tracking-tight" style={{ color: "#1a1a1a" }}>Tischlerei</span>
-                    <span className="text-3xl lg:text-5xl font-bold tracking-tight" style={{ color: "#003399" }}>Graupner</span>
-                    <span className="text-sm lg:text-base font-semibold ml-2" style={{ color: "#cc0000" }}>seit 1960</span>
+                  <div className="flex items-baseline gap-0.5 mb-0.5">
+                    <span className="text-2xl lg:text-4xl font-bold tracking-tight" style={{ color: "#1a1a1a" }}>Tischlerei</span>
+                    <span className="text-2xl lg:text-4xl font-bold tracking-tight" style={{ color: "#003399" }}>Graupner</span>
+                    <span className="text-xs lg:text-sm font-semibold ml-1.5" style={{ color: "#cc0000" }}>seit 1960</span>
                   </div>
-                  <p className="text-sm lg:text-base font-medium tracking-wide" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
+                  <p className="text-xs lg:text-sm font-medium tracking-wide" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
                   <p className="text-xs lg:text-sm text-muted-foreground mt-2">Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
                 </div>
-                {/* Right: Adresse */}
-                <div className="sm:text-right text-xs lg:text-sm text-muted-foreground">
+                {/* Right: Adresse in Blau */}
+                <div className="sm:text-right text-xs lg:text-sm" style={{ color: "#003399" }}>
                   <p className="whitespace-pre-line">{settings.address || "Erlengrund 129\n22453 Hamburg"}</p>
                   {settings.phone && <p>Tel: {settings.phone}</p>}
                   {settings.email && <p>{settings.email}</p>}
