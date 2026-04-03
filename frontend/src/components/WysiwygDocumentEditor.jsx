@@ -747,26 +747,24 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             onDrop={handleDrop}
             data-testid="document-drop-zone"
           >
-            {/* Document Header */}
+            {/* Document Header - Briefkopf */}
             <div className="p-4 lg:p-10 border-b">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                {/* Left: Document Title & Info */}
+                {/* Left: Briefkopf */}
                 <div>
-                  <h2 className="text-2xl lg:text-4xl font-bold text-primary tracking-tight mb-2 lg:mb-4">
-                    {titles[type].toUpperCase()}
-                  </h2>
-                  <div className="space-y-0.5 text-xs lg:text-sm text-muted-foreground">
-                    <p>Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
+                  <div className="flex items-baseline gap-1 mb-0.5">
+                    <span className="text-3xl lg:text-5xl font-bold tracking-tight" style={{ color: "#1a1a1a" }}>Tischlerei</span>
+                    <span className="text-3xl lg:text-5xl font-bold tracking-tight" style={{ color: "#003399" }}>Graupner</span>
+                    <span className="text-sm lg:text-base font-semibold ml-2" style={{ color: "#cc0000" }}>seit 1960</span>
                   </div>
+                  <p className="text-sm lg:text-base font-medium tracking-wide" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground mt-2">Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
                 </div>
-                {/* Right: Company Info */}
-                <div className="sm:text-right">
-                  <p className="font-bold text-base lg:text-lg">{settings.company_name || "Ihr Firmenname"}</p>
-                  <p className="text-xs lg:text-sm text-muted-foreground whitespace-pre-line">
-                    {settings.address || "Ihre Adresse"}
-                  </p>
-                  {settings.phone && <p className="text-xs lg:text-sm text-muted-foreground">Tel: {settings.phone}</p>}
-                  {settings.email && <p className="text-xs lg:text-sm text-muted-foreground">{settings.email}</p>}
+                {/* Right: Adresse */}
+                <div className="sm:text-right text-xs lg:text-sm text-muted-foreground">
+                  <p className="whitespace-pre-line">{settings.address || "Erlengrund 129\n22453 Hamburg"}</p>
+                  {settings.phone && <p>Tel: {settings.phone}</p>}
+                  {settings.email && <p>{settings.email}</p>}
                 </div>
               </div>
             </div>
