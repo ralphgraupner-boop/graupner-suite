@@ -9,10 +9,12 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
   const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
   const [sending, setSending] = useState(false);
   const [emailHistory, setEmailHistory] = useState([]);
+  const [settings, setSettings] = useState({});
 
   useEffect(() => {
     if (isOpen && document) {
       api.get(`/email/log/${type}/${document.id}`).then(res => setEmailHistory(res.data)).catch(() => {});
+      api.get("/settings").then(res => setSettings(res.data)).catch(() => {});
     }
   }, [isOpen, document, type]);
 
@@ -132,69 +134,104 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
         )}
 
         {/* Document Content */}
-        <div className="p-8 bg-white">
-          {/* Document Header */}
-          <div className="flex justify-between mb-8 pb-6 border-b">
+        <div className="p-6 lg:p-8 bg-white">
+          {/* Briefkopf */}
+          <div className="flex justify-between items-start mb-2">
             <div>
-              <h1 className="text-3xl font-bold text-primary mb-2">{titles[type].toUpperCase()}</h1>
-              <p className="text-muted-foreground">{numberLabels[type]} {docNumber}</p>
-              <p className="text-muted-foreground">
-                Datum: {new Date(document.created_at).toLocaleDateString("de-DE")}
-              </p>
-              {document.valid_until && (
-                <p className="text-muted-foreground">
-                  Gültig bis: {new Date(document.valid_until).toLocaleDateString("de-DE")}
-                </p>
-              )}
-              {document.due_date && (
-                <p className="text-muted-foreground">
-                  Fällig: {new Date(document.due_date).toLocaleDateString("de-DE")}
-                </p>
-              )}
+              <div className="flex items-baseline gap-0.5 mb-0.5">
+                <span className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: "#1a1a1a" }}>Tischlerei</span>
+                <span className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: "#003399" }}>Graupner</span>
+                <span className="text-xs font-semibold ml-1.5" style={{ color: "#cc0000" }}>seit 1960</span>
+              </div>
+              <p className="text-xs font-medium tracking-wide" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
             </div>
-            <div className="text-right">
-              <p className="font-semibold text-lg">{document.customer_name}</p>
-              {document.customer_address && (
-                <p className="text-muted-foreground whitespace-pre-line text-sm">
-                  {document.customer_address.split(/,\s*/).join("\n")}
-                </p>
-              )}
+            <div className="text-right text-xs font-medium" style={{ color: "#003399" }}>
+              <p className="font-bold">{settings.company_name || "Tischlerei Graupner"}</p>
+              {(settings.address || "Erlengrund 129\n22453 Hamburg").split("\n").map((l, i) => (
+                <p key={i}>{l.trim()}</p>
+              ))}
+              <p>Tel.: {settings.phone || "040 55567744"}</p>
+              <p>{settings.email || "Service24@tischlerei-graupner.de"}</p>
+              <p>{settings.website || "www.tischlerei-graupner.de"}</p>
+              {settings.tax_id && <p>Steuernummer: {settings.tax_id}</p>}
+              <div className="mt-2 pt-2 border-t border-blue-200 space-y-0.5">
+                <p>Kd.-Nr.: {document.customer_id ? document.customer_id.substring(0, 8).toUpperCase() : "-"}</p>
+                <p>Datum: {new Date(document.created_at).toLocaleDateString("de-DE")}</p>
+                <p>{numberLabels[type]}: {docNumber}</p>
+              </div>
             </div>
           </div>
 
-          {/* Betreff */}
+          {/* DIN 5008 Absenderzeile + Kundenadresse */}
+          <div className="mt-6 mb-6 max-w-sm">
+            <p className="text-[9px] text-muted-foreground border-b border-muted-foreground/30 pb-0.5 mb-2 tracking-wide">
+              {settings.company_name || "Tischlerei Graupner"} · {(settings.address || "Erlengrund 129\n22453 Hamburg").split("\n").map(l => l.trim()).join(" · ")}
+            </p>
+            <p className="font-semibold text-sm">{document.customer_name}</p>
+            {document.customer_address && (
+              <p className="text-sm whitespace-pre-line">
+                {document.customer_address.includes("\n")
+                  ? document.customer_address
+                  : document.customer_address.split(/,\s*/).join("\n")}
+              </p>
+            )}
+          </div>
+
+          {/* Angebots-Nr. groß blau */}
+          <p className="text-lg font-bold mb-1" style={{ color: "#003399" }}>
+            {numberLabels[type]}: {docNumber}
+          </p>
+
+          {/* Betreff fett blau */}
           {document.betreff && (
-            <p className="font-bold text-base mb-4 border-b pb-2">{document.betreff}</p>
+            <p className="font-bold text-base mb-3" style={{ color: "#003399" }}>{document.betreff}</p>
           )}
 
           {/* Vortext */}
           {document.vortext && (
-            <p className="text-sm text-muted-foreground mb-4 whitespace-pre-line">{document.vortext}</p>
+            <p className="text-sm mb-4 whitespace-pre-line">{document.vortext}</p>
           )}
 
           {/* Positions Table */}
           <table className="w-full mb-6">
             <thead>
               <tr className="border-b-2 border-primary/20">
-                <th className="text-left py-3 text-sm font-semibold text-primary">Pos</th>
+                <th className="text-left py-3 text-sm font-semibold text-primary w-10">Pos</th>
                 <th className="text-left py-3 text-sm font-semibold text-primary">Beschreibung</th>
-                <th className="text-right py-3 text-sm font-semibold text-primary">Menge</th>
-                <th className="text-left py-3 text-sm font-semibold text-primary">Einheit</th>
-                <th className="text-right py-3 text-sm font-semibold text-primary">Einzelpreis</th>
-                <th className="text-right py-3 text-sm font-semibold text-primary">Gesamt</th>
+                <th className="text-right py-3 text-sm font-semibold text-primary w-16">Menge</th>
+                <th className="text-left py-3 text-sm font-semibold text-primary w-16">Einheit</th>
+                <th className="text-right py-3 text-sm font-semibold text-primary w-24">Einzelpreis</th>
+                <th className="text-right py-3 text-sm font-semibold text-primary w-24">Gesamt</th>
               </tr>
             </thead>
             <tbody>
-              {document.positions?.map((pos, idx) => (
-                <tr key={idx} className="border-b">
-                  <td className="py-3 text-sm">{pos.pos_nr}</td>
-                  <td className="py-3 text-sm">{pos.description}</td>
-                  <td className="py-3 text-sm text-right font-mono">{pos.quantity}</td>
-                  <td className="py-3 text-sm">{pos.unit}</td>
-                  <td className="py-3 text-sm text-right font-mono">{pos.price_net?.toFixed(2)} €</td>
-                  <td className="py-3 text-sm text-right font-mono">{(pos.quantity * pos.price_net)?.toFixed(2)} €</td>
-                </tr>
-              ))}
+              {document.positions?.map((pos, idx) => {
+                if (pos.type === "titel") {
+                  return (
+                    <tr key={idx} className="border-b bg-amber-50/60">
+                      <td className="py-3 text-sm font-bold text-primary">{pos.pos_nr}</td>
+                      <td className="py-3 text-sm font-bold text-primary" colSpan={5}>{pos.description}</td>
+                    </tr>
+                  );
+                }
+                const descLines = (pos.description || "").split("\n");
+                return (
+                  <tr key={idx} className="border-b">
+                    <td className="py-3 text-sm align-top">{pos.pos_nr}</td>
+                    <td className="py-3 text-sm align-top whitespace-pre-line">
+                      {descLines.map((line, i) => (
+                        <span key={i} className={i === 0 ? "font-bold" : ""}>
+                          {line}{i < descLines.length - 1 ? "\n" : ""}
+                        </span>
+                      ))}
+                    </td>
+                    <td className="py-3 text-sm text-right font-mono align-top">{pos.quantity}</td>
+                    <td className="py-3 text-sm align-top">{pos.unit}</td>
+                    <td className="py-3 text-sm text-right font-mono align-top">{pos.price_net?.toFixed(2)} €</td>
+                    <td className="py-3 text-sm text-right font-mono align-top">{(pos.quantity * pos.price_net)?.toFixed(2)} €</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
@@ -205,6 +242,18 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
                 <span className="text-muted-foreground">Netto</span>
                 <span className="font-mono">{document.subtotal_net?.toFixed(2)} €</span>
               </div>
+              {document.discount > 0 && (
+                <div className="flex justify-between py-2">
+                  <span className="text-muted-foreground">
+                    Rabatt {document.discount_type === "percent" ? `(${document.discount}%)` : ""}
+                  </span>
+                  <span className="font-mono text-red-600">
+                    -{document.discount_type === "percent"
+                      ? (document.subtotal_net * document.discount / 100).toFixed(2)
+                      : document.discount.toFixed(2)} €
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between py-2">
                 <span className="text-muted-foreground">MwSt ({document.vat_rate}%)</span>
                 <span className="font-mono">{document.vat_amount?.toFixed(2)} €</span>
@@ -216,13 +265,37 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
             </div>
           </div>
 
-          {/* Notes */}
-          {document.notes && (
-            <div className="mt-6 pt-6 border-t">
-              <p className="text-sm font-semibold text-muted-foreground mb-2">Anmerkungen:</p>
-              <p className="text-sm whitespace-pre-line">{document.notes}</p>
-            </div>
+          {/* Schlusstext */}
+          {document.schlusstext && (
+            <p className="text-sm whitespace-pre-line mb-4">{document.schlusstext}</p>
           )}
+
+          {document.valid_until && (
+            <p className="text-sm font-semibold">Gültig bis: {new Date(document.valid_until).toLocaleDateString("de-DE")}</p>
+          )}
+          {document.due_date && (
+            <p className="text-sm font-semibold">Zahlbar bis: {new Date(document.due_date).toLocaleDateString("de-DE")}</p>
+          )}
+
+          {/* Footer */}
+          <div className="mt-8 pt-4 border-t text-[11px] text-muted-foreground grid grid-cols-3 gap-4">
+            <div>
+              <p className="font-bold">{settings.company_name || "Tischlerei Graupner"}</p>
+              {settings.owner_name && <p>Inh. {settings.owner_name}</p>}
+              {(settings.address || "").split("\n").map((l, i) => <p key={i}>{l.trim()}</p>)}
+            </div>
+            <div>
+              {settings.phone && <p>Tel: {settings.phone}</p>}
+              {settings.email && <p>{settings.email}</p>}
+              {settings.website && <p>{settings.website}</p>}
+              {settings.tax_id && <p>St.-Nr.: {settings.tax_id}</p>}
+            </div>
+            <div>
+              {settings.bank_name && <p>{settings.bank_name}</p>}
+              {settings.iban && <p>IBAN: {settings.iban}</p>}
+              {settings.bic && <p>BIC: {settings.bic}</p>}
+            </div>
+          </div>
 
           {/* Versandhistorie */}
           {emailHistory.length > 0 && (
