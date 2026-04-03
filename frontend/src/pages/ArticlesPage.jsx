@@ -105,6 +105,7 @@ const ArtikelPage = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.label}</span>
+                      {item.artikel_nr && <span className="text-[10px] font-mono text-muted-foreground">{item.artikel_nr}</span>}
                     </div>
                     <h3 className="font-semibold text-sm truncate">{item.name}</h3>
                     {item.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.description}</p>}
@@ -150,9 +151,10 @@ const ArtikelModal = ({ isOpen, onClose, item, onSave }) => {
         unit: item.unit || "Stück", ek_preis: item.ek_preis || 0,
         aufschlag_1: item.aufschlag_1 || 0, aufschlag_2: item.aufschlag_2 || 0, aufschlag_3: item.aufschlag_3 || 0,
         price_net: item.price_net || 0, subunternehmer: item.subunternehmer || "", purchase_price: item.purchase_price || 0,
+        artikel_nr: item.artikel_nr || "",
       });
     } else {
-      setForm({ name: "", description: "", typ: "Artikel", unit: "Stück", ek_preis: 0, aufschlag_1: 0, aufschlag_2: 0, aufschlag_3: 0, price_net: 0, subunternehmer: "", purchase_price: 0 });
+      setForm({ name: "", description: "", typ: "Artikel", unit: "Stück", ek_preis: 0, aufschlag_1: 0, aufschlag_2: 0, aufschlag_3: 0, price_net: 0, subunternehmer: "", purchase_price: 0, artikel_nr: "" });
     }
   }, [item, isOpen]);
 
@@ -203,13 +205,19 @@ const ArtikelModal = ({ isOpen, onClose, item, onSave }) => {
             <label className="block text-sm font-medium mb-1">Bezeichnung *</label>
             <Input data-testid="input-artikel-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="z.B. Türreparatur" required />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Einheit</label>
-            <select data-testid="select-artikel-unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}
-              className="w-full h-10 rounded-sm border border-input bg-background px-3 text-sm">
-              <option value="Stück">Stück</option><option value="Stunde">Stunde</option><option value="m²">m²</option>
-              <option value="lfm">lfm</option><option value="Pauschal">Pauschal</option><option value="Tag">Tag</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nummer</label>
+              <Input data-testid="input-artikel-nr" value={form.artikel_nr} onChange={(e) => setForm({ ...form, artikel_nr: e.target.value })} placeholder="Wird automatisch vergeben" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Einheit</label>
+              <select data-testid="select-artikel-unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                className="w-full h-10 rounded-sm border border-input bg-background px-3 text-sm">
+                <option value="Stück">Stück</option><option value="Stunde">Stunde</option><option value="m²">m²</option>
+                <option value="lfm">lfm</option><option value="Pauschal">Pauschal</option><option value="Tag">Tag</option>
+              </select>
+            </div>
           </div>
         </div>
 

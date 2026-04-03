@@ -148,6 +148,31 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [saveAsArticleIdx, setSaveAsArticleIdx] = useState(null);
+  const [saveAsType, setSaveAsType] = useState("Leistung");
+
+  const handleSavePositionAsArticle = async (idx) => {
+    const pos = positions[idx];
+    if (!pos.description?.trim()) { toast.error("Beschreibung erforderlich"); return; }
+    try {
+      const res = await api.post("/articles", {
+        name: pos.description.trim(),
+        typ: saveAsType,
+        price_net: pos.price_net || 0,
+        unit: pos.unit || "Stück",
+      });
+      toast.success(`Als ${saveAsType} gespeichert: ${res.data.artikel_nr}`);
+      // Update position with article number
+      updatePosition(idx, "artikel_nr", res.data.artikel_nr);
+      setSaveAsArticleIdx(null);
+      // Reload articles
+      const artRes = await api.get("/articles");
+      setArticles(artRes.data.filter(a => a.typ === "Artikel"));
+      setServices(artRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    }
+  };
 
   const addFromStamm = (item) => {
     const newIdx = positions.length;
@@ -865,6 +890,30 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(32, e.target.scrollHeight) + "px"; }}
                           ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(32, el.scrollHeight) + "px"; } }}
                         />
+                        {pos.artikel_nr && <span className="text-[10px] text-muted-foreground font-mono px-2">{pos.artikel_nr}</span>}
+                        {pos.description?.trim() && !pos.artikel_nr && (
+                          <div className="px-2 mt-0.5">
+                            {saveAsArticleIdx === idx ? (
+                              <div className="flex items-center gap-1.5 animate-in fade-in">
+                                <select value={saveAsType} onChange={(e) => setSaveAsType(e.target.value)}
+                                  className="h-6 text-[11px] border rounded px-1 bg-white">
+                                  <option value="Leistung">Leistung</option>
+                                  <option value="Artikel">Artikel</option>
+                                  <option value="Fremdleistung">Fremdleistung</option>
+                                </select>
+                                <button onClick={() => handleSavePositionAsArticle(idx)}
+                                  className="text-[11px] text-green-600 hover:text-green-700 font-medium px-1.5 py-0.5 rounded hover:bg-green-50">Speichern</button>
+                                <button onClick={() => setSaveAsArticleIdx(null)}
+                                  className="text-[11px] text-muted-foreground hover:text-foreground px-1">Abbrechen</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setSaveAsArticleIdx(idx)}
+                                className="opacity-0 group-hover:opacity-100 text-[11px] text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1 transition-opacity">
+                                <Bookmark className="w-3 h-3" /> Als Artikel/Leistung speichern
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 align-bottom">
                         <input type="number" step="0.01" value={pos.quantity}

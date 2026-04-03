@@ -98,6 +98,7 @@ class EmailRequest(BaseModel):
 
 class Article(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    artikel_nr: str = ""
     name: str
     description: str = ""
     typ: str = "Artikel"  # Artikel, Leistung, Fremdleistung
@@ -116,6 +117,7 @@ class Article(BaseModel):
 
 class ArticleCreate(BaseModel):
     name: str
+    artikel_nr: str = ""
     description: str = ""
     typ: str = "Artikel"
     price_net: float = 0

@@ -6,12 +6,29 @@ from database import db
 router = APIRouter()
 
 VALID_TYPES = ["Artikel", "Leistung", "Fremdleistung"]
+PREFIX_MAP = {"Artikel": "A", "Leistung": "L", "Fremdleistung": "F"}
 
 
 def calc_vk(ek: float, aufschlag: float) -> float:
     if ek <= 0 or aufschlag <= 0:
         return 0
     return round(ek * (1 + aufschlag / 100), 2)
+
+
+async def generate_artikel_nr(typ: str) -> str:
+    prefix = PREFIX_MAP.get(typ, "A")
+    last = await db.articles.find(
+        {"artikel_nr": {"$regex": f"^{prefix}-"}},
+        {"_id": 0, "artikel_nr": 1}
+    ).sort("artikel_nr", -1).limit(1).to_list(1)
+    if last and last[0].get("artikel_nr"):
+        try:
+            num = int(last[0]["artikel_nr"].split("-")[1]) + 1
+        except (ValueError, IndexError):
+            num = 1
+    else:
+        num = 1
+    return f"{prefix}-{num:04d}"
 
 
 @router.get("/articles", response_model=List[Article])
@@ -31,6 +48,8 @@ async def create_article(article: ArticleCreate):
     data["vk_preis_3"] = calc_vk(data["ek_preis"], data["aufschlag_3"])
     if data["typ"] not in VALID_TYPES:
         data["typ"] = "Artikel"
+    if not data.get("artikel_nr"):
+        data["artikel_nr"] = await generate_artikel_nr(data["typ"])
     article_obj = Article(**data)
     await db.articles.insert_one(article_obj.model_dump())
     return article_obj
