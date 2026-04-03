@@ -831,10 +831,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     <th className="w-8"></th>
                     <th className="text-left py-3 text-sm font-semibold text-primary w-12">Pos</th>
                     <th className="text-left py-3 text-sm font-semibold text-primary">Beschreibung</th>
-                    <th className="text-right py-3 text-sm font-semibold text-primary w-24">Menge</th>
-                    <th className="text-left py-3 text-sm font-semibold text-primary w-24">Einheit</th>
-                    <th className="text-right py-3 text-sm font-semibold text-primary w-28">Einzelpreis</th>
-                    <th className="text-right py-3 text-sm font-semibold text-primary w-28">Gesamt</th>
                     <th className="w-10"></th>
                   </tr>
                 </thead>
@@ -865,29 +861,29 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(32, e.target.scrollHeight) + "px"; }}
                           ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(32, el.scrollHeight) + "px"; } }}
                         />
-                      </td>
-                      <td className="py-2">
-                        <input type="number" step="0.01" value={pos.quantity}
-                          onChange={(e) => updatePosition(idx, "quantity", parseFloat(e.target.value) || 0)}
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono" />
-                      </td>
-                      <td className="py-2">
-                        <input type="text" value={pos.unit}
-                          onChange={(e) => updatePosition(idx, "unit", e.target.value)}
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm" />
-                      </td>
-                      <td className="py-2">
-                        <div className="flex items-center justify-end">
-                          <input type="number" step="0.01" value={pos.price_net}
-                            onChange={(e) => updatePosition(idx, "price_net", parseFloat(e.target.value) || 0)}
-                            className="w-20 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono" />
-                          <span className="text-sm text-muted-foreground ml-1">€</span>
+                        <div className="flex items-center justify-end gap-3 mt-1 px-2">
+                          <div className="flex items-center gap-1">
+                            <input type="number" step="0.01" value={pos.quantity}
+                              onChange={(e) => updatePosition(idx, "quantity", parseFloat(e.target.value) || 0)}
+                              className="w-16 bg-transparent border border-slate-200 focus:ring-2 focus:ring-primary/20 rounded px-2 py-0.5 text-sm text-right font-mono" />
+                            <input type="text" value={pos.unit}
+                              onChange={(e) => updatePosition(idx, "unit", e.target.value)}
+                              className="w-16 bg-transparent border border-slate-200 focus:ring-2 focus:ring-primary/20 rounded px-2 py-0.5 text-sm text-center" />
+                          </div>
+                          <span className="text-xs text-muted-foreground">x</span>
+                          <div className="flex items-center gap-1">
+                            <input type="number" step="0.01" value={pos.price_net}
+                              onChange={(e) => updatePosition(idx, "price_net", parseFloat(e.target.value) || 0)}
+                              className="w-24 bg-transparent border border-slate-200 focus:ring-2 focus:ring-primary/20 rounded px-2 py-0.5 text-sm text-right font-mono" />
+                            <span className="text-xs text-muted-foreground">€</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">=</span>
+                          <span className="font-mono text-sm font-semibold min-w-[80px] text-right">
+                            {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
+                          </span>
                         </div>
                       </td>
-                      <td className="py-3 text-right font-mono text-sm">
-                        {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
-                      </td>
-                      <td className="py-3">
+                      <td className="py-3 align-top">
                         <button onClick={() => removePosition(idx)}
                           className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-opacity">
                           <Trash2 className="w-4 h-4" />
