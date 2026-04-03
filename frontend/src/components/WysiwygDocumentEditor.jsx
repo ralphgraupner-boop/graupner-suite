@@ -1324,14 +1324,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               />
             </div>
 
-            {/* Footer */}
-            {type === "invoice" && settings.iban && (
-              <div className="px-4 lg:px-10 py-4 lg:py-6 border-t bg-slate-50/50 text-xs lg:text-sm text-muted-foreground">
-                <p className="font-medium mb-1">Bankverbindung:</p>
-                <p className="break-all">{settings.bank_name} | IBAN: {settings.iban} | BIC: {settings.bic}</p>
-                {settings.tax_id && <p className="mt-2">Steuernummer: {settings.tax_id}</p>}
-              </div>
-            )}
+            {/* Footer - Firmeninformationen auf allen Dokumenten */}
+            <div className="px-4 lg:px-10 py-4 lg:py-5 border-t bg-slate-50/50 text-[10px] lg:text-xs text-muted-foreground text-center space-y-1" data-testid="document-footer">
+              <p>{settings.company_name || "Tischlerei Graupner"} {(settings.address || "Erlengrund 129 22453 Hamburg").replace(/\n/g, " ")} Tel. {settings.phone || "040 52530818"} Mail: {settings.email || "Service@tischlerei-graupner.de"}</p>
+              <p>Bankverbindung: {settings.owner_name || "Ralph Graupner"} | {settings.bank_name || "N26"} | IBAN: {settings.iban || "DE33 1001 1001 2028 1390 46"} | BIC: {settings.bic || "NTSBDEB1XXX"} SteuerNr. {settings.tax_id || "45/076/04744"}</p>
+            </div>
           </div>
           </div>
 
