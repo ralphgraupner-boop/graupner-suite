@@ -143,7 +143,21 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
                 <span className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: "#003399" }}>Graupner</span>
                 <span className="text-xs font-semibold ml-1.5" style={{ color: "#cc0000" }}>seit 1960</span>
               </div>
-              <p className="text-xs font-medium tracking-wide" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
+              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
+              {/* DIN 5008 Absenderzeile + Kundenadresse — auf Höhe rechte Spalte */}
+              <div className="max-w-sm">
+                <p className="text-[9px] text-muted-foreground border-b border-muted-foreground/30 pb-0.5 mb-2 tracking-wide">
+                  {settings.company_name || "Tischlerei Graupner"} · {(settings.address || "Erlengrund 129\n22453 Hamburg").split("\n").map(l => l.trim()).join(" · ")}
+                </p>
+                <p className="font-semibold text-sm">{document.customer_name}</p>
+                {document.customer_address && (
+                  <p className="text-sm whitespace-pre-line">
+                    {document.customer_address.includes("\n")
+                      ? document.customer_address
+                      : document.customer_address.split(/,\s*/).join("\n")}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="text-right text-xs font-medium" style={{ color: "#003399" }}>
               <p className="font-bold">{settings.company_name || "Tischlerei Graupner"}</p>
@@ -160,21 +174,6 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
                 <p>{numberLabels[type]}: {docNumber}</p>
               </div>
             </div>
-          </div>
-
-          {/* DIN 5008 Absenderzeile + Kundenadresse */}
-          <div className="mt-6 mb-6 max-w-sm">
-            <p className="text-[9px] text-muted-foreground border-b border-muted-foreground/30 pb-0.5 mb-2 tracking-wide">
-              {settings.company_name || "Tischlerei Graupner"} · {(settings.address || "Erlengrund 129\n22453 Hamburg").split("\n").map(l => l.trim()).join(" · ")}
-            </p>
-            <p className="font-semibold text-sm">{document.customer_name}</p>
-            {document.customer_address && (
-              <p className="text-sm whitespace-pre-line">
-                {document.customer_address.includes("\n")
-                  ? document.customer_address
-                  : document.customer_address.split(/,\s*/).join("\n")}
-              </p>
-            )}
           </div>
 
           {/* Angebots-Nr. groß blau */}
