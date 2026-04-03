@@ -177,7 +177,7 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit }
           </div>
 
           {/* Angebots-Nr. groß blau */}
-          <p className="text-lg font-bold mb-1" style={{ color: "#003399" }}>
+          <p className="text-lg font-bold mb-1 mt-10" style={{ color: "#003399" }}>
             {numberLabels[type]}: {docNumber}
           </p>
 
