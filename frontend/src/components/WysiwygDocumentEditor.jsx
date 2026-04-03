@@ -1159,7 +1159,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           onBlur={() => checkStammChange(idx)}
                           placeholder="Beschreibung eingeben..."
                           rows={1}
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm resize-none overflow-hidden"
+                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm resize-none overflow-hidden [&::first-line]:font-bold"
                           style={{ minHeight: "32px" }}
                           onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(32, e.target.scrollHeight) + "px"; }}
                           ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(32, el.scrollHeight) + "px"; } }}
