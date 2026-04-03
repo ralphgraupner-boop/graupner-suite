@@ -13,6 +13,7 @@ const InvoicesPage = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [overdueInvoices, setOverdueInvoices] = useState([]);
   const [dunningEditor, setDunningEditor] = useState(null);
+  const [settings, setSettings] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,12 +22,14 @@ const InvoicesPage = () => {
 
   const loadInvoices = async () => {
     try {
-      const [invRes, overdueRes] = await Promise.all([
+      const [invRes, overdueRes, settingsRes] = await Promise.all([
         api.get("/invoices"),
-        api.get("/invoices/overdue")
+        api.get("/invoices/overdue"),
+        api.get("/settings")
       ]);
       setInvoices(invRes.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
       setOverdueInvoices(overdueRes.data);
+      setSettings(settingsRes.data || {});
     } catch (err) {
       toast.error("Fehler beim Laden der Rechnungen");
     } finally {
@@ -561,6 +564,12 @@ const InvoicesPage = () => {
                     {dunningEditor.invoice.days_overdue > 0 && ` (${dunningEditor.invoice.days_overdue} Tage überfällig)`}
                   </p>
                 )}
+
+                {/* Fußzeile wie in Rechnungen/Angeboten */}
+                <div className="mt-6 pt-3 border-t bg-slate-50/50 text-[9px] text-muted-foreground text-center space-y-0.5" data-testid="dunning-invoice-footer">
+                  <p>{settings.company_name || "Tischlerei Graupner"} {(settings.address || "Erlengrund 129 22453 Hamburg").replace(/\n/g, " ")} Tel. {settings.phone || "040 52530818"} Mail: {settings.email || "Service@tischlerei-graupner.de"}</p>
+                  <p>Bankverbindung: {settings.owner_name || "Ralph Graupner"} | {settings.bank_name || "N26"} | IBAN: {settings.iban || "DE33 1001 1001 2028 1390 46"} | BIC: {settings.bic || "NTSBDEB1XXX"} SteuerNr. {settings.tax_id || "45/076/04744"}</p>
+                </div>
               </div>
             </div>
 
@@ -706,6 +715,12 @@ const InvoicesPage = () => {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* Fußzeile – identisch mit Rechnungen/Formularen */}
+                <div className="mt-4 pt-3 border-t bg-slate-50/50 text-[10px] text-muted-foreground text-center space-y-0.5" data-testid="dunning-editor-footer">
+                  <p>{settings.company_name || "Tischlerei Graupner"} {(settings.address || "Erlengrund 129 22453 Hamburg").replace(/\n/g, " ")} Tel. {settings.phone || "040 52530818"} Mail: {settings.email || "Service@tischlerei-graupner.de"}</p>
+                  <p>Bankverbindung: {settings.owner_name || "Ralph Graupner"} | {settings.bank_name || "N26"} | IBAN: {settings.iban || "DE33 1001 1001 2028 1390 46"} | BIC: {settings.bic || "NTSBDEB1XXX"} SteuerNr. {settings.tax_id || "45/076/04744"}</p>
                 </div>
               </div>
             </div>
