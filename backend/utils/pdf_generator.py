@@ -134,11 +134,33 @@ def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
     return buffer
 
 
+def _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num):
+    """Header für Folgeseiten: Firmenname, Dokument-Info, Seitenzähler"""
+    koenigsblau = HexColor("#003399")
+    muted_color = HexColor("#64748B")
+    doc_titles = {"quote": "Angebot", "order": "Auftragsbestätigung", "invoice": "Rechnung"}
+
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(koenigsblau)
+    c.drawString(2 * cm, height - 1.5 * cm, settings.get("company_name", "Tischlerei Graupner"))
+
+    c.setFont("Helvetica", 9)
+    c.drawString(2 * cm, height - 2 * cm, f"{doc_titles.get(doc_type, 'Dokument')} {doc_number}")
+
+    c.setFillColor(muted_color)
+    c.setFont("Helvetica", 8)
+    c.drawRightString(width - 2 * cm, height - 1.5 * cm, f"Seite {page_num}")
+
+    c.setStrokeColor(HexColor("#E2E8F0"))
+    c.line(2 * cm, height - 2.3 * cm, width - 2 * cm, height - 2.3 * cm)
+
+
 def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     """Generiert PDF für Angebot, Auftragsbestätigung oder Rechnung — passend zum WYSIWYG-Editor"""
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
+    page_num = 1
 
     # Colors
     primary_color = HexColor("#14532D")
@@ -306,10 +328,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
     for pos in data.get("positions", []):
         if y_pos < footer_y_limit:
-            # Draw footer on current page before creating new one
-            _draw_footer(c, width, settings)
+            _draw_footer(c, width, settings, page_num)
             c.showPage()
-            y_pos = height - 3 * cm
+            page_num += 1
+            _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+            y_pos = height - 3.5 * cm
             c.setFillColor(text_color)
             c.setFont("Helvetica", 9)
 
@@ -344,9 +367,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         for line in rest_lines:
             y_pos -= 0.35 * cm
             if y_pos < footer_y_limit:
-                _draw_footer(c, width, settings)
+                _draw_footer(c, width, settings, page_num)
                 c.showPage()
-                y_pos = height - 3 * cm
+                page_num += 1
+                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                y_pos = height - 3.5 * cm
                 c.setFillColor(text_color)
                 c.setFont("Helvetica", 8)
             if len(line) > 60:
@@ -367,9 +392,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     # === Totals ===
     y_pos -= 0.5 * cm
     if y_pos < footer_y_limit + 3 * cm:
-        _draw_footer(c, width, settings)
+        _draw_footer(c, width, settings, page_num)
         c.showPage()
-        y_pos = height - 3 * cm
+        page_num += 1
+        _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+        y_pos = height - 3.5 * cm
 
     c.setStrokeColor(HexColor("#E2E8F0"))
     c.line(12 * cm, y_pos, width - 2 * cm, y_pos)
@@ -419,9 +446,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         c.setFillColor(text_color)
         for line in schlusstext.split("\n")[:8]:
             if y_pos < footer_y_limit:
-                _draw_footer(c, width, settings)
+                _draw_footer(c, width, settings, page_num)
                 c.showPage()
-                y_pos = height - 3 * cm
+                page_num += 1
+                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                y_pos = height - 3.5 * cm
             c.drawString(2 * cm, y_pos, line[:90])
             y_pos -= 0.35 * cm
 
@@ -447,15 +476,15 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             pass
 
     # === Footer ===
-    _draw_footer(c, width, settings)
+    _draw_footer(c, width, settings, page_num)
 
     c.save()
     buffer.seek(0)
     return buffer
 
 
-def _draw_footer(c, width, settings):
-    """Zeichnet die Fußzeile mit Firmendaten und Bankverbindung"""
+def _draw_footer(c, width, settings, page_num=1):
+    """Zeichnet die Fußzeile mit Firmendaten, Bankverbindung und Seitenzähler"""
     muted_color = HexColor("#64748B")
     footer_y = 3.5 * cm
 
@@ -463,6 +492,10 @@ def _draw_footer(c, width, settings):
     c.line(2 * cm, footer_y + 0.3 * cm, width - 2 * cm, footer_y + 0.3 * cm)
 
     c.setFillColor(muted_color)
+
+    # Seitenzähler
+    c.setFont("Helvetica", 7)
+    c.drawRightString(width - 2 * cm, footer_y + 0.5 * cm, f"Seite {page_num}")
 
     # Column 1: Company
     col1_x = 2 * cm
