@@ -80,7 +80,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         api.get("/settings")
       ]);
       setCustomers(customersRes.data);
-      setArticles(articlesRes.data);
+      setArticles(articlesRes.data.filter(a => a.typ === "Artikel"));
       setServices(articlesRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setSettings(settingsRes.data);
 
