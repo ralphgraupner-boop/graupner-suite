@@ -6,6 +6,7 @@ import axios from "axios";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect } from "@/components/TextTemplateSelect";
+import { SettingsPage } from "@/pages/SettingsPage";
 
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   
   // Document state
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
@@ -425,7 +427,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate("/settings")}
+              onClick={() => setShowSettings(true)}
               data-testid="btn-settings-topbar"
             >
               <Wrench className="w-4 h-4" />
@@ -1259,6 +1261,24 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
         </div>
       </div>
+
+      {/* Settings Slide-Over Panel */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex" data-testid="settings-overlay">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
+          <div className="relative ml-auto w-full max-w-4xl bg-background shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-200">
+            <div className="sticky top-0 z-10 bg-background border-b px-6 py-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Einstellungen</h2>
+              <Button variant="outline" size="sm" onClick={() => { setShowSettings(false); loadData(); }} data-testid="btn-close-settings">
+                <ArrowLeft className="w-4 h-4" /> Zurück zum Dokument
+              </Button>
+            </div>
+            <div className="p-6">
+              <SettingsPage />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
