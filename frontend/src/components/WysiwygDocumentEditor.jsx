@@ -80,8 +80,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         api.get("/settings")
       ]);
       setCustomers(customersRes.data);
-      setArticles(articlesRes.data.filter(a => a.typ === "Artikel"));
-      setServices(articlesRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+      const allArticles = articlesRes.data;
+      const filteredArt = allArticles.filter(a => a.typ === "Artikel");
+      const filteredSvc = allArticles.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung");
+      console.log("loadData articles:", allArticles.length, "art:", filteredArt.length, "svc:", filteredSvc.length);
+      setArticles(filteredArt);
+      setServices(filteredSvc);
       setSettings(settingsRes.data);
 
       // Load Titel-Vorlagen
@@ -401,8 +405,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   // Filter items for sidebar search
-  const filteredServices = articles.filter(a =>
-    (a.typ === "Leistung" || a.typ === "Fremdleistung") &&
+  const filteredServices = services.filter(a =>
     (a.name.toLowerCase().includes(sidebarSearch.toLowerCase()) ||
     (a.description || "").toLowerCase().includes(sidebarSearch.toLowerCase()))
   );

@@ -1,4 +1,4 @@
-<analysis>type === titleWysiwygDocumentEditor.jsxpositionssubtotalfinal_amountservice24@tischlerei-graupner.de/app/landing_page/index.htmlaxios.getapi.gethttps://graupner-editor.preview.emergentagent.com
+<analysis>type === titleWysiwygDocumentEditor.jsxpositionssubtotalfinal_amountservice24@tischlerei-graupner.de/app/landing_page/index.htmlaxios.getapi.gethttps://handwerk-platform.preview.emergentagent.com
 /app/
 ├── backend/
 │   ├── routes/
