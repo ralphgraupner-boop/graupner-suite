@@ -6,8 +6,8 @@ from auth import get_current_user
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung"]
-VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "allgemein"]
+VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel"]
 
 PLACEHOLDERS = [
     {"alias": "{anrede_brief}", "beschreibung": "Sehr geehrter Herr/Sehr geehrte Frau + Name"},

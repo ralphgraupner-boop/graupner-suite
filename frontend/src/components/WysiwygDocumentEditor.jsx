@@ -56,6 +56,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [similarDocs, setSimilarDocs] = useState([]);
   const [expandedDoc, setExpandedDoc] = useState(null);
   const [rightTab, setRightTab] = useState("vorlagen"); // expanded detail view
+  const [titelTemplates, setTitelTemplates] = useState([]);
+  const [titelDropdownIdx, setTitelDropdownIdx] = useState(null);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -76,6 +78,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       setArticles(articlesRes.data);
       setServices(articlesRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setSettings(settingsRes.data);
+
+      // Load Titel-Vorlagen
+      try {
+        const titelRes = await api.get("/text-templates", { params: { text_type: "titel" } });
+        setTitelTemplates(titelRes.data);
+      } catch {}
 
       // Load existing document if editing
       if (!isNew) {
@@ -133,6 +141,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       ...positions,
       { type: "titel", pos_nr: 0, description: "" }
     ]);
+  };
+
+  const saveTitelTemplate = async (name) => {
+    if (!name?.trim()) return;
+    const exists = titelTemplates.some(t => t.content === name.trim());
+    if (exists) return;
+    try {
+      await api.post("/text-templates", { doc_type: "allgemein", text_type: "titel", title: name.trim(), content: name.trim() });
+      const res = await api.get("/text-templates", { params: { text_type: "titel" } });
+      setTitelTemplates(res.data);
+      toast.success("Titel-Vorlage gespeichert!");
+    } catch { toast.error("Fehler beim Speichern"); }
   };
 
   const updatePosition = (index, field, value) => {
@@ -893,16 +913,45 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                             <span className="text-base font-bold text-primary">{numbering[idx]}</span>
                             <span className="text-xs text-amber-600 font-medium">Titel</span>
                           </div>
-                          <button onClick={() => removePosition(idx)} className="p-1 hover:bg-destructive/10 rounded-sm">
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {pos.description?.trim() && !titelTemplates.some(t => t.content === pos.description.trim()) && (
+                              <button type="button" onClick={() => saveTitelTemplate(pos.description)}
+                                className="p-1 text-amber-500 hover:text-amber-600 rounded" title="Als Vorlage speichern">
+                                <Bookmark className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button onClick={() => removePosition(idx)} className="p-1 hover:bg-destructive/10 rounded-sm">
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </button>
+                          </div>
                         </div>
-                        <input
-                          value={pos.description}
-                          onChange={(e) => updatePosition(idx, "description", e.target.value)}
-                          placeholder="Titel eingeben..."
-                          className="w-full border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
-                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            value={pos.description}
+                            onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                            placeholder="Titel eingeben..."
+                            className="flex-1 border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
+                          />
+                          <div className="relative">
+                            <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
+                              className="p-1.5 text-amber-600 hover:bg-amber-50 rounded border">
+                              <ChevronDown className={`w-4 h-4 transition-transform ${titelDropdownIdx === idx ? "rotate-180" : ""}`} />
+                            </button>
+                            {titelDropdownIdx === idx && (
+                              <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[200px] max-h-40 overflow-y-auto">
+                                {titelTemplates.length > 0 ? titelTemplates.map(t => (
+                                  <button key={t.id} type="button"
+                                    onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
+                                    className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 border-b last:border-b-0">
+                                    {t.content}
+                                  </button>
+                                )) : (
+                                  <p className="px-3 py-2 text-xs text-muted-foreground">Keine Vorlagen</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     );
                   }
@@ -993,13 +1042,44 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           </td>
                           <td className="py-3 text-base font-bold text-primary">{numbering[idx]}</td>
                           <td className="py-2" colSpan={4}>
-                            <input
-                              value={pos.description}
-                              onChange={(e) => updatePosition(idx, "description", e.target.value)}
-                              placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
-                              className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
-                              data-testid={`titel-input-${idx}`}
-                            />
+                            <div className="flex items-center gap-1">
+                              <input
+                                value={pos.description}
+                                onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                                placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
+                                className="flex-1 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
+                                data-testid={`titel-input-${idx}`}
+                              />
+                              {/* Titel-Vorlage Dropdown */}
+                              <div className="relative">
+                                <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
+                                  className="p-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
+                                  title="Titel-Vorlage wählen">
+                                  <ChevronDown className={`w-4 h-4 transition-transform ${titelDropdownIdx === idx ? "rotate-180" : ""}`} />
+                                </button>
+                                {titelDropdownIdx === idx && (
+                                  <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[220px] max-h-48 overflow-y-auto">
+                                    {titelTemplates.length > 0 ? titelTemplates.map(t => (
+                                      <button key={t.id} type="button"
+                                        onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
+                                        className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 transition-colors border-b last:border-b-0">
+                                        {t.content}
+                                      </button>
+                                    )) : (
+                                      <p className="px-3 py-2 text-xs text-muted-foreground">Keine Titel-Vorlagen vorhanden</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {/* Speichern-Button */}
+                              {pos.description?.trim() && !titelTemplates.some(t => t.content === pos.description.trim()) && (
+                                <button type="button" onClick={() => saveTitelTemplate(pos.description)}
+                                  className="p-1 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                  title="Als Titel-Vorlage speichern">
+                                  <Bookmark className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td></td>
                           <td className="py-3">
