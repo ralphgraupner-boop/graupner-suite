@@ -58,6 +58,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [rightTab, setRightTab] = useState("vorlagen"); // expanded detail view
   const [titelTemplates, setTitelTemplates] = useState([]);
   const [titelDropdownIdx, setTitelDropdownIdx] = useState(null);
+  const [stammChangeIdx, setStammChangeIdx] = useState(null);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -161,6 +162,46 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setPositions(updated);
   };
 
+  const checkStammChange = (idx) => {
+    const pos = positions[idx];
+    if (!pos?.source_article_id) return;
+    const changed = pos.description !== pos.original_description ||
+      pos.unit !== pos.original_unit ||
+      pos.price_net !== pos.original_price_net;
+    if (changed) setStammChangeIdx(idx);
+  };
+
+  const saveToStamm = async (idx) => {
+    const pos = positions[idx];
+    if (!pos?.source_article_id) return;
+    try {
+      // Bestehenden Artikel laden und nur geänderte Felder übernehmen
+      const existing = await api.get(`/articles/${pos.source_article_id}`);
+      const article = existing.data;
+      const descParts = pos.description.split(" - ");
+      const updateData = {
+        ...article,
+        name: descParts[0] || pos.description,
+        description: descParts.slice(1).join(" - ") || article.description || "",
+        unit: pos.unit,
+        price_net: pos.price_net
+      };
+      delete updateData.id;
+      delete updateData.created_at;
+      await api.put(`/articles/${pos.source_article_id}`, updateData);
+      const updated = [...positions];
+      updated[idx].original_description = pos.description;
+      updated[idx].original_unit = pos.unit;
+      updated[idx].original_price_net = pos.price_net;
+      setPositions(updated);
+      toast.success("Stammdaten aktualisiert!");
+      const artRes = await api.get("/articles");
+      setArticles(artRes.data.filter(a => a.typ === "Artikel"));
+      setServices(artRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+    } catch { toast.error("Fehler beim Aktualisieren der Stammdaten"); }
+    setStammChangeIdx(null);
+  };
+
   const removePosition = (index) => {
     if (positions.length <= 1) return;
     const updated = positions.filter((_, i) => i !== index);
@@ -253,15 +294,20 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const addFromStamm = (item) => {
     const newIdx = positions.length;
+    const desc = item.name + (item.description ? ` - ${item.description}` : "");
     setPositions([
       ...positions,
       {
         type: "position",
         pos_nr: newIdx + 1,
-        description: item.name + (item.description ? ` - ${item.description}` : ""),
+        description: desc,
         quantity: 1,
         unit: item.unit,
-        price_net: item.price_net
+        price_net: item.price_net,
+        source_article_id: item.id,
+        original_description: desc,
+        original_unit: item.unit,
+        original_price_net: item.price_net
       }
     ]);
     const ekPrice = item.ek_preis || item.purchase_price || 0;
@@ -1110,6 +1156,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                       <td className="py-2">
                         <textarea value={pos.description}
                           onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                          onBlur={() => checkStammChange(idx)}
                           placeholder="Beschreibung eingeben..."
                           rows={1}
                           className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm resize-none overflow-hidden"
@@ -1118,7 +1165,17 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(32, el.scrollHeight) + "px"; } }}
                         />
                         {pos.artikel_nr && <span className="text-[10px] text-muted-foreground font-mono px-2">{pos.artikel_nr}</span>}
-                        {pos.description?.trim() && !pos.artikel_nr && (
+                        {/* Stammdaten-Änderung übernehmen */}
+                        {stammChangeIdx === idx && (
+                          <div className="px-2 mt-1 flex items-center gap-2 animate-in fade-in">
+                            <span className="text-[11px] text-blue-600">Änderung in Stammdaten übernehmen?</span>
+                            <button onClick={() => saveToStamm(idx)}
+                              className="text-[11px] text-green-600 hover:text-green-700 font-medium px-1.5 py-0.5 rounded hover:bg-green-50">Ja</button>
+                            <button onClick={() => setStammChangeIdx(null)}
+                              className="text-[11px] text-muted-foreground hover:text-foreground px-1">Nein</button>
+                          </div>
+                        )}
+                        {stammChangeIdx !== idx && pos.description?.trim() && !pos.artikel_nr && !pos.source_article_id && (
                           <div className="px-2 mt-0.5">
                             {saveAsArticleIdx === idx ? (
                               <div className="flex items-center gap-1.5 animate-in fade-in">
@@ -1150,12 +1207,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                       <td className="py-2 align-bottom">
                         <input type="text" value={pos.unit}
                           onChange={(e) => updatePosition(idx, "unit", e.target.value)}
+                          onBlur={() => checkStammChange(idx)}
                           className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm" />
                       </td>
                       <td className="py-2 align-bottom">
                         <div className="flex items-center justify-end">
                           <input type="number" step="0.01" value={pos.price_net}
                             onChange={(e) => updatePosition(idx, "price_net", parseFloat(e.target.value) || 0)}
+                            onBlur={() => checkStammChange(idx)}
                             className="w-20 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm text-right font-mono" />
                           <span className="text-sm text-muted-foreground ml-1">€</span>
                         </div>
