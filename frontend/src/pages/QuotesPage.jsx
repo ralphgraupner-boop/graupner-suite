@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Download, Trash2, Edit, CheckCircle } from "lucide-react";
+import { FileText, Plus, Download, Trash2, Edit, CheckCircle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -11,7 +11,18 @@ const QuotesPage = () => {
   const [loading, setLoading] = useState(true);
   const [previewQuote, setPreviewQuote] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+
+  const filteredQuotes = useMemo(() => {
+    if (!searchTerm.trim()) return quotes;
+    const term = searchTerm.toLowerCase();
+    return quotes.filter(q =>
+      (q.betreff || "").toLowerCase().includes(term) ||
+      (q.customer_name || "").toLowerCase().includes(term) ||
+      (q.quote_number || "").toLowerCase().includes(term)
+    );
+  }, [quotes, searchTerm]);
 
   useEffect(() => {
     loadQuotes();
@@ -103,6 +114,19 @@ const QuotesPage = () => {
         </Button>
       </div>
 
+      {/* Suchfeld */}
+      <div className="relative mb-4" data-testid="quotes-search">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Suchen nach Beschreibung, Kunde oder Nr..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-9 pr-3 py-2 border rounded-sm text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          data-testid="input-search-quotes"
+        />
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -117,12 +141,13 @@ const QuotesPage = () => {
         <>
           {/* Mobile Cards */}
           <div className="lg:hidden space-y-3">
-            {quotes.map((quote) => (
+            {filteredQuotes.map((quote) => (
               <Card key={quote.id} className="p-4" onClick={() => setPreviewQuote(quote)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-sm text-muted-foreground">{quote.quote_number}</p>
                     <p className="font-semibold truncate">{quote.customer_name}</p>
+                    {quote.betreff && <p className="text-sm text-muted-foreground truncate mt-0.5">{quote.betreff}</p>}
                   </div>
                   {getStatusBadge(quote.status)}
                 </div>
@@ -156,6 +181,7 @@ const QuotesPage = () => {
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-4 font-semibold">Nr.</th>
                   <th className="text-left p-4 font-semibold">Kunde</th>
+                  <th className="text-left p-4 font-semibold">Beschreibung</th>
                   <th className="text-left p-4 font-semibold">Datum</th>
                   <th className="text-right p-4 font-semibold">Betrag</th>
                   <th className="text-left p-4 font-semibold">Status</th>
@@ -163,7 +189,7 @@ const QuotesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {quotes.map((quote) => (
+                {filteredQuotes.map((quote) => (
                   <tr 
                     key={quote.id} 
                     className="border-b table-row-hover cursor-pointer"
@@ -171,6 +197,7 @@ const QuotesPage = () => {
                   >
                     <td className="p-4 font-mono text-sm">{quote.quote_number}</td>
                     <td className="p-4">{quote.customer_name}</td>
+                    <td className="p-4 text-muted-foreground text-sm max-w-[250px] truncate">{quote.betreff || "-"}</td>
                     <td className="p-4 text-muted-foreground">
                       {new Date(quote.created_at).toLocaleDateString("de-DE")}
                     </td>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardCheck, Receipt, Download, Edit, Trash2 } from "lucide-react";
+import { ClipboardCheck, Receipt, Download, Edit, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -11,7 +11,18 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [previewOrder, setPreviewOrder] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+
+  const filteredOrders = useMemo(() => {
+    if (!searchTerm.trim()) return orders;
+    const term = searchTerm.toLowerCase();
+    return orders.filter(o =>
+      (o.betreff || "").toLowerCase().includes(term) ||
+      (o.customer_name || "").toLowerCase().includes(term) ||
+      (o.order_number || "").toLowerCase().includes(term)
+    );
+  }, [orders, searchTerm]);
 
   useEffect(() => {
     loadOrders();
@@ -96,6 +107,19 @@ const OrdersPage = () => {
         <p className="text-muted-foreground mt-1 text-sm lg:text-base">{orders.length} Aufträge gesamt</p>
       </div>
 
+      {/* Suchfeld */}
+      <div className="relative mb-4" data-testid="orders-search">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Suchen nach Beschreibung, Kunde oder Nr..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-9 pr-3 py-2 border rounded-sm text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          data-testid="input-search-orders"
+        />
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -110,12 +134,13 @@ const OrdersPage = () => {
         <>
           {/* Mobile Cards */}
           <div className="lg:hidden space-y-3">
-            {orders.map((order) => (
+            {filteredOrders.map((order) => (
               <Card key={order.id} className="p-4" onClick={() => setPreviewOrder(order)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-sm text-muted-foreground">{order.order_number}</p>
                     <p className="font-semibold truncate">{order.customer_name}</p>
+                    {order.betreff && <p className="text-sm text-muted-foreground truncate mt-0.5">{order.betreff}</p>}
                   </div>
                   {getStatusBadge(order.status)}
                 </div>
@@ -149,6 +174,7 @@ const OrdersPage = () => {
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-4 font-semibold">Auftrags-Nr.</th>
                   <th className="text-left p-4 font-semibold">Kunde</th>
+                  <th className="text-left p-4 font-semibold">Beschreibung</th>
                   <th className="text-left p-4 font-semibold">Datum</th>
                   <th className="text-right p-4 font-semibold">Betrag</th>
                   <th className="text-left p-4 font-semibold">Status</th>
@@ -156,7 +182,7 @@ const OrdersPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr 
                     key={order.id} 
                     className="border-b table-row-hover cursor-pointer"
@@ -164,6 +190,7 @@ const OrdersPage = () => {
                   >
                     <td className="p-4 font-mono text-sm">{order.order_number}</td>
                     <td className="p-4">{order.customer_name}</td>
+                    <td className="p-4 text-muted-foreground text-sm max-w-[250px] truncate">{order.betreff || "-"}</td>
                     <td className="p-4 text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString("de-DE")}
                     </td>

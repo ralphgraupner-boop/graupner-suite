@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle, Eye } from "lucide-react";
+import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -14,7 +14,18 @@ const InvoicesPage = () => {
   const [overdueInvoices, setOverdueInvoices] = useState([]);
   const [dunningEditor, setDunningEditor] = useState(null);
   const [settings, setSettings] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+
+  const filteredInvoices = useMemo(() => {
+    if (!searchTerm.trim()) return invoices;
+    const term = searchTerm.toLowerCase();
+    return invoices.filter(inv =>
+      (inv.betreff || "").toLowerCase().includes(term) ||
+      (inv.customer_name || "").toLowerCase().includes(term) ||
+      (inv.invoice_number || "").toLowerCase().includes(term)
+    );
+  }, [invoices, searchTerm]);
 
   useEffect(() => {
     loadInvoices();
@@ -225,6 +236,19 @@ const InvoicesPage = () => {
         </button>
       </div>
 
+      {/* Suchfeld */}
+      <div className="relative mb-4" data-testid="invoices-search">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Suchen nach Beschreibung, Kunde oder Nr..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-9 pr-3 py-2 border rounded-sm text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          data-testid="input-search-invoices"
+        />
+      </div>
+
       {activeTab === "dunning" ? (
         /* Mahnwesen Tab */
         <div data-testid="dunning-section">
@@ -342,12 +366,13 @@ const InvoicesPage = () => {
         <>
           {/* Mobile Cards */}
           <div className="lg:hidden space-y-3">
-            {invoices.map((invoice) => (
+            {filteredInvoices.map((invoice) => (
               <Card key={invoice.id} className="p-4" onClick={() => setPreviewInvoice(invoice)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-sm text-muted-foreground">{invoice.invoice_number}</p>
                     <p className="font-semibold truncate">{invoice.customer_name}</p>
+                    {invoice.betreff && <p className="text-sm text-muted-foreground truncate mt-0.5">{invoice.betreff}</p>}
                   </div>
                   {getStatusBadge(invoice.status)}
                 </div>
@@ -380,6 +405,7 @@ const InvoicesPage = () => {
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-4 font-semibold">Rechnungs-Nr.</th>
                   <th className="text-left p-4 font-semibold">Kunde</th>
+                  <th className="text-left p-4 font-semibold">Beschreibung</th>
                   <th className="text-left p-4 font-semibold">Datum</th>
                   <th className="text-left p-4 font-semibold">Fällig</th>
                   <th className="text-right p-4 font-semibold">Betrag</th>
@@ -388,7 +414,7 @@ const InvoicesPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <tr 
                     key={invoice.id} 
                     className="border-b table-row-hover cursor-pointer"
@@ -396,6 +422,7 @@ const InvoicesPage = () => {
                   >
                     <td className="p-4 font-mono text-sm">{invoice.invoice_number}</td>
                     <td className="p-4">{invoice.customer_name}</td>
+                    <td className="p-4 text-muted-foreground text-sm max-w-[250px] truncate">{invoice.betreff || "-"}</td>
                     <td className="p-4 text-muted-foreground">
                       {new Date(invoice.created_at).toLocaleDateString("de-DE")}
                     </td>
