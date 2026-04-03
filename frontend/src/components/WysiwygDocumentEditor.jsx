@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { Package, Plus, Mic, MicOff, Download, Trash2, Edit, TrendingUp, Search, Save, Wrench, ArrowLeft, Copy, GripVertical, Calculator, ChevronDown, Bookmark, BookmarkCheck, FileSearch, Filter, X } from "lucide-react";
+import { Package, Plus, Mic, MicOff, Download, Trash2, Edit, TrendingUp, Search, Save, Wrench, ArrowLeft, Copy, GripVertical, Calculator, ChevronDown, Bookmark, BookmarkCheck, FileSearch, Filter, X, Mail, Printer } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { Button, Card, Badge } from "@/components/common";
@@ -63,6 +63,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [leistungsBloecke, setLeistungsBloecke] = useState([]);
   const [selectedPositions, setSelectedPositions] = useState(new Set());
   const [blockSaveName, setBlockSaveName] = useState("");
+
+  // E-Mail Dialog
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -605,6 +610,45 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!emailForm.to_email) { toast.error("Bitte E-Mail-Adresse eingeben"); return; }
+    setSendingEmail(true);
+    try {
+      await api.post(`/email/document/${type}/${id}`, {
+        to_email: emailForm.to_email,
+        subject: emailForm.subject || `${titles[type]} ${docNumber}`,
+        message: emailForm.message
+      });
+      toast.success(`${titles[type]} per E-Mail gesendet`);
+      setShowEmailDialog(false);
+      setEmailForm({ to_email: "", subject: "", message: "" });
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "E-Mail konnte nicht gesendet werden");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
+    try {
+      const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
+      const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const printWindow = window.open(url);
+      if (printWindow) {
+        printWindow.addEventListener("load", () => printWindow.print());
+      }
+    } catch (err) {
+      toast.error("Fehler beim Drucken");
+    }
+  };
+
+  const handleSaveAndExit = async () => {
+    await handleSave();
+    navigate(listPaths[type]);
+  };
+
   const { subtotal, discountAmt, netAfterDiscount, vat, total, finalAmount } = calculateTotals();
   const titelGroups = hasTitels ? getTitelGroups() : [];
 
@@ -852,7 +896,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1.5 lg:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -875,17 +919,35 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             {aiLoading && (
               <span className="text-xs text-muted-foreground animate-pulse hidden sm:inline">KI verarbeitet...</span>
             )}
+            <div className="h-6 w-px bg-border hidden sm:block" />
             {!isNew && (
-              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+              <Button variant="outline" size="sm" onClick={() => {
+                setEmailForm(f => ({ ...f, to_email: customer?.email || "", subject: `${titles[type]} ${docNumber}` }));
+                setShowEmailDialog(true);
+              }} data-testid="btn-email-document">
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">E-Mail</span>
+              </Button>
+            )}
+            {!isNew && (
+              <Button variant="outline" size="sm" onClick={handlePrint} data-testid="btn-print-document">
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">Drucken</span>
+              </Button>
+            )}
+            {!isNew && (
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF} data-testid="btn-pdf-document">
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">PDF</span>
               </Button>
             )}
+            <div className="h-6 w-px bg-border hidden sm:block" />
             <Button size="sm" onClick={handleSave} disabled={saving} data-testid="btn-save-document">
               <Save className="w-4 h-4" />
               <span className="hidden sm:inline">{saving ? "..." : "Speichern"}</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate(listPaths[type])} data-testid="btn-close-editor">
+            <Button variant="default" size="sm" onClick={handleSaveAndExit} disabled={saving} data-testid="btn-save-and-exit"
+              className="bg-primary/90 hover:bg-primary">
               <X className="w-4 h-4" />
               <span className="hidden sm:inline">Beenden</span>
             </Button>
@@ -2096,6 +2158,40 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
         </div>
       </div>
+
+      {/* E-Mail Dialog */}
+      {showEmailDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowEmailDialog(false)} />
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 p-6" data-testid="email-dialog">
+            <h3 className="text-lg font-semibold mb-4">{titles[type]} per E-Mail senden</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">An</label>
+                <input value={emailForm.to_email} onChange={e => setEmailForm(f => ({ ...f, to_email: e.target.value }))}
+                  placeholder="empfaenger@email.de" className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-to-input" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Betreff</label>
+                <input value={emailForm.subject} onChange={e => setEmailForm(f => ({ ...f, subject: e.target.value }))}
+                  placeholder={`${titles[type]} ${docNumber}`} className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-subject-input" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Nachricht</label>
+                <textarea value={emailForm.message} onChange={e => setEmailForm(f => ({ ...f, message: e.target.value }))}
+                  placeholder="Optionale Nachricht..." rows={3} className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-message-input" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(false)}>Abbrechen</Button>
+              <Button size="sm" onClick={handleSendEmail} disabled={sendingEmail} data-testid="btn-send-email">
+                <Mail className="w-4 h-4 mr-1" />
+                {sendingEmail ? "Sende..." : "Senden"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Slide-Over Panel */}
       {showSettings && (
