@@ -637,13 +637,17 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = url;
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
-        iframe.contentWindow.print();
-      };
+      const w = window.open(url, "_blank");
+      if (!w) {
+        // Fallback: Download if popup blocked
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `${titles[type]}_${docNumber}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.info("PDF heruntergeladen — bitte manuell drucken");
+      }
     } catch (err) {
       toast.error("Fehler beim Drucken");
     }
