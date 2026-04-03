@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle } from "lucide-react";
+import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -118,6 +118,18 @@ const InvoicesPage = () => {
     }
   };
 
+  const handleViewDunning = async (id, e) => {
+    e?.stopPropagation();
+    try {
+      const res = await api.get(`/pdf/dunning/${id}`, { responseType: "blob", params: { download: true } });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (err) {
+      toast.error("Fehler beim Öffnen der Mahnung");
+    }
+  };
+
   const handleEmailDunning = async (inv, e) => {
     e?.stopPropagation();
     const email = window.prompt("E-Mail-Adresse des Kunden:", inv.customer_email || "");
@@ -226,6 +238,16 @@ const InvoicesPage = () => {
                       )}
                     </div>
                     <div className="flex gap-2 shrink-0">
+                      {(inv.dunning_level || 0) > 0 && (
+                        <button
+                          onClick={(e) => handleViewDunning(inv.id, e)}
+                          className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-sm"
+                          title="Mahnung ansehen"
+                          data-testid={`btn-view-dunning-${inv.id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
                       {(inv.dunning_level || 0) > 0 && (
                         <button
                           onClick={(e) => handleDownloadDunning(inv.id, inv.invoice_number, e)}
