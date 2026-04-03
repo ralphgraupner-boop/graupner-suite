@@ -1,17 +1,16 @@
-<analysis>schiebetür-reparatur-hamburg.de{anrede_brief}schiebetür-reparatur-hamburg.de040 55567744Tischlerei Graupner Erlenweg 129 22453 Hamburg7:00 - 16:00 UhrWartung von Fenster und Türenimage_selector_toolschiebetür-reparatur-hamburg.deindex.html.html/api/kontakt/submitservice24@tischlerei-graupner.dePUT /api/anfragen/{id}{anrede_brief}/api/articles/api/webhook/contact/submit/api/kontakt/submitwindow.confirm()target=_blank
+<analysis>type === titleWysiwygDocumentEditor.jsxpositionssubtotalfinal_amountservice24@tischlerei-graupner.de/app/landing_page/index.htmlaxios.getapi.gethttps://graupner-editor.preview.emergentagent.com
 /app/
 ├── backend/
 │   ├── routes/
-│   │   ├── dashboard.py      # Contains Anfragen and VCF import
-│   │   ├── text_templates.py # New Textbausteine CRUD
-│   │   ├── articles.py       # Unified articles/services route
-│   │   ├── webhook.py        # Webhook routing (contains alias fixes)
-│   ├── models.py             # Pydantic Models (updated with anrede, vortext, schlusstext)
+│   │   ├── articles.py       # Updated with ID auto-generation
+│   │   ├── pdf.py            # PDF Generation
+│   │   ├── settings.py       # Extended settings
+│   ├── models.py             # Updated with Betreff, discount fields
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/            # ArticlesPage, SettingsPage
-│   │   ├── components/       # WysiwygDocumentEditor.jsx, TextTemplateSelect.jsx
+│   │   ├── pages/            # SettingsPage.jsx (Refactored to Tabs)
+│   │   ├── components/       # WysiwygDocumentEditor.jsx (Massively expanded)
 └── memory/
     ├── PRD.md
     └── test_credentials.md
-POST/api/kontakt/submitanrede{anrede_brief}typek_priceprice_netdoc_typetext_typetitlecontent/app/kontaktformular_ionos.html/app/backend/routes/webhook.py/app/frontend/src/components/WysiwygDocumentEditor.jsxWysiwygDocumentEditor.jsxPOST /api/kontakt/submitPOST /api/anfragen/import-vcfGET/POST /api/articlesindex.htmlhttps://<PROD-URL>/api/kontakt/submitservice24@.../app/test_reports/iteration_13.jsoniteration_16.json/app/memory/PRD.mdanfrage.schiebetür-reparatur-hamburg.dekontaktformular_ionos.html/app/memory/test_credentials.mdschiebetür-reparatur-hamburg.de</analysis>
+onDragStartonDroparticle_numbertext_typebetreffbemerkungdiscount_percent/app/frontend/src/components/WysiwygDocumentEditor.jsx/app/frontend/src/pages/SettingsPage.jsx/app/frontend/src/components/TextTemplateSelect.jsx/app/backend/routes/articles.pyWysiwygDocumentEditor.jsxPositionsTableDocumentTotalsDocumentHeaderGET /api/pdf/{type}/{id}POST /api/text-templatesPOST /api/articlesalign-bottom/app/landing_page/index.html/app/memory/PRD.md/app/memory/test_credentials.mdWysiwygDocumentEditor.jsx</analysis>

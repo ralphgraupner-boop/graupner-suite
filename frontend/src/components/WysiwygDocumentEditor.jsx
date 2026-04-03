@@ -26,13 +26,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customer, setCustomer] = useState(null);
   const [positions, setPositions] = useState([
-    { pos_nr: 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
+    { type: "position", pos_nr: 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
   ]);
   const [notes, setNotes] = useState("");
   const [vortext, setVortext] = useState("");
   const [schlusstext, setSchlusstext] = useState("");
   const [betreff, setBetreff] = useState("");
   const [vatRate, setVatRate] = useState(19);
+  const [discount, setDiscount] = useState(0);
+  const [discountType, setDiscountType] = useState("percent");
   const [status, setStatus] = useState(type === "quote" ? "Entwurf" : type === "order" ? "Offen" : "Offen");
   const [depositAmount, setDepositAmount] = useState(0);
   const [docNumber, setDocNumber] = useState("");
@@ -82,12 +84,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const doc = res.data;
         setSelectedCustomerId(doc.customer_id);
         setCustomer({ name: doc.customer_name, address: doc.customer_address });
-        setPositions(doc.positions || []);
+        setPositions((doc.positions || []).map(p => ({ ...p, type: p.type || "position" })));
         setNotes(doc.notes || "");
         setVortext(doc.vortext || "");
         setSchlusstext(doc.schlusstext || "");
         setBetreff(doc.betreff || "");
         setVatRate(doc.vat_rate || 19);
+        setDiscount(doc.discount || 0);
+        setDiscountType(doc.discount_type || "percent");
         setStatus(doc.status || "");
         setDepositAmount(doc.deposit_amount || 0);
         setDocNumber(doc.quote_number || doc.order_number || doc.invoice_number);
@@ -120,7 +124,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const addPosition = () => {
     setPositions([
       ...positions,
-      { pos_nr: positions.length + 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
+      { type: "position", pos_nr: 0, description: "", quantity: 1, unit: "Stück", price_net: 0 }
+    ]);
+  };
+
+  const addTitel = () => {
+    setPositions([
+      ...positions,
+      { type: "titel", pos_nr: 0, description: "" }
     ]);
   };
 
@@ -133,7 +144,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const removePosition = (index) => {
     if (positions.length <= 1) return;
     const updated = positions.filter((_, i) => i !== index);
-    updated.forEach((p, i) => (p.pos_nr = i + 1));
     setPositions(updated);
   };
 
@@ -142,9 +152,56 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     const updated = [...positions];
     const [moved] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, moved);
-    updated.forEach((p, i) => (p.pos_nr = i + 1));
     setPositions(updated);
   };
+
+  // Compute numbering: Titel gets 1,2,3...; positions under a Titel get 1.1,1.2,2.1 etc.
+  const getNumbering = () => {
+    let titelNr = 0;
+    let posInTitel = 0;
+    let hasTitel = positions.some(p => p.type === "titel");
+    let flatNr = 0;
+    return positions.map((p) => {
+      if (p.type === "titel") {
+        titelNr++;
+        posInTitel = 0;
+        return String(titelNr);
+      } else {
+        if (hasTitel) {
+          posInTitel++;
+          return titelNr > 0 ? `${titelNr}.${posInTitel}` : String(posInTitel);
+        } else {
+          flatNr++;
+          return String(flatNr);
+        }
+      }
+    });
+  };
+  const numbering = getNumbering();
+
+  // Compute titel subtotals for Gewerk-Zusammenstellung
+  const getTitelGroups = () => {
+    const groups = [];
+    let currentGroup = null;
+    positions.forEach((p, idx) => {
+      if (p.type === "titel") {
+        if (currentGroup) groups.push(currentGroup);
+        currentGroup = { titel: p.description, nr: numbering[idx], sum: 0 };
+      } else if (currentGroup) {
+        currentGroup.sum += (p.quantity || 0) * (p.price_net || 0);
+      } else {
+        // positions without titel
+        if (!groups.length || groups[groups.length - 1].titel !== "__ungrouped") {
+          groups.push({ titel: "__ungrouped", nr: "", sum: 0 });
+        }
+        groups[groups.length - 1].sum += (p.quantity || 0) * (p.price_net || 0);
+      }
+    });
+    if (currentGroup) groups.push(currentGroup);
+    return groups.filter(g => g.titel !== "__ungrouped" || g.sum > 0);
+  };
+
+  const hasTitels = positions.some(p => p.type === "titel");
 
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -271,10 +328,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const calculateTotals = () => {
-    const subtotal = positions.reduce((sum, p) => sum + (p.quantity || 0) * (p.price_net || 0), 0);
-    const vat = subtotal * (vatRate / 100);
-    const total = subtotal + vat;
-    const final = total - depositAmount;
+    const subtotal = positions.filter(p => p.type !== "titel").reduce((sum, p) => sum + (p.quantity || 0) * (p.price_net || 0), 0);
+    const discountAmount = discountType === "percent" ? subtotal * (discount / 100) : discount;
+    const subtotalAfterDiscount = subtotal - discountAmount;
+    const vat = subtotalAfterDiscount * (vatRate / 100);
+    const total = subtotalAfterDiscount + vat;
+    const final_amount = total - depositAmount;
     return { subtotal, vat, total, final };
   };
 
@@ -1013,7 +1072,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         <tr>
                           <td></td><td></td><td></td><td></td><td></td>
                           <td className="text-right py-2 text-primary font-semibold text-sm">Restbetrag</td>
-                          <td className="text-right py-2 font-mono text-primary font-semibold text-sm">{final.toFixed(2)} €</td>
+                          <td className="text-right py-2 font-mono text-primary font-semibold text-sm">{final_amount.toFixed(2)} €</td>
                           <td></td>
                         </tr>
                       )}
@@ -1059,7 +1118,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         {depositAmount > 0 && (
                           <div className="flex justify-between py-2 text-primary font-semibold">
                             <span>Restbetrag</span>
-                            <span className="font-mono">{final.toFixed(2)} €</span>
+                            <span className="font-mono">{final_amount.toFixed(2)} €</span>
                           </div>
                         )}
                       </>
