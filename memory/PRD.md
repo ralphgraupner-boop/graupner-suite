@@ -69,6 +69,14 @@ Komplette Handwerker-Software ("Graupner Suite") für eine Tischlerei. Ersetzt a
 - [x] Anfragen bearbeitbar (PUT /api/anfragen/{id}, Edit-Modal mit allen Feldern) — 02.04.2026
 - [x] Schnellnotiz-Funktion (Inline-Eingabe mit Timestamp in Anfragen-Liste) — 02.04.2026
 - [x] Textbausteine-System: Zentrale Verwaltung in Einstellungen (CRUD pro Dokumenttyp), Vortext/Schlusstext-Auswahl im WYSIWYG-Editor, Aliase ({kunde_name}, {firma}, {datum} etc.) mit automatischer Auflösung — 02.04.2026
+- [x] Titel-Gruppen (Gewerk-/Titelzusammenstellung) im Dokumenteditor — 03.04.2026
+  - Titel-Zeilen (type: "titel") mit amber Hintergrund und fetter Darstellung
+  - Hierarchische Nummerierung (1, 1.1, 1.2, 2, 2.1 etc.)
+  - Gewerk-/Titelzusammenstellung im Summenbereich mit Zwischensummen pro Gruppe
+  - Prozentualer Zu-/Abschlag auf die Nettosumme vor MwSt-Berechnung
+  - Totals: Nettosumme → Abschlag → Nettobetrag → MwSt → Brutto
+  - Backend: discount, discount_type, betreff Felder in Quotes/Orders/Invoices
+  - Vollständig getestet (Backend 9/9, Frontend alle UI-Elemente verifiziert)
 
 ## Implementierte Features (Landing Page)
 - [x] Standalone Landing Page (`/app/landing_page/index.html`) für `schiebetür-reparatur-hamburg.de` — 02.04.2026
