@@ -7,9 +7,21 @@ router = APIRouter()
 
 @router.get("/settings", response_model=CompanySettings)
 async def get_settings():
+    import os
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0})
     if not settings:
-        return CompanySettings()
+        settings = {}
+    # SMTP Fallback aus .env
+    if not settings.get("smtp_server"):
+        settings["smtp_server"] = os.environ.get("SMTP_SERVER", "")
+    if not settings.get("smtp_port"):
+        settings["smtp_port"] = int(os.environ.get("SMTP_PORT", "465"))
+    if not settings.get("smtp_user"):
+        settings["smtp_user"] = os.environ.get("SMTP_USER", "")
+    if not settings.get("smtp_password"):
+        settings["smtp_password"] = os.environ.get("SMTP_PASSWORD", "")
+    if not settings.get("smtp_from"):
+        settings["smtp_from"] = os.environ.get("SMTP_FROM", "")
     return CompanySettings(**settings)
 
 
