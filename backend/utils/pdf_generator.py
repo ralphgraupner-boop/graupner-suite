@@ -45,9 +45,12 @@ def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
     c.drawString(2*cm, height - 5*cm, invoice.get("customer_name", ""))
     y_addr = height - 5.5*cm
     if invoice.get("customer_address"):
-        for line in invoice["customer_address"].split("\n"):
-            c.drawString(2*cm, y_addr, line)
-            y_addr -= 0.4*cm
+        addr = invoice["customer_address"]
+        addr_lines = addr.split("\n") if "\n" in addr else [p.strip() for p in addr.split(",")]
+        for line in addr_lines:
+            if line.strip():
+                c.drawString(2*cm, y_addr, line.strip())
+                y_addr -= 0.4*cm
 
     # Body text
     y_pos = height - 7.5*cm
@@ -241,9 +244,16 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     c.drawString(2 * cm, y_cust, data.get("customer_name", ""))
     y_cust -= 0.4 * cm
     if data.get("customer_address"):
-        for line in data["customer_address"].split("\n"):
-            c.drawString(2 * cm, y_cust, line.strip())
-            y_cust -= 0.4 * cm
+        addr = data["customer_address"]
+        # Adresse aufteilen: Zeilenumbrüche oder Kommas
+        if "\n" in addr:
+            addr_lines = addr.split("\n")
+        else:
+            addr_lines = [part.strip() for part in addr.split(",")]
+        for line in addr_lines:
+            if line.strip():
+                c.drawString(2 * cm, y_cust, line.strip())
+                y_cust -= 0.4 * cm
 
     # === Angebots-Nr. groß in Blau ===
     y_doc_nr = height - 7.8 * cm
