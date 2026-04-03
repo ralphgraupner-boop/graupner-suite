@@ -274,17 +274,24 @@ async def delete_invoice(invoice_id: str):
 # ==================== MAHNWESEN ====================
 
 @router.post("/invoices/{invoice_id}/dunning")
-async def advance_dunning(invoice_id: str, user=Depends(get_current_user)):
-    """Mahnstufe erhöhen und Historie speichern"""
+async def advance_dunning(invoice_id: str, body: dict = {}, user=Depends(get_current_user)):
+    """Mahnstufe setzen (mit optionalem Custom-Text und Level) und Historie speichern"""
     invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
 
-    current_level = invoice.get("dunning_level", 0)
-    if current_level >= 3:
-        raise HTTPException(status_code=400, detail="Maximale Mahnstufe bereits erreicht")
+    # Level kann direkt gewählt werden oder automatisch +1
+    target_level = body.get("level")
+    custom_text = body.get("custom_text", "")
+    
+    if target_level:
+        new_level = min(max(int(target_level), 1), 3)
+    else:
+        current_level = invoice.get("dunning_level", 0)
+        if current_level >= 3:
+            raise HTTPException(status_code=400, detail="Maximale Mahnstufe bereits erreicht")
+        new_level = current_level + 1
 
-    new_level = current_level + 1
     dunning_fees = {1: 0, 2: 5.00, 3: 10.00}
     fee = dunning_fees.get(new_level, 0)
 
@@ -292,7 +299,8 @@ async def advance_dunning(invoice_id: str, user=Depends(get_current_user)):
         "level": new_level,
         "date": datetime.now(timezone.utc).isoformat(),
         "fee": fee,
-        "label": {1: "Zahlungserinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung"}.get(new_level, "Mahnung")
+        "label": {1: "Zahlungserinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung"}.get(new_level, "Mahnung"),
+        "custom_text": custom_text if custom_text else None
     }
 
     await db.invoices.update_one(
@@ -302,6 +310,7 @@ async def advance_dunning(invoice_id: str, user=Depends(get_current_user)):
                 "dunning_level": new_level,
                 "dunning_date": datetime.now(timezone.utc).isoformat(),
                 "dunning_fee": fee,
+                "dunning_custom_text": custom_text,
                 "status": "Überfällig"
             },
             "$push": {
@@ -310,4 +319,4 @@ async def advance_dunning(invoice_id: str, user=Depends(get_current_user)):
         }
     )
 
-    return {"message": f"Mahnstufe auf {new_level} erhöht", "dunning_level": new_level, "fee": fee}
+    return {"message": f"Mahnstufe auf {new_level} gesetzt", "dunning_level": new_level, "fee": fee}

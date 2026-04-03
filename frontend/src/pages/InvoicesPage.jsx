@@ -12,6 +12,7 @@ const InvoicesPage = () => {
   const [previewInvoice, setPreviewInvoice] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
   const [overdueInvoices, setOverdueInvoices] = useState([]);
+  const [dunningEditor, setDunningEditor] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -89,14 +90,37 @@ const InvoicesPage = () => {
     return <Badge variant={variants[status] || "default"}>{status}</Badge>;
   };
 
-  const handleDunning = async (id, e) => {
+  const dunningTexts = {
+    1: (inv) => `Sehr geehrte Damen und Herren,\n\nbei Durchsicht unserer Unterlagen haben wir festgestellt, dass die Rechnung\nNr. ${inv.invoice_number} vom ${new Date(inv.created_at).toLocaleDateString("de-DE")}\nüber ${inv.total_gross?.toFixed(2)} EUR noch nicht beglichen wurde.\n\nSicherlich handelt es sich um ein Versehen. Wir bitten Sie, den offenen\nBetrag innerhalb der nächsten 7 Tage auf unser Konto zu überweisen.`,
+    2: (inv) => `Sehr geehrte Damen und Herren,\n\ntrotz unserer Zahlungserinnerung ist die Rechnung Nr. ${inv.invoice_number}\nüber ${inv.total_gross?.toFixed(2)} EUR weiterhin unbeglichen.\n\nWir fordern Sie hiermit auf, den fälligen Betrag zuzüglich Mahngebühren\nvon 5,00 EUR innerhalb von 7 Tagen auf unser Konto zu überweisen.`,
+    3: (inv) => `Sehr geehrte Damen und Herren,\n\ntrotz mehrfacher Aufforderung ist die Rechnung Nr. ${inv.invoice_number}\nüber ${inv.total_gross?.toFixed(2)} EUR immer noch nicht beglichen.\n\nDies ist unsere letzte Mahnung. Sollte der Gesamtbetrag inkl. Mahngebühren\nvon 10,00 EUR nicht innerhalb von 5 Tagen bei uns eingehen, werden wir\nohne weitere Ankündigung rechtliche Schritte einleiten.`
+  };
+
+  const openDunningEditor = (inv, e) => {
     e?.stopPropagation();
+    const nextLevel = Math.min((inv.dunning_level || 0) + 1, 3);
+    setDunningEditor({
+      invoice: inv,
+      level: nextLevel,
+      text: dunningTexts[nextLevel]?.(inv) || "",
+      saving: false
+    });
+  };
+
+  const handleDunningSubmit = async () => {
+    if (!dunningEditor) return;
+    setDunningEditor(prev => ({ ...prev, saving: true }));
     try {
-      const res = await api.post(`/invoices/${id}/dunning`);
-      toast.success(res.data.message);
+      await api.post(`/invoices/${dunningEditor.invoice.id}/dunning`, {
+        level: dunningEditor.level,
+        custom_text: dunningEditor.text
+      });
+      toast.success(`${getDunningLabel(dunningEditor.level)} erstellt`);
+      setDunningEditor(null);
       loadInvoices();
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Fehler beim Mahnen");
+      toast.error(err?.response?.data?.detail || "Fehler");
+      setDunningEditor(prev => ({ ...prev, saving: false }));
     }
   };
 
@@ -270,7 +294,7 @@ const InvoicesPage = () => {
                       )}
                       {(inv.dunning_level || 0) < 3 && (
                         <button
-                          onClick={(e) => handleDunning(inv.id, e)}
+                          onClick={(e) => openDunningEditor(inv, e)}
                           className="p-2.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-sm"
                           title={`${getDunningLabel((inv.dunning_level || 0) + 1)} erstellen`}
                           data-testid={`btn-dunning-${inv.id}`}
@@ -431,6 +455,83 @@ const InvoicesPage = () => {
         onDownload={(id, num) => handleDownloadPDF(id, num)}
         onEdit={(inv) => handleEdit(inv)}
       />
+
+      {/* Mahnungs-Editor Dialog */}
+      {dunningEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDunningEditor(null)} />
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-xl mx-4 p-6 max-h-[90vh] overflow-y-auto" data-testid="dunning-editor-dialog">
+            <h3 className="text-lg font-semibold mb-1">Mahnung bearbeiten</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {dunningEditor.invoice.invoice_number} · {dunningEditor.invoice.customer_name} · {dunningEditor.invoice.total_gross?.toFixed(2)} €
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Dringlichkeitsstufe</label>
+                <select
+                  data-testid="dunning-level-select"
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  value={dunningEditor.level}
+                  onChange={(e) => {
+                    const newLevel = parseInt(e.target.value);
+                    setDunningEditor(prev => ({
+                      ...prev,
+                      level: newLevel,
+                      text: dunningTexts[newLevel]?.(prev.invoice) || prev.text
+                    }));
+                  }}
+                >
+                  <option value={1}>Stufe 1 — Zahlungserinnerung (keine Gebühr)</option>
+                  <option value={2}>Stufe 2 — 1. Mahnung (5,00 € Gebühr)</option>
+                  <option value={3}>Stufe 3 — Letzte Mahnung (10,00 € Gebühr)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Mahntext</label>
+                <textarea
+                  data-testid="dunning-text-area"
+                  className="w-full border rounded px-3 py-2 text-sm font-mono"
+                  rows={12}
+                  value={dunningEditor.text}
+                  onChange={(e) => setDunningEditor(prev => ({ ...prev, text: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Der Text wird in der Mahnung verwendet. Sie können ihn frei anpassen.</p>
+              </div>
+
+              <div className="bg-muted/50 rounded p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Rechnungsbetrag:</span>
+                  <span className="font-mono">{dunningEditor.invoice.total_gross?.toFixed(2)} €</span>
+                </div>
+                {dunningEditor.level >= 2 && (
+                  <div className="flex justify-between text-red-600">
+                    <span>Mahngebühr (Stufe {dunningEditor.level}):</span>
+                    <span className="font-mono">{dunningEditor.level === 2 ? "5,00" : "10,00"} €</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold border-t mt-1 pt-1">
+                  <span>Gesamtbetrag:</span>
+                  <span className="font-mono">
+                    {(dunningEditor.invoice.total_gross + (dunningEditor.level === 2 ? 5 : dunningEditor.level === 3 ? 10 : 0)).toFixed(2)} €
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-5">
+              <Button variant="outline" size="sm" onClick={() => setDunningEditor(null)}>Abbrechen</Button>
+              <Button size="sm" onClick={handleDunningSubmit} disabled={dunningEditor.saving}
+                className={dunningEditor.level >= 2 ? "bg-red-600 hover:bg-red-700" : ""}
+                data-testid="btn-submit-dunning">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                {dunningEditor.saving ? "..." : `${getDunningLabel(dunningEditor.level)} erstellen`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

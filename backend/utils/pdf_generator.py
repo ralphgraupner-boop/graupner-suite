@@ -168,9 +168,16 @@ def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
     }
 
     c.setFont("Helvetica", 10)
-    for line in messages.get(level, messages[1]):
-        c.drawString(2 * cm, y_pos, line)
-        y_pos -= 0.45 * cm
+    # Custom Text oder Standard-Vorlage
+    custom_text = invoice.get("dunning_custom_text", "")
+    if custom_text:
+        for line in custom_text.split("\n"):
+            c.drawString(2 * cm, y_pos, line[:90])
+            y_pos -= 0.45 * cm
+    else:
+        for line in messages.get(level, messages[1]):
+            c.drawString(2 * cm, y_pos, line)
+            y_pos -= 0.45 * cm
 
     # === Betragsaufstellung ===
     y_pos -= 0.8 * cm
