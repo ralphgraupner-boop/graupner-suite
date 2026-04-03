@@ -130,9 +130,11 @@ async def create_invoice(invoice: InvoiceCreate):
 
     invoice_number = await get_next_invoice_number()
 
-    subtotal_net = sum(p.quantity * p.price_net for p in invoice.positions)
-    vat_amount = subtotal_net * (invoice.vat_rate / 100) if invoice.vat_rate > 0 else 0
-    total_gross = subtotal_net + vat_amount
+    subtotal_net = sum(p.quantity * p.price_net for p in invoice.positions if p.type != "titel")
+    discount_amt = subtotal_net * (invoice.discount / 100) if invoice.discount_type == "percent" else invoice.discount
+    net_after_discount = subtotal_net - discount_amt
+    vat_amount = net_after_discount * (invoice.vat_rate / 100) if invoice.vat_rate > 0 else 0
+    total_gross = net_after_discount + vat_amount
     final_amount = total_gross - invoice.deposit_amount
 
     due_date = (datetime.now(timezone.utc) + timedelta(days=invoice.due_days)).isoformat()
@@ -147,6 +149,9 @@ async def create_invoice(invoice: InvoiceCreate):
         notes=invoice.notes,
         vortext=invoice.vortext,
         schlusstext=invoice.schlusstext,
+        betreff=invoice.betreff,
+        discount=invoice.discount,
+        discount_type=invoice.discount_type,
         vat_rate=invoice.vat_rate,
         subtotal_net=round(subtotal_net, 2),
         vat_amount=round(vat_amount, 2),
@@ -223,9 +228,11 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
             for p in positions:
                 p.price_net = round(p.price_net * factor, 2)
 
-    subtotal_net = sum(p.quantity * p.price_net for p in positions)
-    vat_amount = subtotal_net * (update.vat_rate / 100) if update.vat_rate > 0 else 0
-    total_gross = subtotal_net + vat_amount
+    subtotal_net = sum(p.quantity * p.price_net for p in positions if p.type != "titel")
+    discount_amt = subtotal_net * (update.discount / 100) if update.discount_type == "percent" else update.discount
+    net_after_discount = subtotal_net - discount_amt
+    vat_amount = net_after_discount * (update.vat_rate / 100) if update.vat_rate > 0 else 0
+    total_gross = net_after_discount + vat_amount
     final_amount = total_gross - update.deposit_amount
 
     update_data = {
@@ -233,6 +240,9 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
         "notes": update.notes,
         "vortext": update.vortext,
         "schlusstext": update.schlusstext,
+        "betreff": update.betreff,
+        "discount": update.discount,
+        "discount_type": update.discount_type,
         "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),

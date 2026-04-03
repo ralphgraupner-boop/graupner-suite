@@ -86,15 +86,20 @@ async def update_order(order_id: str, update: OrderUpdate):
             for p in positions:
                 p.price_net = round(p.price_net * factor, 2)
 
-    subtotal_net = sum(p.quantity * p.price_net for p in positions)
-    vat_amount = subtotal_net * (update.vat_rate / 100) if update.vat_rate > 0 else 0
-    total_gross = subtotal_net + vat_amount
+    subtotal_net = sum(p.quantity * p.price_net for p in positions if p.type != "titel")
+    discount_amt = subtotal_net * (update.discount / 100) if update.discount_type == "percent" else update.discount
+    net_after_discount = subtotal_net - discount_amt
+    vat_amount = net_after_discount * (update.vat_rate / 100) if update.vat_rate > 0 else 0
+    total_gross = net_after_discount + vat_amount
 
     update_data = {
         "positions": [p.model_dump() for p in positions],
         "notes": update.notes,
         "vortext": update.vortext,
         "schlusstext": update.schlusstext,
+        "betreff": update.betreff,
+        "discount": update.discount,
+        "discount_type": update.discount_type,
         "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),

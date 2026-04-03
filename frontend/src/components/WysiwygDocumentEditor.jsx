@@ -236,6 +236,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setPositions([
       ...positions,
       {
+        type: "position",
         pos_nr: newIdx + 1,
         description: item.name + (item.description ? ` - ${item.description}` : ""),
         quantity: 1,
@@ -329,12 +330,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const calculateTotals = () => {
     const subtotal = positions.filter(p => p.type !== "titel").reduce((sum, p) => sum + (p.quantity || 0) * (p.price_net || 0), 0);
-    const discountAmount = discountType === "percent" ? subtotal * (discount / 100) : discount;
-    const subtotalAfterDiscount = subtotal - discountAmount;
-    const vat = subtotalAfterDiscount * (vatRate / 100);
-    const total = subtotalAfterDiscount + vat;
-    const final_amount = total - depositAmount;
-    return { subtotal, vat, total, final };
+    const discountAmt = discountType === "percent" ? subtotal * (discount / 100) : discount;
+    const netAfterDiscount = subtotal - discountAmt;
+    const vat = netAfterDiscount * (vatRate / 100);
+    const total = netAfterDiscount + vat;
+    const finalAmount = total - depositAmount;
+    return { subtotal, discountAmt, netAfterDiscount, vat, total, finalAmount };
   };
 
   // Voice recording functions
@@ -428,6 +429,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           vortext,
           schlusstext,
           betreff,
+          discount,
+          discount_type: discountType,
           vat_rate: vatRate,
           ...(type === "quote" && { valid_days: 30 }),
           ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount })
@@ -441,6 +444,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           vortext,
           schlusstext,
           betreff,
+          discount,
+          discount_type: discountType,
           vat_rate: vatRate,
           status,
           ...(type === "invoice" && { deposit_amount: depositAmount })
@@ -477,7 +482,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     }
   };
 
-  const { subtotal, vat, total, final } = calculateTotals();
+  const { subtotal, discountAmt, netAfterDiscount, vat, total, finalAmount } = calculateTotals();
+  const titelGroups = hasTitels ? getTitelGroups() : [];
 
   if (loading) {
     return (
@@ -857,7 +863,29 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             <div className="px-4 lg:px-10 py-4 lg:py-8">
               {/* Mobile Positions - Card Layout */}
               <div className="lg:hidden space-y-3">
-                {positions.map((pos, idx) => (
+                {positions.map((pos, idx) => {
+                  if (pos.type === "titel") {
+                    return (
+                      <div key={idx} className="border-2 border-amber-300/60 rounded-sm p-3 bg-amber-50/60" data-testid={`mobile-titel-${idx}`}>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold text-primary">{numbering[idx]}</span>
+                            <span className="text-xs text-amber-600 font-medium">Titel</span>
+                          </div>
+                          <button onClick={() => removePosition(idx)} className="p-1 hover:bg-destructive/10 rounded-sm">
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </button>
+                        </div>
+                        <input
+                          value={pos.description}
+                          onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                          placeholder="Titel eingeben..."
+                          className="w-full border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
+                        />
+                      </div>
+                    );
+                  }
+                  return (
                   <div key={idx} className="border rounded-sm p-3 bg-white">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
@@ -865,7 +893,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           {idx > 0 && <button onClick={() => movePosition(idx, idx - 1)} className="p-0.5 hover:bg-muted rounded text-muted-foreground"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg></button>}
                           {idx < positions.length - 1 && <button onClick={() => movePosition(idx, idx + 1)} className="p-0.5 hover:bg-muted rounded text-muted-foreground"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg></button>}
                         </div>
-                        <span className="text-xs font-mono text-muted-foreground">Pos. {pos.pos_nr}</span>
+                        <span className="text-xs font-mono text-muted-foreground">Pos. {numbering[idx]}</span>
                       </div>
                       <button onClick={() => removePosition(idx)} className="p-1 hover:bg-destructive/10 rounded-sm">
                         <Trash2 className="w-3.5 h-3.5 text-destructive" />
@@ -905,7 +933,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                       = {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Desktop Positions - Table */}
@@ -923,7 +952,45 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {positions.map((pos, idx) => (
+                  {positions.map((pos, idx) => {
+                    if (pos.type === "titel") {
+                      return (
+                        <tr key={idx}
+                          draggable
+                          onDragStart={() => setDragIndex(idx)}
+                          onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                          onDragLeave={() => setDragOverIndex(null)}
+                          onDrop={() => { movePosition(dragIndex, idx); setDragIndex(null); setDragOverIndex(null); }}
+                          onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                          className={`border-b-2 border-amber-300/60 bg-amber-50/60 group ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
+                          data-testid={`titel-row-${idx}`}
+                        >
+                          <td className="py-2">
+                            <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground">
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+                          </td>
+                          <td className="py-3 text-base font-bold text-primary">{numbering[idx]}</td>
+                          <td className="py-2" colSpan={4}>
+                            <input
+                              value={pos.description}
+                              onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                              placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
+                              className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
+                              data-testid={`titel-input-${idx}`}
+                            />
+                          </td>
+                          <td></td>
+                          <td className="py-3">
+                            <button onClick={() => removePosition(idx)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-opacity">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return (
                     <tr key={idx}
                       draggable
                       onDragStart={() => setDragIndex(idx)}
@@ -938,7 +1005,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           <GripVertical className="w-4 h-4" />
                         </div>
                       </td>
-                      <td className="py-3 text-sm text-muted-foreground align-top">{pos.pos_nr}</td>
+                      <td className="py-3 text-sm text-muted-foreground align-top">{numbering[idx]}</td>
                       <td className="py-2">
                         <textarea value={pos.description}
                           onChange={(e) => updatePosition(idx, "description", e.target.value)}
@@ -1002,38 +1069,113 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
 
-              {/* Add Position Button */}
-              <button
-                onClick={addPosition}
-                data-testid="btn-add-position"
-                className="mt-4 flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Position hinzufügen
-              </button>
+              {/* Add Position / Titel Buttons */}
+              <div className="mt-4 flex items-center gap-4">
+                <button
+                  onClick={addPosition}
+                  data-testid="btn-add-position"
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Position hinzufügen
+                </button>
+                <button
+                  onClick={addTitel}
+                  data-testid="btn-add-titel"
+                  className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 transition-colors font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Titel hinzufügen
+                </button>
+              </div>
             </div>
 
-            {/* Totals - using same table layout for alignment */}
+            {/* Totals - Gewerk-/Titelzusammenstellung + Summen */}
             <div className="px-4 lg:px-10 py-4 lg:py-6 border-t">
+              {/* Desktop Totals */}
               <table className="hidden lg:table w-full">
                 <tbody>
+                  {/* Gewerk-/Titelzusammenstellung (nur wenn Titel vorhanden) */}
+                  {hasTitels && titelGroups.length > 0 && (
+                    <>
+                      <tr>
+                        <td className="w-8"></td>
+                        <td className="w-12"></td>
+                        <td colSpan={4} className="py-3 text-sm font-bold text-primary">Gewerk-/Titelzusammenstellung</td>
+                        <td style={{ width: "100px" }}></td>
+                        <td className="w-8"></td>
+                      </tr>
+                      {titelGroups.map((g, i) => (
+                        <tr key={`tg-${i}`} className="border-b border-slate-100">
+                          <td className="w-8"></td>
+                          <td className="w-12"></td>
+                          <td colSpan={4} className="py-2 text-sm">
+                            <span className="font-semibold mr-2">{g.nr}</span>
+                            {g.titel}
+                          </td>
+                          <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>{g.sum.toFixed(2)} €</td>
+                          <td className="w-8"></td>
+                        </tr>
+                      ))}
+                      <tr className="border-t border-slate-300">
+                        <td className="w-8"></td>
+                        <td className="w-12"></td>
+                        <td colSpan={3}></td>
+                        <td style={{ width: "70px" }}></td>
+                        <td style={{ width: "70px" }}></td>
+                        <td className="w-8"></td>
+                      </tr>
+                    </>
+                  )}
+                  {/* Nettosumme */}
                   <tr>
                     <td className="w-8"></td>
                     <td className="w-12"></td>
                     <td></td>
                     <td style={{ width: "70px" }}></td>
                     <td style={{ width: "70px" }}></td>
-                    <td className="text-right py-2 text-muted-foreground text-sm" style={{ width: "100px" }}>Netto</td>
+                    <td className="text-right py-2 text-muted-foreground text-sm" style={{ width: "100px" }}>Nettosumme</td>
                     <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>{subtotal.toFixed(2)} €</td>
                     <td className="w-8"></td>
                   </tr>
+                  {/* Zu-/Abschlag */}
                   <tr>
                     <td></td><td></td><td></td><td></td><td></td>
-                    <td className="text-right py-2 text-sm">
+                    <td className="text-right py-2 text-sm" style={{ width: "100px" }}>
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-muted-foreground text-xs">Abschlag</span>
+                        <input type="number" step="0.1" value={discount || ""}
+                          onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                          placeholder="0"
+                          className="w-14 h-6 text-xs border rounded px-1 bg-white text-right font-mono"
+                          data-testid="discount-input"
+                        />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
+                    </td>
+                    <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>
+                      {discountAmt > 0 ? `-${discountAmt.toFixed(2)} €` : "0,00 €"}
+                    </td>
+                    <td></td>
+                  </tr>
+                  {/* Nettobetrag nach Abschlag (nur anzeigen wenn Abschlag > 0) */}
+                  {discount > 0 && (
+                    <tr className="border-t border-slate-200">
+                      <td></td><td></td><td></td><td></td><td></td>
+                      <td className="text-right py-2 text-sm font-medium" style={{ width: "100px" }}>Nettobetrag</td>
+                      <td className="text-right py-2 font-mono text-sm font-medium" style={{ width: "100px" }}>{netAfterDiscount.toFixed(2)} €</td>
+                      <td></td>
+                    </tr>
+                  )}
+                  {/* MwSt */}
+                  <tr>
+                    <td></td><td></td><td></td><td></td><td></td>
+                    <td className="text-right py-2 text-sm" style={{ width: "100px" }}>
                       <div className="flex items-center justify-end gap-1">
                         <span className="text-muted-foreground">MwSt</span>
                         <select value={vatRate} onChange={(e) => setVatRate(parseFloat(e.target.value))}
@@ -1044,12 +1186,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         </select>
                       </div>
                     </td>
-                    <td className="text-right py-2 font-mono text-sm">{vat.toFixed(2)} €</td>
+                    <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>{vat.toFixed(2)} €</td>
                     <td></td>
                   </tr>
+                  {/* Brutto / Gesamt */}
                   <tr className="border-t-2 border-primary">
                     <td></td><td></td><td></td><td></td><td></td>
-                    <td className="text-right py-3 font-bold text-lg">Gesamt</td>
+                    <td className="text-right py-3 font-bold text-lg">Brutto</td>
                     <td className="text-right py-3 font-mono font-bold text-lg">{total.toFixed(2)} €</td>
                     <td></td>
                   </tr>
@@ -1072,7 +1215,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         <tr>
                           <td></td><td></td><td></td><td></td><td></td>
                           <td className="text-right py-2 text-primary font-semibold text-sm">Restbetrag</td>
-                          <td className="text-right py-2 font-mono text-primary font-semibold text-sm">{final_amount.toFixed(2)} €</td>
+                          <td className="text-right py-2 font-mono text-primary font-semibold text-sm">{finalAmount.toFixed(2)} €</td>
                           <td></td>
                         </tr>
                       )}
@@ -1084,10 +1227,39 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               <div className="lg:hidden">
                 <div className="flex justify-end">
                   <div className="w-full sm:w-72 space-y-2">
+                    {/* Mobile Gewerk-Zusammenstellung */}
+                    {hasTitels && titelGroups.length > 0 && (
+                      <div className="mb-3 pb-2 border-b">
+                        <p className="text-xs font-bold text-primary mb-2">Gewerk-/Titelzusammenstellung</p>
+                        {titelGroups.map((g, i) => (
+                          <div key={`mtg-${i}`} className="flex justify-between py-1 text-sm">
+                            <span><span className="font-semibold mr-1">{g.nr}</span> {g.titel}</span>
+                            <span className="font-mono">{g.sum.toFixed(2)} €</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex justify-between py-2">
-                      <span className="text-muted-foreground">Netto</span>
+                      <span className="text-muted-foreground">Nettosumme</span>
                       <span className="font-mono">{subtotal.toFixed(2)} €</span>
                     </div>
+                    <div className="flex justify-between py-2 items-center">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground text-sm">Abschlag</span>
+                        <input type="number" step="0.1" value={discount || ""}
+                          onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                          placeholder="0"
+                          className="w-12 h-6 text-xs border rounded px-1 bg-white text-right font-mono" />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
+                      <span className="font-mono">{discountAmt > 0 ? `-${discountAmt.toFixed(2)} €` : "0,00 €"}</span>
+                    </div>
+                    {discount > 0 && (
+                      <div className="flex justify-between py-2 border-t font-medium">
+                        <span>Nettobetrag</span>
+                        <span className="font-mono">{netAfterDiscount.toFixed(2)} €</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-2 items-center">
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">MwSt</span>
@@ -1101,7 +1273,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                       <span className="font-mono">{vat.toFixed(2)} €</span>
                     </div>
                     <div className="flex justify-between py-3 border-t-2 border-primary font-bold text-lg">
-                      <span>Gesamt</span>
+                      <span>Brutto</span>
                       <span className="font-mono">{total.toFixed(2)} €</span>
                     </div>
                     {type === "invoice" && (
@@ -1118,7 +1290,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                         {depositAmount > 0 && (
                           <div className="flex justify-between py-2 text-primary font-semibold">
                             <span>Restbetrag</span>
-                            <span className="font-mono">{final_amount.toFixed(2)} €</span>
+                            <span className="font-mono">{finalAmount.toFixed(2)} €</span>
                           </div>
                         )}
                       </>
@@ -1406,7 +1578,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Übersicht</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-slate-50 rounded-md p-2 text-center">
-                    <p className="text-lg font-bold font-mono text-primary">{positions.filter(p => p.description).length}</p>
+                    <p className="text-lg font-bold font-mono text-primary">{positions.filter(p => p.description && p.type !== "titel").length}</p>
                     <p className="text-[10px] text-muted-foreground">Positionen</p>
                   </div>
                   <div className="bg-slate-50 rounded-md p-2 text-center">

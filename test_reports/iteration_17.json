@@ -1,0 +1,71 @@
+{
+  "summary": "Tested Titel-Gruppen (Gewerk-/Titelzusammenstellung) and Discount features. Backend API tests: 9/9 passed. Frontend UI elements verified: Titel hinzufügen button, discount input, hierarchical numbering, Gewerk-/Titelzusammenstellung section all present and functional.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: POST /api/quotes with type='titel' positions - creates quote correctly",
+    "Backend: POST /api/quotes with discount (percent) - calculates correctly",
+    "Backend: POST /api/quotes with both titel and discount - excludes titel from calculation",
+    "Backend: PUT /api/quotes/{id} with discount - recalculates totals correctly",
+    "Backend: GET /api/quotes/{id} - preserves titel positions and discount",
+    "Backend: Betreff field saved and retrieved correctly",
+    "Backend: PUT /api/orders/{id} with discount - works correctly",
+    "Backend: POST /api/invoices with titel and discount - works correctly",
+    "Backend: PUT /api/invoices/{id} with discount and deposit - works correctly",
+    "Frontend: 'Titel hinzufügen' button exists (data-testid='btn-add-titel')",
+    "Frontend: 'Position hinzufügen' button exists (data-testid='btn-add-position')",
+    "Frontend: Discount input exists (data-testid='discount-input')",
+    "Frontend: Save button exists (data-testid='btn-save-document')",
+    "Frontend: Customer select exists (data-testid='wysiwyg-customer-select')",
+    "Frontend: Titel rows render with amber background (data-testid='titel-row-{idx}')",
+    "Frontend: Hierarchical numbering works (1, 1.1, 1.2, 2, 2.1 format)",
+    "Frontend: Gewerk-/Titelzusammenstellung section visible in totals area",
+    "Frontend: Totals display: Nettosumme, Abschlag, Nettobetrag, MwSt, Brutto"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_titel_discount.py",
+    "/app/test_reports/pytest/pytest_titel_discount.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Code review: WysiwygDocumentEditor.jsx is 1625 lines - consider splitting into smaller components",
+    "Minor: Console warning about <span> inside <option> in mobile dropdown (line 697)"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_titel_discount.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+
+  "test_credentials": {
+    "username": "admin",
+    "password": "admin123"
+  },
+
+  "seed_data_creation": "Created test quote A-2026-0021 with 2 Titel groups, 3 positions, and 3% discount for verification. Quote ID: c288214e-7f81-4832-8ccf-7fa863f65294",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Titel-Gruppen and Discount features fully implemented and working. Test quote A-2026-0021 exists with: 2 Titel positions (Einrüstarbeiten, Dachdeckerarbeiten), 3 regular positions, 3% discount. Calculation verified: Subtotal 3050€, Discount 91.50€, Net 2958.50€, VAT 562.12€, Total 3520.61€. Frontend data-testids: btn-add-titel, btn-add-position, discount-input, btn-save-document, wysiwyg-customer-select, titel-row-{idx}, titel-input-{idx}. Hierarchical numbering: Titel gets 1,2,3; positions under Titel get 1.1,1.2,2.1 etc.",
+
+  "rca_of_the_issue": "N/A - All features working correctly as implemented"
+}

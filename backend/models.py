@@ -151,9 +151,10 @@ class ServiceCreate(BaseModel):
 
 
 class Position(BaseModel):
+    type: str = "position"
     pos_nr: int = 1
     description: str = ""
-    quantity: float = 1
+    quantity: float = 0
     unit: str = "Stück"
     price_net: float = 0
 
@@ -167,6 +168,9 @@ class Quote(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
     subtotal_net: float = 0
     vat_amount: float = 0
@@ -183,6 +187,9 @@ class QuoteCreate(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
 
 class Order(BaseModel):
@@ -196,6 +203,9 @@ class Order(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
     subtotal_net: float = 0
     vat_amount: float = 0
@@ -215,6 +225,9 @@ class Invoice(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
     subtotal_net: float = 0
     vat_amount: float = 0
@@ -237,6 +250,9 @@ class InvoiceCreate(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
     deposit_amount: float = 0
     due_days: int = 14
@@ -317,6 +333,9 @@ class QuoteUpdate(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
     status: str = ""
     custom_total: Optional[float] = None
@@ -326,6 +345,9 @@ class OrderUpdate(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
     status: str = ""
     custom_total: Optional[float] = None
@@ -335,6 +357,9 @@ class InvoiceUpdate(BaseModel):
     notes: str = ""
     vortext: str = ""
     schlusstext: str = ""
+    betreff: str = ""
+    discount: float = 0
+    discount_type: str = "percent"
     vat_rate: float = 19
     status: str = ""
     deposit_amount: float = 0
