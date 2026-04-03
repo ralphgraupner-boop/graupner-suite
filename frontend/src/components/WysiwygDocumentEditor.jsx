@@ -48,7 +48,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   // 3-Column Layout state (Desktop)
   const [sidebarSearch, setSidebarSearch] = useState("");
-  const [sidebarTab, setSidebarTab] = useState("services"); // "services" | "articles"
+  const [sidebarTab, setSidebarTab] = useState("services"); // "services" | "articles" | "blocks"
   const [costPrices, setCostPrices] = useState({});
   const [kalkulationOpen, setKalkulationOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -59,6 +59,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [titelTemplates, setTitelTemplates] = useState([]);
   const [titelDropdownIdx, setTitelDropdownIdx] = useState(null);
   const [stammChangeIdx, setStammChangeIdx] = useState(null);
+  const [leistungsBloecke, setLeistungsBloecke] = useState([]);
+  const [selectedPositions, setSelectedPositions] = useState(new Set());
+  const [blockSaveName, setBlockSaveName] = useState("");
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -84,6 +87,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       try {
         const titelRes = await api.get("/text-templates", { params: { text_type: "titel" } });
         setTitelTemplates(titelRes.data);
+      } catch {}
+
+      // Load Leistungsblöcke
+      try {
+        const blockRes = await api.get("/leistungsbloecke");
+        setLeistungsBloecke(blockRes.data);
       } catch {}
 
       // Load existing document if editing
@@ -154,6 +163,47 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       setTitelTemplates(res.data);
       toast.success("Titel-Vorlage gespeichert!");
     } catch { toast.error("Fehler beim Speichern"); }
+  };
+
+  const togglePositionSelect = (idx) => {
+    setSelectedPositions(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
+  const saveAsLeistungsBlock = async () => {
+    if (!blockSaveName.trim() || selectedPositions.size === 0) return;
+    const blockPositions = [...selectedPositions].sort().map(idx => {
+      const p = positions[idx];
+      return { type: p.type, description: p.description, quantity: p.quantity || 0, unit: p.unit || "Stück", price_net: p.price_net || 0 };
+    });
+    try {
+      await api.post("/leistungsbloecke", { name: blockSaveName.trim(), positions: blockPositions });
+      const res = await api.get("/leistungsbloecke");
+      setLeistungsBloecke(res.data);
+      setSelectedPositions(new Set());
+      setBlockSaveName("");
+      toast.success("Leistungsblock gespeichert!");
+    } catch { toast.error("Fehler beim Speichern"); }
+  };
+
+  const insertLeistungsBlock = (block) => {
+    const newPositions = block.positions.map((p, i) => ({
+      ...p,
+      pos_nr: positions.length + i + 1
+    }));
+    setPositions([...positions, ...newPositions]);
+    toast.success(`Block "${block.name}" eingefügt (${block.positions.length} Positionen)`);
+  };
+
+  const deleteLeistungsBlock = async (blockId) => {
+    try {
+      await api.delete(`/leistungsbloecke/${blockId}`);
+      setLeistungsBloecke(prev => prev.filter(b => b.id !== blockId));
+      toast.success("Block gelöscht");
+    } catch { toast.error("Fehler beim Löschen"); }
   };
 
   const updatePosition = (index, field, value) => {
@@ -654,9 +704,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   <Package className="w-3.5 h-3.5 inline mr-1" />
                   Artikel ({filteredArticles.length})
                 </button>
+                <button
+                  onClick={() => setSidebarTab("blocks")}
+                  className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "blocks" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
+                  data-testid="tab-blocks"
+                >
+                  <Copy className="w-3.5 h-3.5 inline mr-1" />
+                  Blöcke ({leistungsBloecke.length})
+                </button>
               </div>
 
               {/* Items List */}
+              {sidebarTab !== "blocks" ? (
               <div className="space-y-1.5">
                 {(sidebarTab === "services" ? filteredServices : filteredArticles).map((item) => (
                   <div key={item.id}>
@@ -741,6 +800,39 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   </p>
                 )}
               </div>
+              ) : (
+              /* Blöcke Tab */
+              <div className="space-y-2">
+                {leistungsBloecke.map(block => (
+                  <div key={block.id} className="border rounded-sm p-3 bg-card hover:border-primary/30 transition-colors">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-sm font-semibold">{block.name}</p>
+                      <button onClick={() => deleteLeistungsBlock(block.id)}
+                        className="p-0.5 text-muted-foreground hover:text-destructive rounded transition-colors">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mb-2">{block.positions.length} Positionen</p>
+                    <div className="text-[10px] text-muted-foreground mb-2 space-y-0.5 max-h-20 overflow-y-auto">
+                      {block.positions.map((p, i) => (
+                        <p key={i} className="truncate">{p.type === "titel" ? `Titel: ${p.description}` : `${p.description.split("\n")[0]}`}</p>
+                      ))}
+                    </div>
+                    <button onClick={() => insertLeistungsBlock(block)}
+                      className="w-full py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-sm hover:bg-primary/90 transition-colors"
+                      data-testid={`insert-block-${block.id}`}>
+                      <Plus className="w-3 h-3 inline mr-1" /> Ins Dokument
+                    </button>
+                  </div>
+                ))}
+                {leistungsBloecke.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-6">
+                    Keine Leistungsblöcke vorhanden.<br />
+                    Positionen im Dokument markieren und als Block speichern.
+                  </p>
+                )}
+              </div>
+              )}
             </div>
           </div>
 
@@ -1082,8 +1174,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                           data-testid={`titel-row-${idx}`}
                         >
                           <td className="py-2">
-                            <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground">
-                              <GripVertical className="w-4 h-4" />
+                            <div className="flex flex-col items-center gap-0.5">
+                              <input type="checkbox" checked={selectedPositions.has(idx)}
+                                onChange={() => togglePositionSelect(idx)}
+                                className="w-3.5 h-3.5 rounded border-muted-foreground/40 accent-primary cursor-pointer" />
+                              <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground">
+                                <GripVertical className="w-4 h-4" />
+                              </div>
                             </div>
                           </td>
                           <td className="py-3 text-base font-bold text-primary">{numbering[idx]}</td>
@@ -1148,8 +1245,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                       className={`border-b border-slate-100 group transition-colors ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
                     >
                       <td className="py-2 align-bottom">
-                        <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground">
-                          <GripVertical className="w-4 h-4" />
+                        <div className="flex flex-col items-center gap-0.5">
+                          <input type="checkbox" checked={selectedPositions.has(idx)}
+                            onChange={() => togglePositionSelect(idx)}
+                            className="w-3.5 h-3.5 rounded border-muted-foreground/40 accent-primary cursor-pointer" />
+                          <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground">
+                            <GripVertical className="w-4 h-4" />
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 text-sm text-muted-foreground align-top">{numbering[idx]}</td>
@@ -1253,6 +1355,29 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   Titel hinzufügen
                 </button>
               </div>
+              {/* Leistungsblock speichern */}
+              {selectedPositions.size > 0 && (
+                <div className="mt-3 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-sm animate-in fade-in" data-testid="block-save-bar">
+                  <span className="text-xs text-blue-700 font-medium whitespace-nowrap">{selectedPositions.size} markiert</span>
+                  <input
+                    value={blockSaveName}
+                    onChange={(e) => setBlockSaveName(e.target.value)}
+                    placeholder="Blockname eingeben..."
+                    className="flex-1 h-8 text-sm border rounded px-2 bg-white"
+                    data-testid="block-name-input"
+                  />
+                  <button onClick={saveAsLeistungsBlock}
+                    disabled={!blockSaveName.trim()}
+                    className="h-8 px-3 text-xs font-medium bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
+                    data-testid="btn-save-block">
+                    Als Block speichern
+                  </button>
+                  <button onClick={() => setSelectedPositions(new Set())}
+                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Totals - Gewerk-/Titelzusammenstellung + Summen */}

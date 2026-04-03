@@ -158,6 +158,16 @@ class Position(BaseModel):
     unit: str = "Stück"
     price_net: float = 0
 
+class LeistungsBlock(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    positions: List[dict] = []
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class LeistungsBlockCreate(BaseModel):
+    name: str
+    positions: List[dict] = []
+
 class Quote(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     quote_number: str = ""
