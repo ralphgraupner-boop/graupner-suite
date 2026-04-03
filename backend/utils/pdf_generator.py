@@ -132,96 +132,187 @@ def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
 
 
 def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
-    """Generiert PDF für Angebot, Auftragsbestätigung oder Rechnung"""
+    """Generiert PDF für Angebot, Auftragsbestätigung oder Rechnung — passend zum WYSIWYG-Editor"""
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
     # Colors
     primary_color = HexColor("#14532D")
+    koenigsblau = HexColor("#003399")
     text_color = HexColor("#0F172A")
     muted_color = HexColor("#64748B")
+    red_accent = HexColor("#CC0000")
 
-    # Header
-    c.setFillColor(primary_color)
-    c.setFont("Helvetica-Bold", 20)
-
-    titles = {
+    doc_titles = {
         "quote": "ANGEBOT",
         "order": "AUFTRAGSBESTÄTIGUNG",
         "invoice": "RECHNUNG"
     }
-    c.drawString(2*cm, height - 2*cm, titles.get(doc_type, "DOKUMENT"))
-
-    # Document number
-    c.setFillColor(text_color)
-    c.setFont("Helvetica", 10)
-    number_labels = {
-        "quote": f"Angebots-Nr.: {data.get('quote_number', '')}",
-        "order": f"Auftrags-Nr.: {data.get('order_number', '')}",
-        "invoice": f"Rechnungs-Nr.: {data.get('invoice_number', '')}"
+    number_keys = {
+        "quote": "quote_number",
+        "order": "order_number",
+        "invoice": "invoice_number"
     }
-    c.drawString(2*cm, height - 2.8*cm, number_labels.get(doc_type, ""))
-    c.drawString(2*cm, height - 3.3*cm, f"Datum: {datetime.fromisoformat(data['created_at']).strftime('%d.%m.%Y')}")
+    number_labels = {
+        "quote": "Angebots-Nr.",
+        "order": "Auftrags-Nr.",
+        "invoice": "Rechnungs-Nr."
+    }
 
-    # Company info (right side)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawRightString(width - 2*cm, height - 2*cm, settings.get("company_name", "Tischlerei Graupner"))
+    company_name = settings.get("company_name", "Tischlerei Graupner")
+    address_lines = (settings.get("address") or "Erlengrund 129\n22453 Hamburg").split("\n")
+    phone = settings.get("phone", "040 55567744")
+    email = settings.get("email", "Service24@tischlerei-graupner.de")
+    website = settings.get("website", "") or "www.tischlerei-graupner.de"
+    tax_id = settings.get("tax_id", "")
+    doc_number = data.get(number_keys.get(doc_type, "quote_number"), "")
+
+    # === BRIEFKOPF (Letterhead) ===
+    # Left: "Tischlerei Graupner seit 1960"
+    y = height - 2 * cm
+    c.setFont("Helvetica-Bold", 22)
+    c.setFillColor(text_color)
+    c.drawString(2 * cm, y, "Tischlerei")
+    tischlerei_width = c.stringWidth("Tischlerei", "Helvetica-Bold", 22)
+    c.setFillColor(koenigsblau)
+    c.drawString(2 * cm + tischlerei_width + 2, y, "Graupner")
+    graupner_width = c.stringWidth("Graupner", "Helvetica-Bold", 22)
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(red_accent)
+    c.drawString(2 * cm + tischlerei_width + graupner_width + 8, y + 2, "seit 1960")
+
+    y -= 0.5 * cm
     c.setFont("Helvetica", 9)
-    y_pos = height - 2.5*cm
-    if settings.get("address"):
-        for line in settings["address"].split("\n"):
-            c.drawRightString(width - 2*cm, y_pos, line)
-            y_pos -= 0.4*cm
-    if settings.get("phone"):
-        c.drawRightString(width - 2*cm, y_pos, f"Tel: {settings['phone']}")
-        y_pos -= 0.4*cm
-    if settings.get("email"):
-        c.drawRightString(width - 2*cm, y_pos, settings["email"])
+    c.setFillColor(koenigsblau)
+    c.drawString(2 * cm, y, "Mitglied der Handwerkskammer Hamburg")
 
-    # Customer address
+    # Right: Company info in blue
+    ry = height - 2 * cm
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(koenigsblau)
+    c.drawRightString(width - 2 * cm, ry, company_name)
+    ry -= 0.35 * cm
+    c.setFont("Helvetica", 8)
+    for line in address_lines:
+        c.drawRightString(width - 2 * cm, ry, line.strip())
+        ry -= 0.35 * cm
+    c.drawRightString(width - 2 * cm, ry, f"Tel.: {phone}")
+    ry -= 0.35 * cm
+    c.drawRightString(width - 2 * cm, ry, email)
+    ry -= 0.35 * cm
+    if website:
+        c.drawRightString(width - 2 * cm, ry, website)
+        ry -= 0.35 * cm
+    if tax_id:
+        c.drawRightString(width - 2 * cm, ry, f"Steuernummer: {tax_id}")
+        ry -= 0.35 * cm
+
+    # Right: Kd.-Nr., Datum, Dokument-Nr.
+    ry -= 0.2 * cm
+    c.setStrokeColor(HexColor("#B3C6E0"))
+    c.line(width - 6 * cm, ry + 0.15 * cm, width - 2 * cm, ry + 0.15 * cm)
+    c.setFont("Helvetica", 8)
+    c.setFillColor(koenigsblau)
+    customer_id = data.get("customer_id", "")
+    c.drawRightString(width - 2 * cm, ry, f"Kd.-Nr.: {customer_id[:8].upper() if customer_id else '-'}")
+    ry -= 0.35 * cm
+    try:
+        datum = datetime.fromisoformat(data["created_at"]).strftime("%d.%m.%Y")
+    except (KeyError, ValueError):
+        datum = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    c.drawRightString(width - 2 * cm, ry, f"Datum: {datum}")
+    ry -= 0.35 * cm
+    c.setFont("Helvetica-Bold", 8)
+    c.drawRightString(width - 2 * cm, ry, f"{number_labels.get(doc_type, 'Nr.')}: {doc_number}")
+
+    # === DIN 5008 Brieffenster (Absenderzeile + Kundenadresse) ===
+    y_addr_start = height - 5 * cm
+    c.setFont("Helvetica", 6.5)
+    c.setFillColor(muted_color)
+    sender_line = f"{company_name} · {' · '.join(l.strip() for l in address_lines)}"
+    c.drawString(2 * cm, y_addr_start + 0.3 * cm, sender_line)
+    c.setStrokeColor(HexColor("#D0D0D0"))
+    c.line(2 * cm, y_addr_start + 0.15 * cm, 9 * cm, y_addr_start + 0.15 * cm)
+
     c.setFillColor(text_color)
     c.setFont("Helvetica", 10)
-    c.drawString(2*cm, height - 5*cm, data.get("customer_name", ""))
-    y_addr = height - 5.5*cm
+    y_cust = y_addr_start - 0.3 * cm
+    c.drawString(2 * cm, y_cust, data.get("customer_name", ""))
+    y_cust -= 0.4 * cm
     if data.get("customer_address"):
         for line in data["customer_address"].split("\n"):
-            c.drawString(2*cm, y_addr, line)
-            y_addr -= 0.4*cm
+            c.drawString(2 * cm, y_cust, line.strip())
+            y_cust -= 0.4 * cm
 
-    # Positions table
-    y_table = height - 8*cm
+    # === Angebots-Nr. groß in Blau ===
+    y_doc_nr = height - 7.8 * cm
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(koenigsblau)
+    c.drawString(2 * cm, y_doc_nr, f"{number_labels.get(doc_type, 'Nr.')}: {doc_number}")
+
+    # === Betreff (fett, blau) ===
+    y_betreff = y_doc_nr - 0.7 * cm
+    betreff = data.get("betreff", "")
+    if betreff:
+        c.setFont("Helvetica-Bold", 11)
+        c.setFillColor(koenigsblau)
+        c.drawString(2 * cm, y_betreff, betreff[:80])
+        y_betreff -= 0.5 * cm
+
+    # === Vortext ===
+    y_vt = y_betreff - 0.3 * cm
+    vortext = data.get("vortext", "")
+    if vortext:
+        c.setFont("Helvetica", 9)
+        c.setFillColor(text_color)
+        for line in vortext.split("\n")[:6]:
+            c.drawString(2 * cm, y_vt, line[:90])
+            y_vt -= 0.35 * cm
+        y_vt -= 0.2 * cm
+
+    # === Positions Table ===
+    y_table = y_vt - 0.3 * cm
+    if y_table > height - 11 * cm:
+        y_table = height - 11 * cm
+
     c.setFillColor(primary_color)
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(2*cm, y_table, "Pos")
-    c.drawString(3*cm, y_table, "Beschreibung")
-    c.drawString(12*cm, y_table, "Menge")
-    c.drawString(14*cm, y_table, "Einheit")
-    c.drawString(16*cm, y_table, "Einzelpreis")
-    c.drawRightString(width - 2*cm, y_table, "Gesamt")
+    c.drawString(2 * cm, y_table, "Pos")
+    c.drawString(3 * cm, y_table, "Beschreibung")
+    c.drawString(12 * cm, y_table, "Menge")
+    c.drawString(13.5 * cm, y_table, "Einheit")
+    c.drawString(15.5 * cm, y_table, "Einzelpreis")
+    c.drawRightString(width - 2 * cm, y_table, "Gesamt")
 
     c.setStrokeColor(HexColor("#E2E8F0"))
-    c.line(2*cm, y_table - 0.2*cm, width - 2*cm, y_table - 0.2*cm)
+    c.line(2 * cm, y_table - 0.2 * cm, width - 2 * cm, y_table - 0.2 * cm)
 
     c.setFillColor(text_color)
     c.setFont("Helvetica", 9)
-    y_pos = y_table - 0.7*cm
+    y_pos = y_table - 0.7 * cm
+
+    footer_y_limit = 5.5 * cm
 
     for pos in data.get("positions", []):
-        if y_pos < 5*cm:
+        if y_pos < footer_y_limit:
+            # Draw footer on current page before creating new one
+            _draw_footer(c, width, settings)
             c.showPage()
-            y_pos = height - 3*cm
+            y_pos = height - 3 * cm
+            c.setFillColor(text_color)
+            c.setFont("Helvetica", 9)
 
         # Titel-Zeile: fett und über gesamte Breite
         if pos.get("type") == "titel":
             c.setFont("Helvetica-Bold", 10)
-            c.drawString(2*cm, y_pos, str(pos.get("pos_nr", "")))
-            c.drawString(3*cm, y_pos, pos.get("description", ""))
+            c.drawString(2 * cm, y_pos, str(pos.get("pos_nr", "")))
+            c.drawString(3 * cm, y_pos, pos.get("description", ""))
             c.setFont("Helvetica", 9)
-            y_pos -= 0.6*cm
+            y_pos -= 0.6 * cm
             continue
 
-        c.drawString(2*cm, y_pos, str(pos.get("pos_nr", "")))
+        c.drawString(2 * cm, y_pos, str(pos.get("pos_nr", "")))
 
         desc = pos.get("description", "")
         desc_lines = desc.split("\n") if desc else [""]
@@ -230,138 +321,178 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
         # Erste Zeile fett
         c.setFont("Helvetica-Bold", 9)
-        if len(first_line) > 50:
-            c.drawString(3*cm, y_pos, first_line[:50])
-            y_pos -= 0.4*cm
-            c.drawString(3*cm, y_pos, first_line[50:100])
+        if len(first_line) > 55:
+            c.drawString(3 * cm, y_pos, first_line[:55])
+            y_pos -= 0.35 * cm
+            c.setFont("Helvetica", 8)
+            c.drawString(3 * cm, y_pos, first_line[55:115])
         else:
-            c.drawString(3*cm, y_pos, first_line)
+            c.drawString(3 * cm, y_pos, first_line)
 
         # Restliche Zeilen normal
-        c.setFont("Helvetica", 9)
+        c.setFont("Helvetica", 8)
         for line in rest_lines:
-            y_pos -= 0.35*cm
-            if y_pos < 5*cm:
+            y_pos -= 0.35 * cm
+            if y_pos < footer_y_limit:
+                _draw_footer(c, width, settings)
                 c.showPage()
-                y_pos = height - 3*cm
-            if len(line) > 55:
-                c.drawString(3*cm, y_pos, line[:55])
-                y_pos -= 0.35*cm
-                c.drawString(3*cm, y_pos, line[55:110])
+                y_pos = height - 3 * cm
+                c.setFillColor(text_color)
+                c.setFont("Helvetica", 8)
+            if len(line) > 60:
+                c.drawString(3 * cm, y_pos, line[:60])
+                y_pos -= 0.35 * cm
+                c.drawString(3 * cm, y_pos, line[60:120])
             else:
-                c.drawString(3*cm, y_pos, line)
+                c.drawString(3 * cm, y_pos, line)
 
-        c.drawString(12*cm, y_pos, str(pos.get("quantity", 1)))
-        c.drawString(14*cm, y_pos, pos.get("unit", "Stück"))
-        c.drawRightString(16.5*cm, y_pos, f"{pos.get('price_net', 0):.2f} €")
+        c.setFont("Helvetica", 9)
+        c.drawString(12 * cm, y_pos, str(pos.get("quantity", 1)))
+        c.drawString(13.5 * cm, y_pos, pos.get("unit", "Stück"))
+        c.drawRightString(16.5 * cm, y_pos, f"{pos.get('price_net', 0):.2f} €")
         total = pos.get("quantity", 1) * pos.get("price_net", 0)
-        c.drawRightString(width - 2*cm, y_pos, f"{total:.2f} €")
-        y_pos -= 0.6*cm
+        c.drawRightString(width - 2 * cm, y_pos, f"{total:.2f} €")
+        y_pos -= 0.6 * cm
 
-    # Totals
-    y_pos -= 0.5*cm
-    c.line(12*cm, y_pos, width - 2*cm, y_pos)
-    y_pos -= 0.5*cm
+    # === Totals ===
+    y_pos -= 0.5 * cm
+    if y_pos < footer_y_limit + 3 * cm:
+        _draw_footer(c, width, settings)
+        c.showPage()
+        y_pos = height - 3 * cm
 
+    c.setStrokeColor(HexColor("#E2E8F0"))
+    c.line(12 * cm, y_pos, width - 2 * cm, y_pos)
+    y_pos -= 0.5 * cm
+
+    c.setFillColor(text_color)
     c.setFont("Helvetica", 10)
-    c.drawString(14*cm, y_pos, "Netto:")
-    c.drawRightString(width - 2*cm, y_pos, f"{data.get('subtotal_net', 0):.2f} €")
-    y_pos -= 0.5*cm
+    c.drawString(14 * cm, y_pos, "Netto:")
+    c.drawRightString(width - 2 * cm, y_pos, f"{data.get('subtotal_net', 0):.2f} €")
+    y_pos -= 0.5 * cm
+
+    # Discount
+    discount = data.get("discount", 0)
+    if discount > 0:
+        discount_type = data.get("discount_type", "percent")
+        if discount_type == "percent":
+            c.drawString(14 * cm, y_pos, f"Rabatt ({discount:.0f}%):")
+            discount_amt = data.get("subtotal_net", 0) * (discount / 100)
+        else:
+            c.drawString(14 * cm, y_pos, "Rabatt:")
+            discount_amt = discount
+        c.drawRightString(width - 2 * cm, y_pos, f"-{discount_amt:.2f} €")
+        y_pos -= 0.5 * cm
 
     vat_rate = data.get("vat_rate", 19)
     if vat_rate > 0:
-        c.drawString(14*cm, y_pos, f"MwSt ({vat_rate:.0f}%):")
-        c.drawRightString(width - 2*cm, y_pos, f"{data.get('vat_amount', 0):.2f} €")
-        y_pos -= 0.5*cm
+        c.drawString(14 * cm, y_pos, f"MwSt ({vat_rate:.0f}%):")
+        c.drawRightString(width - 2 * cm, y_pos, f"{data.get('vat_amount', 0):.2f} €")
+        y_pos -= 0.5 * cm
     else:
         c.setFillColor(muted_color)
         c.setFont("Helvetica", 8)
-        c.drawString(14*cm, y_pos, "Gemäß §19 UStG wird keine USt berechnet")
+        c.drawString(14 * cm, y_pos, "Gemäß §19 UStG wird keine USt berechnet")
         c.setFillColor(text_color)
         c.setFont("Helvetica", 10)
-        y_pos -= 0.5*cm
+        y_pos -= 0.5 * cm
 
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(14*cm, y_pos, "Gesamt:")
-    c.drawRightString(width - 2*cm, y_pos, f"{data.get('total_gross', 0):.2f} €")
+    c.drawString(14 * cm, y_pos, "Gesamt:")
+    c.drawRightString(width - 2 * cm, y_pos, f"{data.get('total_gross', 0):.2f} €")
+    y_pos -= 0.8 * cm
 
-    # Notes
-    if data.get("notes"):
-        y_pos -= 1.5*cm
+    # === Schlusstext ===
+    schlusstext = data.get("schlusstext", "")
+    if schlusstext:
         c.setFont("Helvetica", 9)
-        c.setFillColor(muted_color)
-        c.drawString(2*cm, y_pos, "Anmerkungen:")
         c.setFillColor(text_color)
-        y_pos -= 0.4*cm
-        for line in data["notes"].split("\n")[:5]:
-            c.drawString(2*cm, y_pos, line[:80])
-            y_pos -= 0.4*cm
+        for line in schlusstext.split("\n")[:8]:
+            if y_pos < footer_y_limit:
+                _draw_footer(c, width, settings)
+                c.showPage()
+                y_pos = height - 3 * cm
+            c.drawString(2 * cm, y_pos, line[:90])
+            y_pos -= 0.35 * cm
 
-    # Footer - company details
-    footer_y = 3.5*cm
-    c.setStrokeColor(HexColor("#E2E8F0"))
-    c.line(2*cm, footer_y + 0.3*cm, width - 2*cm, footer_y + 0.3*cm)
-
-    c.setFillColor(muted_color)
-    c.setFont("Helvetica", 7)
-
-    col1_x = 2*cm
-    c.setFont("Helvetica-Bold", 7)
-    c.drawString(col1_x, footer_y, settings.get("company_name", "Tischlerei Graupner"))
-    c.setFont("Helvetica", 7)
-    fy = footer_y - 0.35*cm
-    if settings.get("owner_name"):
-        c.drawString(col1_x, fy, f"Inh. {settings['owner_name']}")
-        fy -= 0.35*cm
-    if settings.get("address"):
-        for line in settings["address"].split("\n")[:2]:
-            c.drawString(col1_x, fy, line.strip())
-            fy -= 0.35*cm
-
-    col2_x = 7.5*cm
-    fy2 = footer_y
-    if settings.get("phone"):
-        c.drawString(col2_x, fy2, f"Tel: {settings['phone']}")
-        fy2 -= 0.35*cm
-    if settings.get("email"):
-        c.drawString(col2_x, fy2, settings["email"])
-        fy2 -= 0.35*cm
-    if settings.get("tax_id"):
-        c.drawString(col2_x, fy2, f"St.-Nr.: {settings['tax_id']}")
-        fy2 -= 0.35*cm
-
-    col3_x = 13*cm
-    fy3 = footer_y
-    if settings.get("iban"):
-        if settings.get("bank_name"):
-            c.drawString(col3_x, fy3, settings["bank_name"])
-            fy3 -= 0.35*cm
-        c.drawString(col3_x, fy3, f"IBAN: {settings['iban']}")
-        fy3 -= 0.35*cm
-        if settings.get("bic"):
-            c.drawString(col3_x, fy3, f"BIC: {settings['bic']}")
-            fy3 -= 0.35*cm
-
-    # Due date for invoices
-    if doc_type == "invoice" and data.get("due_date"):
-        try:
-            due = datetime.fromisoformat(data["due_date"]).strftime('%d.%m.%Y')
-            c.setFillColor(text_color)
-            c.setFont("Helvetica-Bold", 9)
-            c.drawString(2*cm, footer_y + 0.8*cm, f"Zahlbar bis: {due}")
-        except (ValueError, TypeError):
-            pass
-
-    # Valid until for quotes
+    # Valid until / Due date
     if doc_type == "quote" and data.get("valid_until"):
         try:
-            valid = datetime.fromisoformat(data["valid_until"]).strftime('%d.%m.%Y')
-            c.setFillColor(text_color)
+            valid = datetime.fromisoformat(data["valid_until"]).strftime("%d.%m.%Y")
+            y_pos -= 0.3 * cm
             c.setFont("Helvetica-Bold", 9)
-            c.drawString(2*cm, footer_y + 0.8*cm, f"Gültig bis: {valid}")
+            c.setFillColor(text_color)
+            c.drawString(2 * cm, y_pos, f"Gültig bis: {valid}")
         except (ValueError, TypeError):
             pass
+
+    if doc_type == "invoice" and data.get("due_date"):
+        try:
+            due = datetime.fromisoformat(data["due_date"]).strftime("%d.%m.%Y")
+            y_pos -= 0.3 * cm
+            c.setFont("Helvetica-Bold", 9)
+            c.setFillColor(text_color)
+            c.drawString(2 * cm, y_pos, f"Zahlbar bis: {due}")
+        except (ValueError, TypeError):
+            pass
+
+    # === Footer ===
+    _draw_footer(c, width, settings)
 
     c.save()
     buffer.seek(0)
     return buffer
+
+
+def _draw_footer(c, width, settings):
+    """Zeichnet die Fußzeile mit Firmendaten und Bankverbindung"""
+    muted_color = HexColor("#64748B")
+    footer_y = 3.5 * cm
+
+    c.setStrokeColor(HexColor("#E2E8F0"))
+    c.line(2 * cm, footer_y + 0.3 * cm, width - 2 * cm, footer_y + 0.3 * cm)
+
+    c.setFillColor(muted_color)
+
+    # Column 1: Company
+    col1_x = 2 * cm
+    c.setFont("Helvetica-Bold", 7)
+    c.drawString(col1_x, footer_y, settings.get("company_name", "Tischlerei Graupner"))
+    c.setFont("Helvetica", 7)
+    fy = footer_y - 0.35 * cm
+    if settings.get("owner_name"):
+        c.drawString(col1_x, fy, f"Inh. {settings['owner_name']}")
+        fy -= 0.35 * cm
+    if settings.get("address"):
+        for line in settings["address"].split("\n")[:2]:
+            c.drawString(col1_x, fy, line.strip())
+            fy -= 0.35 * cm
+
+    # Column 2: Contact + Tax
+    col2_x = 7.5 * cm
+    fy2 = footer_y
+    if settings.get("phone"):
+        c.drawString(col2_x, fy2, f"Tel: {settings['phone']}")
+        fy2 -= 0.35 * cm
+    if settings.get("email"):
+        c.drawString(col2_x, fy2, settings["email"])
+        fy2 -= 0.35 * cm
+    if settings.get("website"):
+        c.drawString(col2_x, fy2, settings["website"])
+        fy2 -= 0.35 * cm
+    if settings.get("tax_id"):
+        c.drawString(col2_x, fy2, f"St.-Nr.: {settings['tax_id']}")
+        fy2 -= 0.35 * cm
+
+    # Column 3: Bank
+    col3_x = 13 * cm
+    fy3 = footer_y
+    if settings.get("iban"):
+        if settings.get("bank_name"):
+            c.drawString(col3_x, fy3, settings["bank_name"])
+            fy3 -= 0.35 * cm
+        c.drawString(col3_x, fy3, f"IBAN: {settings['iban']}")
+        fy3 -= 0.35 * cm
+        if settings.get("bic"):
+            c.drawString(col3_x, fy3, f"BIC: {settings['bic']}")
+            fy3 -= 0.35 * cm

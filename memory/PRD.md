@@ -60,6 +60,7 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Toolbar: E-Mail, Drucken, PDF, Speichern, Beenden (inkl. Speichern) buttons added (2026-04-03)
 - [x] E-Mail Dialog: Vorlagen-Dropdown für Nachrichtentext mit Platzhalter-Ersetzung und "Als Vorlage speichern" (2026-04-03)
 - [x] PDF: Titel-Zeilen fett gedruckt, erste Beschreibungszeile fett, mehrzeilige Beschreibungen korrekt (2026-04-03)
+- [x] PDF komplett überarbeitet: Briefkopf (Tischlerei Graupner seit 1960), rechte Spalte (Kd.-Nr., Datum, Nr.), DIN 5008 Absenderzeile, Betreff fett/blau, Vortext, Schlusstext, Fußzeile auf jeder Seite (2026-04-03)
 - [x] Article management page
 - [x] E-Mail protocol
 - [x] Website Integration page
