@@ -614,7 +614,10 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const StammdatenPanel = ({ articles: arts, services: svcs, onRefresh }) => {
     const [editItem, setEditItem] = useState(null);
     const [tab, setTab] = useState("leistungen");
-    const allItems = tab === "leistungen" ? svcs : arts;
+    const [search, setSearch] = useState("");
+    const allItems = (tab === "leistungen" ? svcs : arts).filter(i =>
+      !search || i.name?.toLowerCase().includes(search.toLowerCase()) || i.description?.toLowerCase().includes(search.toLowerCase()) || i.article_number?.toLowerCase().includes(search.toLowerCase())
+    );
 
     const handleDelete = async (id) => {
       if (!window.confirm("Wirklich löschen?")) return;
@@ -654,6 +657,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             className="ml-auto px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-sm hover:bg-primary/90">
             <Plus className="w-4 h-4 inline mr-1" /> Neu
           </button>
+        </div>
+        <div className="relative mb-4">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Suchen nach Name, Beschreibung, Nummer..."
+            className="w-full border rounded-sm pl-9 pr-3 py-2 text-sm" />
         </div>
         {editItem && (
           <div className="border rounded-sm p-4 mb-4 bg-muted/30 space-y-3">
