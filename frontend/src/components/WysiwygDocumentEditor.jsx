@@ -758,6 +758,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     <span className="text-xs lg:text-sm font-semibold ml-1.5" style={{ color: "#cc0000" }}>seit 1960</span>
                   </div>
                   <p className="text-xs lg:text-sm font-medium tracking-wide mb-3" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
+                  {/* Abstand für Brieffenster-Höhe */}
+                  <div className="h-6 lg:h-8"></div>
                   {/* DIN 5008 Brieffenster */}
                   <div className="max-w-sm">
                     <p className="text-[9px] lg:text-[10px] text-muted-foreground border-b border-muted-foreground/30 pb-0.5 mb-2 tracking-wide">
