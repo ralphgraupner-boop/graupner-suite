@@ -756,7 +756,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     {titles[type].toUpperCase()}
                   </h2>
                   <div className="space-y-0.5 text-xs lg:text-sm text-muted-foreground">
-                    <p>{type === "quote" ? "Angebots-Nr." : type === "order" ? "Auftrags-Nr." : "Rechnungs-Nr."}: {docNumber || "(wird beim Speichern vergeben)"}</p>
                     <p>Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
                   </div>
                 </div>
@@ -831,6 +830,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Dokument-Nummer groß in Dunkelblau */}
+            <div className="px-4 lg:px-10 py-4 lg:py-5 border-b">
+              <h2 className="text-xl lg:text-2xl font-bold" style={{ color: "#1a1a5e" }} data-testid="doc-number-heading">
+                {type === "quote" ? "Angebots-Nr." : type === "order" ? "Auftrags-Nr." : "Rechnungs-Nr."} {docNumber || "(wird beim Speichern vergeben)"}
+              </h2>
             </div>
 
             {/* Betreff */}
