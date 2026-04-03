@@ -831,11 +831,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     <th className="w-8"></th>
                     <th className="text-left py-3 text-sm font-semibold text-primary w-12">Pos</th>
                     <th className="text-left py-3 text-sm font-semibold text-primary">Beschreibung</th>
-                    <th className="text-right py-3 text-sm font-semibold text-primary w-20">Menge</th>
-                    <th className="text-left py-3 text-sm font-semibold text-primary w-20 pl-3">Einheit</th>
-                    <th className="text-right py-3 text-sm font-semibold text-primary w-28">Einzelpreis</th>
-                    <th className="text-right py-3 text-sm font-semibold text-primary w-28">Gesamt</th>
-                    <th className="w-10"></th>
+                    <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "70px" }}>Menge</th>
+                    <th className="text-left py-3 text-sm font-semibold text-primary pl-2" style={{ width: "70px" }}>Einheit</th>
+                    <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "100px" }}>Einzelpreis</th>
+                    <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "100px" }}>Gesamt</th>
+                    <th className="w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
