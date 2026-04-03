@@ -57,7 +57,7 @@ async def check_followup_quotes(user=Depends(get_current_user)):
     from routes.push import send_push_to_all
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     followup_days = settings.get("followup_days", 7)
-    if settings.get("followup_push_enabled") is False:
+    if settings.get("followup_push_enabled") in (False, "false"):
         return {"followup_count": 0, "quotes": [], "push_disabled": True}
     now = datetime.now(timezone.utc)
     threshold = now - timedelta(days=followup_days)

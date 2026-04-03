@@ -303,6 +303,9 @@ class CompanySettings(BaseModel):
     pdf_accent_color: str = "#1a1a2e"
     pdf_font_size: str = "normal"
     pdf_bemerkung_default: str = ""
+    # Wiedervorlage Settings
+    followup_days: int = 7
+    followup_push_enabled: bool = True
 
 
 class WebhookContact(BaseModel):

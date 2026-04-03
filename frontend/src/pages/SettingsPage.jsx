@@ -433,7 +433,7 @@ const WiedervorlageSettings = ({ settings, setSettings, onSave, saving }) => {
             <select
               data-testid="select-followup-push"
               className="w-full border rounded px-3 py-2 text-sm"
-              value={settings.followup_push_enabled !== false ? "true" : "false"}
+              value={settings.followup_push_enabled === false ? "false" : "true"}
               onChange={(e) => setSettings({ ...settings, followup_push_enabled: e.target.value === "true" })}
             >
               <option value="true">Aktiviert</option>
