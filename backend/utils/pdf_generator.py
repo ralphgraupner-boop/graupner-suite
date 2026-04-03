@@ -212,15 +212,44 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             c.showPage()
             y_pos = height - 3*cm
 
+        # Titel-Zeile: fett und über gesamte Breite
+        if pos.get("type") == "titel":
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(2*cm, y_pos, str(pos.get("pos_nr", "")))
+            c.drawString(3*cm, y_pos, pos.get("description", ""))
+            c.setFont("Helvetica", 9)
+            y_pos -= 0.6*cm
+            continue
+
         c.drawString(2*cm, y_pos, str(pos.get("pos_nr", "")))
 
         desc = pos.get("description", "")
-        if len(desc) > 50:
-            c.drawString(3*cm, y_pos, desc[:50])
+        desc_lines = desc.split("\n") if desc else [""]
+        first_line = desc_lines[0] if desc_lines else ""
+        rest_lines = desc_lines[1:] if len(desc_lines) > 1 else []
+
+        # Erste Zeile fett
+        c.setFont("Helvetica-Bold", 9)
+        if len(first_line) > 50:
+            c.drawString(3*cm, y_pos, first_line[:50])
             y_pos -= 0.4*cm
-            c.drawString(3*cm, y_pos, desc[50:100])
+            c.drawString(3*cm, y_pos, first_line[50:100])
         else:
-            c.drawString(3*cm, y_pos, desc)
+            c.drawString(3*cm, y_pos, first_line)
+
+        # Restliche Zeilen normal
+        c.setFont("Helvetica", 9)
+        for line in rest_lines:
+            y_pos -= 0.35*cm
+            if y_pos < 5*cm:
+                c.showPage()
+                y_pos = height - 3*cm
+            if len(line) > 55:
+                c.drawString(3*cm, y_pos, line[:55])
+                y_pos -= 0.35*cm
+                c.drawString(3*cm, y_pos, line[55:110])
+            else:
+                c.drawString(3*cm, y_pos, line)
 
         c.drawString(12*cm, y_pos, str(pos.get("quantity", 1)))
         c.drawString(14*cm, y_pos, pos.get("unit", "Stück"))
