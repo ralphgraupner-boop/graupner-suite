@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube } from "lucide-react";
+import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -396,8 +396,60 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
         </div>
       </Card>
 
+      <WiedervorlageSettings settings={settings} setSettings={setSettings} onSave={onSave} saving={saving} />
+
       <PushNotificationSettings />
     </div>
+  );
+};
+
+
+// ==================== WIEDERVORLAGE SETTINGS ====================
+const WiedervorlageSettings = ({ settings, setSettings, onSave, saving }) => {
+  return (
+    <Card className="p-4 lg:p-6">
+      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <Clock className="w-5 h-5 text-primary" /> Wiedervorlage-Einstellungen
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Automatische Erinnerung bei Angeboten die nicht beantwortet wurden.
+      </p>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Wiedervorlage nach (Tagen)</label>
+            <Input
+              data-testid="input-followup-days"
+              type="number"
+              min={1}
+              value={settings.followup_days || 7}
+              onChange={(e) => setSettings({ ...settings, followup_days: parseInt(e.target.value) || 7 })}
+              placeholder="7"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Angebote werden nach dieser Anzahl Tage zur Wiedervorlage vorgeschlagen.</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Automatische Push-Benachrichtigung</label>
+            <select
+              data-testid="select-followup-push"
+              className="w-full border rounded px-3 py-2 text-sm"
+              value={settings.followup_push_enabled !== false ? "true" : "false"}
+              onChange={(e) => setSettings({ ...settings, followup_push_enabled: e.target.value === "true" })}
+            >
+              <option value="true">Aktiviert</option>
+              <option value="false">Deaktiviert</option>
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">Push-Nachricht wenn Angebote zur Wiedervorlage fällig sind.</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end mt-4">
+        <Button data-testid="btn-save-followup" onClick={onSave} disabled={saving}>
+          <Save className="w-4 h-4" />
+          {saving ? "..." : "Speichern"}
+        </Button>
+      </div>
+    </Card>
   );
 };
 

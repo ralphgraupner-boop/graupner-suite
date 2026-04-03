@@ -26,9 +26,11 @@ async def get_quotes():
 
 @router.get("/quotes/followup")
 async def get_followup_quotes(user=Depends(get_current_user)):
-    """Angebote die zur Wiedervorlage fällig sind (>7 Tage ohne Antwort)"""
+    """Angebote die zur Wiedervorlage fällig sind"""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    followup_days = settings.get("followup_days", 7)
     now = datetime.now(timezone.utc)
-    threshold = now - timedelta(days=7)
+    threshold = now - timedelta(days=followup_days)
     quotes = await db.quotes.find(
         {"status": {"$in": ["Entwurf", "Gesendet"]}, "followup_sent": {"$ne": True}},
         {"_id": 0}
@@ -53,8 +55,12 @@ async def get_followup_quotes(user=Depends(get_current_user)):
 async def check_followup_quotes(user=Depends(get_current_user)):
     """Prüft Angebote für automatische Wiedervorlage und sendet Push"""
     from routes.push import send_push_to_all
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    followup_days = settings.get("followup_days", 7)
+    if settings.get("followup_push_enabled") is False:
+        return {"followup_count": 0, "quotes": [], "push_disabled": True}
     now = datetime.now(timezone.utc)
-    threshold = now - timedelta(days=7)
+    threshold = now - timedelta(days=followup_days)
     quotes = await db.quotes.find(
         {"status": {"$in": ["Entwurf", "Gesendet"]}, "followup_sent": {"$ne": True}},
         {"_id": 0}
