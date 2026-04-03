@@ -761,10 +761,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   <p className="text-xs lg:text-sm text-muted-foreground mt-2">Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
                 </div>
                 {/* Right: Adresse in Blau */}
-                <div className="sm:text-right text-xs lg:text-sm" style={{ color: "#003399" }}>
-                  <p className="whitespace-pre-line">{settings.address || "Erlengrund 129\n22453 Hamburg"}</p>
-                  {settings.phone && <p>Tel: {settings.phone}</p>}
-                  {settings.email && <p>{settings.email}</p>}
+                <div className="sm:text-right text-xs lg:text-sm font-medium" style={{ color: "#003399" }}>
+                  <p className="font-bold">Tischlerei Graupner</p>
+                  <p>Erlengrund 129</p>
+                  <p>22453 Hamburg</p>
+                  <p>Tel.: 040 55567744</p>
+                  <p>Service24@tischlerei-graupner.de</p>
+                  <p>www.tischlerei-graupner.de</p>
+                  <p>Steuernummer: 45/076/04744</p>
                 </div>
               </div>
             </div>
