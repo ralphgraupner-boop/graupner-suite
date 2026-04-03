@@ -180,7 +180,8 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
             }
           }}
           placeholder="z.B. Angebot für Schiebetür-Reparatur"
-          className="flex w-full h-10 rounded-sm border border-input bg-background px-3 py-2 text-sm font-semibold ring-offset-background placeholder:text-muted-foreground placeholder:font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex w-full h-10 rounded-sm border border-input bg-background px-3 py-2 text-sm font-bold ring-offset-background placeholder:text-muted-foreground placeholder:font-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          style={{ color: "#003399" }}
         />
       ) : (
         <textarea
