@@ -540,6 +540,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setSaving(true);
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
+      let res = null;
       
       if (isNew) {
         const payload = {
@@ -555,7 +556,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           ...(type === "quote" && { valid_days: 30 }),
           ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount })
         };
-        await api.post(`/${endpoint}`, payload);
+        res = await api.post(`/${endpoint}`, payload);
         toast.success(`${titles[type]} erstellt!`);
       } else {
         const payload = {
@@ -571,9 +572,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           ...(type === "invoice" && { deposit_amount: depositAmount })
         };
         await api.put(`/${endpoint}/${id}`, payload);
-        toast.success(`${titles[type]} aktualisiert!`);
+        toast.success(`${titles[type]} gespeichert!`);
       }
-      navigate(listPaths[type]);
+      if (isNew && res?.data?.id) {
+        navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true });
+      }
     } catch (err) {
       toast.error("Fehler beim Speichern");
     } finally {
@@ -881,6 +884,10 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             <Button size="sm" onClick={handleSave} disabled={saving} data-testid="btn-save-document">
               <Save className="w-4 h-4" />
               <span className="hidden sm:inline">{saving ? "..." : "Speichern"}</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate(listPaths[type])} data-testid="btn-close-editor">
+              <X className="w-4 h-4" />
+              <span className="hidden sm:inline">Beenden</span>
             </Button>
           </div>
         </div>

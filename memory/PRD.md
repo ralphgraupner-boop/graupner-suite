@@ -56,6 +56,7 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Fixed Articles tab showing Services bug
 - [x] Fixed SMTP Email settings bug
 - [x] Fixed sidebar Leistungen showing 0 items bug (2026-04-03)
+- [x] Save button now keeps editor open (Zwischenspeichern), separate "Beenden" button to exit (2026-04-03)
 - [x] Article management page
 - [x] E-Mail protocol
 - [x] Website Integration page
