@@ -68,6 +68,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState([]);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -921,8 +922,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             )}
             <div className="h-6 w-px bg-border hidden sm:block" />
             {!isNew && (
-              <Button variant="outline" size="sm" onClick={() => {
+              <Button variant="outline" size="sm" onClick={async () => {
                 setEmailForm(f => ({ ...f, to_email: customer?.email || "", subject: `${titles[type]} ${docNumber}` }));
+                try {
+                  const res = await api.get(`/text-templates?text_type=email`);
+                  setEmailTemplates(res.data || []);
+                } catch {}
                 setShowEmailDialog(true);
               }} data-testid="btn-email-document">
                 <Mail className="w-4 h-4" />
@@ -2177,9 +2182,53 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   placeholder={`${titles[type]} ${docNumber}`} className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-subject-input" />
               </div>
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Nachricht</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-muted-foreground">Nachricht</label>
+                  <select
+                    className="text-xs border rounded px-2 py-1 text-muted-foreground"
+                    data-testid="email-template-select"
+                    value=""
+                    onChange={(e) => {
+                      const tpl = emailTemplates.find(t => t.id === e.target.value);
+                      if (tpl) {
+                        const content = tpl.content
+                          .replace(/\{kunde_name\}/g, customer?.name || "")
+                          .replace(/\{anrede_brief\}/g, customer?.name ? (customer.name.includes("Frau") ? `Sehr geehrte ${customer.name}` : `Sehr geehrter Herr ${customer.name.split(" ").pop()}`) : "Sehr geehrte Damen und Herren")
+                          .replace(/\{firma\}/g, settings.company_name || "Tischlerei Graupner")
+                          .replace(/\{dokument_nr\}/g, docNumber || "")
+                          .replace(/\{datum\}/g, new Date().toLocaleDateString("de-DE"));
+                        setEmailForm(f => ({ ...f, message: content }));
+                      }
+                    }}
+                  >
+                    <option value="">Vorlage wählen...</option>
+                    {emailTemplates.map(t => (
+                      <option key={t.id} value={t.id}>{t.title}</option>
+                    ))}
+                  </select>
+                </div>
                 <textarea value={emailForm.message} onChange={e => setEmailForm(f => ({ ...f, message: e.target.value }))}
-                  placeholder="Optionale Nachricht..." rows={3} className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-message-input" />
+                  placeholder="Nachricht eingeben oder Vorlage wählen..." rows={5} className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-message-input" />
+                {emailForm.message && (
+                  <button
+                    className="text-xs text-primary hover:underline mt-1"
+                    data-testid="btn-save-email-template"
+                    onClick={async () => {
+                      const name = prompt("Vorlagenname:");
+                      if (!name) return;
+                      try {
+                        await api.post("/text-templates", {
+                          doc_type: "allgemein", text_type: "email", title: name, content: emailForm.message
+                        });
+                        const res = await api.get(`/text-templates?text_type=email`);
+                        setEmailTemplates(res.data || []);
+                        toast.success("E-Mail-Vorlage gespeichert");
+                      } catch { toast.error("Fehler beim Speichern"); }
+                    }}
+                  >
+                    Als Vorlage speichern
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">
