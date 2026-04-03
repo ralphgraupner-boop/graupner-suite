@@ -62,6 +62,7 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] PDF: Titel-Zeilen fett gedruckt, erste Beschreibungszeile fett, mehrzeilige Beschreibungen korrekt (2026-04-03)
 - [x] PDF komplett überarbeitet: Briefkopf, rechte Spalte, DIN 5008, Betreff, Vortext, Schlusstext, Fußzeile (2026-04-03)
 - [x] DocumentPreview (Vorschau beim Öffnen) angepasst: gleicher Briefkopf wie Editor + PDF (2026-04-03)
+- [x] Mahnwesen komplett überarbeitet: Briefkopf, Mahngebühren (5€/10€), Mahnungshistorie, Bankverbindung im Text (2026-04-03)
 - [x] Article management page
 - [x] E-Mail protocol
 - [x] Website Integration page

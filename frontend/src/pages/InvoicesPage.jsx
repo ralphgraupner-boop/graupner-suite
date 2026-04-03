@@ -202,9 +202,28 @@ const InvoicesPage = () => {
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
                         <span>Betrag: <strong className="text-foreground">{inv.total_gross?.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</strong></span>
+                        {inv.dunning_fee > 0 && (
+                          <span>+ Mahngebühr: <strong className="text-red-600">{inv.dunning_fee?.toFixed(2)} €</strong></span>
+                        )}
                         <span>Fällig: {new Date(inv.due_date).toLocaleDateString("de-DE")}</span>
                         <span>Mahnstufe: <strong className={inv.dunning_level >= 2 ? "text-red-600" : "text-foreground"}>{getDunningLabel(inv.dunning_level || 0)}</strong></span>
                       </div>
+                      {/* Mahnungshistorie */}
+                      {inv.dunning_history?.length > 0 && (
+                        <div className="mt-3 pt-2 border-t border-dashed">
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">Mahnverlauf:</p>
+                          <div className="space-y-0.5">
+                            {inv.dunning_history.map((h, i) => (
+                              <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                                <span>{new Date(h.date).toLocaleDateString("de-DE")}</span>
+                                <span className="font-medium text-foreground">{h.label}</span>
+                                {h.fee > 0 && <span className="text-red-600">({h.fee.toFixed(2)} € Gebühr)</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2 shrink-0">
                       {(inv.dunning_level || 0) > 0 && (

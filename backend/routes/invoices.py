@@ -275,7 +275,7 @@ async def delete_invoice(invoice_id: str):
 
 @router.post("/invoices/{invoice_id}/dunning")
 async def advance_dunning(invoice_id: str, user=Depends(get_current_user)):
-    """Mahnstufe erhöhen"""
+    """Mahnstufe erhöhen und Historie speichern"""
     invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
@@ -285,13 +285,29 @@ async def advance_dunning(invoice_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Maximale Mahnstufe bereits erreicht")
 
     new_level = current_level + 1
+    dunning_fees = {1: 0, 2: 5.00, 3: 10.00}
+    fee = dunning_fees.get(new_level, 0)
+
+    history_entry = {
+        "level": new_level,
+        "date": datetime.now(timezone.utc).isoformat(),
+        "fee": fee,
+        "label": {1: "Zahlungserinnerung", 2: "1. Mahnung", 3: "Letzte Mahnung"}.get(new_level, "Mahnung")
+    }
+
     await db.invoices.update_one(
         {"id": invoice_id},
-        {"$set": {
-            "dunning_level": new_level,
-            "dunning_date": datetime.now(timezone.utc).isoformat(),
-            "status": "Überfällig"
-        }}
+        {
+            "$set": {
+                "dunning_level": new_level,
+                "dunning_date": datetime.now(timezone.utc).isoformat(),
+                "dunning_fee": fee,
+                "status": "Überfällig"
+            },
+            "$push": {
+                "dunning_history": history_entry
+            }
+        }
     )
 
-    return {"message": f"Mahnstufe auf {new_level} erhöht", "dunning_level": new_level}
+    return {"message": f"Mahnstufe auf {new_level} erhöht", "dunning_level": new_level, "fee": fee}
