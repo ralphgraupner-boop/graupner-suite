@@ -256,7 +256,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 y_cust -= 0.4 * cm
 
     # === Angebots-Nr. groß in Blau ===
-    y_doc_nr = height - 7.8 * cm
+    y_doc_nr = height - 10.5 * cm
     c.setFont("Helvetica-Bold", 14)
     c.setFillColor(koenigsblau)
     c.drawString(2 * cm, y_doc_nr, f"{number_labels.get(doc_type, 'Nr.')}: {doc_number}")
