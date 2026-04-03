@@ -758,7 +758,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     <span className="text-xs lg:text-sm font-semibold ml-1.5" style={{ color: "#cc0000" }}>seit 1960</span>
                   </div>
                   <p className="text-xs lg:text-sm font-medium tracking-wide" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
-                  <p className="text-xs lg:text-sm text-muted-foreground mt-2">Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
                 </div>
                 {/* Right: Adresse in Blau */}
                 <div className="sm:text-right text-xs lg:text-sm font-medium" style={{ color: "#003399" }}>
@@ -769,6 +768,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   <p>Service24@tischlerei-graupner.de</p>
                   <p>www.tischlerei-graupner.de</p>
                   <p>Steuernummer: 45/076/04744</p>
+                  {/* Dokument-Metadaten */}
+                  <div className="mt-3 pt-3 border-t border-blue-200 space-y-0.5 text-xs lg:text-sm">
+                    <p>Kd.-Nr.: {selectedCustomerId ? selectedCustomerId.substring(0, 8).toUpperCase() : "-"}</p>
+                    {type !== "quote" && <p>Auft.-Nummer: {type === "order" ? (docNumber || "-") : "-"}</p>}
+                    <p>Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>
+                    <p>{type === "quote" ? "Angebots-Nr." : type === "order" ? "Auftrags-Nr." : "Rechnungs-Nr."}: {docNumber || "-"}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -832,13 +838,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                   )}
                 </div>
               )}
-            </div>
-
-            {/* Dokument-Nummer groß in Dunkelblau */}
-            <div className="px-4 lg:px-10 py-4 lg:py-5 border-b">
-              <h2 className="text-xl lg:text-2xl font-bold" style={{ color: "#1a1a5e" }} data-testid="doc-number-heading">
-                {type === "quote" ? "Angebots-Nr." : type === "order" ? "Auftrags-Nr." : "Rechnungs-Nr."} {docNumber || "(wird beim Speichern vergeben)"}
-              </h2>
             </div>
 
             {/* Betreff */}
