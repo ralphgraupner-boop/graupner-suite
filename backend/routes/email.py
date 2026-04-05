@@ -178,3 +178,100 @@ async def send_followup_email(quote_id: str, req: EmailRequest, user=Depends(get
         logger.error(f"Follow-up E-Mail fehlgeschlagen: {e}")
         await log_email(req.to_email, f"Follow-up: Angebot {quote_number}", "quote", quote_id, quote_number, quote.get("customer_name", ""), "fehlgeschlagen")
         raise HTTPException(status_code=500, detail=f"E-Mail-Versand fehlgeschlagen: {str(e)}")
+
+
+
+# ===================== E-MAIL VORLAGEN (Templates DB) =====================
+
+@router.get("/email/vorlagen")
+async def get_email_vorlagen(q: str = "", user=Depends(get_current_user)):
+    """Get all email templates, optionally filtered by search query"""
+    query = {}
+    if q:
+        query["$or"] = [
+            {"name": {"$regex": q, "$options": "i"}},
+            {"betreff": {"$regex": q, "$options": "i"}},
+        ]
+    vorlagen = await db.email_vorlagen.find(query, {"_id": 0}).sort("name", 1).to_list(100)
+    return vorlagen
+
+
+@router.post("/email/vorlagen")
+async def create_email_vorlage(body: dict, user=Depends(get_current_user)):
+    import uuid
+    vorlage = {
+        "id": str(uuid.uuid4()),
+        "name": body.get("name", ""),
+        "betreff": body.get("betreff", ""),
+        "text": body.get("text", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if not vorlage["name"]:
+        raise HTTPException(400, "Name erforderlich")
+    await db.email_vorlagen.insert_one(vorlage)
+    vorlage.pop("_id", None)
+    return vorlage
+
+
+@router.put("/email/vorlagen/{vorlage_id}")
+async def update_email_vorlage(vorlage_id: str, body: dict, user=Depends(get_current_user)):
+    existing = await db.email_vorlagen.find_one({"id": vorlage_id})
+    if not existing:
+        raise HTTPException(404, "Vorlage nicht gefunden")
+    updates = {k: v for k, v in body.items() if k in ["name", "betreff", "text"]}
+    if updates:
+        await db.email_vorlagen.update_one({"id": vorlage_id}, {"$set": updates})
+    updated = await db.email_vorlagen.find_one({"id": vorlage_id}, {"_id": 0})
+    return updated
+
+
+@router.delete("/email/vorlagen/{vorlage_id}")
+async def delete_email_vorlage(vorlage_id: str, user=Depends(get_current_user)):
+    result = await db.email_vorlagen.delete_one({"id": vorlage_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Vorlage nicht gefunden")
+    return {"message": "Vorlage gelöscht"}
+
+
+# ===================== ANFRAGE E-MAIL VERSAND =====================
+
+@router.post("/email/anfrage/{anfrage_id}")
+async def send_anfrage_email(anfrage_id: str, body: dict, user=Depends(get_current_user)):
+    """Send email from Anfragen page"""
+    anfrage = await db.anfragen.find_one({"id": anfrage_id}, {"_id": 0})
+    if not anfrage:
+        raise HTTPException(404, "Anfrage nicht gefunden")
+
+    to_email = body.get("to_email", "")
+    subject = body.get("subject", "")
+    message = body.get("message", "")
+
+    if not to_email or not message:
+        raise HTTPException(400, "E-Mail-Adresse und Nachricht erforderlich")
+
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    company = settings.get("company_name", "Tischlerei Graupner")
+
+    body_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <p>{message.replace(chr(10), '<br>')}</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
+        <p style="font-size: 12px; color: #64748B;">
+            {company}<br>
+            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
+            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
+        </p>
+    </div>
+    """
+
+    try:
+        send_email(
+            to_email=to_email,
+            subject=subject or f"Nachricht von {company}",
+            body_html=body_html,
+        )
+        await log_email(to_email, subject, "anfrage", anfrage_id, "", anfrage.get("name", ""), "gesendet")
+        return {"message": f"E-Mail an {to_email} gesendet"}
+    except Exception as e:
+        logger.error(f"Anfrage-Email failed: {e}")
+        raise HTTPException(500, f"E-Mail-Versand fehlgeschlagen: {str(e)}")

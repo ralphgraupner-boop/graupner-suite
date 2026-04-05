@@ -331,6 +331,139 @@ const TextbausteineTab = () => {
 
 
 // ==================== EMAIL TAB ====================
+// ==================== E-MAIL VORLAGEN MANAGER ====================
+const EmailVorlagenManager = () => {
+  const [vorlagen, setVorlagen] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editItem, setEditItem] = useState(null);
+  const [form, setForm] = useState({ name: "", betreff: "", text: "" });
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const load = async () => {
+    try {
+      const res = await api.get("/email/vorlagen");
+      setVorlagen(res.data);
+    } catch {} finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const filtered = vorlagen.filter(v =>
+    v.name.toLowerCase().includes(search.toLowerCase()) ||
+    v.betreff.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const openNew = () => { setEditItem("new"); setForm({ name: "", betreff: "", text: "" }); };
+  const openEdit = (v) => { setEditItem(v.id); setForm({ name: v.name, betreff: v.betreff, text: v.text }); };
+
+  const handleSave = async () => {
+    if (!form.name) { toast.error("Name erforderlich"); return; }
+    setSaving(true);
+    try {
+      if (editItem === "new") {
+        await api.post("/email/vorlagen", form);
+        toast.success("Vorlage erstellt");
+      } else {
+        await api.put(`/email/vorlagen/${editItem}`, form);
+        toast.success("Vorlage aktualisiert");
+      }
+      setEditItem(null);
+      load();
+    } catch { toast.error("Fehler beim Speichern"); } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/email/vorlagen/${id}`);
+      toast.success("Vorlage gelöscht");
+      load();
+    } catch { toast.error("Fehler beim Löschen"); }
+  };
+
+  return (
+    <Card className="p-4 lg:p-6" data-testid="email-vorlagen-settings">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <FileText className="w-5 h-5 text-primary" /> E-Mail-Vorlagen
+        </h3>
+        <Button size="sm" onClick={openNew} data-testid="btn-new-vorlage">
+          <Plus className="w-4 h-4" /> Neue Vorlage
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground mb-3">
+        Vorlagen für schnellen E-Mail-Versand aus Anfragen und anderen Modulen.
+      </p>
+
+      {vorlagen.length > 3 && (
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Vorlagen durchsuchen..."
+          className="mb-3"
+          data-testid="search-vorlagen"
+        />
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center h-16"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" /></div>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4">Noch keine Vorlagen. Erstellen Sie die erste!</p>
+      ) : (
+        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          {filtered.map((v) => (
+            <div key={v.id} className="flex items-center justify-between p-3 border rounded-sm hover:bg-muted/30 transition-colors" data-testid={`vorlage-row-${v.id}`}>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm truncate">{v.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{v.betreff}</p>
+              </div>
+              <div className="flex items-center gap-1 ml-2 shrink-0">
+                <button onClick={() => openEdit(v)} className="p-1.5 hover:bg-muted rounded-sm" title="Bearbeiten">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => handleDelete(v.id)} className="p-1.5 hover:bg-red-50 rounded-sm text-red-500" title="Löschen">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Edit/Create Modal */}
+      <Modal isOpen={!!editItem} onClose={() => setEditItem(null)} title={editItem === "new" ? "Neue E-Mail-Vorlage" : "Vorlage bearbeiten"}>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Name (zum Suchen)</label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="z.B. Bilder anfordern" data-testid="vorlage-name" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Betreff</label>
+            <Input value={form.betreff} onChange={(e) => setForm({ ...form, betreff: e.target.value })} placeholder="z.B. Bitte um Zusendung von Fotos" data-testid="vorlage-betreff" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Nachricht</label>
+            <Textarea
+              value={form.text}
+              onChange={(e) => setForm({ ...form, text: e.target.value })}
+              placeholder={"Sehr geehrte/r {kunde_name},\n\nbitte senden Sie uns Fotos des Schadens...\n\nMit freundlichen Grüßen\nTischlerei Graupner"}
+              rows={6}
+              data-testid="vorlage-text"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Platzhalter: {"{kunde_name}"}, {"{email}"}, {"{firma_name}"}</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setEditItem(null)}>Abbrechen</Button>
+            <Button onClick={handleSave} disabled={saving} data-testid="btn-save-vorlage">
+              {saving ? "Speichere..." : "Speichern"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </Card>
+  );
+};
+
+
 const EmailTab = ({ settings, setSettings, onSave, saving }) => {
   const [testing, setTesting] = useState(false);
   const [imapTesting, setImapTesting] = useState(false);
@@ -431,6 +564,9 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
       </Card>
 
       <WiedervorlageSettings settings={settings} setSettings={setSettings} onSave={onSave} saving={saving} />
+
+      {/* E-Mail-Vorlagen */}
+      <EmailVorlagenManager />
 
       {/* IMAP Einstellungen */}
       <Card className="p-4 lg:p-6" data-testid="imap-settings">

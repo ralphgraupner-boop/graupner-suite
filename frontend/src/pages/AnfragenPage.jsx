@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
@@ -20,6 +20,7 @@ const AnfragenPage = () => {
   const [quickNoteSaving, setQuickNoteSaving] = useState(false);
   const [vcfUploading, setVcfUploading] = useState(false);
   const [reparaturgruppen, setReparaturgruppen] = useState([]);
+  const [emailAnfrage, setEmailAnfrage] = useState(null);
 
   useEffect(() => {
     loadAnfragen();
@@ -297,6 +298,14 @@ const AnfragenPage = () => {
                   )}
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
+                      onClick={() => setEmailAnfrage(anfrage)}
+                      data-testid={`btn-mail-${anfrage.id}`}
+                      className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-sm transition-colors"
+                      title="E-Mail senden"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => openQuickNote(anfrage)}
                       data-testid={`btn-quicknote-${anfrage.id}`}
                       className={`p-2 rounded-sm transition-colors ${quickNoteId === anfrage.id ? 'bg-amber-200 text-amber-800' : 'bg-amber-50 hover:bg-amber-100 text-amber-700'}`}
@@ -514,6 +523,9 @@ const AnfragenPage = () => {
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                      <Button size="sm" variant="outline" onClick={() => setEmailAnfrage(anfrage)} data-testid={`btn-mail-anfrage-${anfrage.id}`}>
+                        <Mail className="w-4 h-4" /> E-Mail senden
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => openQuickNote(anfrage)} data-testid={`btn-quicknote-expanded-${anfrage.id}`}>
                         <MessageSquarePlus className="w-4 h-4" /> Schnellnotiz
                       </Button>
@@ -716,6 +728,156 @@ const AnfragenPage = () => {
           </div>
         </div>
       </Modal>
+      {/* E-Mail Dialog */}
+      {emailAnfrage && (
+        <AnfrageEmailDialog
+          anfrage={emailAnfrage}
+          onClose={() => setEmailAnfrage(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+
+// ==================== ANFRAGE E-MAIL DIALOG ====================
+const AnfrageEmailDialog = ({ anfrage, onClose }) => {
+  const [toEmail, setToEmail] = useState(anfrage.email || "");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [vorlagen, setVorlagen] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showResults, setShowResults] = useState(false);
+
+  useEffect(() => {
+    api.get("/email/vorlagen").then(res => setVorlagen(res.data)).catch(() => {});
+  }, []);
+
+  const filtered = vorlagen.filter(v =>
+    v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    v.betreff.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const replacePlaceholders = (text) => {
+    return text
+      .replace(/\{kunde_name\}/g, anfrage.name || "")
+      .replace(/\{email\}/g, anfrage.email || "")
+      .replace(/\{firma_name\}/g, "Tischlerei Graupner");
+  };
+
+  const applyVorlage = (vorlage) => {
+    setSubject(replacePlaceholders(vorlage.betreff));
+    setMessage(replacePlaceholders(vorlage.text));
+    setSearchTerm(vorlage.name);
+    setShowResults(false);
+  };
+
+  const handleSend = async () => {
+    if (!toEmail || !message) { toast.error("E-Mail und Nachricht erforderlich"); return; }
+    setSending(true);
+    try {
+      await api.post(`/email/anfrage/${anfrage.id}`, { to_email: toEmail, subject, message });
+      toast.success(`E-Mail an ${toEmail} gesendet`);
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Senden");
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={onClose} data-testid="anfrage-email-dialog">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg my-8" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Mail className="w-5 h-5" /> E-Mail an {anfrage.name}
+          </h2>
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-4 space-y-3">
+          {/* Vorlage suchen */}
+          <div className="relative">
+            <label className="block text-sm font-medium mb-1">Vorlage wählen</label>
+            <input
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setShowResults(true); }}
+              onFocus={() => setShowResults(true)}
+              className="w-full border rounded-sm p-2 text-sm pr-8"
+              placeholder="Vorlage suchen... z.B. Bilder"
+              data-testid="email-vorlage-search"
+            />
+            <Search className="w-4 h-4 text-muted-foreground absolute right-2.5 top-[34px]" />
+            {showResults && (
+              <div className="absolute z-10 mt-1 w-full bg-background border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid="email-vorlage-results">
+                {filtered.length === 0 ? (
+                  <p className="p-3 text-sm text-muted-foreground">Keine Vorlagen gefunden</p>
+                ) : (
+                  filtered.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => applyVorlage(v)}
+                      className="w-full text-left p-3 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
+                      data-testid={`vorlage-option-${v.id}`}
+                    >
+                      <p className="text-sm font-medium">{v.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{v.betreff}</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* An */}
+          <div>
+            <label className="block text-sm font-medium mb-1">An</label>
+            <input
+              type="email"
+              value={toEmail}
+              onChange={(e) => setToEmail(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm"
+              placeholder="kunde@email.de"
+              data-testid="email-to"
+            />
+          </div>
+
+          {/* Betreff */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Betreff</label>
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm"
+              placeholder="Betreff..."
+              data-testid="email-subject"
+            />
+          </div>
+
+          {/* Nachricht */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Nachricht</label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm min-h-[150px] resize-none"
+              placeholder="Nachricht..."
+              data-testid="email-message"
+            />
+          </div>
+        </div>
+        <div className="p-4 border-t flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Abbrechen</button>
+          <button
+            onClick={handleSend}
+            disabled={sending || !toEmail || !message}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
+            data-testid="btn-send-anfrage-email"
+          >
+            <Send className="w-4 h-4" />
+            {sending ? "Sende..." : "E-Mail senden"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
