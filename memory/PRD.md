@@ -20,35 +20,31 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] 1-Click Kundenportal-Erstellung + Auto-E-Mail-Einladungen
 - [x] Shared PortalButtons.jsx für Anfragen/Einsätze/Kunden
 - [x] Passwort-Datei in Einstellungen (Benutzer-Tab)
-- [x] **WysiwygDocumentEditor Refactoring** (2.297 → 527 Zeilen, 10 Sub-Komponenten)
-- [x] **Textbaustein Click-Outside Fix** (Dropdown schließt bei Klick außerhalb)
+- [x] WysiwygDocumentEditor Refactoring (2.297 → 527 Zeilen, 10 Sub-Komponenten)
+- [x] Textbaustein Click-Outside Fix
 - [x] **Artikelkalkulation** (EK, Zeitanteile mit Lohnstufen, Materialzuschlag, Gewinnaufschlag)
 - [x] **Kalkulationseinstellungen** (Stundensätze Meister/Geselle/Azubi/Helfer + Zuschläge global konfigurierbar)
+- [x] **Kalkulationshistorie** (Vollständige Kalkulation pro Artikel gespeichert, aufklappbare Details, letzte Kalkulation vorausfüllbar, "Kalkulation laden" aus Historie)
 
 ## Code Architecture
 ```
-/app/frontend/src/components/
-├── WysiwygDocumentEditor.jsx    (540 lines - state & orchestration)
-├── wysiwyg/
-│   ├── EditorToolbar.jsx
-│   ├── EditorSidebar.jsx        (+ KalkulationPanel integration)
-│   ├── DocumentHeader.jsx
-│   ├── PositionsTable.jsx
-│   ├── TotalsSection.jsx
-│   ├── RightSidebar.jsx
-│   ├── EmailDialog.jsx
-│   ├── SettingsSlideOver.jsx
-│   ├── StammdatenPanel.jsx
-│   ├── BloeckePanel.jsx
-│   └── KalkulationPanel.jsx     (NEW: Artikelkalkulation)
-├── PortalButtons.jsx
-├── TextTemplateSelect.jsx       (+ Click-outside fix)
-└── common/
+/app/frontend/src/components/wysiwyg/
+├── KalkulationPanel.jsx     (Historie + Vorausfüllung + Berechnung)
+├── EditorSidebar.jsx        (+ Kalkulations-Button)
+├── ...
+/app/backend/routes/
+├── kalkulation.py           (NEW: POST save, GET history, GET latest)
+├── ...
 ```
 
-## Key DB Schema
-- `settings.kalk_meister/geselle/azubi/helfer`: Stundenlöhne (float)
-- `settings.kalk_materialzuschlag/gewinnaufschlag`: Zuschläge in % (float)
+## Key DB Collections
+- `kalkulation_historie`: { id, article_id, article_name, ek, zeit_meister/geselle/azubi/helfer, rate_*, sonstige_kosten[], materialzuschlag, gewinnaufschlag, lohnkosten, zwischensumme, vk_preis, created_at }
+- `settings`: kalk_meister, kalk_geselle, kalk_azubi, kalk_helfer, kalk_materialzuschlag, kalk_gewinnaufschlag
+
+## Key API Endpoints
+- `POST /api/kalkulation` - Kalkulation speichern
+- `GET /api/kalkulation/{article_id}` - Historie (max 20, neuste zuerst)
+- `GET /api/kalkulation/{article_id}/latest` - Letzte Kalkulation
 
 ## Backlog
 - P1: N26 Bank Integration (CSV-Import / Open Banking)
