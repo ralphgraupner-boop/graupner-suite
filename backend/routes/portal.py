@@ -3,6 +3,7 @@ from fastapi.responses import Response
 from database import db, logger
 from auth import get_current_user
 from utils.storage import put_object, get_object
+from utils import send_email
 from datetime import datetime, timezone, timedelta
 import uuid
 import hashlib
@@ -31,6 +32,7 @@ async def list_portals(user=Depends(get_current_user)):
 async def create_portal(body: dict, user=Depends(get_current_user)):
     customer_id = body.get("customer_id", "")
     customer_name = body.get("customer_name", "Kunde")
+    customer_email = body.get("customer_email", "")
     description = body.get("description", "")
     weeks = body.get("weeks", 8)
     password = body.get("password", "")
@@ -45,6 +47,7 @@ async def create_portal(body: dict, user=Depends(get_current_user)):
         "token": token,
         "customer_id": customer_id,
         "customer_name": customer_name,
+        "customer_email": customer_email,
         "description": description,
         "password_hash": hash_password(password),
         "password_plain": password,
@@ -125,6 +128,59 @@ async def admin_upload_file(
 async def admin_delete_file(file_id: str, user=Depends(get_current_user)):
     await db.portal_files.update_one({"id": file_id}, {"$set": {"is_deleted": True}})
     return {"message": "Datei gelöscht"}
+
+
+@router.post("/portals/{portal_id}/send-email")
+async def send_portal_email(portal_id: str, body: dict, user=Depends(get_current_user)):
+    portal = await db.portals.find_one({"id": portal_id}, {"_id": 0})
+    if not portal:
+        raise HTTPException(404, "Portal nicht gefunden")
+
+    customer_email = portal.get("customer_email", "")
+    if not customer_email:
+        raise HTTPException(400, "Keine E-Mail-Adresse vorhanden")
+
+    portal_url = body.get("portal_url", "")
+    if not portal_url:
+        raise HTTPException(400, "Portal-URL fehlt")
+
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    company = settings.get("company_name", "Tischlerei Graupner")
+    customer_name = portal.get("customer_name", "Kunde")
+    description = portal.get("description", "")
+    password = portal.get("password_plain", "")
+    expires = datetime.fromisoformat(portal["expires_at"]).strftime("%d.%m.%Y")
+
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a5632;">Ihr persönliches Kundenportal</h2>
+      <p>Sehr geehrte/r {customer_name},</p>
+      <p>wir haben für Sie ein persönliches Portal eingerichtet, über das Sie uns bequem Bilder und Informationen zu Ihrem Projekt zukommen lassen können.</p>
+      {f'<p><strong>Projekt:</strong> {description}</p>' if description else ''}
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0 0 10px 0;"><strong>Ihr Zugang:</strong></p>
+        <p style="margin: 0 0 5px 0;">Link: <a href="{portal_url}" style="color: #1a5632;">{portal_url}</a></p>
+        <p style="margin: 0;">Passwort: <strong>{password}</strong></p>
+      </div>
+      <p>Über dieses Portal können Sie:</p>
+      <ul>
+        <li>Fotos hochladen (z.B. von Schäden, Fenstern, Türen)</li>
+        <li>Unsere Dokumente und Angebote einsehen</li>
+      </ul>
+      <p style="color: #666; font-size: 12px;">Das Portal ist gültig bis {expires}.</p>
+      <p>Mit freundlichen Grüßen<br/>{company}</p>
+    </div>
+    """
+    try:
+        send_email(
+            to_email=customer_email,
+            subject=f"Ihr Kundenportal – {company}",
+            body_html=html
+        )
+        return {"message": "E-Mail gesendet", "sent_to": customer_email}
+    except Exception as e:
+        logger.warning(f"Portal email failed: {e}")
+        raise HTTPException(500, f"E-Mail konnte nicht gesendet werden: {str(e)}")
 
 
 # ===================== PUBLIC ENDPOINTS (no auth) =====================

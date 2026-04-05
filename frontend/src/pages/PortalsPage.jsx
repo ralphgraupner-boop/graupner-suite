@@ -229,33 +229,50 @@ const PortalsPage = () => {
 const CreatePortalDialog = ({ customers, onClose, onCreated }) => {
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [description, setDescription] = useState("");
   const [password, setPassword] = useState("");
   const [weeks, setWeeks] = useState(8);
+  const [sendEmail, setSendEmail] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const handleCustomerSelect = (e) => {
     const id = e.target.value;
     setCustomerId(id);
     const c = customers.find(c => c.id === id);
-    if (c) setCustomerName(c.name || "");
+    if (c) {
+      setCustomerName(c.name || "");
+      setCustomerEmail(c.email || "");
+    }
   };
 
   const handleCreate = async () => {
     if (!customerName.trim()) { toast.error("Kundenname erforderlich"); return; }
     if (!password.trim()) { toast.error("Passwort erforderlich"); return; }
+    if (sendEmail && !customerEmail.trim()) { toast.error("E-Mail-Adresse erforderlich für den Versand"); return; }
     setSaving(true);
     try {
       const res = await api.post("/portals", {
         customer_id: customerId,
         customer_name: customerName,
+        customer_email: customerEmail,
         description,
         password,
         weeks
       });
-      const url = `${window.location.origin}/portal/${res.data.token}`;
-      navigator.clipboard.writeText(url).catch(() => {});
-      toast.success("Portal erstellt! Link wurde kopiert.");
+      const portalUrl = `${window.location.origin}/portal/${res.data.token}`;
+      navigator.clipboard.writeText(portalUrl).catch(() => {});
+
+      if (sendEmail && customerEmail) {
+        try {
+          await api.post(`/portals/${res.data.id}/send-email`, { portal_url: portalUrl });
+          toast.success("Portal erstellt! E-Mail mit Zugangsdaten an Kunden gesendet.");
+        } catch (emailErr) {
+          toast.success("Portal erstellt! E-Mail konnte nicht gesendet werden – Link wurde kopiert.");
+        }
+      } else {
+        toast.success("Portal erstellt! Link wurde kopiert.");
+      }
       onCreated();
     } catch (e) {
       toast.error("Fehler beim Erstellen");
@@ -296,6 +313,17 @@ const CreatePortalDialog = ({ customers, onClose, onCreated }) => {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium mb-1">E-Mail des Kunden</label>
+            <input
+              type="email"
+              value={customerEmail}
+              onChange={(e) => setCustomerEmail(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm"
+              placeholder="kunde@example.de"
+              data-testid="input-customer-email"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">Beschreibung (Projekt)</label>
             <input
               type="text"
@@ -331,6 +359,15 @@ const CreatePortalDialog = ({ customers, onClose, onCreated }) => {
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 cursor-pointer" data-testid="checkbox-send-email">
+            <input
+              type="checkbox"
+              checked={sendEmail}
+              onChange={(e) => setSendEmail(e.target.checked)}
+              className="rounded border-input"
+            />
+            <span className="text-sm">Portal-Link per E-Mail an Kunden senden</span>
+          </label>
         </div>
         <div className="p-4 border-t flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Abbrechen</button>
