@@ -75,6 +75,7 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Kundenportal erweitert: Kundendaten-Anzeige (Adresse, Anfrage), Mitteilungssystem mit 4 Kategorien (Korrektur, Hinweis, Termin, Zusatzinfo), Admin sieht Kundenmitteilungen im Portal-Detail (2026-04-05)
 - [x] Push-Benachrichtigung + E-Mail an Admin bei neuer Kundenmitteilung oder Bild-Upload im Portal (2026-04-05)
 - [x] Einsatzplanung-Modul (Phase 1): Konfigurierbare Auswahlfelder (Monteure, Reparaturgruppen, Material), Einsatz-CRUD, Filterliste, aufklappbare Detailansicht, Google Kalender + E-Mail-Links (2026-04-05)
+- [x] Einsatzplanung: Anfrage-Schritte als konfigurierbare Workflow-Buttons mit Anzahl über der Liste, ersetzt alten Status-Dropdown (2026-04-05)
 - [x] Performance: React.lazy für SettingsPanel, useMemo für Filter-Berechnungen (2026-04-03)
 - [x] Article management page
 - [x] E-Mail protocol

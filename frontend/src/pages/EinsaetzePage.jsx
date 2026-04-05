@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 
 const EinsaetzePage = () => {
   const [einsaetze, setEinsaetze] = useState([]);
-  const [config, setConfig] = useState({ monteure: [], reparaturgruppen: [], materialien: [] });
+  const [config, setConfig] = useState({ monteure: [], reparaturgruppen: [], materialien: [], anfrage_schritte: [] });
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -15,7 +15,7 @@ const EinsaetzePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMonteur, setFilterMonteur] = useState("");
   const [filterGruppe, setFilterGruppe] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterSchritt, setFilterSchritt] = useState("");
 
   const loadData = useCallback(async () => {
     try {
@@ -52,11 +52,20 @@ const EinsaetzePage = () => {
     if (filterGruppe) {
       items = items.filter(e => e.reparaturgruppe === filterGruppe);
     }
-    if (filterStatus) {
-      items = items.filter(e => e.status === filterStatus);
+    if (filterSchritt) {
+      items = items.filter(e => e.status === filterSchritt);
     }
     return items;
-  }, [einsaetze, searchTerm, filterMonteur, filterGruppe, filterStatus]);
+  }, [einsaetze, searchTerm, filterMonteur, filterGruppe, filterSchritt]);
+
+  // Berechne Anzahl pro Anfrage-Schritt
+  const schrittCounts = useMemo(() => {
+    const counts = {};
+    for (const schritt of config.anfrage_schritte || []) {
+      counts[schritt] = einsaetze.filter(e => e.status === schritt).length;
+    }
+    return counts;
+  }, [einsaetze, config.anfrage_schritte]);
 
   const deleteEinsatz = async (id) => {
     if (!window.confirm("Einsatz wirklich löschen?")) return;
@@ -74,6 +83,19 @@ const EinsaetzePage = () => {
     inaktiv: "bg-gray-100 text-gray-600",
     abgeschlossen: "bg-blue-100 text-blue-700",
     wartend: "bg-amber-100 text-amber-700"
+  };
+
+  // Dynamische Farben für Anfrage-Schritte basierend auf Nummerierung
+  const getSchrittColor = (schritt) => {
+    if (!schritt) return "bg-gray-100 text-gray-600";
+    if (statusColors[schritt]) return statusColors[schritt];
+    const num = parseFloat(schritt);
+    if (num < 2) return "bg-amber-100 text-amber-700";
+    if (num < 3) return "bg-orange-100 text-orange-700";
+    if (num < 5) return "bg-cyan-100 text-cyan-700";
+    if (num < 6) return "bg-blue-100 text-blue-700";
+    if (num < 6.05) return "bg-green-100 text-green-700";
+    return "bg-emerald-100 text-emerald-700";
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
@@ -106,6 +128,39 @@ const EinsaetzePage = () => {
         </div>
       </div>
 
+      {/* Anfrage-Schritte Buttons */}
+      {(config.anfrage_schritte || []).length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4" data-testid="schritt-buttons">
+          <button
+            onClick={() => setFilterSchritt("")}
+            className={`px-3 py-1.5 rounded-sm text-xs font-medium border transition-colors ${
+              !filterSchritt ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted border-input"
+            }`}
+            data-testid="btn-schritt-alle"
+          >
+            Alle ({einsaetze.length})
+          </button>
+          {(config.anfrage_schritte || []).map(schritt => {
+            const count = schrittCounts[schritt] || 0;
+            if (count === 0) return null;
+            return (
+              <button
+                key={schritt}
+                onClick={() => setFilterSchritt(filterSchritt === schritt ? "" : schritt)}
+                className={`px-3 py-1.5 rounded-sm text-xs font-medium border transition-colors ${
+                  filterSchritt === schritt
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background hover:bg-muted border-input"
+                }`}
+                data-testid={`btn-schritt-${schritt}`}
+              >
+                {count} x {schritt}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4" data-testid="einsatz-filters">
         <div className="relative flex-1 min-w-[200px]">
@@ -137,18 +192,6 @@ const EinsaetzePage = () => {
           <option value="">Alle Gruppen</option>
           {config.reparaturgruppen.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="border rounded-sm px-3 py-2 text-sm bg-background"
-          data-testid="filter-status"
-        >
-          <option value="">Alle Status</option>
-          <option value="aktiv">Aktiv</option>
-          <option value="wartend">Wartend</option>
-          <option value="abgeschlossen">Abgeschlossen</option>
-          <option value="inaktiv">Inaktiv</option>
-        </select>
       </div>
 
       {/* List */}
@@ -162,7 +205,7 @@ const EinsaetzePage = () => {
             <EinsatzCard
               key={e.id}
               einsatz={e}
-              statusColors={statusColors}
+              getSchrittColor={getSchrittColor}
               onEdit={() => { setEditItem(e); setShowCreate(true); }}
               onDelete={() => deleteEinsatz(e.id)}
             />
@@ -194,7 +237,7 @@ const EinsaetzePage = () => {
 };
 
 
-const EinsatzCard = ({ einsatz, statusColors, onEdit, onDelete }) => {
+const EinsatzCard = ({ einsatz, getSchrittColor, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
   const e = einsatz;
 
@@ -206,9 +249,9 @@ const EinsatzCard = ({ einsatz, statusColors, onEdit, onDelete }) => {
       >
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="font-semibold truncate">{e.customer_name || "Kein Kunde"}</h3>
-              <Badge className={statusColors[e.status] || "bg-gray-100"}>{e.status}</Badge>
+              <Badge className={getSchrittColor(e.status)}>{e.status || "Neu"}</Badge>
               {e.reparaturgruppe && (
                 <Badge className="bg-slate-100 text-slate-600">{e.reparaturgruppe}</Badge>
               )}
@@ -428,12 +471,10 @@ const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Status</label>
+              <label className="block text-sm font-medium mb-1">Anfrage-Schritt</label>
               <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-status">
-                <option value="aktiv">Aktiv</option>
-                <option value="wartend">Wartend</option>
-                <option value="abgeschlossen">Abgeschlossen</option>
-                <option value="inaktiv">Inaktiv</option>
+                <option value="">-- Schritt wählen --</option>
+                {config.anfrage_schritte?.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>
@@ -495,6 +536,7 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
   const [monteure, setMonteure] = useState((config.monteure || []).join("\n"));
   const [gruppen, setGruppen] = useState((config.reparaturgruppen || []).join("\n"));
   const [materialien, setMaterialien] = useState((config.materialien || []).join("\n"));
+  const [schritte, setSchritte] = useState((config.anfrage_schritte || []).join("\n"));
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -504,6 +546,7 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
         monteure: monteure.split("\n").map(s => s.trim()).filter(Boolean),
         reparaturgruppen: gruppen.split("\n").map(s => s.trim()).filter(Boolean),
         materialien: materialien.split("\n").map(s => s.trim()).filter(Boolean),
+        anfrage_schritte: schritte.split("\n").map(s => s.trim()).filter(Boolean),
       });
       toast.success("Auswahlfelder gespeichert");
       onSaved();
@@ -515,13 +558,25 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="config-dialog">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" data-testid="config-dialog">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-md my-8">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">Auswahlfelder konfigurieren</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div>
+            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+              <FileText className="w-4 h-4" /> Anfrage-Schritte (ein Schritt pro Zeile)
+            </label>
+            <textarea
+              value={schritte}
+              onChange={(e) => setSchritte(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm min-h-[140px] resize-none font-mono"
+              placeholder={"1) Besichtig. Terminieren\n1) Bild+Bes.Term. fordern\n1.2) Abgelehnt/Ausgelastet\n2.05) Geschätzt p. Mail\n5.00) Angebot schreiben\n6.00) Auftragsbestätigung schreiben\n6.02) Auftrag ausführen\n6.03) Auftrag in Ausführung\n6.06) Rechnung schreiben"}
+              data-testid="config-schritte"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium mb-1 flex items-center gap-1">
               <User className="w-4 h-4" /> Monteure (ein Name pro Zeile)
@@ -530,7 +585,7 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
               value={monteure}
               onChange={(e) => setMonteure(e.target.value)}
               className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
-              placeholder={"Ralph Graupner\nMax Mustermann\nPeter Schmidt"}
+              placeholder={"Ralph Graupner\nMax Mustermann"}
               data-testid="config-monteure"
             />
           </div>
@@ -542,7 +597,7 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
               value={gruppen}
               onChange={(e) => setGruppen(e.target.value)}
               className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
-              placeholder={"Fenster\nTüren\nDach\nBoden\nFassade"}
+              placeholder={"Fenster\nTüren\nDach"}
               data-testid="config-gruppen"
             />
           </div>
@@ -554,7 +609,7 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
               value={materialien}
               onChange={(e) => setMaterialien(e.target.value)}
               className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
-              placeholder={"Holz\nGlas\nDichtung\nBeschläge\nFarbe"}
+              placeholder={"Holz\nGlas\nDichtung"}
               data-testid="config-materialien"
             />
           </div>

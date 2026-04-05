@@ -27,7 +27,7 @@ async def get_config(user=Depends(get_current_user)):
 @router.put("/einsatz-config")
 async def update_config(body: dict, user=Depends(get_current_user)):
     updates = {}
-    for field in ["monteure", "reparaturgruppen", "materialien"]:
+    for field in ["monteure", "reparaturgruppen", "materialien", "anfrage_schritte"]:
         if field in body:
             updates[field] = body[field]
     if not updates:
