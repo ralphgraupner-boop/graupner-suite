@@ -241,6 +241,7 @@ async def verify_portal(token: str, body: dict):
         "expires_at": portal.get("expires_at"),
         "customer_data": customer_data,
         "customer_notes": portal.get("customer_notes", []),
+        "admin_notes": portal.get("admin_notes", []),
         "einsatz_data": einsatz_data,
     }
 
@@ -301,6 +302,41 @@ async def public_add_note(token: str, body: dict):
         logger.warning(f"Admin email notification failed: {e}")
 
     return note
+
+
+# ===================== ADMIN NACHRICHTEN (Textbausteine) =====================
+
+@router.post("/portals/{portal_id}/admin-notes")
+async def add_admin_note(portal_id: str, body: dict, user=Depends(get_current_user)):
+    """Admin sendet Nachricht an Kunden über das Portal"""
+    portal = await db.portals.find_one({"id": portal_id})
+    if not portal:
+        raise HTTPException(404, "Portal nicht gefunden")
+
+    text = body.get("text", "").strip()
+    if not text:
+        raise HTTPException(400, "Text darf nicht leer sein")
+
+    note = {
+        "id": str(uuid.uuid4()),
+        "type": "admin",
+        "text": text,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.portals.update_one(
+        {"id": portal_id},
+        {"$push": {"admin_notes": note}}
+    )
+    return note
+
+
+@router.get("/portals/{portal_id}/admin-notes")
+async def get_admin_notes(portal_id: str, user=Depends(get_current_user)):
+    """Admin-Nachrichten abrufen"""
+    portal = await db.portals.find_one({"id": portal_id}, {"_id": 0})
+    if not portal:
+        raise HTTPException(404, "Portal nicht gefunden")
+    return portal.get("admin_notes", [])
 
 
 @router.post("/portal/{token}/files")

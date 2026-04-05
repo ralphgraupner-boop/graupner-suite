@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User } from "lucide-react";
+import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -390,18 +390,53 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
   const customerFiles = files.filter(f => f.uploaded_by === "customer");
   const businessFiles = files.filter(f => f.uploaded_by === "business");
   const [notes, setNotes] = useState([]);
+  const [adminNotes, setAdminNotes] = useState([]);
+  const [msgText, setMsgText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [vorlagen, setVorlagen] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     api.get(`/portals/${portal.id}/files`).catch(() => {});
-    // Load portal details for notes
     api.get("/portals").then(res => {
       const p = res.data.find(x => x.id === portal.id);
       if (p?.customer_notes) setNotes(p.customer_notes);
+      if (p?.admin_notes) setAdminNotes(p.admin_notes);
     }).catch(() => {});
+    api.get("/email/vorlagen").then(res => setVorlagen(res.data)).catch(() => {});
   }, [portal.id]);
 
-  const noteTypeLabels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo" };
-  const noteTypeColors = { korrektur: "text-orange-700 bg-orange-50", hinweis: "text-blue-700 bg-blue-50", termin: "text-green-700 bg-green-50", zusatz: "text-purple-700 bg-purple-50" };
+  const filtered = vorlagen.filter(v =>
+    v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    v.betreff.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const applyVorlage = (vorlage) => {
+    let text = vorlage.text || "";
+    text = text
+      .replace(/\{kunde_name\}/g, portal.customer_name || "")
+      .replace(/\{firma_name\}/g, "Tischlerei Graupner");
+    setMsgText(text);
+    setSearchTerm(vorlage.name);
+    setShowResults(false);
+  };
+
+  const sendAdminNote = async () => {
+    if (!msgText.trim()) { toast.error("Nachricht darf nicht leer sein"); return; }
+    setSending(true);
+    try {
+      const note = await api.post(`/portals/${portal.id}/admin-notes`, { text: msgText });
+      setAdminNotes(prev => [...prev, note.data]);
+      setMsgText("");
+      setSearchTerm("");
+      toast.success("Nachricht an Kunden gesendet");
+    } catch { toast.error("Fehler beim Senden"); }
+    finally { setSending(false); }
+  };
+
+  const noteTypeLabels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo", admin: "Ihre Nachricht" };
+  const noteTypeColors = { korrektur: "text-orange-700 bg-orange-50", hinweis: "text-blue-700 bg-blue-50", termin: "text-green-700 bg-green-50", zusatz: "text-purple-700 bg-purple-50", admin: "text-emerald-700 bg-emerald-50" };
 
   return (
     <div data-testid="portal-detail">
@@ -462,6 +497,85 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
           </div>
         </div>
       )}
+
+      {/* Ihre Nachrichten an den Kunden */}
+      {adminNotes.length > 0 && (
+        <div className="mb-6" data-testid="portal-admin-notes">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-emerald-600" />
+            Ihre Nachrichten ({adminNotes.length})
+          </h3>
+          <div className="space-y-2">
+            {adminNotes.map(note => (
+              <div key={note.id} className="border border-emerald-200 rounded-sm p-3 bg-emerald-50/50">
+                <span className="text-xs text-muted-foreground">{new Date(note.created_at).toLocaleString("de-DE")}</span>
+                <p className="text-sm whitespace-pre-wrap mt-1">{note.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Nachricht verfassen mit Textbausteinen */}
+      <Card className="p-4 mb-6" data-testid="portal-message-composer">
+        <h3 className="font-semibold mb-3 flex items-center gap-2">
+          <Send className="w-4 h-4 text-primary" />
+          Nachricht an Kunden senden
+        </h3>
+        <div className="space-y-3">
+          <div className="relative">
+            <label className="block text-sm font-medium mb-1">Textbaustein wählen</label>
+            <div className="relative">
+              <input
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setShowResults(true); }}
+                onFocus={() => setShowResults(true)}
+                className="w-full border rounded-sm p-2 text-sm pr-8"
+                placeholder="Vorlage suchen... z.B. Bilder"
+                data-testid="portal-vorlage-search"
+              />
+              <Search className="w-4 h-4 text-muted-foreground absolute right-2.5 top-2.5" />
+            </div>
+            {showResults && (
+              <div className="absolute z-10 mt-1 w-full bg-background border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid="portal-vorlage-results">
+                {filtered.length === 0 ? (
+                  <p className="p-3 text-sm text-muted-foreground">Keine Vorlagen gefunden</p>
+                ) : (
+                  filtered.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => applyVorlage(v)}
+                      className="w-full text-left p-3 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
+                      data-testid={`portal-vorlage-${v.id}`}
+                    >
+                      <p className="text-sm font-medium">{v.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{v.betreff}</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          <textarea
+            value={msgText}
+            onChange={(e) => setMsgText(e.target.value)}
+            className="w-full border rounded-sm p-2 text-sm min-h-[120px] resize-y"
+            placeholder="Nachricht an den Kunden..."
+            data-testid="portal-message-text"
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={sendAdminNote}
+              disabled={sending || !msgText.trim()}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
+              data-testid="btn-send-portal-message"
+            >
+              <Send className="w-4 h-4" />
+              {sending ? "Sende..." : "Nachricht senden"}
+            </button>
+          </div>
+        </div>
+      </Card>
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Kundenbilder */}

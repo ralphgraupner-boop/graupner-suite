@@ -16,6 +16,7 @@ const CustomerPortalPage = () => {
   const [description, setDescription] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [customerNotes, setCustomerNotes] = useState([]);
+  const [adminNotes, setAdminNotes] = useState([]);
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState("hinweis");
   const [sendingNote, setSendingNote] = useState(false);
@@ -41,6 +42,7 @@ const CustomerPortalPage = () => {
       const res = await axios.post(`${API}/portal/verify/${token}`, { password });
       setPortalInfo(res.data);
       setCustomerNotes(res.data.customer_notes || []);
+      setAdminNotes(res.data.admin_notes || []);
       setAuthenticated(true);
     } catch (e) {
       const msg = e.response?.data?.detail || "Zugang fehlgeschlagen";
@@ -257,6 +259,24 @@ const CustomerPortalPage = () => {
               <p className="text-xs text-slate-400">
                 Bitte teilen Sie uns per Nachricht mit, falls Sie am Termin verhindert sind oder Fragen haben.
               </p>
+            </div>
+          </section>
+        )}
+
+        {/* Nachrichten von Tischlerei */}
+        {adminNotes.length > 0 && (
+          <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-emerald-500" data-testid="portal-admin-notes">
+            <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <Mail className="w-5 h-5 text-emerald-600" />
+              Nachrichten von Tischlerei Graupner
+            </h2>
+            <div className="space-y-2">
+              {adminNotes.map(note => (
+                <div key={note.id} className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <span className="text-xs text-slate-400">{new Date(note.created_at).toLocaleString("de-DE")}</span>
+                  <p className="text-sm whitespace-pre-wrap mt-1">{note.text}</p>
+                </div>
+              ))}
             </div>
           </section>
         )}
