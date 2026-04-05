@@ -243,6 +243,43 @@ async def public_add_note(token: str, body: dict):
         {"id": portal["id"]},
         {"$push": {"customer_notes": note}}
     )
+
+    # Push-Benachrichtigung an Admin
+    type_labels = {"korrektur": "Korrektur", "hinweis": "Hinweis", "termin": "Terminvorschlag", "zusatz": "Zusatzinfo"}
+    try:
+        from routes.push import send_push_to_all
+        await send_push_to_all(
+            title=f"Kundenportal: {type_labels.get(note_type, note_type)}",
+            body=f"{portal.get('customer_name', 'Kunde')}: {text[:100]}{'...' if len(text) > 100 else ''}",
+            url="/portals"
+        )
+    except Exception as e:
+        logger.warning(f"Push notification failed: {e}")
+
+    # E-Mail-Benachrichtigung an Admin
+    try:
+        settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+        admin_email = settings.get("email", "")
+        if admin_email:
+            html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h3 style="color: #1a5632;">Neue Kundenportal-Mitteilung</h3>
+              <p><strong>Kunde:</strong> {portal.get('customer_name', 'Kunde')}</p>
+              <p><strong>Projekt:</strong> {portal.get('description', '-')}</p>
+              <p><strong>Typ:</strong> {type_labels.get(note_type, note_type)}</p>
+              <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <p style="margin: 0;">{text}</p>
+              </div>
+            </div>
+            """
+            send_email(
+                to_email=admin_email,
+                subject=f"Portal-Mitteilung: {type_labels.get(note_type, note_type)} von {portal.get('customer_name', 'Kunde')}",
+                body_html=html
+            )
+    except Exception as e:
+        logger.warning(f"Admin email notification failed: {e}")
+
     return note
 
 
@@ -289,6 +326,18 @@ async def public_upload_file(
     }
     await db.portal_files.insert_one(file_doc)
     file_doc.pop("_id", None)
+
+    # Push-Benachrichtigung: Neues Bild
+    try:
+        from routes.push import send_push_to_all
+        await send_push_to_all(
+            title="Kundenportal: Neues Bild",
+            body=f"{portal.get('customer_name', 'Kunde')} hat ein Bild hochgeladen ({file.filename})",
+            url="/portals"
+        )
+    except Exception as e:
+        logger.warning(f"Push for upload failed: {e}")
+
     return file_doc
 
 
