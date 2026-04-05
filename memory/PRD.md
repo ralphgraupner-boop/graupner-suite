@@ -15,51 +15,40 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] DIN 5008 PDF, Letterhead, Leistungsblöcke, Title Groups
 - [x] Mahnwesen (Dunning), E-Mail Dialog
 - [x] Self-Service Customer Portal with Push Notifications
-- [x] Einsatzplanung Phase 1 + Phase 2 (Multi-Select Reparaturgruppen, 2-Spalten-Dialog, E-Mail-Vorlagen, .ics, Google Kalender)
-- [x] IMAP E-Mail-Empfang (manuell + Auto-Polling alle 5 Min)
-- [x] Reparaturgruppen in Einstellungen + Anfragen (Multi-Select)
-- [x] E-Mail-Versand aus Anfragen mit Vorlagen-Datenbank
+- [x] Einsatzplanung Phase 1 + Phase 2
+- [x] IMAP E-Mail-Empfang (manuell + Auto-Polling)
 - [x] 1-Click Kundenportal-Erstellung + Auto-E-Mail-Einladungen
 - [x] Shared PortalButtons.jsx für Anfragen/Einsätze/Kunden
 - [x] Passwort-Datei in Einstellungen (Benutzer-Tab)
 - [x] **WysiwygDocumentEditor Refactoring** (2.297 → 527 Zeilen, 10 Sub-Komponenten)
+- [x] **Textbaustein Click-Outside Fix** (Dropdown schließt bei Klick außerhalb)
+- [x] **Artikelkalkulation** (EK, Zeitanteile mit Lohnstufen, Materialzuschlag, Gewinnaufschlag)
+- [x] **Kalkulationseinstellungen** (Stundensätze Meister/Geselle/Azubi/Helfer + Zuschläge global konfigurierbar)
 
 ## Code Architecture
 ```
 /app/frontend/src/components/
-├── WysiwygDocumentEditor.jsx    (527 lines - state & orchestration)
+├── WysiwygDocumentEditor.jsx    (540 lines - state & orchestration)
 ├── wysiwyg/
-│   ├── EditorToolbar.jsx        (82 lines)
-│   ├── EditorSidebar.jsx        (179 lines)
-│   ├── DocumentHeader.jsx       (119 lines)
-│   ├── PositionsTable.jsx       (387 lines)
-│   ├── TotalsSection.jsx        (213 lines)
-│   ├── RightSidebar.jsx         (274 lines)
-│   ├── EmailDialog.jsx          (85 lines)
-│   ├── SettingsSlideOver.jsx    (55 lines)
-│   ├── StammdatenPanel.jsx      (122 lines)
-│   └── BloeckePanel.jsx         (104 lines)
+│   ├── EditorToolbar.jsx
+│   ├── EditorSidebar.jsx        (+ KalkulationPanel integration)
+│   ├── DocumentHeader.jsx
+│   ├── PositionsTable.jsx
+│   ├── TotalsSection.jsx
+│   ├── RightSidebar.jsx
+│   ├── EmailDialog.jsx
+│   ├── SettingsSlideOver.jsx
+│   ├── StammdatenPanel.jsx
+│   ├── BloeckePanel.jsx
+│   └── KalkulationPanel.jsx     (NEW: Artikelkalkulation)
 ├── PortalButtons.jsx
-├── TextTemplateSelect.jsx
+├── TextTemplateSelect.jsx       (+ Click-outside fix)
 └── common/
 ```
 
-## Key API Endpoints
-- `GET/POST/PUT/DELETE /api/email/vorlagen` - E-Mail-Vorlagen CRUD
-- `POST /api/email/anfrage/{id}` - E-Mail von Anfrage senden
-- `POST /api/einsaetze/{id}/email` - Termin-E-Mail senden
-- `GET /api/einsaetze/{id}/ics` - .ics Kalender-Download
-- `GET/POST /api/imap/fetch` - IMAP E-Mails abrufen
-- `POST /api/portals/from-anfrage/{id}` - Portal aus Anfrage erstellen
-- `GET /api/portals/status/{id_or_email}` - Portal-Status prüfen
-
-## Key DB Collections
-- `email_vorlagen`: { id, name, betreff, text, created_at }
-- `einsatz_config`: { monteure, reparaturgruppen, materialien, anfrage_schritte, termin_vorlagen }
-- `anfragen`: { ..., reparaturgruppen: [] }
-- `einsaetze`: { ..., reparaturgruppen: [] }
-- `leistungsbloecke`: { id, name, positions: [] }
-- `portals`: { ..., admin_notes: [] }
+## Key DB Schema
+- `settings.kalk_meister/geselle/azubi/helfer`: Stundenlöhne (float)
+- `settings.kalk_materialzuschlag/gewinnaufschlag`: Zuschläge in % (float)
 
 ## Backlog
 - P1: N26 Bank Integration (CSV-Import / Open Banking)
