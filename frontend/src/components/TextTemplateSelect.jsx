@@ -52,6 +52,17 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const textareaRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -138,7 +149,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
             </button>
           )}
           {templates.length > 0 && (
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
                 onClick={() => setOpen(!open)}
