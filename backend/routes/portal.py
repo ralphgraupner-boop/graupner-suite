@@ -60,6 +60,133 @@ async def create_portal(body: dict, user=Depends(get_current_user)):
     return portal
 
 
+@router.post("/portals/from-anfrage/{anfrage_id}")
+async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(get_current_user)):
+    """Erstellt Portal direkt aus einer Anfrage mit automatischem E-Mail-Versand"""
+    anfrage = await db.anfragen.find_one({"id": anfrage_id}, {"_id": 0})
+    if not anfrage:
+        raise HTTPException(404, "Anfrage nicht gefunden")
+
+    customer_email = anfrage.get("email", "")
+    customer_name = anfrage.get("name", "Kunde")
+    if not customer_email:
+        raise HTTPException(400, "Anfrage hat keine E-Mail-Adresse. Bitte erst ergänzen.")
+
+    # Check if portal already exists for this anfrage
+    existing = await db.portals.find_one({"anfrage_id": anfrage_id})
+    if existing:
+        raise HTTPException(400, "Für diese Anfrage existiert bereits ein Kundenportal.")
+
+    # Find or create customer
+    customer_id = ""
+    customer = await db.customers.find_one({"email": customer_email}, {"_id": 0})
+    if customer:
+        customer_id = customer.get("id", "")
+    else:
+        # Create customer from anfrage data
+        customer_id = str(uuid.uuid4())
+        new_customer = {
+            "id": customer_id,
+            "name": customer_name,
+            "email": customer_email,
+            "phone": anfrage.get("phone", ""),
+            "address": anfrage.get("address", ""),
+            "firma": anfrage.get("firma", ""),
+            "customer_type": anfrage.get("customer_type", "Privat"),
+            "anrede": anfrage.get("anrede", ""),
+            "notes": anfrage.get("notes", ""),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.customers.insert_one(new_customer)
+        new_customer.pop("_id", None)
+        logger.info(f"Customer auto-created from Anfrage: {customer_name}")
+
+    # Generate password
+    password = body.get("password", "") or secrets.token_urlsafe(8)
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+
+    beschreibung_parts = []
+    if anfrage.get("nachricht"):
+        beschreibung_parts.append(anfrage["nachricht"][:200])
+    gruppen = anfrage.get("reparaturgruppen", [])
+    if gruppen:
+        beschreibung_parts.append(f"Reparaturgruppen: {', '.join(gruppen)}")
+    cats = anfrage.get("categories", [])
+    if cats:
+        beschreibung_parts.append(f"Kategorien: {', '.join(cats)}")
+    description = body.get("description", "") or " | ".join(beschreibung_parts)
+
+    portal = {
+        "id": str(uuid.uuid4()),
+        "token": token,
+        "customer_id": customer_id,
+        "customer_name": customer_name,
+        "customer_email": customer_email,
+        "description": description,
+        "anfrage_id": anfrage_id,
+        "password_hash": hash_password(password),
+        "password_plain": password,
+        "active": True,
+        "expires_at": (now + timedelta(weeks=8)).isoformat(),
+        "created_at": now.isoformat(),
+    }
+    await db.portals.insert_one(portal)
+    portal.pop("_id", None)
+
+    # Auto-send invitation email
+    portal_url = body.get("portal_base_url", "")
+    if portal_url:
+        portal_url = f"{portal_url.rstrip('/')}/portal/{token}"
+    email_sent = False
+    if portal_url and customer_email:
+        try:
+            settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+            company = settings.get("company_name", "Tischlerei Graupner")
+            expires = datetime.fromisoformat(portal["expires_at"]).strftime("%d.%m.%Y")
+
+            html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1a5632;">Ihr persönliches Kundenportal</h2>
+              <p>Sehr geehrte/r {customer_name},</p>
+              <p>wir haben Ihre Anfrage erhalten und für Sie ein persönliches Portal eingerichtet, über das Sie uns bequem Bilder und Informationen zukommen lassen können.</p>
+              {f'<p><strong>Projekt:</strong> {description}</p>' if description else ''}
+              <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0 0 10px 0;"><strong>Ihr Zugang:</strong></p>
+                <p style="margin: 0 0 5px 0;">Link: <a href="{portal_url}" style="color: #1a5632;">{portal_url}</a></p>
+                <p style="margin: 0;">Passwort: <strong>{password}</strong></p>
+              </div>
+              <p>Über dieses Portal können Sie:</p>
+              <ul>
+                <li>Fotos hochladen (z.B. von Schäden, Fenstern, Türen)</li>
+                <li>Nachrichten an uns senden</li>
+                <li>Unsere Dokumente und Angebote einsehen</li>
+              </ul>
+              <p style="color: #666; font-size: 12px;">Das Portal ist gültig bis {expires}.</p>
+              <hr style="border: none; border-top: 1px solid #e2e8f0;">
+              <p style="font-size: 12px; color: #64748B;">
+                {company}<br>
+                {settings.get('phone', '')}
+              </p>
+            </div>
+            """
+            send_email(
+                to_email=customer_email,
+                subject=f"Ihr Kundenportal - {company}",
+                body_html=html,
+            )
+            email_sent = True
+            logger.info(f"Portal invitation auto-sent to {customer_email}")
+        except Exception as e:
+            logger.error(f"Auto-send portal email failed: {e}")
+
+    return {
+        **portal,
+        "email_sent": email_sent,
+        "customer_created": not bool(customer),
+    }
+
+
 @router.put("/portals/{portal_id}")
 async def update_portal(portal_id: str, body: dict, user=Depends(get_current_user)):
     updates = {}
