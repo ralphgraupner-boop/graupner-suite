@@ -18,7 +18,31 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Einsatzplanung Phase 1 + Phase 2 (Multi-Select Reparaturgruppen, 2-Spalten-Dialog, E-Mail-Vorlagen, .ics, Google Kalender)
 - [x] IMAP E-Mail-Empfang (manuell + Auto-Polling alle 5 Min)
 - [x] Reparaturgruppen in Einstellungen + Anfragen (Multi-Select)
-- [x] **E-Mail-Versand aus Anfragen** mit Vorlagen-Datenbank (CRUD in Einstellungen, Suchfeld im Dialog, Platzhalter-Ersetzung, Kunden-E-Mail vorausgefüllt)
+- [x] E-Mail-Versand aus Anfragen mit Vorlagen-Datenbank
+- [x] 1-Click Kundenportal-Erstellung + Auto-E-Mail-Einladungen
+- [x] Shared PortalButtons.jsx für Anfragen/Einsätze/Kunden
+- [x] Passwort-Datei in Einstellungen (Benutzer-Tab)
+- [x] **WysiwygDocumentEditor Refactoring** (2.297 → 527 Zeilen, 10 Sub-Komponenten)
+
+## Code Architecture
+```
+/app/frontend/src/components/
+├── WysiwygDocumentEditor.jsx    (527 lines - state & orchestration)
+├── wysiwyg/
+│   ├── EditorToolbar.jsx        (82 lines)
+│   ├── EditorSidebar.jsx        (179 lines)
+│   ├── DocumentHeader.jsx       (119 lines)
+│   ├── PositionsTable.jsx       (387 lines)
+│   ├── TotalsSection.jsx        (213 lines)
+│   ├── RightSidebar.jsx         (274 lines)
+│   ├── EmailDialog.jsx          (85 lines)
+│   ├── SettingsSlideOver.jsx    (55 lines)
+│   ├── StammdatenPanel.jsx      (122 lines)
+│   └── BloeckePanel.jsx         (104 lines)
+├── PortalButtons.jsx
+├── TextTemplateSelect.jsx
+└── common/
+```
 
 ## Key API Endpoints
 - `GET/POST/PUT/DELETE /api/email/vorlagen` - E-Mail-Vorlagen CRUD
@@ -26,18 +50,21 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - `POST /api/einsaetze/{id}/email` - Termin-E-Mail senden
 - `GET /api/einsaetze/{id}/ics` - .ics Kalender-Download
 - `GET/POST /api/imap/fetch` - IMAP E-Mails abrufen
-- `POST /api/imap/test` - IMAP Verbindungstest
+- `POST /api/portals/from-anfrage/{id}` - Portal aus Anfrage erstellen
+- `GET /api/portals/status/{id_or_email}` - Portal-Status prüfen
 
 ## Key DB Collections
 - `email_vorlagen`: { id, name, betreff, text, created_at }
 - `einsatz_config`: { monteure, reparaturgruppen, materialien, anfrage_schritte, termin_vorlagen }
 - `anfragen`: { ..., reparaturgruppen: [] }
 - `einsaetze`: { ..., reparaturgruppen: [] }
+- `leistungsbloecke`: { id, name, positions: [] }
+- `portals`: { ..., admin_notes: [] }
 
 ## Backlog
-- P3: N26 Bank Integration
-- P4: Windows Desktop App
-- P5: WysiwygDocumentEditor Refactoring
+- P1: N26 Bank Integration (CSV-Import / Open Banking)
+- P2: Windows Desktop App (Electron wrapper)
+- P3: SettingsPage Refactoring (>1.100 Zeilen → Sub-Komponenten)
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 via Emergent LLM Key
