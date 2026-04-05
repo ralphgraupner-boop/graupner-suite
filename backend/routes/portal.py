@@ -223,7 +223,9 @@ async def verify_portal(token: str, body: dict):
         )
         if einsatz:
             einsatz_data = {
-                "reparaturgruppe": einsatz.get("reparaturgruppe", ""),
+                "reparaturgruppen": einsatz.get("reparaturgruppen", []) or (
+                    [einsatz["reparaturgruppe"]] if einsatz.get("reparaturgruppe") else []
+                ),
                 "beschreibung": einsatz.get("beschreibung", ""),
                 "termin": einsatz.get("termin", ""),
                 "termin_text": einsatz.get("termin_text", ""),

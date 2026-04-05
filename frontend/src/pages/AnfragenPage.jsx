@@ -84,7 +84,7 @@ const AnfragenPage = () => {
       nachricht: anfrage.nachricht || "",
       notes: anfrage.notes || "",
       categories: anfrage.categories || [],
-      reparaturgruppe: anfrage.reparaturgruppe || "",
+      reparaturgruppen: anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : []),
     });
   };
 
@@ -286,10 +286,14 @@ const AnfragenPage = () => {
                       ))}
                     </div>
                   )}
-                  {anfrage.reparaturgruppe && (
-                    <span className="hidden lg:inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
-                      <Wrench className="w-3 h-3" />{anfrage.reparaturgruppe}
-                    </span>
+                  {(anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : [])).length > 0 && (
+                    <div className="hidden lg:flex flex-wrap gap-1">
+                      {(anfrage.reparaturgruppen || [anfrage.reparaturgruppe].filter(Boolean)).map((g) => (
+                        <span key={g} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                          <Wrench className="w-3 h-3" />{g}
+                        </span>
+                      ))}
+                    </div>
                   )}
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
@@ -399,10 +403,14 @@ const AnfragenPage = () => {
                       {/* Kategorien & Beschreibungen */}
                       <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Kategorien & Details</h4>
-                        {anfrage.reparaturgruppe && (
+                        {(anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : [])).length > 0 && (
                           <div className="mb-3 bg-orange-50 rounded-sm p-3 border border-orange-200" data-testid={`reparaturgruppe-detail-${anfrage.id}`}>
-                            <span className="text-xs text-orange-600 font-medium uppercase tracking-wide flex items-center gap-1"><Wrench className="w-3 h-3" /> Reparaturgruppe</span>
-                            <p className="text-sm font-medium text-orange-800 mt-0.5">{anfrage.reparaturgruppe}</p>
+                            <span className="text-xs text-orange-600 font-medium uppercase tracking-wide flex items-center gap-1"><Wrench className="w-3 h-3" /> Reparaturgruppen</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {(anfrage.reparaturgruppen || [anfrage.reparaturgruppe].filter(Boolean)).map((g) => (
+                                <span key={g} className="px-2 py-0.5 bg-orange-200 text-orange-800 text-sm font-medium rounded-full">{g}</span>
+                              ))}
+                            </div>
                           </div>
                         )}
                         {(anfrage.categories || []).length > 0 ? (
@@ -646,27 +654,22 @@ const AnfragenPage = () => {
           {reparaturgruppen.length > 0 && (
             <div>
               <label className="block text-sm font-medium mb-2 flex items-center gap-1">
-                <Wrench className="w-4 h-4 text-orange-600" /> Reparaturgruppe
+                <Wrench className="w-4 h-4 text-orange-600" /> Reparaturgruppen (mehrfach auswählbar)
               </label>
               <div className="flex flex-wrap gap-2" data-testid="edit-anfrage-reparaturgruppe">
-                <button
-                  type="button"
-                  onClick={() => setEditForm({ ...editForm, reparaturgruppe: "" })}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    !editForm.reparaturgruppe
-                      ? "bg-gray-600 text-white shadow-sm"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  Keine
-                </button>
                 {reparaturgruppen.map((g) => (
                   <button
                     key={g}
                     type="button"
-                    onClick={() => setEditForm({ ...editForm, reparaturgruppe: g })}
+                    onClick={() => {
+                      const cur = editForm.reparaturgruppen || [];
+                      setEditForm({
+                        ...editForm,
+                        reparaturgruppen: cur.includes(g) ? cur.filter(x => x !== g) : [...cur, g],
+                      });
+                    }}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                      editForm.reparaturgruppe === g
+                      (editForm.reparaturgruppen || []).includes(g)
                         ? "bg-orange-600 text-white shadow-sm"
                         : "bg-orange-50 text-orange-700 hover:bg-orange-100"
                     }`}
@@ -675,6 +678,9 @@ const AnfragenPage = () => {
                   </button>
                 ))}
               </div>
+              {(editForm.reparaturgruppen || []).length > 0 && (
+                <p className="text-xs text-orange-600 mt-1">{editForm.reparaturgruppen.length} ausgewählt</p>
+              )}
             </div>
           )}
 

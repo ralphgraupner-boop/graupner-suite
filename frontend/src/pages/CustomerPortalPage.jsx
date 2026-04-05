@@ -230,10 +230,12 @@ const CustomerPortalPage = () => {
                   </p>
                 </div>
               </div>
-              {einsatzData.reparaturgruppe && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Wrench className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-600">{einsatzData.reparaturgruppe}</span>
+              {((Array.isArray(einsatzData.reparaturgruppen) ? einsatzData.reparaturgruppen : [einsatzData.reparaturgruppen]).filter(Boolean)).length > 0 && (
+                <div className="flex items-center gap-2 text-sm flex-wrap">
+                  <Wrench className="w-4 h-4 text-slate-400 shrink-0" />
+                  {(Array.isArray(einsatzData.reparaturgruppen) ? einsatzData.reparaturgruppen : [einsatzData.reparaturgruppen]).filter(Boolean).map((g) => (
+                    <span key={g} className="text-slate-600">{g}</span>
+                  ))}
                 </div>
               )}
               {einsatzData.monteur_1 && (

@@ -1,0 +1,106 @@
+{
+  "summary": "Tested 3 new features for Graupner Suite iteration 20: 1) Einsatz-Dialog wider (max-w-3xl, 2-column layout), 2) Reparaturgruppen multi-select chips (max 3) in both Einsatz and Anfragen, 3) Termintext with Vorlagen visible on right side. All 15 backend tests pass. All frontend UI features verified.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: POST /api/einsaetze - accepts reparaturgruppen as array",
+    "Backend: GET /api/einsaetze/{id} - returns reparaturgruppen as array",
+    "Backend: PUT /api/einsaetze/{id} - updates reparaturgruppen array",
+    "Backend: GET /api/einsaetze - returns reparaturgruppen field in list",
+    "Backend: DELETE /api/einsaetze/{id} - cleanup works",
+    "Backend: GET /api/anfragen - returns reparaturgruppen field",
+    "Backend: PUT /api/anfragen/{id} - accepts reparaturgruppen as array",
+    "Backend: Verify anfrage reparaturgruppen persisted",
+    "Backend: GET /api/einsatz-config - returns reparaturgruppen list",
+    "Backend: PUT /api/einsatz-config - updates reparaturgruppen list",
+    "Backend: Create einsatz with empty reparaturgruppen array",
+    "Backend: Create einsatz with single reparaturgruppe in array",
+    "Backend: Create einsatz with termin_text field",
+    "Backend: Update einsatz termin_text",
+    "Frontend: Einsatz dialog is 768px wide (max-w-3xl applied)",
+    "Frontend: Einsatz dialog has 2-column grid layout",
+    "Frontend: Reparaturgruppen multi-select chips (11 chips available)",
+    "Frontend: Chips turn orange when selected",
+    "Frontend: Max 3 chips can be selected (4th chip disabled)",
+    "Frontend: '3 ausgewählt' count shown",
+    "Frontend: Termintext textarea visible on right column",
+    "Frontend: 'Vorlage einfügen' with template buttons visible",
+    "Frontend: Anfragen edit modal has Reparaturgruppen multi-select",
+    "Frontend: Anfragen modal shows '(mehrfach auswählbar)' label",
+    "Frontend: Anfragen save updates reparaturgruppen array",
+    "Frontend: Anfragen expanded card shows REPARATURGRUPPEN section with multiple badges",
+    "Frontend: Einsatz cards display multiple reparaturgruppen badges",
+    "Frontend: Einsatz expanded view shows 'Reparaturgruppen:' with comma-separated list"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_reparaturgruppen_v20.py",
+    "/app/test_reports/pytest/pytest_v20.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_reparaturgruppen_v20.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Created test Einsatz with 3 reparaturgruppen for UI verification (cleaned up after test)",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "All 3 features fully implemented and tested: 1) Einsatz dialog now 768px wide with 2-column layout (left: form fields including multi-select reparaturgruppen chips, right: Beschreibung, Termin, Termintext with Vorlage buttons). 2) Reparaturgruppen changed from single-select string to multi-select array (max 3) in both Einsatz and Anfragen. 3) Backend field renamed from 'reparaturgruppe' (string) to 'reparaturgruppen' (List[str]). Frontend handles backward compatibility by checking both fields: (e.reparaturgruppen || (e.reparaturgruppe ? [e.reparaturgruppe] : [])). Existing data with old 'reparaturgruppe' string field displays correctly.",
+
+  "features_verified": {
+    "einsatz_dialog_layout": {
+      "width_768px": true,
+      "two_column_layout": true,
+      "left_column_form_fields": true,
+      "right_column_texts": true
+    },
+    "reparaturgruppen_multiselect_einsatz": {
+      "chips_available": 11,
+      "max_selection": 3,
+      "orange_selected_style": true,
+      "disabled_when_max": true,
+      "count_display": true
+    },
+    "reparaturgruppen_multiselect_anfragen": {
+      "modal_has_multiselect": true,
+      "label_shows_mehrfach": true,
+      "save_updates_array": true,
+      "expanded_shows_badges": true
+    },
+    "termintext_vorlagen": {
+      "textarea_visible": true,
+      "vorlage_buttons_visible": true
+    },
+    "backward_compatibility": {
+      "old_reparaturgruppe_string_displays": true,
+      "new_reparaturgruppen_array_works": true
+    }
+  }
+}

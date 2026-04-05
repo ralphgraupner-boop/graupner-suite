@@ -91,99 +91,101 @@ async def fetch_imap_emails(user=Depends(get_current_user)):
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
 
     server = settings.get("imap_server", "")
-    port = settings.get("imap_port", 993)
     imap_user = settings.get("imap_user", "")
     password = settings.get("imap_password", "")
-    folder = settings.get("imap_folder", "INBOX")
 
     if not server or not imap_user or not password:
         raise HTTPException(400, "IMAP-Einstellungen unvollständig. Bitte unter Einstellungen konfigurieren.")
 
     try:
-        mail = imaplib.IMAP4_SSL(server, port)
-        mail.login(imap_user, password)
-        mail.select(folder, readonly=False)
-
-        # Search for unseen emails
-        status, data = mail.search(None, "UNSEEN")
-        if status != "OK":
-            mail.logout()
-            return {"fetched": 0, "message": "Keine neuen E-Mails"}
-
-        email_ids = data[0].split()
-        created = 0
-
-        for eid in email_ids[-50:]:  # Max 50 at a time
-            status, msg_data = mail.fetch(eid, "(RFC822)")
-            if status != "OK":
-                continue
-
-            raw = msg_data[0][1]
-            msg = email.message_from_bytes(raw)
-
-            from_header = decode_mime_header(msg.get("From", ""))
-            subject = decode_mime_header(msg.get("Subject", ""))
-            date_header = msg.get("Date", "")
-            sender_email = extract_email_address(from_header)
-            sender_name = extract_name(from_header)
-            body = get_email_body(msg)
-
-            # Check if already imported (by message-id)
-            message_id = msg.get("Message-ID", "")
-            if message_id:
-                existing = await db.anfragen.find_one({"email_message_id": message_id})
-                if existing:
-                    continue
-
-            # Create Anfrage
-            anfrage = {
-                "id": str(uuid.uuid4()),
-                "name": sender_name,
-                "email": sender_email,
-                "phone": "",
-                "address": "",
-                "notes": f"Betreff: {subject}",
-                "photos": [],
-                "categories": [],
-                "reparaturgruppe": "",
-                "customer_type": "Privat",
-                "firma": "",
-                "anrede": "",
-                "source": "e-mail",
-                "obj_address": "",
-                "nachricht": body[:2000] if body else subject,
-                "email_message_id": message_id,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
-            await db.anfragen.insert_one(anfrage)
-            anfrage.pop("_id", None)
-            created += 1
-
-            # Mark as seen
-            mail.store(eid, "+FLAGS", "\\Seen")
-
-        mail.logout()
-
-        # Push notification if new emails
-        if created > 0:
-            try:
-                from routes.push import send_push_to_all
-                await send_push_to_all(
-                    title=f"{created} neue E-Mail-Anfrage{'n' if created > 1 else ''}",
-                    body=f"{created} E-Mail{'s' if created > 1 else ''} als Anfragen importiert",
-                    url="/anfragen"
-                )
-            except Exception as e:
-                logger.warning(f"Push after IMAP failed: {e}")
-
-        return {"fetched": created, "message": f"{created} neue Anfrage{'n' if created != 1 else ''} importiert"}
-
+        count = await fetch_imap_emails_internal(settings)
+        return {"fetched": count, "message": f"{count} neue Anfrage{'n' if count != 1 else ''} importiert"}
     except imaplib.IMAP4.error as e:
         logger.error(f"IMAP error: {e}")
         raise HTTPException(500, f"IMAP-Fehler: {str(e)}")
     except Exception as e:
         logger.error(f"IMAP fetch error: {e}")
         raise HTTPException(500, f"Fehler beim E-Mail-Abruf: {str(e)}")
+
+
+async def fetch_imap_emails_internal(settings: dict) -> int:
+    """Internal function to fetch IMAP emails, returns count of created Anfragen"""
+    server = settings.get("imap_server", "")
+    port = settings.get("imap_port", 993)
+    imap_user = settings.get("imap_user", "")
+    password = settings.get("imap_password", "")
+    folder = settings.get("imap_folder", "INBOX")
+
+    mail = imaplib.IMAP4_SSL(server, port)
+    mail.login(imap_user, password)
+    mail.select(folder, readonly=False)
+
+    status, data = mail.search(None, "UNSEEN")
+    if status != "OK":
+        mail.logout()
+        return 0
+
+    email_ids = data[0].split()
+    created = 0
+
+    for eid in email_ids[-50:]:
+        status, msg_data = mail.fetch(eid, "(RFC822)")
+        if status != "OK":
+            continue
+
+        raw = msg_data[0][1]
+        msg = email.message_from_bytes(raw)
+
+        from_header = decode_mime_header(msg.get("From", ""))
+        subject = decode_mime_header(msg.get("Subject", ""))
+        sender_email = extract_email_address(from_header)
+        sender_name = extract_name(from_header)
+        body = get_email_body(msg)
+
+        message_id = msg.get("Message-ID", "")
+        if message_id:
+            existing = await db.anfragen.find_one({"email_message_id": message_id})
+            if existing:
+                continue
+
+        anfrage = {
+            "id": str(uuid.uuid4()),
+            "name": sender_name,
+            "email": sender_email,
+            "phone": "",
+            "address": "",
+            "notes": f"Betreff: {subject}",
+            "photos": [],
+            "categories": [],
+            "reparaturgruppen": [],
+            "customer_type": "Privat",
+            "firma": "",
+            "anrede": "",
+            "source": "e-mail",
+            "obj_address": "",
+            "nachricht": body[:2000] if body else subject,
+            "email_message_id": message_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.anfragen.insert_one(anfrage)
+        anfrage.pop("_id", None)
+        created += 1
+        mail.store(eid, "+FLAGS", "\\Seen")
+
+    mail.logout()
+
+    if created > 0:
+        try:
+            from routes.push import send_push_to_all
+            await send_push_to_all(
+                title=f"{created} neue E-Mail-Anfrage{'n' if created > 1 else ''}",
+                body=f"{created} E-Mail{'s' if created > 1 else ''} als Anfragen importiert",
+                url="/anfragen"
+            )
+        except Exception as e:
+            logger.warning(f"Push after IMAP failed: {e}")
+
+    return created
 
 
 @router.post("/imap/test")

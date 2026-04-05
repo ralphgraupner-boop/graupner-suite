@@ -266,9 +266,9 @@ const EinsatzCard = ({ einsatz, getSchrittColor, config, onEdit, onDelete }) => 
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="font-semibold truncate">{e.customer_name || "Kein Kunde"}</h3>
               <Badge className={getSchrittColor(e.status)}>{e.status || "Neu"}</Badge>
-              {e.reparaturgruppe && (
-                <Badge className="bg-slate-100 text-slate-600">{e.reparaturgruppe}</Badge>
-              )}
+              {(e.reparaturgruppen || (e.reparaturgruppe ? [e.reparaturgruppe] : [])).map((g) => (
+                <Badge key={g} className="bg-slate-100 text-slate-600">{g}</Badge>
+              ))}
             </div>
             <p className="text-sm text-muted-foreground truncate">{e.beschreibung || "-"}</p>
             <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
@@ -302,7 +302,7 @@ const EinsatzCard = ({ einsatz, getSchrittColor, config, onEdit, onDelete }) => 
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             <div><span className="text-muted-foreground">Monteur 1:</span> {e.monteur_1 || "-"}</div>
             <div><span className="text-muted-foreground">Monteur 2:</span> {e.monteur_2 || "-"}</div>
-            <div><span className="text-muted-foreground">Reparaturgruppe:</span> {e.reparaturgruppe || "-"}</div>
+            <div><span className="text-muted-foreground">Reparaturgruppen:</span> {(e.reparaturgruppen || (e.reparaturgruppe ? [e.reparaturgruppe] : [])).join(", ") || "-"}</div>
             <div><span className="text-muted-foreground">Schätzung:</span> {e.summe_schaetzung ? `${e.summe_schaetzung.toFixed(2)} €` : "-"}</div>
             <div><span className="text-muted-foreground">Material:</span> {(e.material || []).join(", ") || "-"}</div>
             <div><span className="text-muted-foreground">Termin:</span> {e.termin ? new Date(e.termin).toLocaleString("de-DE") : "-"}</div>
@@ -319,7 +319,7 @@ const EinsatzCard = ({ einsatz, getSchrittColor, config, onEdit, onDelete }) => 
             {e.termin && (
               <>
                 <a
-                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Einsatz: ${e.customer_name || "Kunde"} - ${e.reparaturgruppe || ""}`)}&dates=${e.termin.replace(/[-:]/g, "").replace(/\.\d+/, "").replace("T", "T")}&details=${encodeURIComponent(e.beschreibung || "")}`}
+                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Einsatz: ${e.customer_name || "Kunde"} - ${(e.reparaturgruppen || []).join(", ") || e.reparaturgruppe || ""}`)}&dates=${e.termin.replace(/[-:]/g, "").replace(/\.\d+/, "").replace("T", "T")}&details=${encodeURIComponent(e.beschreibung || "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-xs hover:bg-muted"
@@ -366,7 +366,7 @@ const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
   const [customerName, setCustomerName] = useState(item?.customer_name || "");
   const [monteur1, setMonteur1] = useState(item?.monteur_1 || "");
   const [monteur2, setMonteur2] = useState(item?.monteur_2 || "");
-  const [gruppe, setGruppe] = useState(item?.reparaturgruppe || "");
+  const [gruppen, setGruppen] = useState(item?.reparaturgruppen || (item?.reparaturgruppe ? [item.reparaturgruppe] : []));
   const [material, setMaterial] = useState(item?.material || []);
   const [schaetzung, setSchaetzung] = useState(item?.summe_schaetzung || 0);
   const [status, setStatus] = useState(item?.status || "aktiv");
@@ -386,6 +386,10 @@ const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
     setMaterial(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
   };
 
+  const toggleGruppe = (g) => {
+    setGruppen(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const data = {
@@ -393,7 +397,7 @@ const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
       customer_name: customerName,
       monteur_1: monteur1,
       monteur_2: monteur2,
-      reparaturgruppe: gruppe,
+      reparaturgruppen: gruppen,
       material,
       summe_schaetzung: Number(schaetzung) || 0,
       status,
@@ -419,129 +423,182 @@ const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" data-testid="einsatz-dialog">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg my-8">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-3xl my-8">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">{item ? "Einsatz bearbeiten" : "Neuer Einsatz"}</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* Kunde */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Kunde</label>
-            <select value={customerId} onChange={handleCustomerSelect} className="w-full border rounded-sm p-2 text-sm" data-testid="select-customer">
-              <option value="">-- Kunde wählen --</option>
-              {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+        <div className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Linke Spalte */}
+            <div className="space-y-4">
+              {/* Kunde */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Kunde</label>
+                <select value={customerId} onChange={handleCustomerSelect} className="w-full border rounded-sm p-2 text-sm" data-testid="select-customer">
+                  <option value="">-- Kunde wählen --</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
 
-          {/* Monteure */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Monteur 1</label>
-              <select value={monteur1} onChange={(e) => setMonteur1(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-monteur1">
-                <option value="">-- wählen --</option>
-                {config.monteure.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
+              {/* Monteure */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Monteur 1</label>
+                  <select value={monteur1} onChange={(e) => setMonteur1(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-monteur1">
+                    <option value="">-- wählen --</option>
+                    {config.monteure.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Monteur 2</label>
+                  <select value={monteur2} onChange={(e) => setMonteur2(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-monteur2">
+                    <option value="">-- wählen --</option>
+                    {config.monteure.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Reparaturgruppen Multi-Select */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Reparaturgruppen (max. 3)</label>
+                <div className="flex flex-wrap gap-2" data-testid="select-gruppen">
+                  {config.reparaturgruppen.map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => toggleGruppe(g)}
+                      disabled={!gruppen.includes(g) && gruppen.length >= 3}
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                        gruppen.includes(g)
+                          ? "bg-orange-600 text-white border-orange-600"
+                          : gruppen.length >= 3
+                            ? "bg-muted text-muted-foreground/50 border-input cursor-not-allowed"
+                            : "bg-background text-muted-foreground border-input hover:bg-orange-50 hover:border-orange-300"
+                      }`}
+                      data-testid={`chip-gruppe-${g}`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+                {gruppen.length > 0 && (
+                  <p className="text-xs text-orange-600 mt-1">{gruppen.length} ausgewählt</p>
+                )}
+              </div>
+
+              {/* Material (Multi-Select Chips) */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Material</label>
+                <div className="flex flex-wrap gap-2">
+                  {config.materialien.map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => toggleMaterial(m)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                        material.includes(m)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-input hover:bg-muted"
+                      }`}
+                      data-testid={`chip-material-${m}`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Schätzung + Status */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Schätzung (€)</label>
+                  <input
+                    type="number"
+                    value={schaetzung}
+                    onChange={(e) => setSchaetzung(e.target.value)}
+                    className="w-full border rounded-sm p-2 text-sm"
+                    step="0.01"
+                    data-testid="input-schaetzung"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Anfrage-Schritt</label>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-status">
+                    <option value="">-- Schritt wählen --</option>
+                    {config.anfrage_schritte?.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Monteur 2</label>
-              <select value={monteur2} onChange={(e) => setMonteur2(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-monteur2">
-                <option value="">-- wählen --</option>
-                {config.monteure.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
+
+            {/* Rechte Spalte - Texte */}
+            <div className="space-y-4">
+              {/* Beschreibung */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Beschreibung</label>
+                <textarea
+                  value={beschreibung}
+                  onChange={(e) => setBeschreibung(e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm min-h-[100px] resize-none"
+                  placeholder="Beschreibung des Einsatzes..."
+                  data-testid="input-beschreibung"
+                />
+              </div>
+
+              {/* Termin */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Termin</label>
+                <input
+                  type="datetime-local"
+                  value={termin}
+                  onChange={(e) => setTermin(e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm"
+                  data-testid="input-termin"
+                />
+              </div>
+
+              {/* Termintext */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Termintext (für E-Mail/Kalender)</label>
+                <textarea
+                  value={terminText}
+                  onChange={(e) => setTerminText(e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm min-h-[120px] resize-none"
+                  placeholder="z.B. Sehr geehrter Herr Müller, wir kommen am..."
+                  data-testid="input-termintext"
+                />
+                {(config.termin_vorlagen || []).length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-xs text-muted-foreground">Vorlage einfügen:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {config.termin_vorlagen.map((v, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            const customerEntry = customers.find(c => c.id === customerId);
+                            let text = v.text || "";
+                            text = text
+                              .replace(/\{kunde_name\}/g, customerEntry?.name || customerName || "")
+                              .replace(/\{termin_datum\}/g, termin ? new Date(termin).toLocaleDateString("de-DE") : "")
+                              .replace(/\{termin_zeit\}/g, termin ? new Date(termin).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "")
+                              .replace(/\{reparaturgruppe\}/g, gruppen.join(", "))
+                              .replace(/\{monteur\}/g, monteur1 || "")
+                              .replace(/\{beschreibung\}/g, beschreibung || "")
+                              .replace(/\{firma_name\}/g, "Tischlerei Graupner");
+                            setTerminText(text);
+                          }}
+                          className="px-2 py-0.5 text-xs border rounded-sm hover:bg-primary/10 hover:border-primary transition-colors"
+                        >
+                          {v.name || `Vorlage ${i + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-
-          {/* Reparaturgruppe */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Reparaturgruppe</label>
-            <select value={gruppe} onChange={(e) => setGruppe(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-gruppe">
-              <option value="">-- wählen --</option>
-              {config.reparaturgruppen.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
-
-          {/* Material (Multi-Select Chips) */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Material</label>
-            <div className="flex flex-wrap gap-2">
-              {config.materialien.map(m => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => toggleMaterial(m)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                    material.includes(m)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-input hover:bg-muted"
-                  }`}
-                  data-testid={`chip-material-${m}`}
-                >
-                  {m}
-                </button>
-              ))}
-              {config.materialien.length === 0 && (
-                <span className="text-xs text-muted-foreground">Keine Materialien konfiguriert</span>
-              )}
-            </div>
-          </div>
-
-          {/* Schätzung + Status */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Summen-Schätzung (€)</label>
-              <input
-                type="number"
-                value={schaetzung}
-                onChange={(e) => setSchaetzung(e.target.value)}
-                className="w-full border rounded-sm p-2 text-sm"
-                step="0.01"
-                data-testid="input-schaetzung"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Anfrage-Schritt</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="select-status">
-                <option value="">-- Schritt wählen --</option>
-                {config.anfrage_schritte?.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Beschreibung */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Beschreibung</label>
-            <textarea
-              value={beschreibung}
-              onChange={(e) => setBeschreibung(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none"
-              placeholder="Beschreibung des Einsatzes..."
-              data-testid="input-beschreibung"
-            />
-          </div>
-
-          {/* Termin */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Termin</label>
-            <input
-              type="datetime-local"
-              value={termin}
-              onChange={(e) => setTermin(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm"
-              data-testid="input-termin"
-            />
-          </div>
-
-          {/* Termintext */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Termintext (für E-Mail/Kalender)</label>
-            <textarea
-              value={terminText}
-              onChange={(e) => setTerminText(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[60px] resize-none"
-              placeholder="z.B. Sehr geehrter Herr Müller, wir kommen am..."
-              data-testid="input-termintext"
-            />
           </div>
         </div>
         <div className="p-4 border-t flex justify-end gap-2">
@@ -753,7 +810,7 @@ const EinsatzEmailDialog = ({ einsatz, config, onClose }) => {
       .replace(/\{kunde_name\}/g, einsatz.customer_name || "")
       .replace(/\{termin_datum\}/g, terminDate)
       .replace(/\{termin_zeit\}/g, terminTime)
-      .replace(/\{reparaturgruppe\}/g, einsatz.reparaturgruppe || "")
+      .replace(/\{reparaturgruppe\}/g, (einsatz.reparaturgruppen || []).join(", ") || einsatz.reparaturgruppe || "")
       .replace(/\{monteur\}/g, einsatz.monteur_1 || "")
       .replace(/\{beschreibung\}/g, einsatz.beschreibung || "")
       .replace(/\{firma_name\}/g, "Tischlerei Graupner");

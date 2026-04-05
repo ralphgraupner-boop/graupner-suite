@@ -60,7 +60,7 @@ async def create_einsatz(body: dict, user=Depends(get_current_user)):
         "anfrage_id": body.get("anfrage_id", ""),
         "monteur_1": body.get("monteur_1", ""),
         "monteur_2": body.get("monteur_2", ""),
-        "reparaturgruppe": body.get("reparaturgruppe", ""),
+        "reparaturgruppen": body.get("reparaturgruppen", []),
         "material": body.get("material", []),
         "summe_schaetzung": body.get("summe_schaetzung", 0),
         "status": body.get("status", "aktiv"),
@@ -91,7 +91,7 @@ async def update_einsatz(einsatz_id: str, body: dict, user=Depends(get_current_u
 
     allowed = [
         "customer_id", "customer_name", "anfrage_id",
-        "monteur_1", "monteur_2", "reparaturgruppe", "material",
+        "monteur_1", "monteur_2", "reparaturgruppen", "material",
         "summe_schaetzung", "status", "beschreibung",
         "termin", "termin_text"
     ]
@@ -201,8 +201,11 @@ def _generate_ics(einsatz: dict, settings: dict) -> str:
     now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     summary = f"Einsatz: {einsatz.get('customer_name', 'Kunde')}"
-    if einsatz.get("reparaturgruppe"):
-        summary += f" - {einsatz['reparaturgruppe']}"
+    gruppen = einsatz.get("reparaturgruppen", []) or []
+    if not gruppen and einsatz.get("reparaturgruppe"):
+        gruppen = [einsatz["reparaturgruppe"]]
+    if gruppen:
+        summary += f" - {', '.join(gruppen)}"
 
     description = einsatz.get("beschreibung", "")
     if einsatz.get("termin_text"):
