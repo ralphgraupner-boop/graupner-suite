@@ -199,6 +199,16 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit, 
           )}
 
           {/* Positions Table */}
+          {(() => {
+            const positions = document.positions || [];
+            const hasTitel = positions.some(p => p.type === "titel");
+            let titelNr = 0, posInTitel = 0, flatNr = 0;
+            const numbering = positions.map((p) => {
+              if (p.type === "titel") { titelNr++; posInTitel = 0; return String(titelNr); }
+              if (hasTitel) { posInTitel++; return titelNr > 0 ? `${titelNr}.${posInTitel}` : String(posInTitel); }
+              flatNr++; return String(flatNr);
+            });
+            return (
           <table className="w-full mb-6">
             <thead>
               <tr className="border-b-2 border-primary/20">
@@ -211,11 +221,11 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit, 
               </tr>
             </thead>
             <tbody>
-              {document.positions?.map((pos, idx) => {
+              {positions.map((pos, idx) => {
                 if (pos.type === "titel") {
                   return (
                     <tr key={idx} className="border-b bg-amber-50/60">
-                      <td className="py-3 text-sm font-bold text-primary">{pos.pos_nr}</td>
+                      <td className="py-3 text-sm font-bold text-primary">{numbering[idx]}</td>
                       <td className="py-3 text-sm font-bold text-primary" colSpan={5}>{pos.description}</td>
                     </tr>
                   );
@@ -223,7 +233,7 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit, 
                 const descLines = (pos.description || "").split("\n");
                 return (
                   <tr key={idx} className="border-b">
-                    <td className="py-3 text-sm align-top">{pos.pos_nr}</td>
+                    <td className="py-3 text-sm align-top">{numbering[idx]}</td>
                     <td className="py-3 text-sm align-top whitespace-pre-line">
                       {descLines.map((line, i) => (
                         <span key={i} className={i === 0 ? "font-bold" : ""}>
@@ -240,6 +250,8 @@ const DocumentPreview = ({ isOpen, onClose, document, type, onDownload, onEdit, 
               })}
             </tbody>
           </table>
+            );
+          })()}
 
           {/* Totals */}
           <div className="flex justify-end mb-6">

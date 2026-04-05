@@ -440,7 +440,27 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
     footer_y_limit = 5.5 * cm
 
-    for pos in data.get("positions", []):
+    # Compute dynamic numbering
+    positions = data.get("positions", [])
+    has_titel = any(p.get("type") == "titel" for p in positions)
+    titel_nr = 0
+    pos_in_titel = 0
+    flat_nr = 0
+    numbering = []
+    for p in positions:
+        if p.get("type") == "titel":
+            titel_nr += 1
+            pos_in_titel = 0
+            numbering.append(str(titel_nr))
+        else:
+            if has_titel:
+                pos_in_titel += 1
+                numbering.append(f"{titel_nr}.{pos_in_titel}" if titel_nr > 0 else str(pos_in_titel))
+            else:
+                flat_nr += 1
+                numbering.append(str(flat_nr))
+
+    for pos_idx, pos in enumerate(positions):
         if y_pos < footer_y_limit:
             _draw_footer(c, width, settings, page_num)
             c.showPage()
@@ -453,13 +473,13 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         # Titel-Zeile: fett und über gesamte Breite
         if pos.get("type") == "titel":
             c.setFont("Helvetica-Bold", 10)
-            c.drawString(2 * cm, y_pos, str(pos.get("pos_nr", "")))
+            c.drawString(2 * cm, y_pos, numbering[pos_idx])
             c.drawString(3 * cm, y_pos, pos.get("description", ""))
             c.setFont("Helvetica", 9)
             y_pos -= 0.6 * cm
             continue
 
-        c.drawString(2 * cm, y_pos, str(pos.get("pos_nr", "")))
+        c.drawString(2 * cm, y_pos, numbering[pos_idx])
 
         desc = pos.get("description", "")
         desc_lines = desc.split("\n") if desc else [""]

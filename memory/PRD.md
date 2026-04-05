@@ -70,6 +70,7 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Beschreibungsfeld (Betreff) + Suchfilter in Angebote-, Aufträge- und Rechnungslisten hinzugefügt (2026-04-03)
 - [x] Self-Service-Kundenportal implementiert: Einmallink + Passwort, 8 Wochen gültig, Kunde lädt Bilder hoch, Geschäft stellt Dokumente ein, Emergent Object Storage Integration (2026-04-03)
 - [x] Auth-System verbessert: JWT-Token im Authorization Header (Bearer), Frontend api.js Interceptor (2026-04-03)
+- [x] Bugfix: Positionsnummern in DocumentPreview und PDF-Generator dynamisch berechnet statt aus DB-Feld pos_nr (2026-04-05)
 - [x] Performance: React.lazy für SettingsPanel, useMemo für Filter-Berechnungen (2026-04-03)
 - [x] Article management page
 - [x] E-Mail protocol
