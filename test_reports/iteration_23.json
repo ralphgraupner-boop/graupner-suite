@@ -1,0 +1,71 @@
+{
+  "summary": "Tested Kalkulation Historie feature - all backend APIs and frontend UI working correctly. POST /api/kalkulation saves calculations, GET /api/kalkulation/{id} returns history sorted by date descending (max 20), GET /api/kalkulation/{id}/latest returns most recent. KalkulationPanel pre-fills from last calculation, saves to history on apply, shows toggleable history section with expandable entries, and 'Diese Kalkulation laden' button loads historical values.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "POST /api/kalkulation saves full calculation entry to DB with all fields",
+    "GET /api/kalkulation/{article_id} returns history sorted by date descending",
+    "GET /api/kalkulation/{article_id} returns max 20 entries",
+    "GET /api/kalkulation/{article_id}/latest returns most recent calculation",
+    "GET /api/kalkulation/{article_id}/latest returns empty object for new article",
+    "GET /api/kalkulation/{article_id} returns empty list for new article",
+    "Saved kalkulation entry contains all required fields (EK, time entries, rates, sonstige, surcharges, calculated values)",
+    "KalkulationPanel pre-fills values from last calculation when opened (EK=20, Meister=2h, Geselle=3h)",
+    "Clicking 'VK-Preis übernehmen' saves calculation to history AND updates article price",
+    "Success toast 'VK-Preis für X auf Y € aktualisiert' appears after apply",
+    "Historie toggle button shows entry count badge (e.g., '1', '2')",
+    "Historie toggle button toggles history section visibility",
+    "Each history entry shows VK price, date, and summary (EK, Lohn, Material%, Gewinn%)",
+    "Expanding history entry shows full details (all time entries with rates, sonstige, surcharges)",
+    "'Diese Kalkulation laden' button in expanded entry re-fills form with that entry's values",
+    "Toast 'Kalkulation geladen' appears after loading from history",
+    "Multiple calculations stack in history (tested: 1 entry → 2 entries after new calculation)",
+    "Calculation comparison shows difference from current VK (green for increase, red for decrease)"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_kalkulation_historie.py",
+    "/app/test_reports/pytest/pytest_kalkulation_historie.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Backend kalkulation.py correctly excludes MongoDB _id from responses",
+    "KalkulationPanel.jsx properly handles loading state and pre-fills values",
+    "History entries are correctly sorted by created_at descending",
+    "All data-testid attributes are properly implemented for testing"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_kalkulation_historie.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (8/8 tests passed)",
+    "frontend": "100% (all Kalkulation Historie features verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Created test calculations for article 'Einrüstkosten/Sicherheitsrelevant' - now has 2+ history entries",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Kalkulation Historie feature fully tested and working. The KalkulationPanel in document editor sidebar (/quotes/edit/{id}) now: 1) Loads latest calculation via GET /api/kalkulation/{id}/latest on mount, 2) Pre-fills all form fields from last calc, 3) Saves to history via POST /api/kalkulation when applying price, 4) Shows toggleable history section with expandable entries. Test article 'Einrüstkosten/Sicherheitsrelevant' has multiple history entries. Backend collection: kalkulation_historie."
+}
