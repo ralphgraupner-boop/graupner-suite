@@ -389,6 +389,19 @@ const CreatePortalDialog = ({ customers, onClose, onCreated }) => {
 const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle, onCopyLink, getPortalUrl }) => {
   const customerFiles = files.filter(f => f.uploaded_by === "customer");
   const businessFiles = files.filter(f => f.uploaded_by === "business");
+  const [notes, setNotes] = useState([]);
+
+  useEffect(() => {
+    api.get(`/portals/${portal.id}/files`).catch(() => {});
+    // Load portal details for notes
+    api.get("/portals").then(res => {
+      const p = res.data.find(x => x.id === portal.id);
+      if (p?.customer_notes) setNotes(p.customer_notes);
+    }).catch(() => {});
+  }, [portal.id]);
+
+  const noteTypeLabels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo" };
+  const noteTypeColors = { korrektur: "text-orange-700 bg-orange-50", hinweis: "text-blue-700 bg-blue-50", termin: "text-green-700 bg-green-50", zusatz: "text-purple-700 bg-purple-50" };
 
   return (
     <div data-testid="portal-detail">
@@ -426,6 +439,29 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
         <code className="text-xs truncate flex-1">{getPortalUrl(portal)}</code>
         <button onClick={onCopyLink} className="text-xs text-primary hover:underline flex-shrink-0">Kopieren</button>
       </div>
+
+      {/* Kundenmitteilungen */}
+      {notes.length > 0 && (
+        <div className="mb-6" data-testid="portal-customer-notes">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Kundenmitteilungen ({notes.length})
+          </h3>
+          <div className="space-y-2">
+            {notes.map(note => (
+              <div key={note.id} className="border rounded-sm p-3 bg-background">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${noteTypeColors[note.type] || "text-gray-700 bg-gray-50"}`}>
+                    {noteTypeLabels[note.type] || note.type}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{new Date(note.created_at).toLocaleString("de-DE")}</span>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Kundenbilder */}

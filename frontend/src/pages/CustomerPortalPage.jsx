@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download } from "lucide-react";
+import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3 } from "lucide-react";
 import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -15,6 +15,11 @@ const CustomerPortalPage = () => {
   const [error, setError] = useState("");
   const [description, setDescription] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [customerNotes, setCustomerNotes] = useState([]);
+  const [noteText, setNoteText] = useState("");
+  const [noteType, setNoteType] = useState("hinweis");
+  const [sendingNote, setSendingNote] = useState(false);
+  const [noteSent, setNoteSent] = useState(false);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -35,6 +40,7 @@ const CustomerPortalPage = () => {
     try {
       const res = await axios.post(`${API}/portal/verify/${token}`, { password });
       setPortalInfo(res.data);
+      setCustomerNotes(res.data.customer_notes || []);
       setAuthenticated(true);
     } catch (e) {
       const msg = e.response?.data?.detail || "Zugang fehlgeschlagen";
@@ -70,6 +76,27 @@ const CustomerPortalPage = () => {
 
   const customerFiles = files.filter(f => f.uploaded_by === "customer");
   const businessFiles = files.filter(f => f.uploaded_by === "business");
+
+  const handleSendNote = async () => {
+    if (!noteText.trim()) return;
+    setSendingNote(true);
+    setNoteSent(false);
+    try {
+      const res = await axios.post(`${API}/portal/${token}/notes`, {
+        password, type: noteType, text: noteText
+      });
+      setCustomerNotes(prev => [...prev, res.data]);
+      setNoteText("");
+      setNoteSent(true);
+      setTimeout(() => setNoteSent(false), 3000);
+    } catch (e) {
+      setError("Nachricht konnte nicht gesendet werden");
+    } finally {
+      setSendingNote(false);
+    }
+  };
+
+  const customerData = portalInfo?.customer_data;
 
   // Login Screen
   if (!authenticated) {
@@ -134,6 +161,136 @@ const CustomerPortalPage = () => {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        {/* Ihre Daten */}
+        {customerData && (
+          <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-customer-data">
+            <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <Edit3 className="w-5 h-5 text-slate-500" />
+              Ihre Daten
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-3 text-sm">
+              {customerData.name && (
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400 font-medium w-16 shrink-0">Name:</span>
+                  <span>{customerData.anrede ? `${customerData.anrede} ` : ""}{customerData.name}</span>
+                </div>
+              )}
+              {customerData.firma && (
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400 font-medium w-16 shrink-0">Firma:</span>
+                  <span>{customerData.firma}</span>
+                </div>
+              )}
+              {customerData.address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <span>{customerData.address}</span>
+                </div>
+              )}
+              {customerData.phone && (
+                <div className="flex items-start gap-2">
+                  <Phone className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <span>{customerData.phone}</span>
+                </div>
+              )}
+              {customerData.email && (
+                <div className="flex items-start gap-2">
+                  <Mail className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <span>{customerData.email}</span>
+                </div>
+              )}
+            </div>
+            {customerData.notes && (
+              <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm">
+                <p className="text-xs font-medium text-slate-500 mb-1">Ihre Anfrage:</p>
+                <p className="whitespace-pre-wrap text-slate-700">{customerData.notes}</p>
+              </div>
+            )}
+            <p className="text-xs text-slate-400 mt-3">Stimmt etwas nicht? Nutzen Sie das Nachrichtenfeld unten, um Korrekturen oder Ergänzungen mitzuteilen.</p>
+          </section>
+        )}
+
+        {/* Mitteilungen & Hinweise */}
+        <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-notes-section">
+          <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-blue-600" />
+            Mitteilungen & Hinweise
+          </h2>
+
+          {/* Bestehende Notizen */}
+          {customerNotes.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {customerNotes.map(note => {
+                const labels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo" };
+                const colors = { korrektur: "bg-orange-100 text-orange-700", hinweis: "bg-blue-100 text-blue-700", termin: "bg-green-100 text-green-700", zusatz: "bg-purple-100 text-purple-700" };
+                return (
+                  <div key={note.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${colors[note.type] || "bg-gray-100 text-gray-600"}`}>
+                        {labels[note.type] || note.type}
+                      </span>
+                      <span className="text-xs text-slate-400">{new Date(note.created_at).toLocaleString("de-DE")}</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Neue Nachricht */}
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              {[
+                { value: "korrektur", label: "Korrektur", icon: Edit3 },
+                { value: "hinweis", label: "Hinweis", icon: MessageSquare },
+                { value: "termin", label: "Termin", icon: Calendar },
+                { value: "zusatz", label: "Zusatzinfo", icon: FileText },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setNoteType(opt.value)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    noteType === opt.value 
+                      ? "bg-blue-600 text-white" 
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                  data-testid={`note-type-${opt.value}`}
+                >
+                  <opt.icon className="w-3.5 h-3.5" />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder={
+                noteType === "korrektur" ? "z.B. Die Adresse ist falsch, richtig ist: Musterstr. 5, 22453 Hamburg" :
+                noteType === "termin" ? "z.B. Besichtigung möglich: Mo-Fr 9-16 Uhr, am besten Dienstag oder Donnerstag" :
+                noteType === "zusatz" ? "z.B. Objekt befindet sich im Hinterhaus, Zufahrt über den Innenhof" :
+                "Ihr Hinweis an die Tischlerei..."
+              }
+              className="w-full border border-slate-200 rounded-lg p-3 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              data-testid="portal-note-input"
+            />
+            <button
+              onClick={handleSendNote}
+              disabled={sendingNote || !noteText.trim()}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              data-testid="portal-send-note-btn"
+            >
+              <Send className="w-4 h-4" />
+              {sendingNote ? "Wird gesendet..." : "Nachricht senden"}
+            </button>
+            {noteSent && (
+              <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
+                <CheckCircle className="w-4 h-4" />
+                Nachricht erfolgreich gesendet!
+              </div>
+            )}
+          </div>
+        </section>
         {/* Upload Section */}
         <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-upload-section">
           <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">

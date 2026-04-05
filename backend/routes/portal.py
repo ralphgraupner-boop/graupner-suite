@@ -198,12 +198,52 @@ async def verify_portal(token: str, body: dict):
     password = body.get("password", "")
     if hash_password(password) != portal.get("password_hash"):
         raise HTTPException(401, "Falsches Passwort")
+
+    # Load customer data if linked
+    customer_data = None
+    if portal.get("customer_id"):
+        cust = await db.customers.find_one({"id": portal["customer_id"]}, {"_id": 0})
+        if cust:
+            customer_data = {
+                "name": cust.get("name", ""),
+                "email": cust.get("email", ""),
+                "phone": cust.get("phone", ""),
+                "address": cust.get("address", ""),
+                "notes": cust.get("notes", ""),
+                "anrede": cust.get("anrede", ""),
+                "firma": cust.get("firma", ""),
+            }
+
     return {
         "valid": True,
+        "portal_id": portal.get("id"),
         "customer_name": portal.get("customer_name", ""),
         "description": portal.get("description", ""),
         "expires_at": portal.get("expires_at"),
+        "customer_data": customer_data,
+        "customer_notes": portal.get("customer_notes", []),
     }
+
+
+@router.post("/portal/{token}/notes")
+async def public_add_note(token: str, body: dict):
+    portal = await _verify_portal_access(token, body.get("password", ""))
+    note_type = body.get("type", "hinweis")  # hinweis, korrektur, termin, zusatz
+    text = body.get("text", "").strip()
+    if not text:
+        raise HTTPException(400, "Text darf nicht leer sein")
+
+    note = {
+        "id": str(uuid.uuid4()),
+        "type": note_type,
+        "text": text,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.portals.update_one(
+        {"id": portal["id"]},
+        {"$push": {"customer_notes": note}}
+    )
+    return note
 
 
 @router.post("/portal/{token}/files")
