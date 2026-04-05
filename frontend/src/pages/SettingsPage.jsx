@@ -748,8 +748,14 @@ const BenutzerTab = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [portals, setPortals] = useState([]);
+  const [portalsLoading, setPortalsLoading] = useState(true);
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { loadUsers(); loadPortals(); }, []);
+
+  const loadPortals = async () => {
+    try { const res = await api.get("/portals"); setPortals(res.data); } catch {} finally { setPortalsLoading(false); }
+  };
 
   const loadUsers = async () => {
     try { const res = await api.get("/users"); setUsers(res.data); } catch { toast.error("Fehler beim Laden"); }
@@ -863,6 +869,77 @@ const BenutzerTab = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Portal-Passwörter */}
+      <Card className="p-4 lg:p-6 mt-6" data-testid="portal-passwords-section">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Key className="w-5 h-5 text-primary" /> Kundenportal-Passwörter
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={portals.length === 0}
+            onClick={() => {
+              const lines = ["KUNDENPORTAL - PASSWORTLISTE", "=============================", `Erstellt: ${new Date().toLocaleDateString("de-DE")}`, ""];
+              portals.forEach(p => {
+                lines.push(`Kunde:    ${p.customer_name || "-"}`);
+                lines.push(`E-Mail:   ${p.customer_email || "-"}`);
+                lines.push(`Passwort: ${p.password_plain || "?"}`);
+                lines.push(`Status:   ${p.active ? "Aktiv" : "Deaktiviert"}`);
+                lines.push(`Gültig:   ${p.expires_at ? new Date(p.expires_at).toLocaleDateString("de-DE") : "-"}`);
+                lines.push(`Link:     ${window.location.origin}/portal/${p.token}`);
+                lines.push("-----------------------------");
+                lines.push("");
+              });
+              const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = `Kundenportal_Passwoerter_${new Date().toISOString().slice(0,10)}.txt`;
+              a.click();
+              URL.revokeObjectURL(a.href);
+              toast.success("Passwort-Datei heruntergeladen");
+            }}
+            data-testid="btn-download-passwords-settings"
+          >
+            <Save className="w-4 h-4" /> Als Datei speichern
+          </Button>
+        </div>
+        {portalsLoading ? (
+          <div className="flex items-center justify-center h-16"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" /></div>
+        ) : portals.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Keine Kundenportale vorhanden.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="pb-2 font-medium">Kunde</th>
+                  <th className="pb-2 font-medium">E-Mail</th>
+                  <th className="pb-2 font-medium">Passwort</th>
+                  <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium">Gültig bis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {portals.map(p => (
+                  <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/30">
+                    <td className="py-2 pr-3">{p.customer_name || "-"}</td>
+                    <td className="py-2 pr-3 text-muted-foreground">{p.customer_email || "-"}</td>
+                    <td className="py-2 pr-3 font-mono text-xs bg-muted/50 px-2 rounded">{p.password_plain || "?"}</td>
+                    <td className="py-2 pr-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${p.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {p.active ? "Aktiv" : "Inaktiv"}
+                      </span>
+                    </td>
+                    <td className="py-2 text-muted-foreground">{p.expires_at ? new Date(p.expires_at).toLocaleDateString("de-DE") : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </Card>
   );
 };
