@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare } from "lucide-react";
+import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -40,6 +40,27 @@ const PortalsPage = () => {
   const openPortal = (portal) => {
     setSelectedPortal(portal);
     loadFiles(portal.id);
+  };
+
+  const downloadPasswortDatei = () => {
+    const lines = ["KUNDENPORTAL - PASSWORTLISTE", "=============================", `Erstellt: ${new Date().toLocaleDateString("de-DE")}`, ""];
+    portals.forEach(p => {
+      lines.push(`Kunde:    ${p.customer_name || "-"}`);
+      lines.push(`E-Mail:   ${p.customer_email || "-"}`);
+      lines.push(`Passwort: ${p.password_plain || "?"}`);
+      lines.push(`Status:   ${p.active ? "Aktiv" : "Deaktiviert"}`);
+      lines.push(`Gültig:   ${p.expires_at ? new Date(p.expires_at).toLocaleDateString("de-DE") : "-"}`);
+      lines.push(`Link:     ${window.location.origin}/portal/${p.token}`);
+      lines.push("-----------------------------");
+      lines.push("");
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `Kundenportal_Passwoerter_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast.success("Passwort-Datei heruntergeladen");
   };
 
   const toggleActive = async (portal) => {
@@ -121,14 +142,25 @@ const PortalsPage = () => {
           <h1 className="text-2xl lg:text-4xl font-bold">Kundenportale</h1>
           <p className="text-muted-foreground mt-1 text-sm">{portals.length} Portale</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90"
-          data-testid="btn-create-portal"
-        >
-          <Plus className="w-4 h-4" />
-          Neues Portal
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={downloadPasswortDatei}
+            className="flex items-center gap-2 border px-4 py-2 rounded-sm text-sm font-medium hover:bg-muted"
+            data-testid="btn-download-passwords"
+            title="Passwort-Datei herunterladen"
+          >
+            <Download className="w-4 h-4" />
+            Passwort-Datei
+          </button>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90"
+            data-testid="btn-create-portal"
+          >
+            <Plus className="w-4 h-4" />
+            Neues Portal
+          </button>
+        </div>
       </div>
 
       {showCreate && (
