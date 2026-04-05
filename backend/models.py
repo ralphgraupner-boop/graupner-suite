@@ -58,6 +58,7 @@ class Anfrage(BaseModel):
     notes: str = ""
     photos: List[str] = []
     categories: List[str] = []
+    reparaturgruppe: str = ""
     customer_type: str = "Privat"
     firma: str = ""
     anrede: str = ""
@@ -76,6 +77,7 @@ class AnfrageUpdate(BaseModel):
     notes: Optional[str] = None
     nachricht: Optional[str] = None
     categories: Optional[List[str]] = None
+    reparaturgruppe: Optional[str] = None
     customer_type: Optional[str] = None
     firma: Optional[str] = None
     anrede: Optional[str] = None

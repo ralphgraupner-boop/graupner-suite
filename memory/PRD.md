@@ -1,11 +1,12 @@
 # PRD - Graupner Suite (Handwerker-Software)
 
 ## Original Problem Statement
-Complete craftsman management software ("Graupner Suite") for a carpentry business. Features customer management, unified article/service database, Anfragen inbox, and a highly customizable WYSIWYG 3-column document editor.
+Complete craftsman management software ("Graupner Suite") for a carpentry business. Features customer management, unified article/service database, Anfragen inbox, highly customizable WYSIWYG 3-column document editor, Mahnwesen (Dunning), Customer Self-Service Portal, and Dispatch/Resource Planning (Einsatzplanung).
 
 ## Core Users
 - Tischlerei Graupner (carpentry business) admin/owner
 - Workshop employees
+- Customers (via Self-Service Portal)
 
 ## Tech Stack
 - Frontend: React, Tailwind CSS, Shadcn UI
@@ -24,22 +25,31 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 │   │   ├── leistungsbloecke.py
 │   │   ├── settings.py
 │   │   ├── text_templates.py
+│   │   ├── portal.py
+│   │   ├── einsaetze.py
 │   │   └── ...
+│   ├── utils/
+│   │   ├── storage.py
+│   │   └── pdf_generator.py
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
-│   │   │   └── SettingsPage.jsx
+│   │   │   ├── SettingsPage.jsx (with Einsatzplanung tab)
+│   │   │   ├── EinsaetzePage.jsx
+│   │   │   ├── AnfragenPage.jsx (with Reparaturgruppen)
+│   │   │   ├── PortalsPage.jsx
+│   │   │   └── CustomerPortalPage.jsx
 │   │   ├── components/
-│   │   │   └── WysiwygDocumentEditor.jsx (>2130 lines)
+│   │   │   └── WysiwygDocumentEditor.jsx (>2200 lines)
 └── memory/
     ├── PRD.md
     └── test_credentials.md
 ```
 
-## Completed Features (as of 2026-04-03)
+## Completed Features (as of 2026-04-05)
 - [x] Dashboard with KPIs
 - [x] Customer Management (CRUD)
-- [x] Anfragen (Inquiries) Inbox
+- [x] Anfragen (Inquiries) Inbox with Reparaturgruppen integration
 - [x] Documents: Angebote, Aufträge, Rechnungen
 - [x] WYSIWYG Document Editor with drag-and-drop
 - [x] Title Groups & Discount Calculations (Gewerk-/Titelzusammenstellung)
@@ -49,62 +59,44 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Betreff text styled bold and blue
 - [x] Removed Anmerkungen field, kept Schlusstext
 - [x] Title blocks saveable to/selectable from templates
-- [x] Leistungsblöcke (Service Blocks) - save/insert groups of positions
-- [x] Prompt for Stammdaten changes when editing articles in documents
+- [x] Leistungsblöcke (Service Blocks)
+- [x] Prompt for Stammdaten changes when editing articles
 - [x] First line of position descriptions rendered bold
-- [x] Slide-over Settings panel with CRUD tabs for Leistungen/Artikel/Blöcke
-- [x] Fixed Articles tab showing Services bug
-- [x] Fixed SMTP Email settings bug
-- [x] Fixed sidebar Leistungen showing 0 items bug (2026-04-03)
-- [x] Save button now keeps editor open (Zwischenspeichern), separate "Beenden" button to exit (2026-04-03)
-- [x] Toolbar: E-Mail, Drucken, PDF, Speichern, Beenden (inkl. Speichern) buttons added (2026-04-03)
-- [x] E-Mail Dialog: Vorlagen-Dropdown für Nachrichtentext mit Platzhalter-Ersetzung und "Als Vorlage speichern" (2026-04-03)
-- [x] PDF: Titel-Zeilen fett gedruckt, erste Beschreibungszeile fett, mehrzeilige Beschreibungen korrekt (2026-04-03)
-- [x] PDF komplett überarbeitet: Briefkopf, rechte Spalte, DIN 5008, Betreff, Vortext, Schlusstext, Fußzeile (2026-04-03)
-- [x] DocumentPreview (Vorschau beim Öffnen) angepasst: gleicher Briefkopf wie Editor + PDF (2026-04-03)
-- [x] Mahnwesen komplett überarbeitet: Briefkopf, Mahngebühren (5€/10€), Mahnungshistorie, Bankverbindung im Text (2026-04-03)
-- [x] Mahnungs-Editor: Dialog mit Dringlichkeitswahl (Stufe 1-3), editierbarem Mahntext, Kostenaufstellung, Custom-Text im PDF (2026-04-03)
-- [x] Mahnwesen-Flow: Klick auf Karte → Rechnungsvorschau → "Mahnung erstellen" Button → Editor mit Fertigtext-Vorlagen (2026-04-03)
-- [x] Fußtext (Firma, Bankverbindung, Steuernr.) in Mahnungs-Split-View eingefügt – links (Rechnungsvorschau) und rechts (Editor) (2026-04-03)
-- [x] Bugfix: Vortext/Schlusstext/Betreff-Vorlagen jetzt dokumenttyp-übergreifend verfügbar (Angebot, Auftrag, Rechnung) (2026-04-03)
-- [x] Beschreibungsfeld (Betreff) + Suchfilter in Angebote-, Aufträge- und Rechnungslisten hinzugefügt (2026-04-03)
-- [x] Self-Service-Kundenportal implementiert: Einmallink + Passwort, 8 Wochen gültig, Kunde lädt Bilder hoch, Geschäft stellt Dokumente ein, Emergent Object Storage Integration (2026-04-03)
-- [x] Auth-System verbessert: JWT-Token im Authorization Header (Bearer), Frontend api.js Interceptor (2026-04-03)
-- [x] Bugfix: Positionsnummern in DocumentPreview und PDF-Generator dynamisch berechnet statt aus DB-Feld pos_nr (2026-04-05)
-- [x] Portal-Erstellung: Automatischer E-Mail-Versand mit Portal-Link + Passwort an Kunden (2026-04-05)
-- [x] Kundenportal erweitert: Kundendaten-Anzeige (Adresse, Anfrage), Mitteilungssystem mit 4 Kategorien (Korrektur, Hinweis, Termin, Zusatzinfo), Admin sieht Kundenmitteilungen im Portal-Detail (2026-04-05)
-- [x] Push-Benachrichtigung + E-Mail an Admin bei neuer Kundenmitteilung oder Bild-Upload im Portal (2026-04-05)
-- [x] Einsatzplanung-Modul (Phase 1): Konfigurierbare Auswahlfelder (Monteure, Reparaturgruppen, Material), Einsatz-CRUD, Filterliste, aufklappbare Detailansicht, Google Kalender + E-Mail-Links (2026-04-05)
-- [x] Einsatzplanung: Anfrage-Schritte als konfigurierbare Workflow-Buttons mit Anzahl über der Liste, ersetzt alten Status-Dropdown (2026-04-05)
-- [x] Performance: React.lazy für SettingsPanel, useMemo für Filter-Berechnungen (2026-04-03)
-- [x] Article management page
-- [x] E-Mail protocol
-- [x] Website Integration page
-- [x] Settings page
-
-## Bug Fixes (2026-04-03)
-- Fixed: Sidebar "Leistungen" tab showing 0 items despite API returning 11 services
-  - Root cause: `filteredServices` was filtering from `articles` state (only Artikel items) instead of `services` state
-  - Fix: Changed filter source from `articles` to `services` in WysiwygDocumentEditor.jsx line 408
+- [x] Slide-over Settings panel with CRUD tabs
+- [x] E-Mail Dialog with templates and placeholder replacement
+- [x] PDF fully reworked: Briefkopf, DIN 5008, Betreff, Vortext, Schlusstext, Fußzeile
+- [x] Mahnwesen (Dunning) with severity levels, fees, history
+- [x] Vortext/Schlusstext templates available across all document types
+- [x] Beschreibung search field in document tables
+- [x] Self-Service Customer Portal (secure upload, messaging, auto-email)
+- [x] Push Notifications + Email alerts for portal activity
+- [x] Einsatzplanung Module Phase 1: Config, CRUD, Workflow Steps, Filters
+- [x] Einsatzplanung config in Settings page (Anfrage-Schritte, Reparaturgruppen, Monteure, Materialien)
+- [x] Reparaturgruppen integrated into Anfragen page (edit modal, detail view, list badges)
 
 ## Upcoming Tasks (P1)
-- E-Mail-Empfang via IMAP (fetch emails to Anfragen) - reminder for April 5/6
-- Landing Page IONOS FTP Upload - reminder for April 5/6
+- Einsatzplanung Phase 2: Google Kalender direkte Integration
+- Einsatzplanung Phase 2: E-Mail-Vorlagen für Termintexte
+- Einsatzplanung Phase 2: Kundenportal-Anbindung
 
-## Future Tasks (P2-P4)
-- P2: Bank Integration (N26 CSV-Import / Open Banking)
-- P3: Windows Desktop App (Electron wrapper)
-- P3: Auftrags-Status-Workflow
-- P3: Druckansicht für Dokumente
-- P4: WysiwygDocumentEditor Refactoring (split into sub-components)
+## Future Tasks (P2-P5)
+- P2: E-Mail-Empfang via IMAP (service24@tischlerei-graupner.de → Anfragen)
+- P3: N26 Bank Integration (CSV-Import / Open Banking)
+- P4: Windows Desktop App (Electron wrapper)
+- P5: WysiwygDocumentEditor Refactoring (split into sub-components)
 
 ## Key DB Collections
 - `articles`: { name, description, unit, price_net, typ: "Artikel"|"Leistung"|"Fremdleistung" }
 - `leistungsbloecke`: { name, positions: [] }
-- `text_templates`: { text_type: "vortext"|"schlusstext"|"titel", ... }
+- `text_templates`: { text_type, doc_type, title, content }
 - `documents`: { type, customer_id, positions, status, ... }
 - `customers`: { name, address, ... }
+- `anfragen`: { name, email, categories, reparaturgruppe, ... }
+- `portals`: { customer_id, token, password, files, notes }
+- `einsaetze`: { customer_id, monteur_1, monteur_2, reparaturgruppe, material, status }
+- `einsatz_config`: { monteure, reparaturgruppen, materialien, anfrage_schritte }
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 via Emergent LLM Key
 - SMTP Email (secure.emailsrvr.com:465)
+- Push API (Browser native, VAPID keys configured)

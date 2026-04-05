@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
@@ -19,10 +19,19 @@ const AnfragenPage = () => {
   const [quickNoteText, setQuickNoteText] = useState("");
   const [quickNoteSaving, setQuickNoteSaving] = useState(false);
   const [vcfUploading, setVcfUploading] = useState(false);
+  const [reparaturgruppen, setReparaturgruppen] = useState([]);
 
   useEffect(() => {
     loadAnfragen();
+    loadConfig();
   }, [activeCategory]);
+
+  const loadConfig = async () => {
+    try {
+      const res = await api.get("/einsatz-config");
+      setReparaturgruppen(res.data.reparaturgruppen || []);
+    } catch {}
+  };
 
   const loadAnfragen = async () => {
     try {
@@ -75,6 +84,7 @@ const AnfragenPage = () => {
       nachricht: anfrage.nachricht || "",
       notes: anfrage.notes || "",
       categories: anfrage.categories || [],
+      reparaturgruppe: anfrage.reparaturgruppe || "",
     });
   };
 
@@ -276,6 +286,11 @@ const AnfragenPage = () => {
                       ))}
                     </div>
                   )}
+                  {anfrage.reparaturgruppe && (
+                    <span className="hidden lg:inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                      <Wrench className="w-3 h-3" />{anfrage.reparaturgruppe}
+                    </span>
+                  )}
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => openQuickNote(anfrage)}
@@ -384,6 +399,12 @@ const AnfragenPage = () => {
                       {/* Kategorien & Beschreibungen */}
                       <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Kategorien & Details</h4>
+                        {anfrage.reparaturgruppe && (
+                          <div className="mb-3 bg-orange-50 rounded-sm p-3 border border-orange-200" data-testid={`reparaturgruppe-detail-${anfrage.id}`}>
+                            <span className="text-xs text-orange-600 font-medium uppercase tracking-wide flex items-center gap-1"><Wrench className="w-3 h-3" /> Reparaturgruppe</span>
+                            <p className="text-sm font-medium text-orange-800 mt-0.5">{anfrage.reparaturgruppe}</p>
+                          </div>
+                        )}
                         {(anfrage.categories || []).length > 0 ? (
                           <div className="space-y-3">
                             {anfrage.categories.map((cat) => {
@@ -621,6 +642,41 @@ const AnfragenPage = () => {
               ))}
             </div>
           </div>
+
+          {reparaturgruppen.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-2 flex items-center gap-1">
+                <Wrench className="w-4 h-4 text-orange-600" /> Reparaturgruppe
+              </label>
+              <div className="flex flex-wrap gap-2" data-testid="edit-anfrage-reparaturgruppe">
+                <button
+                  type="button"
+                  onClick={() => setEditForm({ ...editForm, reparaturgruppe: "" })}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    !editForm.reparaturgruppe
+                      ? "bg-gray-600 text-white shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  Keine
+                </button>
+                {reparaturgruppen.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, reparaturgruppe: g })}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      editForm.reparaturgruppe === g
+                        ? "bg-orange-600 text-white shadow-sm"
+                        : "bg-orange-50 text-orange-700 hover:bg-orange-100"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Nachricht</label>
