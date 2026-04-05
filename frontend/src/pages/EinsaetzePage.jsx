@@ -362,7 +362,19 @@ const EinsatzCard = ({ einsatz, getSchrittColor, config, onEdit, onDelete }) => 
 
 
 const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
-  const [customerId, setCustomerId] = useState(item?.customer_id || "");
+  // Resolve customer_id: try by ID first, then by name match
+  const resolveCustomerId = () => {
+    if (item?.customer_id) {
+      const match = customers.find(c => c.id === item.customer_id);
+      if (match) return item.customer_id;
+    }
+    if (item?.customer_name) {
+      const match = customers.find(c => c.name === item.customer_name);
+      if (match) return match.id;
+    }
+    return "";
+  };
+  const [customerId, setCustomerId] = useState(resolveCustomerId());
   const [customerName, setCustomerName] = useState(item?.customer_name || "");
   const [monteur1, setMonteur1] = useState(item?.monteur_1 || "");
   const [monteur2, setMonteur2] = useState(item?.monteur_2 || "");
