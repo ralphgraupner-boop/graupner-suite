@@ -787,7 +787,7 @@ const AnfrageEmailDialog = ({ anfrage, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={onClose} data-testid="anfrage-email-dialog">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg my-8" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-3xl my-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Mail className="w-5 h-5" /> E-Mail an {anfrage.name}
@@ -795,50 +795,50 @@ const AnfrageEmailDialog = ({ anfrage, onClose }) => {
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-3">
-          {/* Vorlage suchen */}
-          <div className="relative">
-            <label className="block text-sm font-medium mb-1">Vorlage wählen</label>
-            <input
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setShowResults(true); }}
-              onFocus={() => setShowResults(true)}
-              className="w-full border rounded-sm p-2 text-sm pr-8"
-              placeholder="Vorlage suchen... z.B. Bilder"
-              data-testid="email-vorlage-search"
-            />
-            <Search className="w-4 h-4 text-muted-foreground absolute right-2.5 top-[34px]" />
-            {showResults && (
-              <div className="absolute z-10 mt-1 w-full bg-background border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid="email-vorlage-results">
-                {filtered.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground">Keine Vorlagen gefunden</p>
-                ) : (
-                  filtered.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => applyVorlage(v)}
-                      className="w-full text-left p-3 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
-                      data-testid={`vorlage-option-${v.id}`}
-                    >
-                      <p className="text-sm font-medium">{v.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{v.betreff}</p>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* An */}
-          <div>
-            <label className="block text-sm font-medium mb-1">An</label>
-            <input
-              type="email"
-              value={toEmail}
-              onChange={(e) => setToEmail(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm"
-              placeholder="kunde@email.de"
-              data-testid="email-to"
-            />
+          {/* Vorlage + An in einer Zeile */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="relative">
+              <label className="block text-sm font-medium mb-1">Vorlage wählen</label>
+              <input
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setShowResults(true); }}
+                onFocus={() => setShowResults(true)}
+                className="w-full border rounded-sm p-2 text-sm pr-8"
+                placeholder="Vorlage suchen... z.B. Bilder"
+                data-testid="email-vorlage-search"
+              />
+              <Search className="w-4 h-4 text-muted-foreground absolute right-2.5 top-[34px]" />
+              {showResults && (
+                <div className="absolute z-10 mt-1 w-full bg-background border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid="email-vorlage-results">
+                  {filtered.length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground">Keine Vorlagen gefunden</p>
+                  ) : (
+                    filtered.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => applyVorlage(v)}
+                        className="w-full text-left p-3 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
+                        data-testid={`vorlage-option-${v.id}`}
+                      >
+                        <p className="text-sm font-medium">{v.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{v.betreff}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">An</label>
+              <input
+                type="email"
+                value={toEmail}
+                onChange={(e) => setToEmail(e.target.value)}
+                className="w-full border rounded-sm p-2 text-sm"
+                placeholder="kunde@email.de"
+                data-testid="email-to"
+              />
+            </div>
           </div>
 
           {/* Betreff */}
@@ -859,7 +859,7 @@ const AnfrageEmailDialog = ({ anfrage, onClose }) => {
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[150px] resize-none"
+              className="w-full border rounded-sm p-2 text-sm min-h-[250px] resize-y"
               placeholder="Nachricht..."
               data-testid="email-message"
             />

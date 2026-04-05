@@ -800,7 +800,13 @@ const EinsatzEmailDialog = ({ einsatz, config, onClose }) => {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const vorlagen = config.termin_vorlagen || [];
+  const [vorlagen, setVorlagen] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showResults, setShowResults] = useState(false);
+
+  useEffect(() => {
+    api.get("/email/vorlagen").then(res => setVorlagen(res.data)).catch(() => {});
+  }, []);
 
   // Try to find customer email
   useEffect(() => {
@@ -815,6 +821,11 @@ const EinsatzEmailDialog = ({ einsatz, config, onClose }) => {
     loadCustomerEmail();
   }, [einsatz.customer_id]);
 
+  const filtered = vorlagen.filter(v =>
+    v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    v.betreff.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const replacePlaceholders = (text) => {
     const terminDate = einsatz.termin ? new Date(einsatz.termin).toLocaleDateString("de-DE") : "";
     const terminTime = einsatz.termin ? new Date(einsatz.termin).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "";
@@ -825,12 +836,15 @@ const EinsatzEmailDialog = ({ einsatz, config, onClose }) => {
       .replace(/\{reparaturgruppe\}/g, (einsatz.reparaturgruppen || []).join(", ") || einsatz.reparaturgruppe || "")
       .replace(/\{monteur\}/g, einsatz.monteur_1 || "")
       .replace(/\{beschreibung\}/g, einsatz.beschreibung || "")
+      .replace(/\{email\}/g, toEmail || "")
       .replace(/\{firma_name\}/g, "Tischlerei Graupner");
   };
 
   const applyVorlage = (vorlage) => {
     setSubject(replacePlaceholders(vorlage.betreff));
     setMessage(replacePlaceholders(vorlage.text));
+    setSearchTerm(vorlage.name);
+    setShowResults(false);
   };
 
   const handleSend = async () => {
@@ -847,62 +861,82 @@ const EinsatzEmailDialog = ({ einsatz, config, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={onClose} data-testid="email-dialog">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg my-8" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-3xl my-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold flex items-center gap-2"><Mail className="w-5 h-5" /> Termin-E-Mail</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Mail className="w-5 h-5" /> E-Mail an {einsatz.customer_name || "Kunde"}</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-4 space-y-3 max-h-[65vh] overflow-y-auto">
-          {/* Vorlagen Buttons */}
-          {vorlagen.length > 0 && (
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Vorlage wählen:</label>
-              <div className="flex flex-wrap gap-1">
-                {vorlagen.map((v, i) => (
-                  <button
-                    key={i}
-                    onClick={() => applyVorlage(v)}
-                    className="px-2 py-1 text-xs border rounded-sm hover:bg-primary/10 hover:border-primary transition-colors"
-                    data-testid={`vorlage-btn-${i}`}
-                  >
-                    {v.name || `Vorlage ${i + 1}`}
-                  </button>
-                ))}
-              </div>
+        <div className="p-4 space-y-3">
+          {/* Vorlage + An */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="relative">
+              <label className="block text-sm font-medium mb-1">Vorlage wählen</label>
+              <input
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setShowResults(true); }}
+                onFocus={() => setShowResults(true)}
+                className="w-full border rounded-sm p-2 text-sm pr-8"
+                placeholder="Vorlage suchen... z.B. Bilder"
+                data-testid="email-vorlage-search"
+              />
+              <Search className="w-4 h-4 text-muted-foreground absolute right-2.5 top-[34px]" />
+              {showResults && (
+                <div className="absolute z-10 mt-1 w-full bg-background border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid="email-vorlage-results">
+                  {filtered.length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground">Keine Vorlagen gefunden</p>
+                  ) : (
+                    filtered.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => applyVorlage(v)}
+                        className="w-full text-left p-3 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
+                        data-testid={`vorlage-option-${v.id}`}
+                      >
+                        <p className="text-sm font-medium">{v.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{v.betreff}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium mb-1">An</label>
-            <input
-              type="email"
-              value={toEmail}
-              onChange={(e) => setToEmail(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm"
-              placeholder="kunde@email.de"
-              data-testid="email-to"
-            />
+            <div>
+              <label className="block text-sm font-medium mb-1">An</label>
+              <input
+                type="email"
+                value={toEmail}
+                onChange={(e) => setToEmail(e.target.value)}
+                className="w-full border rounded-sm p-2 text-sm"
+                placeholder="kunde@email.de"
+                data-testid="email-to"
+              />
+            </div>
           </div>
+
+          {/* Betreff */}
           <div>
             <label className="block text-sm font-medium mb-1">Betreff</label>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="w-full border rounded-sm p-2 text-sm"
-              placeholder="Terminbestätigung"
+              placeholder="Betreff..."
               data-testid="email-subject"
             />
           </div>
+
+          {/* Nachricht */}
           <div>
             <label className="block text-sm font-medium mb-1">Nachricht</label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[150px] resize-none"
-              placeholder="Sehr geehrte/r..."
+              className="w-full border rounded-sm p-2 text-sm min-h-[250px] resize-y"
+              placeholder="Nachricht..."
               data-testid="email-message"
             />
           </div>
+
           {einsatz.termin && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Calendar className="w-3 h-3" />
