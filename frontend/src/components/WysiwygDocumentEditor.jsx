@@ -227,6 +227,21 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const handleDragStart = (e, item) => { e.dataTransfer.setData("application/json", JSON.stringify(item)); e.dataTransfer.effectAllowed = "copy"; };
+
+  const handleApplyKalkPrice = async (item, newPrice, newEk) => {
+    if (!item?.id) return;
+    try {
+      const existing = await api.get(`/articles/${item.id}`);
+      const article = existing.data;
+      const updateData = { ...article, price_net: newPrice, ek_preis: newEk };
+      delete updateData.id; delete updateData.created_at;
+      await api.put(`/articles/${item.id}`, updateData);
+      toast.success(`VK-Preis für "${item.name}" auf ${newPrice.toFixed(2)} € aktualisiert`);
+      const artRes = await api.get("/articles");
+      setArticles(artRes.data.filter(a => a.typ === "Artikel"));
+      setServices(artRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+    } catch { toast.error("Fehler beim Aktualisieren"); }
+  };
   const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; };
   const handleDrop = (e) => { e.preventDefault(); try { const item = JSON.parse(e.dataTransfer.getData("application/json")); addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); } catch {} };
   const updateCostPrice = (idx, value) => setCostPrices(prev => ({ ...prev, [idx]: parseFloat(value) || 0 }));
@@ -421,6 +436,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             addFromStamm={addFromStamm} deleteLeistungsBlock={deleteLeistungsBlock}
             insertLeistungsBlock={insertLeistungsBlock}
             handleDragStart={handleDragStart} navigate={navigate}
+            settings={settings} onApplyKalkPrice={handleApplyKalkPrice}
           />
 
           <div>

@@ -1,5 +1,7 @@
-import { Search, Wrench, Package, Copy, GripVertical, ChevronDown, Plus, Edit, Trash2 } from "lucide-react";
+import React from "react";
+import { Search, Wrench, Package, Copy, GripVertical, ChevronDown, Plus, Edit, Trash2, Calculator } from "lucide-react";
 import { toast } from "sonner";
+import { KalkulationPanel } from "./KalkulationPanel";
 
 const EditorSidebar = ({
   sidebarSearch, setSidebarSearch, sidebarTab, setSidebarTab,
@@ -7,7 +9,9 @@ const EditorSidebar = ({
   selectedItem, setSelectedItem,
   addFromStamm, deleteLeistungsBlock, insertLeistungsBlock,
   handleDragStart, navigate,
+  settings, onApplyKalkPrice,
 }) => {
+  const [kalkItem, setKalkItem] = React.useState(null);
   return (
     <div className="hidden lg:block">
       <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pr-1">
@@ -119,14 +123,25 @@ const EditorSidebar = ({
                       Ins Dokument
                     </button>
                     <button
+                      onClick={(e) => { e.stopPropagation(); setKalkItem(kalkItem?.id === item.id ? null : item); }}
+                      className={`flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border text-sm font-medium transition-colors ${kalkItem?.id === item.id ? "border-blue-400 bg-blue-50 text-blue-700" : "border-input bg-card hover:bg-muted"}`}
+                      data-testid={`btn-kalk-item-${item.id}`}
+                      title="Kalkulieren"
+                    >
+                      <Calculator className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/articles`); }}
                       className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-input bg-card text-sm font-medium hover:bg-muted transition-colors"
                       data-testid={`btn-edit-item-${item.id}`}
+                      title="Bearbeiten"
                     >
                       <Edit className="w-4 h-4" />
-                      Bearbeiten
                     </button>
                   </div>
+                  {kalkItem?.id === item.id && (
+                    <KalkulationPanel item={item} settings={settings || {}} onApplyPrice={onApplyKalkPrice} onClose={() => setKalkItem(null)} />
+                  )}
                   <p className="text-[10px] text-muted-foreground text-center mt-2">Oder per Drag & Drop ins Dokument ziehen</p>
                 </div>
               )}

@@ -40,6 +40,14 @@ async def get_articles(typ: str = ""):
     return articles
 
 
+@router.get("/articles/{article_id}", response_model=Article)
+async def get_article(article_id: str):
+    article = await db.articles.find_one({"id": article_id}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel nicht gefunden")
+    return article
+
+
 @router.post("/articles", response_model=Article)
 async def create_article(article: ArticleCreate):
     data = article.model_dump()

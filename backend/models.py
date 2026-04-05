@@ -315,6 +315,13 @@ class CompanySettings(BaseModel):
     imap_password: str = ""
     imap_folder: str = "INBOX"
     imap_enabled: bool = False
+    # Kalkulation Settings
+    kalk_meister: float = 58.0
+    kalk_geselle: float = 45.0
+    kalk_azubi: float = 18.0
+    kalk_helfer: float = 25.0
+    kalk_materialzuschlag: float = 10.0
+    kalk_gewinnaufschlag: float = 15.0
 
 
 class WebhookContact(BaseModel):

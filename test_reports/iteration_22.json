@@ -1,0 +1,83 @@
+{
+  "summary": "Tested Kalkulation feature: Settings tab with wage rates (Meister, Geselle, Azubi, Helfer) and surcharges (Materialzuschlag, Gewinnaufschlag), and KalkulationPanel in WYSIWYG document editor sidebar. Fixed missing GET /api/articles/{id} endpoint that was causing 'Fehler beim Aktualisieren' error.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Settings page has 'Kalkulation' tab with Calculator icon",
+    "Kalkulation tab shows Kalkulationsstufen section with Meisterlohn, Gesellenlohn, Azubi-Lohn, Helfer-Lohn inputs",
+    "Kalkulation tab shows Standard-Zuschläge section with Materialzuschlag (%) and Gewinnaufschlag (%) inputs",
+    "Default values loaded from settings (Meister=76.71, Geselle=72.12, Azubi=26, Helfer=68.5, Material=10%, Gewinn=15%)",
+    "Saving Kalkulation settings persists values correctly",
+    "Toast message 'Einstellungen gespeichert' appears on save",
+    "Document editor sidebar shows Leistungen/Artikel items with prices and EK values",
+    "Clicking a Leistung/Artikel expands detail view with Calculator button",
+    "Calculator button opens KalkulationPanel with all required fields",
+    "KalkulationPanel shows EK-Preis input field",
+    "KalkulationPanel shows 4 wage-level time inputs (Meister, Geselle, Azubi, Helfer) with rates from settings",
+    "KalkulationPanel shows Sonstige Kosten section with '+ Hinzufügen' button",
+    "Adding sonstige Kosten works (name and amount inputs)",
+    "KalkulationPanel shows Materialzuschlag (%) and Gewinnaufschlag (%) inputs with defaults from settings",
+    "Calculation updates in real-time when inputs change",
+    "Calculation formula correct: VK = (EK + Lohnkosten + Sonstige) × (1 + Material%) × (1 + Gewinn%)",
+    "VK Netto (kalkuliert) displays calculated price",
+    "Comparison with current VK price shown (difference in green/red)",
+    "'VK-Preis übernehmen' button shows calculated price",
+    "'VK-Preis übernehmen' button updates article price in database",
+    "Success toast 'VK-Preis für ... auf X € aktualisiert' appears after apply",
+    "Closing panel via X button works",
+    "GET /api/articles/{id} endpoint returns single article",
+    "PUT /api/articles/{id} updates article price_net and ek_preis"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_kalkulation.py",
+    "/app/backend/routes/articles.py"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Added missing GET /api/articles/{article_id} endpoint to fix 405 Method Not Allowed error",
+    "KalkulationPanel correctly uses settings.kalk_* values for wage rates and surcharges",
+    "Calculation formula implemented correctly in KalkulationPanel.jsx"
+  ],
+
+  "updated_files": [
+    "/app/backend/routes/articles.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (6/6 tests passed)",
+    "frontend": "100% (all Kalkulation features verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Used existing quote A-2026-0021 and article 'Einrüstkosten/Sicherheitsrelevant' for testing",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Kalkulation feature fully tested and working. Settings tab at /settings has Kalkulation tab with wage rates and surcharges. KalkulationPanel in document editor sidebar (/quotes/edit/{id}) opens when clicking Calculator button on expanded Leistung/Artikel. The panel calculates VK price based on EK, labor hours, sonstige costs, and surcharges. 'VK-Preis übernehmen' button updates the article's price_net in the database. Fixed missing GET /api/articles/{id} endpoint.",
+
+  "bug_fix_applied": {
+    "issue": "405 Method Not Allowed when clicking 'VK-Preis übernehmen' button",
+    "root_cause": "Missing GET /api/articles/{article_id} endpoint in articles router",
+    "fix": "Added @router.get('/articles/{article_id}') endpoint to /app/backend/routes/articles.py",
+    "verification": "Apply button now successfully updates article price with success toast"
+  }
+}
