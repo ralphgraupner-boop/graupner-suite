@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Share2 } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
+import { PortalButtons } from "@/components/PortalButtons";
 import { api } from "@/lib/api";
 import { CATEGORIES } from "@/lib/constants";
 
@@ -21,7 +22,6 @@ const AnfragenPage = () => {
   const [vcfUploading, setVcfUploading] = useState(false);
   const [reparaturgruppen, setReparaturgruppen] = useState([]);
   const [emailAnfrage, setEmailAnfrage] = useState(null);
-  const [portalCreating, setPortalCreating] = useState(null);
 
   useEffect(() => {
     loadAnfragen();
@@ -33,29 +33,6 @@ const AnfragenPage = () => {
       const res = await api.get("/einsatz-config");
       setReparaturgruppen(res.data.reparaturgruppen || []);
     } catch {}
-  };
-
-  const createPortalFromAnfrage = async (anfrage) => {
-    if (!anfrage.email) {
-      toast.error("Keine E-Mail-Adresse vorhanden. Bitte erst ergänzen.");
-      return;
-    }
-    setPortalCreating(anfrage.id);
-    try {
-      const res = await api.post(`/portals/from-anfrage/${anfrage.id}`, {
-        portal_base_url: window.location.origin,
-      });
-      const portalData = res.data;
-      const msgs = ["Kundenportal erstellt"];
-      if (portalData.customer_created) msgs.push("Kunde angelegt");
-      if (portalData.email_sent) msgs.push("Einladung + Passwort versendet");
-      else msgs.push("E-Mail konnte nicht gesendet werden");
-      toast.success(msgs.join(" · "));
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Fehler beim Erstellen");
-    } finally {
-      setPortalCreating(null);
-    }
   };
 
   const loadAnfragen = async () => {
@@ -547,15 +524,7 @@ const AnfragenPage = () => {
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-                      <Button
-                        size="sm"
-                        onClick={() => createPortalFromAnfrage(anfrage)}
-                        disabled={portalCreating === anfrage.id || !anfrage.email}
-                        data-testid={`btn-portal-anfrage-${anfrage.id}`}
-                      >
-                        <Share2 className="w-4 h-4" />
-                        {portalCreating === anfrage.id ? "Erstelle Portal..." : "Kundenportal erstellen"}
-                      </Button>
+                      <PortalButtons email={anfrage.email} anfrageId={anfrage.id} />
                       <Button size="sm" variant="outline" onClick={() => setEmailAnfrage(anfrage)} data-testid={`btn-mail-anfrage-${anfrage.id}`}>
                         <Mail className="w-4 h-4" /> E-Mail senden
                       </Button>

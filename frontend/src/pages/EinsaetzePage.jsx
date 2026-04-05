@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, Plus, Filter, Edit, Trash2, X, Settings2, User, Wrench, Package, Calculator, Calendar, FileText, ChevronDown, ChevronUp, Mail, Download, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
+import { PortalButtons } from "@/components/PortalButtons";
 import { api } from "@/lib/api";
 
 const EinsaetzePage = () => {
@@ -316,6 +317,7 @@ const EinsatzCard = ({ einsatz, getSchrittColor, config, onEdit, onDelete }) => 
             </div>
           )}
           <div className="mt-3 flex flex-wrap gap-2">
+            <PortalButtons email={null} customerId={e.customer_id} />
             {e.termin && (
               <>
                 <a

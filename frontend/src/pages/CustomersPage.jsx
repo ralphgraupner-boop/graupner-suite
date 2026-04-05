@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Users, Plus, Mail, Trash2, Edit, ChevronRight, Search, Globe, Inbox, ChevronDown, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
+import { PortalButtons } from "@/components/PortalButtons";
 import { api, API } from "@/lib/api";
 import { CATEGORIES, CUSTOMER_STATUSES } from "@/lib/constants";
 
@@ -275,6 +276,7 @@ const CustomersPage = () => {
 
                   {/* Aktionen */}
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                    <PortalButtons email={customer.email} customerId={customer.id} />
                     <Button size="sm" onClick={() => { setEditCustomer(customer); setShowModal(true); }}>
                       <Edit className="w-4 h-4" /> Bearbeiten
                     </Button>

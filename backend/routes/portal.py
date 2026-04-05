@@ -28,6 +28,89 @@ async def list_portals(user=Depends(get_current_user)):
     return portals
 
 
+@router.get("/portals/lookup")
+async def lookup_portal(email: str = "", customer_id: str = "", anfrage_id: str = "", user=Depends(get_current_user)):
+    """Find portal by email, customer_id or anfrage_id"""
+    query = {"$or": []}
+    if email:
+        query["$or"].append({"customer_email": email})
+    if customer_id:
+        query["$or"].append({"customer_id": customer_id})
+    if anfrage_id:
+        query["$or"].append({"anfrage_id": anfrage_id})
+    if not query["$or"]:
+        return None
+    portal = await db.portals.find_one(query, {"_id": 0, "password_hash": 0})
+    return portal
+
+
+@router.post("/portals/from-customer/{customer_id}")
+async def create_portal_from_customer(customer_id: str, body: dict, user=Depends(get_current_user)):
+    """Erstellt Portal direkt aus einem Kunden mit automatischem E-Mail-Versand"""
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(404, "Kunde nicht gefunden")
+
+    customer_email = customer.get("email", "")
+    customer_name = customer.get("name", "Kunde")
+    if not customer_email:
+        raise HTTPException(400, "Kunde hat keine E-Mail-Adresse. Bitte erst ergänzen.")
+
+    existing = await db.portals.find_one({"customer_id": customer_id})
+    if existing:
+        raise HTTPException(400, "Für diesen Kunden existiert bereits ein Kundenportal.")
+
+    password = body.get("password", "") or secrets.token_urlsafe(8)
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+
+    portal = {
+        "id": str(uuid.uuid4()),
+        "token": token,
+        "customer_id": customer_id,
+        "customer_name": customer_name,
+        "customer_email": customer_email,
+        "description": body.get("description", ""),
+        "password_hash": hash_password(password),
+        "password_plain": password,
+        "active": True,
+        "expires_at": (now + timedelta(weeks=8)).isoformat(),
+        "created_at": now.isoformat(),
+    }
+    await db.portals.insert_one(portal)
+    portal.pop("_id", None)
+
+    portal_base_url = body.get("portal_base_url", "")
+    portal_url = f"{portal_base_url.rstrip('/')}/portal/{token}" if portal_base_url else ""
+    email_sent = False
+    if portal_url and customer_email:
+        try:
+            settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+            company = settings.get("company_name", "Tischlerei Graupner")
+            expires = datetime.fromisoformat(portal["expires_at"]).strftime("%d.%m.%Y")
+            html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1a5632;">Ihr persönliches Kundenportal</h2>
+              <p>Sehr geehrte/r {customer_name},</p>
+              <p>wir haben für Sie ein persönliches Portal eingerichtet.</p>
+              <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0 0 10px 0;"><strong>Ihr Zugang:</strong></p>
+                <p style="margin: 0 0 5px 0;">Link: <a href="{portal_url}" style="color: #1a5632;">{portal_url}</a></p>
+                <p style="margin: 0;">Passwort: <strong>{password}</strong></p>
+              </div>
+              <p style="color: #666; font-size: 12px;">Gültig bis {expires}.</p>
+              <hr style="border: none; border-top: 1px solid #e2e8f0;">
+              <p style="font-size: 12px; color: #64748B;">{company}</p>
+            </div>
+            """
+            send_email(to_email=customer_email, subject=f"Ihr Kundenportal - {company}", body_html=html)
+            email_sent = True
+        except Exception as e:
+            logger.error(f"Auto-send portal email failed: {e}")
+
+    return {**portal, "email_sent": email_sent}
+
+
 @router.post("/portals")
 async def create_portal(body: dict, user=Depends(get_current_user)):
     customer_id = body.get("customer_id", "")
