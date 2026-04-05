@@ -18,79 +18,52 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 ```
 /app/
 ├── backend/
-│   ├── server.py
+│   ├── server.py (includes IMAP auto-polling background task)
 │   ├── models.py
 │   ├── routes/
-│   │   ├── articles.py
-│   │   ├── leistungsbloecke.py
-│   │   ├── settings.py
-│   │   ├── text_templates.py
-│   │   ├── portal.py
-│   │   ├── einsaetze.py (email send, .ics generation)
-│   │   ├── imap.py (IMAP fetch, test)
+│   │   ├── articles.py, leistungsbloecke.py, settings.py
+│   │   ├── text_templates.py, portal.py
+│   │   ├── einsaetze.py (email send, .ics, multi reparaturgruppen)
+│   │   ├── imap.py (IMAP fetch + test + internal polling fn)
 │   │   └── ...
 │   ├── utils/
-│   │   ├── storage.py
-│   │   └── pdf_generator.py
+│   │   ├── storage.py, pdf_generator.py
 ├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── SettingsPage.jsx (Einsatzplanung tab, IMAP settings)
-│   │   │   ├── EinsaetzePage.jsx (email dialog, .ics, vorlagen)
-│   │   │   ├── AnfragenPage.jsx (Reparaturgruppen)
-│   │   │   ├── PortalsPage.jsx
-│   │   │   └── CustomerPortalPage.jsx (termin section)
-│   │   ├── components/
-│   │   │   └── WysiwygDocumentEditor.jsx (>2200 lines)
-└── memory/
-    ├── PRD.md
-    └── test_credentials.md
+│   ├── src/pages/
+│   │   ├── SettingsPage.jsx (Einsatzplanung tab, IMAP settings)
+│   │   ├── EinsaetzePage.jsx (2-col dialog, multi-select gruppen, email dialog)
+│   │   ├── AnfragenPage.jsx (multi-select reparaturgruppen)
+│   │   ├── PortalsPage.jsx, CustomerPortalPage.jsx (termin section)
 ```
 
 ## Completed Features (as of 2026-04-05)
-- [x] Dashboard with KPIs
-- [x] Customer Management (CRUD)
-- [x] Anfragen (Inquiries) Inbox with Reparaturgruppen integration
-- [x] Documents: Angebote, Aufträge, Rechnungen
-- [x] WYSIWYG Document Editor with drag-and-drop
-- [x] Title Groups & Discount Calculations (Gewerk-/Titelzusammenstellung)
-- [x] DIN 5008 compliant letterhead & address window
-- [x] Header/Letterhead branding (Tischlerei Graupner, seit 1960)
-- [x] Leistungsblöcke (Service Blocks)
-- [x] E-Mail Dialog with templates and placeholder replacement
-- [x] PDF fully reworked: Briefkopf, DIN 5008, Betreff, Vortext, Schlusstext, Fußzeile
-- [x] Mahnwesen (Dunning) with severity levels, fees, history
-- [x] Self-Service Customer Portal (secure upload, messaging, auto-email)
-- [x] Push Notifications + Email alerts for portal activity
-- [x] Einsatzplanung Module Phase 1: Config, CRUD, Workflow Steps, Filters
-- [x] Einsatzplanung config in Settings page
-- [x] Reparaturgruppen integrated into Anfragen page
-- [x] **E-Mail-Vorlagen für Termintexte** (configurable templates with placeholders, SMTP send with .ics)
-- [x] **Google Kalender + .ics Download** for Einsätze
-- [x] **Kundenportal-Anbindung** (shows termin info from linked Einsatz)
-- [x] **IMAP E-Mail-Empfang** (fetch emails, auto-create Anfragen, connection test)
+- [x] Dashboard, Customer Management, Anfragen Inbox
+- [x] Documents: Angebote, Aufträge, Rechnungen with WYSIWYG Editor
+- [x] DIN 5008 PDF, Letterhead, Leistungsblöcke, Title Groups
+- [x] Mahnwesen (Dunning), E-Mail Dialog
+- [x] Self-Service Customer Portal with Push Notifications
+- [x] Einsatzplanung Phase 1 + Phase 2:
+  - Config (Monteure, Reparaturgruppen, Materialien, Anfrage-Schritte, Termin-Vorlagen)
+  - Multi-Select Reparaturgruppen (max 3) in Einsatz + Anfragen
+  - 2-Spalten Einsatz-Dialog mit Termintext + Vorlagen
+  - E-Mail-Versand mit .ics Anhang + Vorlagen
+  - Google Kalender Link + .ics Download
+  - Kundenportal zeigt Termin-Info
+  - Settings-Tab für Einsatzplanung
+- [x] IMAP E-Mail-Empfang (manuell + Auto-Polling alle 5 Min)
+- [x] Reparaturgruppen in Einstellungen konfigurierbar
 
-## Upcoming Tasks
-- None currently queued
+## Key Data Model Changes
+- `reparaturgruppe` (string) → `reparaturgruppen` (List[str]) in Anfrage + Einsatz
+- Frontend handles backward compat: `(e.reparaturgruppen || (e.reparaturgruppe ? [e.reparaturgruppe] : []))`
 
 ## Backlog (P3-P5)
-- P3: N26 Bank Integration (CSV-Import / Open Banking)
-- P4: Windows Desktop App (Electron wrapper)
-- P5: WysiwygDocumentEditor Refactoring (split into sub-components)
-
-## Key DB Collections
-- `articles`: { name, description, unit, price_net, typ }
-- `leistungsbloecke`: { name, positions: [] }
-- `text_templates`: { text_type, doc_type, title, content }
-- `documents`: { type, customer_id, positions, status, ... }
-- `customers`: { name, address, ... }
-- `anfragen`: { name, email, categories, reparaturgruppe, ... }
-- `portals`: { customer_id, token, password, files, notes }
-- `einsaetze`: { customer_id, monteur_1, monteur_2, reparaturgruppe, material, status, termin, termin_text }
-- `einsatz_config`: { monteure, reparaturgruppen, materialien, anfrage_schritte, termin_vorlagen }
+- P3: N26 Bank Integration
+- P4: Windows Desktop App
+- P5: WysiwygDocumentEditor Refactoring
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 via Emergent LLM Key
 - SMTP Email (secure.emailsrvr.com:465)
-- IMAP Email Reception (configurable in Settings)
+- IMAP Email Reception (configurable)
 - Push API (Browser native, VAPID keys configured)
