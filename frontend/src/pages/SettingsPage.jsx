@@ -333,6 +333,9 @@ const TextbausteineTab = () => {
 // ==================== EMAIL TAB ====================
 const EmailTab = ({ settings, setSettings, onSave, saving }) => {
   const [testing, setTesting] = useState(false);
+  const [imapTesting, setImapTesting] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [imapFolders, setImapFolders] = useState([]);
 
   const handleTestSmtp = async () => {
     setTesting(true);
@@ -349,6 +352,36 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
       toast.error(err.response?.data?.detail || "SMTP-Test fehlgeschlagen");
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleTestImap = async () => {
+    setImapTesting(true);
+    try {
+      const res = await api.post("/imap/test", {
+        imap_server: settings.imap_server,
+        imap_port: settings.imap_port,
+        imap_user: settings.imap_user,
+        imap_password: settings.imap_password,
+      });
+      toast.success(res.data.message);
+      setImapFolders(res.data.folders || []);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "IMAP-Test fehlgeschlagen");
+    } finally {
+      setImapTesting(false);
+    }
+  };
+
+  const handleFetchEmails = async () => {
+    setFetching(true);
+    try {
+      const res = await api.post("/imap/fetch");
+      toast.success(res.data.message);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "E-Mail-Abruf fehlgeschlagen");
+    } finally {
+      setFetching(false);
     }
   };
 
@@ -398,6 +431,70 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
       </Card>
 
       <WiedervorlageSettings settings={settings} setSettings={setSettings} onSave={onSave} saving={saving} />
+
+      {/* IMAP Einstellungen */}
+      <Card className="p-4 lg:p-6" data-testid="imap-settings">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Mail className="w-5 h-5 text-primary" /> IMAP E-Mail-Empfang
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          E-Mails automatisch abrufen und als Anfragen importieren.
+        </p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">IMAP-Server</label>
+              <Input data-testid="input-imap-server" value={settings.imap_server || ""} onChange={(e) => setSettings({ ...settings, imap_server: e.target.value })} placeholder="z.B. imap.emailsrvr.com" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Port</label>
+              <Input data-testid="input-imap-port" type="number" value={settings.imap_port || 993} onChange={(e) => setSettings({ ...settings, imap_port: parseInt(e.target.value) || 993 })} placeholder="993" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Benutzername / E-Mail</label>
+              <Input data-testid="input-imap-user" value={settings.imap_user || ""} onChange={(e) => setSettings({ ...settings, imap_user: e.target.value })} placeholder="service24@tischlerei-graupner.de" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Passwort</label>
+              <Input data-testid="input-imap-password" type="password" value={settings.imap_password || ""} onChange={(e) => setSettings({ ...settings, imap_password: e.target.value })} placeholder="********" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Ordner</label>
+              {imapFolders.length > 0 ? (
+                <select data-testid="select-imap-folder" value={settings.imap_folder || "INBOX"} onChange={(e) => setSettings({ ...settings, imap_folder: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
+                  {imapFolders.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              ) : (
+                <Input data-testid="input-imap-folder" value={settings.imap_folder || "INBOX"} onChange={(e) => setSettings({ ...settings, imap_folder: e.target.value })} placeholder="INBOX" />
+              )}
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="flex items-center gap-2 cursor-pointer h-10">
+                <input type="checkbox" checked={settings.imap_enabled || false} onChange={(e) => setSettings({ ...settings, imap_enabled: e.target.checked })} className="h-4 w-4 rounded border-input" />
+                <span className="text-sm font-medium">IMAP aktiv</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <Button data-testid="btn-test-imap" variant="outline" onClick={handleTestImap} disabled={imapTesting}>
+            <TestTube className="w-4 h-4" />
+            {imapTesting ? "Teste..." : "Verbindung testen"}
+          </Button>
+          <Button data-testid="btn-fetch-imap" variant="outline" onClick={handleFetchEmails} disabled={fetching}>
+            <Mail className="w-4 h-4" />
+            {fetching ? "Abrufe..." : "Jetzt abrufen"}
+          </Button>
+          <Button data-testid="btn-save-imap" onClick={onSave} disabled={saving}>
+            <Save className="w-4 h-4" />
+            {saving ? "..." : "Speichern"}
+          </Button>
+        </div>
+      </Card>
 
       <PushNotificationSettings />
     </div>
@@ -776,6 +873,7 @@ const SettingsPage = () => {
     company_address: "", default_due_days: 14, default_quote_validity_days: 30,
     email_signature: "",
     smtp_server: "", smtp_port: 465, smtp_user: "", smtp_password: "", smtp_from: "",
+    imap_server: "", imap_port: 993, imap_user: "", imap_password: "", imap_folder: "INBOX", imap_enabled: false,
     pdf_header_text: "", pdf_footer_text: "", pdf_show_logo: true,
     pdf_accent_color: "#1a1a2e", pdf_font_size: "normal", pdf_bemerkung_default: ""
   });

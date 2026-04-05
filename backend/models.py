@@ -308,6 +308,13 @@ class CompanySettings(BaseModel):
     # Wiedervorlage Settings
     followup_days: int = 7
     followup_push_enabled: bool = True
+    # IMAP Settings
+    imap_server: str = ""
+    imap_port: int = 993
+    imap_user: str = ""
+    imap_password: str = ""
+    imap_folder: str = "INBOX"
+    imap_enabled: bool = False
 
 
 class WebhookContact(BaseModel):

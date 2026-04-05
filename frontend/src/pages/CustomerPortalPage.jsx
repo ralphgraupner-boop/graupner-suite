@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3 } from "lucide-react";
+import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3, Wrench, Clock, User } from "lucide-react";
 import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -97,6 +97,7 @@ const CustomerPortalPage = () => {
   };
 
   const customerData = portalInfo?.customer_data;
+  const einsatzData = portalInfo?.einsatz_data;
 
   // Login Screen
   if (!authenticated) {
@@ -207,6 +208,54 @@ const CustomerPortalPage = () => {
               </div>
             )}
             <p className="text-xs text-slate-400 mt-3">Stimmt etwas nicht? Nutzen Sie das Nachrichtenfeld unten, um Korrekturen oder Ergänzungen mitzuteilen.</p>
+          </section>
+        )}
+
+        {/* Termin-Information */}
+        {einsatzData && einsatzData.termin && (
+          <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500" data-testid="portal-termin-section">
+            <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              Ihr Termin
+            </h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                <Clock className="w-5 h-5 text-blue-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-blue-900">
+                    {new Date(einsatzData.termin).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    {new Date(einsatzData.termin).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                  </p>
+                </div>
+              </div>
+              {einsatzData.reparaturgruppe && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Wrench className="w-4 h-4 text-slate-400" />
+                  <span className="text-slate-600">{einsatzData.reparaturgruppe}</span>
+                </div>
+              )}
+              {einsatzData.monteur_1 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-4 h-4 text-slate-400" />
+                  <span className="text-slate-600">Monteur: {einsatzData.monteur_1}</span>
+                </div>
+              )}
+              {einsatzData.termin_text && (
+                <div className="p-3 bg-slate-50 rounded-lg text-sm whitespace-pre-wrap text-slate-700">
+                  {einsatzData.termin_text}
+                </div>
+              )}
+              {einsatzData.beschreibung && !einsatzData.termin_text && (
+                <div className="p-3 bg-slate-50 rounded-lg text-sm whitespace-pre-wrap text-slate-700">
+                  {einsatzData.beschreibung}
+                </div>
+              )}
+              <p className="text-xs text-slate-400">
+                Bitte teilen Sie uns per Nachricht mit, falls Sie am Termin verhindert sind oder Fragen haben.
+              </p>
+            </div>
           </section>
         )}
 

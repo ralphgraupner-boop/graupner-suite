@@ -1,0 +1,107 @@
+{
+  "summary": "Tested 4 new features for Graupner Suite: 1) E-Mail-Vorlagen for Einsatzplanung, 2) .ics calendar file download, 3) Customer Portal Einsatz/Termin data, 4) IMAP email reception. All 16 backend tests pass. Frontend UI verified for all features.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: POST /api/auth/login - returns token",
+    "Backend: GET /api/einsatz-config - returns config with termin_vorlagen field",
+    "Backend: PUT /api/einsatz-config - can save termin_vorlagen",
+    "Backend: GET /api/einsaetze - lists einsätze",
+    "Backend: GET /api/einsaetze/{id}/ics - returns .ics calendar file with correct format",
+    "Backend: POST /api/einsaetze/{id}/email - endpoint exists and validates input",
+    "Backend: POST /api/imap/test - endpoint exists and validates IMAP credentials",
+    "Backend: POST /api/imap/test - returns 400 for missing fields",
+    "Backend: POST /api/imap/fetch - endpoint exists",
+    "Backend: GET /api/anfragen - returns anfragen with reparaturgruppe field",
+    "Backend: PUT /api/anfragen/{id} - can update reparaturgruppe",
+    "Backend: POST /api/portal/verify/{token} - returns einsatz_data with termin info",
+    "Backend: GET /api/settings - returns IMAP fields",
+    "Backend: PUT /api/settings - can save IMAP configuration",
+    "Frontend: Einsatzplanung page loads with 6 Einsatz cards",
+    "Frontend: Expanded Einsatz card shows 'Termin-E-Mail senden' button",
+    "Frontend: Email dialog opens with template selection, recipient, subject, message fields",
+    "Frontend: Email dialog shows 'Vorlage wählen' dropdown with templates",
+    "Frontend: Config dialog has 'E-Mail-Vorlagen' tab",
+    "Frontend: E-Mail-Vorlagen tab shows placeholders and existing templates",
+    "Frontend: Settings → Einsatzplanung tab shows all 4 config sections",
+    "Frontend: Settings → E-Mail tab shows IMAP E-Mail-Empfang section",
+    "Frontend: IMAP settings has server/port/user/password/folder fields",
+    "Frontend: Anfragen page shows Reparaturgruppe badges",
+    "Frontend: Anfragen expanded card shows Reparaturgruppe detail section",
+    "Frontend: Anfragen edit modal shows Reparaturgruppe field with options"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_new_features_v19.py",
+    "/app/test_reports/pytest/pytest_v19.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_new_features_v19.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123",
+    "smtp_server": "secure.emailsrvr.com",
+    "smtp_port": 465,
+    "smtp_user": "service24@tischlerei-graupner.de"
+  },
+
+  "seed_data_creation": "Used existing test data - 6 Einsätze with 'Testkunde', 7 Anfragen with various Reparaturgruppen",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "All 4 new features fully implemented and tested: 1) E-Mail-Vorlagen in Einsatzplanung config dialog with placeholders {kunde_name}, {termin_datum}, {termin_zeit}, {reparaturgruppe}, {monteur}, {beschreibung}, {firma_name}. 2) .ics calendar download via GET /api/einsaetze/{id}/ics returns valid ICS format. 3) Customer Portal verify endpoint returns einsatz_data with termin info. 4) IMAP settings in Settings → E-Mail tab with test/fetch endpoints. Anfragen now have reparaturgruppe field visible in list, detail view, and edit modal. Note: IMAP test/fetch will fail without real IMAP server - endpoints return proper error messages.",
+
+  "features_verified": {
+    "email_vorlagen": {
+      "config_dialog_tab": true,
+      "placeholders_shown": true,
+      "template_creation": true,
+      "template_selection_in_email_dialog": true
+    },
+    "ics_download": {
+      "endpoint_exists": true,
+      "returns_valid_ics": true,
+      "button_visible_when_termin_set": true
+    },
+    "customer_portal_einsatz": {
+      "verify_returns_einsatz_data": true,
+      "termin_info_included": true
+    },
+    "imap_reception": {
+      "settings_ui": true,
+      "test_endpoint": true,
+      "fetch_endpoint": true,
+      "proper_error_handling": true
+    },
+    "anfragen_reparaturgruppe": {
+      "field_in_model": true,
+      "visible_in_list": true,
+      "visible_in_detail": true,
+      "editable_in_modal": true
+    }
+  }
+}

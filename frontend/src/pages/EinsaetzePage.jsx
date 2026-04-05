@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Plus, Filter, Edit, Trash2, X, Settings2, User, Wrench, Package, Calculator, Calendar, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Filter, Edit, Trash2, X, Settings2, User, Wrench, Package, Calculator, Calendar, FileText, ChevronDown, ChevronUp, Mail, Download, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api } from "@/lib/api";
@@ -205,6 +205,7 @@ const EinsaetzePage = () => {
             <EinsatzCard
               key={e.id}
               einsatz={e}
+              config={config}
               getSchrittColor={getSchrittColor}
               onEdit={() => { setEditItem(e); setShowCreate(true); }}
               onDelete={() => deleteEinsatz(e.id)}
@@ -237,9 +238,22 @@ const EinsaetzePage = () => {
 };
 
 
-const EinsatzCard = ({ einsatz, getSchrittColor, onEdit, onDelete }) => {
+const EinsatzCard = ({ einsatz, getSchrittColor, config, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
   const e = einsatz;
+
+  const handleIcsDownload = async () => {
+    try {
+      const res = await api.get(`/einsaetze/${e.id}/ics`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "text/calendar" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `termin_${e.customer_name || "einsatz"}.ics`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error("Fehler beim Download"); }
+  };
 
   return (
     <Card className="overflow-hidden" data-testid={`einsatz-card-${e.id}`}>
@@ -301,31 +315,46 @@ const EinsatzCard = ({ einsatz, getSchrittColor, onEdit, onDelete }) => {
               <span className="font-medium text-blue-700">Termintext:</span> {e.termin_text}
             </div>
           )}
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {e.termin && (
-              <a
-                href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Einsatz: ${e.customer_name || "Kunde"} - ${e.reparaturgruppe || ""}`)}&dates=${e.termin.replace(/[-:]/g, "").replace(/\.\d+/, "").replace("T", "T")}&details=${encodeURIComponent(e.beschreibung || "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-xs hover:bg-muted"
-                data-testid="btn-google-cal"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                Google Kalender
-              </a>
+              <>
+                <a
+                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Einsatz: ${e.customer_name || "Kunde"} - ${e.reparaturgruppe || ""}`)}&dates=${e.termin.replace(/[-:]/g, "").replace(/\.\d+/, "").replace("T", "T")}&details=${encodeURIComponent(e.beschreibung || "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-xs hover:bg-muted"
+                  data-testid="btn-google-cal"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Google Kalender
+                </a>
+                <button
+                  onClick={handleIcsDownload}
+                  className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-xs hover:bg-muted"
+                  data-testid="btn-ics-download"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  .ics Download
+                </button>
+              </>
             )}
-            {e.customer_name && (
-              <a
-                href={`mailto:?subject=${encodeURIComponent(`Termin: ${e.reparaturgruppe || "Einsatz"} - ${e.customer_name}`)}&body=${encodeURIComponent(e.termin_text || e.beschreibung || "")}`}
-                className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-xs hover:bg-muted"
-                data-testid="btn-mail"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                E-Mail öffnen
-              </a>
-            )}
+            <button
+              onClick={() => setShowEmail(true)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-sm text-xs hover:bg-primary/90"
+              data-testid="btn-email-einsatz"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              Termin-E-Mail senden
+            </button>
           </div>
         </div>
+      )}
+      {showEmail && (
+        <EinsatzEmailDialog
+          einsatz={e}
+          config={config}
+          onClose={() => setShowEmail(false)}
+        />
       )}
     </Card>
   );
@@ -537,7 +566,9 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
   const [gruppen, setGruppen] = useState((config.reparaturgruppen || []).join("\n"));
   const [materialien, setMaterialien] = useState((config.materialien || []).join("\n"));
   const [schritte, setSchritte] = useState((config.anfrage_schritte || []).join("\n"));
+  const [vorlagen, setVorlagen] = useState(config.termin_vorlagen || []);
   const [saving, setSaving] = useState(false);
+  const [showVorlagen, setShowVorlagen] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -547,6 +578,7 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
         reparaturgruppen: gruppen.split("\n").map(s => s.trim()).filter(Boolean),
         materialien: materialien.split("\n").map(s => s.trim()).filter(Boolean),
         anfrage_schritte: schritte.split("\n").map(s => s.trim()).filter(Boolean),
+        termin_vorlagen: vorlagen,
       });
       toast.success("Auswahlfelder gespeichert");
       onSaved();
@@ -557,62 +589,124 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
     }
   };
 
+  const addVorlage = () => {
+    setVorlagen([...vorlagen, { name: "", betreff: "", text: "" }]);
+  };
+
+  const updateVorlage = (idx, field, value) => {
+    setVorlagen(prev => prev.map((v, i) => i === idx ? { ...v, [field]: value } : v));
+  };
+
+  const removeVorlage = (idx) => {
+    setVorlagen(prev => prev.filter((_, i) => i !== idx));
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" data-testid="config-dialog">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-md my-8">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg my-8">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">Auswahlfelder konfigurieren</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
-          <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-              <FileText className="w-4 h-4" /> Anfrage-Schritte (ein Schritt pro Zeile)
-            </label>
-            <textarea
-              value={schritte}
-              onChange={(e) => setSchritte(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[140px] resize-none font-mono"
-              placeholder={"1) Besichtig. Terminieren\n1) Bild+Bes.Term. fordern\n1.2) Abgelehnt/Ausgelastet\n2.05) Geschätzt p. Mail\n5.00) Angebot schreiben\n6.00) Auftragsbestätigung schreiben\n6.02) Auftrag ausführen\n6.03) Auftrag in Ausführung\n6.06) Rechnung schreiben"}
-              data-testid="config-schritte"
-            />
+          {/* Tab toggle */}
+          <div className="flex gap-2 border-b pb-2">
+            <button onClick={() => setShowVorlagen(false)} className={`px-3 py-1.5 text-sm font-medium rounded-sm ${!showVorlagen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+              Auswahlfelder
+            </button>
+            <button onClick={() => setShowVorlagen(true)} className={`px-3 py-1.5 text-sm font-medium rounded-sm ${showVorlagen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+              E-Mail-Vorlagen
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-              <User className="w-4 h-4" /> Monteure (ein Name pro Zeile)
-            </label>
-            <textarea
-              value={monteure}
-              onChange={(e) => setMonteure(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
-              placeholder={"Ralph Graupner\nMax Mustermann"}
-              data-testid="config-monteure"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-              <Wrench className="w-4 h-4" /> Reparaturgruppen (eine pro Zeile)
-            </label>
-            <textarea
-              value={gruppen}
-              onChange={(e) => setGruppen(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
-              placeholder={"Fenster\nTüren\nDach"}
-              data-testid="config-gruppen"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-              <Package className="w-4 h-4" /> Materialien (eins pro Zeile)
-            </label>
-            <textarea
-              value={materialien}
-              onChange={(e) => setMaterialien(e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
-              placeholder={"Holz\nGlas\nDichtung"}
-              data-testid="config-materialien"
-            />
-          </div>
+
+          {!showVorlagen ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <FileText className="w-4 h-4" /> Anfrage-Schritte (ein Schritt pro Zeile)
+                </label>
+                <textarea
+                  value={schritte}
+                  onChange={(e) => setSchritte(e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm min-h-[140px] resize-none font-mono"
+                  placeholder={"1) Besichtig. Terminieren\n1) Bild+Bes.Term. fordern\n1.2) Abgelehnt/Ausgelastet\n2.05) Geschätzt p. Mail\n5.00) Angebot schreiben\n6.00) Auftragsbestätigung schreiben\n6.02) Auftrag ausführen\n6.03) Auftrag in Ausführung\n6.06) Rechnung schreiben"}
+                  data-testid="config-schritte"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <User className="w-4 h-4" /> Monteure (ein Name pro Zeile)
+                </label>
+                <textarea
+                  value={monteure}
+                  onChange={(e) => setMonteure(e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
+                  placeholder={"Ralph Graupner\nMax Mustermann"}
+                  data-testid="config-monteure"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Wrench className="w-4 h-4" /> Reparaturgruppen (eine pro Zeile)
+                </label>
+                <textarea
+                  value={gruppen}
+                  onChange={(e) => setGruppen(e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
+                  placeholder={"Fenster\nTüren\nDach"}
+                  data-testid="config-gruppen"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Package className="w-4 h-4" /> Materialien (eins pro Zeile)
+                </label>
+                <textarea
+                  value={materialien}
+                  onChange={(e) => setMaterialien(e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
+                  placeholder={"Holz\nGlas\nDichtung"}
+                  data-testid="config-materialien"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Platzhalter: {"{kunde_name}"}, {"{termin_datum}"}, {"{termin_zeit}"}, {"{reparaturgruppe}"}, {"{monteur}"}, {"{beschreibung}"}, {"{firma_name}"}
+              </p>
+              {vorlagen.map((v, idx) => (
+                <div key={idx} className="border rounded-sm p-3 space-y-2 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={v.name}
+                      onChange={(e) => updateVorlage(idx, "name", e.target.value)}
+                      className="flex-1 border rounded-sm p-1.5 text-sm"
+                      placeholder="Vorlagen-Name"
+                    />
+                    <button onClick={() => removeVorlage(idx)} className="p-1 text-red-500 hover:bg-red-50 rounded-sm">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    value={v.betreff}
+                    onChange={(e) => updateVorlage(idx, "betreff", e.target.value)}
+                    className="w-full border rounded-sm p-1.5 text-sm"
+                    placeholder="Betreff z.B. Terminbestätigung - {reparaturgruppe}"
+                  />
+                  <textarea
+                    value={v.text}
+                    onChange={(e) => updateVorlage(idx, "text", e.target.value)}
+                    className="w-full border rounded-sm p-1.5 text-sm min-h-[80px] resize-none"
+                    placeholder={"Sehr geehrte/r {kunde_name},\n\nhiermit bestätigen wir Ihren Termin am {termin_datum} um {termin_zeit} Uhr.\n\nMit freundlichen Grüßen\n{firma_name}"}
+                  />
+                </div>
+              ))}
+              <button onClick={addVorlage} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                <Plus className="w-3.5 h-3.5" /> Neue Vorlage
+              </button>
+            </div>
+          )}
         </div>
         <div className="p-4 border-t flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Abbrechen</button>
@@ -623,6 +717,140 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
             data-testid="btn-save-config"
           >
             {saving ? "Speichere..." : "Speichern"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// ==================== EINSATZ E-MAIL DIALOG ====================
+const EinsatzEmailDialog = ({ einsatz, config, onClose }) => {
+  const [toEmail, setToEmail] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const vorlagen = config.termin_vorlagen || [];
+
+  // Try to find customer email
+  useEffect(() => {
+    const loadCustomerEmail = async () => {
+      if (einsatz.customer_id) {
+        try {
+          const res = await api.get(`/customers/${einsatz.customer_id}`);
+          if (res.data.email) setToEmail(res.data.email);
+        } catch {}
+      }
+    };
+    loadCustomerEmail();
+  }, [einsatz.customer_id]);
+
+  const replacePlaceholders = (text) => {
+    const terminDate = einsatz.termin ? new Date(einsatz.termin).toLocaleDateString("de-DE") : "";
+    const terminTime = einsatz.termin ? new Date(einsatz.termin).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "";
+    return text
+      .replace(/\{kunde_name\}/g, einsatz.customer_name || "")
+      .replace(/\{termin_datum\}/g, terminDate)
+      .replace(/\{termin_zeit\}/g, terminTime)
+      .replace(/\{reparaturgruppe\}/g, einsatz.reparaturgruppe || "")
+      .replace(/\{monteur\}/g, einsatz.monteur_1 || "")
+      .replace(/\{beschreibung\}/g, einsatz.beschreibung || "")
+      .replace(/\{firma_name\}/g, "Tischlerei Graupner");
+  };
+
+  const applyVorlage = (vorlage) => {
+    setSubject(replacePlaceholders(vorlage.betreff));
+    setMessage(replacePlaceholders(vorlage.text));
+  };
+
+  const handleSend = async () => {
+    if (!toEmail || !message) { toast.error("E-Mail und Nachricht erforderlich"); return; }
+    setSending(true);
+    try {
+      await api.post(`/einsaetze/${einsatz.id}/email`, { to_email: toEmail, subject, message });
+      toast.success(`E-Mail an ${toEmail} gesendet`);
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Senden");
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={onClose} data-testid="email-dialog">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg my-8" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Mail className="w-5 h-5" /> Termin-E-Mail</h2>
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-4 space-y-3 max-h-[65vh] overflow-y-auto">
+          {/* Vorlagen Buttons */}
+          {vorlagen.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Vorlage wählen:</label>
+              <div className="flex flex-wrap gap-1">
+                {vorlagen.map((v, i) => (
+                  <button
+                    key={i}
+                    onClick={() => applyVorlage(v)}
+                    className="px-2 py-1 text-xs border rounded-sm hover:bg-primary/10 hover:border-primary transition-colors"
+                    data-testid={`vorlage-btn-${i}`}
+                  >
+                    {v.name || `Vorlage ${i + 1}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">An</label>
+            <input
+              type="email"
+              value={toEmail}
+              onChange={(e) => setToEmail(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm"
+              placeholder="kunde@email.de"
+              data-testid="email-to"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Betreff</label>
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm"
+              placeholder="Terminbestätigung"
+              data-testid="email-subject"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Nachricht</label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm min-h-[150px] resize-none"
+              placeholder="Sehr geehrte/r..."
+              data-testid="email-message"
+            />
+          </div>
+          {einsatz.termin && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              Termin-Datei (.ics) wird automatisch als Anhang beigefügt.
+            </p>
+          )}
+        </div>
+        <div className="p-4 border-t flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Abbrechen</button>
+          <button
+            onClick={handleSend}
+            disabled={sending || !toEmail || !message}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
+            data-testid="btn-send-email"
+          >
+            <Send className="w-4 h-4" />
+            {sending ? "Sende..." : "E-Mail senden"}
           </button>
         </div>
       </div>

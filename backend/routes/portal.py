@@ -214,6 +214,23 @@ async def verify_portal(token: str, body: dict):
                 "firma": cust.get("firma", ""),
             }
 
+    # Load linked Einsatz/Termin data
+    einsatz_data = None
+    if portal.get("customer_id"):
+        einsatz = await db.einsaetze.find_one(
+            {"customer_id": portal["customer_id"]},
+            {"_id": 0}
+        )
+        if einsatz:
+            einsatz_data = {
+                "reparaturgruppe": einsatz.get("reparaturgruppe", ""),
+                "beschreibung": einsatz.get("beschreibung", ""),
+                "termin": einsatz.get("termin", ""),
+                "termin_text": einsatz.get("termin_text", ""),
+                "monteur_1": einsatz.get("monteur_1", ""),
+                "status": einsatz.get("status", ""),
+            }
+
     return {
         "valid": True,
         "portal_id": portal.get("id"),
@@ -222,6 +239,7 @@ async def verify_portal(token: str, body: dict):
         "expires_at": portal.get("expires_at"),
         "customer_data": customer_data,
         "customer_notes": portal.get("customer_notes", []),
+        "einsatz_data": einsatz_data,
     }
 
 
