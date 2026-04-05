@@ -19,6 +19,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { WebhookDocPage } from "@/pages/WebhookDocPage";
 import { PortalsPage } from "@/pages/PortalsPage";
 import CustomerPortalPage from "@/pages/CustomerPortalPage";
+import { EinsaetzePage } from "@/pages/EinsaetzePage";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -68,6 +69,7 @@ function App() {
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
               <Route path="/webhook" element={<MainLayout onLogout={logout}><WebhookDocPage /></MainLayout>} />
               <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
+              <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzePage /></MainLayout>} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </>
