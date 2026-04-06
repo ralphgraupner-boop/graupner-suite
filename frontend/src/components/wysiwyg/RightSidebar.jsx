@@ -19,6 +19,7 @@ const RightSidebar = ({
         {activeKalkItem && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-200" data-testid="active-kalkulation-panel">
             <KalkulationPanel
+              key={`kalk-pos-${activeKalkItem._posIdx}-${activeKalkItem.id || 'new'}`}
               item={activeKalkItem}
               settings={settings}
               onApplyPrice={onApplyKalkPrice}
