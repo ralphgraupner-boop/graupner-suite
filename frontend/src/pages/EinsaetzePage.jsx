@@ -634,7 +634,6 @@ const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
 
 const ConfigDialog = ({ config, onClose, onSaved }) => {
   const [monteure, setMonteure] = useState((config.monteure || []).join("\n"));
-  const [gruppen, setGruppen] = useState((config.reparaturgruppen || []).join("\n"));
   const [materialien, setMaterialien] = useState((config.materialien || []).join("\n"));
   const [schritte, setSchritte] = useState((config.anfrage_schritte || []).join("\n"));
   const [vorlagen, setVorlagen] = useState(config.termin_vorlagen || []);
@@ -646,7 +645,6 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
     try {
       await api.put("/einsatz-config", {
         monteure: monteure.split("\n").map(s => s.trim()).filter(Boolean),
-        reparaturgruppen: gruppen.split("\n").map(s => s.trim()).filter(Boolean),
         materialien: materialien.split("\n").map(s => s.trim()).filter(Boolean),
         anfrage_schritte: schritte.split("\n").map(s => s.trim()).filter(Boolean),
         termin_vorlagen: vorlagen,
@@ -718,15 +716,11 @@ const ConfigDialog = ({ config, onClose, onSaved }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                  <Wrench className="w-4 h-4" /> Reparaturgruppen (eine pro Zeile)
+                  <Wrench className="w-4 h-4" /> Reparaturgruppen
                 </label>
-                <textarea
-                  value={gruppen}
-                  onChange={(e) => setGruppen(e.target.value)}
-                  className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-none font-mono"
-                  placeholder={"Fenster\nTüren\nDach"}
-                  data-testid="config-gruppen"
-                />
+                <div className="border rounded-sm p-3 bg-muted/30 text-sm text-muted-foreground">
+                  Reparaturgruppen werden über <strong>Anfragen → Kategorien verwalten</strong> (⚙) gepflegt und automatisch synchronisiert.
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 flex items-center gap-1">
