@@ -475,18 +475,19 @@ const EinsatzDialog = ({ item, config, customers, onClose, onSaved }) => {
 
               {/* Reparaturgruppen Multi-Select */}
               <div>
-                <label className="block text-sm font-medium mb-1">Reparaturgruppen (max. 3)</label>
+                <label className="block text-sm font-medium mb-1">Reparaturgruppen (max. 5)</label>
                 <div className="flex flex-wrap gap-2" data-testid="select-gruppen">
-                  {config.reparaturgruppen.map(g => (
+                  {/* Merge: config groups + already assigned groups that may have old names */}
+                  {[...new Set([...config.reparaturgruppen, ...gruppen])].map(g => (
                     <button
                       key={g}
                       type="button"
                       onClick={() => toggleGruppe(g)}
-                      disabled={!gruppen.includes(g) && gruppen.length >= 3}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      disabled={!gruppen.includes(g) && gruppen.length >= 5}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                         gruppen.includes(g)
-                          ? "bg-orange-600 text-white border-orange-600"
-                          : gruppen.length >= 3
+                          ? "bg-orange-600 text-white border-orange-600 shadow-sm"
+                          : gruppen.length >= 5
                             ? "bg-muted text-muted-foreground/50 border-input cursor-not-allowed"
                             : "bg-background text-muted-foreground border-input hover:bg-orange-50 hover:border-orange-300"
                       }`}
