@@ -1,0 +1,67 @@
+{
+  "summary": "Frontend-only testing of ArticlesPage with enhanced 2-column Profi-Kalkulation modal. All 13 features tested and working correctly. The modal displays Stammdaten on left and Profi-Kalkulation on right with live calculation, history management, and VK price application.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Articles page loads at /articles with correct article count (15 Einträge gesamt)",
+    "Clicking edit (pencil icon) on article card opens enhanced 2-column modal",
+    "Left side shows STAMMDATEN section with Typ, Name, Nummer, Einheit, Beschreibung, EK/VK prices",
+    "Right side shows PROFI-KALKULATION section with toggle button",
+    "Kalkulation auto-opens and pre-fills from last saved kalkulation (EK=20, Meister=3, Geselle=3)",
+    "Zeitanteile fields show 4 wage levels (Meister=77€, Geselle=72€, Azubi=26€, Helfer=69€) with correct rates from settings",
+    "Live calculation updates: changing Meister from 3 to 4 hours updates VK from 590.11€ to 687.15€",
+    "VK-Preis übernehmen button fills VK price (590.11) into form AND saves kalkulation to history",
+    "Toast message 'VK-Preis 590.11 € übernommen & Kalkulation gespeichert' appears after apply",
+    "Historie toggle shows past calculations with expandable details (3 entries after test)",
+    "'Diese Kalkulation laden' loads historical values into the form with toast 'Kalkulation geladen'",
+    "Creating new article ('Neuer Eintrag' modal) has Kalkulation section available with 'Kalkulation starten' button",
+    "Marge display shows correct percentage (96.6%) when EK=20 and VK=590.11",
+    "Speichern button present for saving article changes",
+    "Modal title shows 'Bearbeiten' for existing articles, 'Neuer Eintrag' for new ones",
+    "Historie badge shows entry count (displayed as '3' after adding new calculation)"
+  ],
+
+  "test_report_links": [
+    "/app/frontend/src/pages/ArticlesPage.jsx"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "2-column layout implemented correctly with grid-cols-1 lg:grid-cols-2",
+    "All data-testid attributes properly implemented for testing",
+    "Live calculation formula correct: EK + Lohnkosten + Sonstige + Material% + Gewinn% = VK",
+    "History entries sorted by created_at descending",
+    "Modal size='xl' (max-w-6xl) provides adequate space for 2-column layout"
+  ],
+
+  "updated_files": [],
+
+  "success_rate": {
+    "backend": "N/A (frontend-only testing)",
+    "frontend": "100% (13/13 features verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Added 1 new kalkulation entry during testing (article 'Einrüstkosten/Sicherheitsrelevant' now has 3+ history entries)",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "ArticlesPage Profi-Kalkulation modal fully tested and working. Key test IDs: btn-toggle-kalk, artikel-kalk-panel, modal-kalk-apply, btn-toggle-modal-historie, modal-kalk-historie, modal-btn-load-entry-{idx}. Test article 'Einrüstkosten/Sicherheitsrelevant' has 3+ history entries. Wage rates from settings: Meister=77€, Geselle=72€, Azubi=26€, Helfer=69€."
+}
