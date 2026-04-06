@@ -1,4 +1,4 @@
-import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark } from "lucide-react";
+import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye } from "lucide-react";
 import { Button, Badge } from "@/components/common";
 
 const EditorToolbar = ({
@@ -6,7 +6,7 @@ const EditorToolbar = ({
   isRecording, aiLoading, saving,
   navigate, setShowSettings, startRecording, stopRecording,
   handleSave, handleSaveAndExit, handleDownloadPDF, handlePrint,
-  onOpenEmailDialog, onToggleVorlagen,
+  onOpenEmailDialog, onToggleVorlagen, onTogglePreview,
 }) => {
   return (
     <div className="fixed top-0 left-0 right-0 bg-card border-b z-40 shadow-sm">
@@ -35,6 +35,12 @@ const EditorToolbar = ({
             <Bookmark className="w-4 h-4" />
             <span className="hidden sm:inline">Vorlagen</span>
           </Button>
+          {!isNew && (
+            <Button variant="outline" size="sm" onClick={onTogglePreview} data-testid="btn-preview-topbar">
+              <Eye className="w-4 h-4" />
+              <span className="hidden sm:inline">Vorschau</span>
+            </Button>
+          )}
           <Button
             variant={isRecording ? "destructive" : "outline"}
             size="sm"

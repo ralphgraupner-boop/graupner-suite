@@ -14,6 +14,7 @@ import { TotalsSection } from "@/components/wysiwyg/TotalsSection";
 import { RightSidebar } from "@/components/wysiwyg/RightSidebar";
 import { EmailDialog } from "@/components/wysiwyg/EmailDialog";
 import { SettingsSlideOver } from "@/components/wysiwyg/SettingsSlideOver";
+import { DocumentPreview } from "@/components/DocumentPreview";
 
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const navigate = useNavigate();
@@ -77,6 +78,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   // E-Mail Dialog
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailTemplates, setEmailTemplates] = useState([]);
@@ -358,6 +360,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleDrop = (e) => { e.preventDefault(); try { const item = JSON.parse(e.dataTransfer.getData("application/json")); addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); } catch {} };
   const updateCostPrice = (idx, value) => setCostPrices(prev => ({ ...prev, [idx]: parseFloat(value) || 0 }));
 
+  const getPreviewDocument = () => ({
+    id, customer_name: customer?.name || "", customer_address: customer?.address || "",
+    customer_email: customer?.email || "", customer_id: customer?.id || "",
+    quote_number: type === "quote" ? docNumber : undefined,
+    order_number: type === "order" ? docNumber : undefined,
+    invoice_number: type === "invoice" ? docNumber : undefined,
+    betreff, vortext, schlusstext, status,
+    positions, subtotal_net: subtotal, vat_rate: vatRate, vat_amount: vat, total_gross: total,
+    discount, discount_type: discountType,
+    created_at: new Date().toISOString(),
+  });
+
   // ==================== COMPUTATIONS ====================
   const getNumbering = () => {
     let titelNr = 0, posInTitel = 0, hasTitel = positions.some(p => p.type === "titel"), flatNr = 0;
@@ -535,6 +549,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         handleSave={handleSave} handleSaveAndExit={handleSaveAndExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
         onOpenEmailDialog={onOpenEmailDialog}
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
+        onTogglePreview={() => setShowPreview(true)}
       />
 
       <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-4">
@@ -657,6 +672,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         deleteLeistungsBlock={deleteLeistungsBlock} insertLeistungsBlock={insertLeistungsBlock}
         loadData={loadData} setLeistungsBloecke={setLeistungsBloecke}
       />
+
+      {showPreview && (
+        <DocumentPreview
+          isOpen={true}
+          type={type}
+          document={getPreviewDocument()}
+          onClose={() => setShowPreview(false)}
+          onEdit={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 };
