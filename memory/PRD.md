@@ -22,11 +22,11 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Artikelkalkulation im Editor-Sidebar (EK, Zeitanteile, Zuschläge)
 - [x] Kalkulationseinstellungen (Lohnstufen global konfigurierbar)
 - [x] Kalkulationshistorie (pro Artikel gespeichert + vorausgefüllt)
-- [x] Profi-Kalkulation in Artikel-Seite (2-Spalten-Modal: Stammdaten + Kalkulation + Historie)
+- [x] Profi-Kalkulation in Artikel-Seite (2-Spalten-Modal)
 - [x] Dashboard Pill Badges + Anfragen Modal
-- [x] **Hover-Kalkulation**: Maus über Position → KalkulationPanel öffnet sich rechts (EK, Zeitanteile, Zuschläge, VK-Preis) — funktioniert in Angebote, AB, Rechnungen
-- [x] **Vorlagen-Button**: In Toolbar oben (neben Einstellungen), togglet Vorlagen-Ansicht in der rechten Sidebar
-- [x] **Rechte Sidebar umgebaut**: Tab-Bar entfernt, Hover-basierte Kalkulation + Dokument-Kalkulation + Übersicht
+- [x] **Positions-Kalkulation per Klick**: Calculator-Icon auf jeder Position, KalkulationPanel öffnet sich rechts und bleibt offen, VK-Preis wird direkt in Position übernommen
+- [x] **Vorlagen-Button**: In Toolbar oben (neben Einstellungen), togglet Vorlagen-Ansicht in rechter Sidebar
+- [x] **Rechte Sidebar umgebaut**: Tab-Bar entfernt, klick-basierte Kalkulation + Dokument-Kalkulation + Übersicht
 
 ## Key API Endpoints
 - `POST /api/kalkulation` - Kalkulation speichern

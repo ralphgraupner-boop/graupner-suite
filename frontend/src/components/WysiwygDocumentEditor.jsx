@@ -63,7 +63,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [similarDocs, setSimilarDocs] = useState([]);
   const [expandedDoc, setExpandedDoc] = useState(null);
   const [showVorlagen, setShowVorlagen] = useState(false);
-  const [hoveredKalkItem, setHoveredKalkItem] = useState(null);
+  const [activeKalkIdx, setActiveKalkIdx] = useState(null);
   const [titelTemplates, setTitelTemplates] = useState([]);
   const [titelDropdownIdx, setTitelDropdownIdx] = useState(null);
   const [stammChangeIdx, setStammChangeIdx] = useState(null);
@@ -243,33 +243,35 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       setServices(artRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
     } catch { toast.error("Fehler beim Aktualisieren"); }
   };
-  const handlePositionHover = (idx) => {
+  const openPositionKalk = (idx) => {
     const pos = positions[idx];
-    if (!pos || pos.type === "titel") { setHoveredKalkItem(null); return; }
+    if (!pos || pos.type === "titel") return;
+    setActiveKalkIdx(idx);
+    setShowVorlagen(false);
+  };
+
+  const getActiveKalkItem = () => {
+    if (activeKalkIdx == null) return null;
+    const pos = positions[activeKalkIdx];
+    if (!pos || pos.type === "titel") return null;
     if (pos.source_article_id) {
       const allItems = [...articles, ...services];
       const found = allItems.find(a => a.id === pos.source_article_id);
-      if (found) { setHoveredKalkItem({ ...found, _posIdx: idx }); return; }
+      if (found) return { ...found, _posIdx: activeKalkIdx };
     }
-    // For positions without source article: create virtual item
     const descParts = (pos.description || "").split("\n")[0].split(" - ");
-    setHoveredKalkItem({
+    return {
       id: null,
-      name: descParts[0] || `Position ${numbering[idx]}`,
+      name: descParts[0] || `Position ${numbering[activeKalkIdx]}`,
       price_net: pos.price_net || 0,
-      ek_preis: costPrices[idx] || 0,
-      _posIdx: idx,
+      ek_preis: costPrices[activeKalkIdx] || 0,
+      _posIdx: activeKalkIdx,
       _noSource: true,
-    });
+    };
   };
-  const handlePositionLeave = () => setHoveredKalkItem(null);
 
-  const handleHoverKalkApply = (item, newPrice, newEk) => {
-    if (item?.id) {
-      // Has source article - update stammdaten
-      handleApplyKalkPrice(item, newPrice, newEk);
-    }
-    // Always update the position price in the document
+  const handleKalkApply = (item, newPrice, newEk) => {
+    if (item?.id) handleApplyKalkPrice(item, newPrice, newEk);
     if (item?._posIdx != null) {
       updatePosition(item._posIdx, "price_net", newPrice);
       if (newEk > 0) setCostPrices(prev => ({ ...prev, [item._posIdx]: newEk }));
@@ -520,7 +522,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 addPosition={addPosition} addTitel={addTitel}
                 blockSaveName={blockSaveName} setBlockSaveName={setBlockSaveName} saveAsLeistungsBlock={saveAsLeistungsBlock} setSelectedPositions={setSelectedPositions}
                 articles={articles} services={services} addFromStamm={addFromStamm}
-                onPositionHover={handlePositionHover} onPositionLeave={handlePositionLeave}
+                onOpenKalkulation={openPositionKalk} activeKalkIdx={activeKalkIdx}
               />
 
               <TotalsSection
@@ -546,10 +548,10 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
           <RightSidebar
             showVorlagen={showVorlagen}
-            hoveredKalkItem={hoveredKalkItem}
+            activeKalkItem={getActiveKalkItem()}
             settings={settings}
-            onApplyKalkPrice={handleHoverKalkApply}
-            onClearHover={() => setHoveredKalkItem(null)}
+            onApplyKalkPrice={handleKalkApply}
+            onCloseKalk={() => setActiveKalkIdx(null)}
             templateDocs={templateDocs} similarDocs={similarDocs} expandedDoc={expandedDoc} setExpandedDoc={setExpandedDoc}
             copyPositionsFromDoc={copyPositionsFromDoc} toggleDocTemplate={toggleDocTemplate}
             titles={titles} type={type} positions={positions}

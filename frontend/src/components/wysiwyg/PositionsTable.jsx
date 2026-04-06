@@ -1,4 +1,4 @@
-import { GripVertical, Trash2, Plus, Bookmark, ChevronDown, X } from "lucide-react";
+import { GripVertical, Trash2, Plus, Bookmark, ChevronDown, X, Calculator } from "lucide-react";
 import { toast } from "sonner";
 
 const PositionsTable = ({
@@ -13,7 +13,7 @@ const PositionsTable = ({
   addPosition, addTitel,
   blockSaveName, setBlockSaveName, saveAsLeistungsBlock, setSelectedPositions,
   articles, addFromStamm, services,
-  onPositionHover, onPositionLeave,
+  onOpenKalkulation, activeKalkIdx,
 }) => {
   return (
     <div className="px-4 lg:px-10 py-4 lg:py-8">
@@ -219,9 +219,7 @@ const PositionsTable = ({
               onDragLeave={() => setDragOverIndex(null)}
               onDrop={() => { movePosition(dragIndex, idx); setDragIndex(null); setDragOverIndex(null); }}
               onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-              onMouseEnter={() => onPositionHover?.(idx)}
-              onMouseLeave={() => onPositionLeave?.()}
-              className={`border-b border-slate-100 group transition-colors ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
+              className={`border-b border-slate-100 group transition-colors ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""} ${activeKalkIdx === idx ? "bg-blue-50/60 border-l-2 border-l-blue-400" : ""}`}
             >
               <td className="py-2 align-bottom">
                 <div className="flex flex-col items-center gap-0.5">
@@ -304,10 +302,17 @@ const PositionsTable = ({
                 {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
               </td>
               <td className="py-3 align-bottom">
-                <button onClick={() => removePosition(idx)}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-opacity">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-0.5">
+                  <button onClick={() => onOpenKalkulation?.(idx)}
+                    className={`p-1 rounded transition-all ${activeKalkIdx === idx ? "bg-blue-100 text-blue-700" : "opacity-0 group-hover:opacity-100 text-blue-500 hover:bg-blue-50 hover:text-blue-700"}`}
+                    title="Kalkulieren" data-testid={`btn-kalk-pos-${idx}`}>
+                    <Calculator className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => removePosition(idx)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-opacity">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </td>
             </tr>
             );
