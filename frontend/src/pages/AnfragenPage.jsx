@@ -413,15 +413,6 @@ const AnfragenPage = () => {
                       ))}
                     </div>
                   )}
-                  {(anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : [])).length > 0 && (
-                    <div className="hidden lg:flex flex-wrap gap-1">
-                      {(anfrage.reparaturgruppen || [anfrage.reparaturgruppe].filter(Boolean)).map((g) => (
-                        <span key={g} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
-                          <Wrench className="w-3 h-3" />{g}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setEmailAnfrage(anfrage)}
@@ -569,15 +560,6 @@ const AnfragenPage = () => {
                   {/* Kategorien */}
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Kategorien & Details</h4>
-                    {(anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : [])).length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {(anfrage.reparaturgruppen || [anfrage.reparaturgruppe].filter(Boolean)).map((g) => (
-                          <span key={g} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
-                            <Wrench className="w-3 h-3" />{g}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                     {(anfrage.categories || []).length > 0 ? (
                       <div className="space-y-2">
                         {anfrage.categories.map((cat) => {
