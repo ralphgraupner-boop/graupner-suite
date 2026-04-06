@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calculator, Check, X, ChevronDown, Clock, History } from "lucide-react";
+import { Calculator, Check, X, ChevronDown, Clock, History, Save, FilePlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -25,7 +25,7 @@ const ZeitInput = ({ label, rate, value, onChange, tid }) => {
   );
 };
 
-const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
+const KalkulationPanel = ({ item, settings, onApplyPrice, onClose, onSaveToStamm, onCreateNewArticle }) => {
   const [ek, setEk] = useState(item.ek_preis || 0);
   const [zeitMeister, setZeitMeister] = useState(0);
   const [zeitGeselle, setZeitGeselle] = useState(0);
@@ -38,6 +38,7 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
   const [expandedEntry, setExpandedEntry] = useState(null);
   const [showHistorie, setShowHistorie] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [stammPrompt, setStammPrompt] = useState(false);
 
   const meisterRate = settings.kalk_meister || 58;
   const geselleRate = settings.kalk_geselle || 45;
@@ -79,6 +80,14 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
   const vkPreis = nachMaterial + gewinnBetrag;
   const gesamtStunden = zeitMeister + zeitGeselle + zeitAzubi + zeitHelfer;
 
+  const getKalkData = () => ({
+    ek, vkPreis, zeitMeister, zeitGeselle, zeitAzubi, zeitHelfer,
+    meisterRate, geselleRate, azubiRate, helferRate,
+    sonstige: sonstige.filter(s => s.name || s.betrag > 0),
+    materialzuschlag, gewinnaufschlag, lohnkosten, sonstigeSum,
+    zwischensumme, materialBetrag, gewinnBetrag,
+  });
+
   const handleApply = async () => {
     if (item.id) {
       try {
@@ -95,6 +104,17 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
       } catch {}
     }
     onApplyPrice(item, vkPreis, ek);
+    setStammPrompt(true);
+  };
+
+  const handleStammSave = () => {
+    onSaveToStamm?.(item, getKalkData());
+    setStammPrompt(false);
+  };
+
+  const handleCreateNew = (typ) => {
+    onCreateNewArticle?.(getKalkData(), typ);
+    setStammPrompt(false);
   };
 
   const loadFromHistorie = (entry) => {
@@ -215,6 +235,34 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
             data-testid="kalk-apply-btn">
             <Check className="w-3.5 h-3.5" /> VK-Preis übernehmen ({vkPreis.toFixed(2)} €)
           </button>
+
+          {stammPrompt && (
+            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/80 p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150" data-testid="stamm-prompt">
+              <p className="text-[11px] font-semibold text-amber-800">Kalkulation auch in Stammdaten speichern?</p>
+              {item.id && (
+                <button onClick={handleStammSave}
+                  className="w-full h-7 flex items-center justify-center gap-1.5 rounded bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition-colors"
+                  data-testid="stamm-save-btn">
+                  <Save className="w-3.5 h-3.5" /> In Stammdaten übernehmen
+                </button>
+              )}
+              <button onClick={() => handleCreateNew("Leistung")}
+                className="w-full h-7 flex items-center justify-center gap-1.5 rounded border border-blue-300 bg-white text-blue-700 text-xs font-medium hover:bg-blue-50 transition-colors"
+                data-testid="stamm-new-leistung-btn">
+                <FilePlus className="w-3.5 h-3.5" /> Neue Leistung anlegen
+              </button>
+              <button onClick={() => handleCreateNew("Artikel")}
+                className="w-full h-7 flex items-center justify-center gap-1.5 rounded border border-slate-300 bg-white text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors"
+                data-testid="stamm-new-artikel-btn">
+                <FilePlus className="w-3.5 h-3.5" /> Neuen Artikel anlegen
+              </button>
+              <button onClick={() => setStammPrompt(false)}
+                className="w-full h-6 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="stamm-skip-btn">
+                Nur hier übernehmen
+              </button>
+            </div>
+          )}
 
           {showHistorie && historie.length > 0 && (
             <div className="mt-3 pt-3 border-t border-blue-200" data-testid="kalk-historie">

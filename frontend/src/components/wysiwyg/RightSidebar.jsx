@@ -3,6 +3,7 @@ import { KalkulationPanel } from "./KalkulationPanel";
 
 const RightSidebar = ({
   showVorlagen, activeKalkItem, settings, onApplyKalkPrice, onCloseKalk,
+  onSaveToStamm, onCreateNewArticle,
   templateDocs, similarDocs, expandedDoc, setExpandedDoc,
   copyPositionsFromDoc, toggleDocTemplate,
   titles, type, positions,
@@ -22,6 +23,8 @@ const RightSidebar = ({
               settings={settings}
               onApplyPrice={onApplyKalkPrice}
               onClose={onCloseKalk}
+              onSaveToStamm={onSaveToStamm}
+              onCreateNewArticle={onCreateNewArticle}
             />
           </div>
         )}

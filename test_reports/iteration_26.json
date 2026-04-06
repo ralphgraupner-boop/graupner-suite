@@ -1,0 +1,87 @@
+{
+  "summary": "Comprehensive testing of click-based KalkulationPanel feature with Stammdaten prompt. Backend APIs (articles, kalkulation) all passing. Frontend features mostly working with one minor issue: 'In Stammdaten übernehmen' button not appearing for positions with source_article_id due to timing/race condition in article lookup.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "In Stammdaten übernehmen button visibility",
+        "issue": "After creating a new Leistung/Artikel and linking it to a position, the 'In Stammdaten übernehmen' button does not appear when reopening the KalkulationPanel for that position. The getActiveKalkItem() function looks up the article in articles/services arrays, but the lookup fails due to timing - loadData() is async and the arrays may not be updated when the user clicks the calculator button again.",
+        "affected_selectors": ["[data-testid='stamm-save-btn']"],
+        "priority": "MEDIUM"
+      }
+    ],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Calculator icon on each position row opens KalkulationPanel in right sidebar (7 buttons found)",
+    "KalkulationPanel stays open (click-based, not hover-based)",
+    "Active position row is highlighted in blue (bg-blue-50/60 class)",
+    "After entering values and clicking 'VK-Preis übernehmen', the position price is updated in the document",
+    "After clicking 'VK-Preis übernehmen', an amber prompt appears asking about Stammdaten",
+    "Prompt shows 'Neue Leistung anlegen' button for positions without source_article_id",
+    "Prompt shows 'Neuen Artikel anlegen' button for positions without source_article_id",
+    "Clicking 'Neue Leistung anlegen' creates a new Leistung via API, links position to it, and shows success toast",
+    "Clicking 'Neuen Artikel anlegen' creates a new Artikel via API, links position to it",
+    "After creating new article, left sidebar count increases (Leistungen: 15→16, Artikel: 2→3)",
+    "Clicking 'Nur hier übernehmen' dismisses the prompt without saving to Stammdaten",
+    "KalkulationPanel stays open after dismissing prompt with 'Nur hier übernehmen'",
+    "Vorlagen button in toolbar toggles templates section in right sidebar",
+    "Right sidebar shows Dokument-Kalkulation when no position is selected",
+    "Übersicht section always visible at bottom of right sidebar (shows Positionen count and Brutto)",
+    "Backend API POST /api/articles creates new Leistung with correct artikel_nr prefix (L-)",
+    "Backend API POST /api/articles creates new Artikel with correct artikel_nr prefix (A-)",
+    "Backend API POST /api/kalkulation saves calculation history",
+    "Backend API GET /api/kalkulation/{id} retrieves history",
+    "Backend API GET /api/kalkulation/{id}/latest retrieves latest entry"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_kalk_articles.py",
+    "/app/test_reports/pytest/pytest_kalk_v26.xml"
+  ],
+
+  "action_items": [
+    "Fix timing issue in getActiveKalkItem() - after creating a new article, ensure articles/services arrays are updated before allowing user to interact with KalkulationPanel again. Consider awaiting loadData() completion or using a loading state.",
+    "Alternative fix: Store the newly created article ID in state and use it directly in getActiveKalkItem() instead of looking up in arrays"
+  ],
+
+  "critical_code_review_comments": [
+    "Click-based KalkulationPanel implementation is clean with proper state management (activeKalkIdx)",
+    "Position rows correctly have calculator buttons with data-testid for testing",
+    "Stammdaten prompt correctly shows different buttons based on item.id presence",
+    "handleCreateFromKalk correctly creates article, saves kalkulation history, and updates position",
+    "Race condition: loadData() is async but updatePosition() is sync - the position gets source_article_id but articles array may not be updated yet",
+    "Vorlagen toggle state (showVorlagen) properly managed and mutually exclusive with KalkulationPanel"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_kalk_articles.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "93% (14/15 features verified, 1 timing issue)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Created 1 new Leistung and 1 new Artikel during testing. Leistungen count: 15→16, Artikel count: 2→3. Test quote A-2026-0021 positions may have updated prices.",
+
+  "retest_needed": true,
+
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "KalkulationPanel click-based feature tested. Key test IDs: btn-kalk-pos-{idx}, kalkulation-panel, kalk-ek, kalk-apply-btn, stamm-prompt, stamm-new-leistung-btn, stamm-new-artikel-btn, stamm-skip-btn, stamm-save-btn, vorlagen-section. Test quote A-2026-0021 (c288214e-7f81-4832-8ccf-7fa863f65294) has Titel groups. Wage rates from settings: Meister=77€, Geselle=72€, Azubi=26€, Helfer=69€. Issue: 'In Stammdaten übernehmen' button not appearing after creating new article due to async loadData() timing.",
+
+  "rca_of_the_issue": "The 'In Stammdaten übernehmen' button visibility issue is caused by a race condition in the getActiveKalkItem() function. When a new article is created via handleCreateFromKalk(), the function: 1) Creates article via API, 2) Updates position's source_article_id via updatePosition(), 3) Calls loadData() to refresh articles/services arrays. However, loadData() is async and the component may re-render before the arrays are updated. When the user clicks the calculator button again, getActiveKalkItem() looks up the article in the arrays but doesn't find it (because loadData() hasn't completed), so it returns a virtual item with id: null, causing the 'In Stammdaten übernehmen' button to not appear."
+}

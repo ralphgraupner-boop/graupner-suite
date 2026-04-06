@@ -271,11 +271,67 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const handleKalkApply = (item, newPrice, newEk) => {
-    if (item?.id) handleApplyKalkPrice(item, newPrice, newEk);
     if (item?._posIdx != null) {
       updatePosition(item._posIdx, "price_net", newPrice);
       if (newEk > 0) setCostPrices(prev => ({ ...prev, [item._posIdx]: newEk }));
     }
+  };
+
+  const handleSaveKalkToStamm = async (item, kalkData) => {
+    if (!item?.id) return;
+    try {
+      const existing = await api.get(`/articles/${item.id}`);
+      await api.put(`/articles/${item.id}`, {
+        ...existing.data,
+        price_net: kalkData.vkPreis,
+        ek_preis: kalkData.ek,
+      });
+      await api.post("/kalkulation", {
+        article_id: item.id, article_name: item.name, ek: kalkData.ek,
+        zeit_meister: kalkData.zeitMeister, zeit_geselle: kalkData.zeitGeselle,
+        zeit_azubi: kalkData.zeitAzubi, zeit_helfer: kalkData.zeitHelfer,
+        rate_meister: kalkData.meisterRate, rate_geselle: kalkData.geselleRate,
+        rate_azubi: kalkData.azubiRate, rate_helfer: kalkData.helferRate,
+        sonstige_kosten: kalkData.sonstige, materialzuschlag: kalkData.materialzuschlag,
+        gewinnaufschlag: kalkData.gewinnaufschlag, lohnkosten: kalkData.lohnkosten,
+        sonstige_summe: kalkData.sonstigeSum, zwischensumme: kalkData.zwischensumme,
+        material_betrag: kalkData.materialBetrag, gewinn_betrag: kalkData.gewinnBetrag,
+        vk_preis: kalkData.vkPreis,
+      });
+      toast.success("Stammdaten aktualisiert");
+      loadData();
+    } catch { toast.error("Fehler beim Speichern"); }
+  };
+
+  const handleCreateFromKalk = async (kalkData, typ) => {
+    const pos = activeKalkIdx != null ? positions[activeKalkIdx] : null;
+    if (!pos) return;
+    const name = (pos.description || "").split("\n")[0].trim();
+    try {
+      const res = await api.post("/articles", {
+        name, typ, price_net: kalkData.vkPreis, ek_preis: kalkData.ek,
+        unit: pos.unit || (typ === "Leistung" ? "Stunde" : "Stück"),
+        description: pos.description || "",
+      });
+      const newId = res.data.id;
+      if (newId) {
+        await api.post("/kalkulation", {
+          article_id: newId, article_name: name, ek: kalkData.ek,
+          zeit_meister: kalkData.zeitMeister, zeit_geselle: kalkData.zeitGeselle,
+          zeit_azubi: kalkData.zeitAzubi, zeit_helfer: kalkData.zeitHelfer,
+          rate_meister: kalkData.meisterRate, rate_geselle: kalkData.geselleRate,
+          rate_azubi: kalkData.azubiRate, rate_helfer: kalkData.helferRate,
+          sonstige_kosten: kalkData.sonstige, materialzuschlag: kalkData.materialzuschlag,
+          gewinnaufschlag: kalkData.gewinnaufschlag, lohnkosten: kalkData.lohnkosten,
+          sonstige_summe: kalkData.sonstigeSum, zwischensumme: kalkData.zwischensumme,
+          material_betrag: kalkData.materialBetrag, gewinn_betrag: kalkData.gewinnBetrag,
+          vk_preis: kalkData.vkPreis,
+        });
+        updatePosition(activeKalkIdx, "source_article_id", newId);
+        toast.success(`${typ} "${name}" angelegt und verknüpft`);
+        loadData();
+      }
+    } catch { toast.error("Fehler beim Anlegen"); }
   };
 
   const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; };
@@ -552,6 +608,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             settings={settings}
             onApplyKalkPrice={handleKalkApply}
             onCloseKalk={() => setActiveKalkIdx(null)}
+            onSaveToStamm={handleSaveKalkToStamm}
+            onCreateNewArticle={handleCreateFromKalk}
             templateDocs={templateDocs} similarDocs={similarDocs} expandedDoc={expandedDoc} setExpandedDoc={setExpandedDoc}
             copyPositionsFromDoc={copyPositionsFromDoc} toggleDocTemplate={toggleDocTemplate}
             titles={titles} type={type} positions={positions}
