@@ -68,14 +68,26 @@ async def get_anfragen_kategorien():
     doc = await db.settings.find_one({"id": "anfragen_kategorien"}, {"_id": 0})
     if doc and "kategorien" in doc:
         return doc["kategorien"]
+    # Fallback: load from einsatz_config reparaturgruppen
+    config = await db.einsatz_config.find_one({"id": "main"}, {"_id": 0})
+    if config and config.get("reparaturgruppen"):
+        return config["reparaturgruppen"]
     return DEFAULT_KATEGORIEN
 
 @router.put("/anfragen-kategorien")
 async def update_anfragen_kategorien(body: dict):
     kategorien = body.get("kategorien", [])
+    kategorien = [k for k in kategorien if k.strip()]
+    # Save categories
     await db.settings.update_one(
         {"id": "anfragen_kategorien"},
         {"$set": {"id": "anfragen_kategorien", "kategorien": kategorien}},
+        upsert=True,
+    )
+    # Sync to Reparaturgruppen in einsatz_config
+    await db.einsatz_config.update_one(
+        {"id": "main"},
+        {"$set": {"reparaturgruppen": kategorien}},
         upsert=True,
     )
     return kategorien
