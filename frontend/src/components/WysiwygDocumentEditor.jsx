@@ -313,7 +313,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         unit: pos.unit || (typ === "Leistung" ? "Stunde" : "Stück"),
         description: pos.description || "",
       });
-      const newId = res.data.id;
+      const newArticle = res.data;
+      const newId = newArticle.id;
       if (newId) {
         await api.post("/kalkulation", {
           article_id: newId, article_name: name, ek: kalkData.ek,
@@ -328,6 +329,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           vk_preis: kalkData.vkPreis,
         });
         updatePosition(activeKalkIdx, "source_article_id", newId);
+        // Immediately add article to local state to avoid race condition
+        if (typ === "Artikel") {
+          setArticles(prev => [...prev, newArticle]);
+        } else {
+          setServices(prev => [...prev, newArticle]);
+        }
         toast.success(`${typ} "${name}" angelegt und verknüpft`);
         loadData();
       }

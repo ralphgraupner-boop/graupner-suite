@@ -24,14 +24,16 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Kalkulationshistorie (pro Artikel gespeichert + vorausgefüllt)
 - [x] Profi-Kalkulation in Artikel-Seite (2-Spalten-Modal)
 - [x] Dashboard Pill Badges + Anfragen Modal
-- [x] **Positions-Kalkulation per Klick**: Calculator-Icon auf jeder Position, KalkulationPanel öffnet sich rechts und bleibt offen, VK-Preis wird direkt in Position übernommen
-- [x] **Vorlagen-Button**: In Toolbar oben (neben Einstellungen), togglet Vorlagen-Ansicht in rechter Sidebar
+- [x] **Positions-Kalkulation per Klick**: Calculator-Icon auf jeder Position, KalkulationPanel öffnet sich rechts und bleibt offen
+- [x] **Vorlagen-Button**: In Toolbar oben, togglet Vorlagen-Ansicht in rechter Sidebar
 - [x] **Rechte Sidebar umgebaut**: Tab-Bar entfernt, klick-basierte Kalkulation + Dokument-Kalkulation + Übersicht
+- [x] **Stammdaten-Prompt**: Nach VK-Preis-Übernahme wird gefragt ob Kalkulation in Stammdaten gespeichert werden soll (In Stammdaten übernehmen / Neue Leistung anlegen / Neuen Artikel anlegen)
 
 ## Key API Endpoints
 - `POST /api/kalkulation` - Kalkulation speichern
 - `GET /api/kalkulation/{article_id}` - Historie (max 20)
 - `GET /api/kalkulation/{article_id}/latest` - Letzte Kalkulation
+- `POST /api/articles` - Neuen Artikel/Leistung anlegen
 
 ## Backlog
 - P1: N26 Bank Integration (CSV-Import / Open Banking)
