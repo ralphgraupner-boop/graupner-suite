@@ -173,12 +173,20 @@ const AnfragenPage = () => {
     return result;
   };
 
-  const filtered = anfragen.filter(
-    (a) =>
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      (a.email || "").toLowerCase().includes(search.toLowerCase()) ||
-      (a.nachricht || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = anfragen.filter((a) => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    const repGruppen = a.reparaturgruppen || (a.reparaturgruppe ? [a.reparaturgruppe] : []);
+    return (
+      a.name.toLowerCase().includes(s) ||
+      (a.email || "").toLowerCase().includes(s) ||
+      (a.nachricht || "").toLowerCase().includes(s) ||
+      (a.phone || "").toLowerCase().includes(s) ||
+      (a.firma || "").toLowerCase().includes(s) ||
+      (a.categories || []).some((c) => c.toLowerCase().includes(s)) ||
+      repGruppen.some((g) => g.toLowerCase().includes(s))
+    );
+  });
 
   return (
     <div data-testid="anfragen-page">
