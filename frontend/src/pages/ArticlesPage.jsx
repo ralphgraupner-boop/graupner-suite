@@ -94,8 +94,8 @@ const ArtikelPage = () => {
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.label}</span>
                       {item.artikel_nr && <span className="text-[10px] font-mono text-muted-foreground">{item.artikel_nr}</span>}
                     </div>
-                    <h3 className="font-semibold text-sm truncate">{item.name}</h3>
-                    {item.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.description}</p>}
+                    <h3 className="font-semibold text-sm">{item.name}</h3>
+                    {item.description && <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{item.description}</p>}
                     {item.subunternehmer && <p className="text-xs text-orange-600 mt-0.5">Sub: {item.subunternehmer}</p>}
                   </div>
                   <div className="flex gap-1 ml-2 shrink-0">
