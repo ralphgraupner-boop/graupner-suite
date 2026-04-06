@@ -13,6 +13,7 @@ const AnfragenPage = () => {
   const [search, setSearch] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [selectedAnfrage, setSelectedAnfrage] = useState(null);
   const [editAnfrage, setEditAnfrage] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -260,7 +261,7 @@ const AnfragenPage = () => {
                 {/* Kompakte Listenzeile */}
                 <div
                   className="flex items-center gap-4 p-3 lg:p-4"
-                  onClick={() => setExpandedId(isExpanded ? null : anfrage.id)}
+                  onClick={() => setSelectedAnfrage(anfrage)}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
                     {anfrage.name?.charAt(0)?.toUpperCase() || "?"}
@@ -339,7 +340,7 @@ const AnfragenPage = () => {
                       {confirmDeleteId === anfrage.id ? <span className="text-xs font-bold">Löschen?</span> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
-                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
                 </div>
 
                 {/* Schnellnotiz Inline */}
@@ -373,186 +374,180 @@ const AnfragenPage = () => {
                     </button>
                   </div>
                 )}
-
-                {/* Aufgeklappte Detail-Ansicht */}
-                {isExpanded && (
-                  <div className="border-t bg-muted/30 p-4 lg:p-6 animate-in slide-in-from-top-2 duration-200">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Kontaktdaten */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Kontaktdaten</h4>
-                        <div className="space-y-2">
-                          <p className="text-sm"><span className="font-medium">Name:</span> {anfrage.name}</p>
-                          {anfrage.email && (
-                            <p className="text-sm"><span className="font-medium">E-Mail:</span> <a href={`mailto:${anfrage.email}`} className="text-primary hover:underline">{anfrage.email}</a></p>
-                          )}
-                          {anfrage.phone && (
-                            <p className="text-sm"><span className="font-medium">Telefon:</span> <a href={`tel:${anfrage.phone}`} className="text-primary hover:underline">{anfrage.phone}</a></p>
-                          )}
-                          {anfrage.address && (
-                            <div>
-                              <span className="text-sm font-medium">Adresse:</span>
-                              <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{anfrage.address}</p>
-                              <button
-                                onClick={() => {
-                                  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.address)}`;
-                                  navigator.clipboard.writeText(url);
-                                  toast.success("Maps-Link kopiert! In neuem Tab einfügen.");
-                                }}
-                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-                              >
-                                <Globe className="w-3 h-3" /> Karten-Link kopieren
-                              </button>
-                            </div>
-                          )}
-                          {anfrage.firma && <p className="text-sm"><span className="font-medium">Firma:</span> {anfrage.firma}</p>}
-                          {anfrage.customer_type && <p className="text-sm"><span className="font-medium">Typ:</span> {anfrage.customer_type}</p>}
-                        </div>
-                      </div>
-
-                      {/* Kategorien & Beschreibungen */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Kategorien & Details</h4>
-                        {(anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : [])).length > 0 && (
-                          <div className="mb-3 bg-orange-50 rounded-sm p-3 border border-orange-200" data-testid={`reparaturgruppe-detail-${anfrage.id}`}>
-                            <span className="text-xs text-orange-600 font-medium uppercase tracking-wide flex items-center gap-1"><Wrench className="w-3 h-3" /> Reparaturgruppen</span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {(anfrage.reparaturgruppen || [anfrage.reparaturgruppe].filter(Boolean)).map((g) => (
-                                <span key={g} className="px-2 py-0.5 bg-orange-200 text-orange-800 text-sm font-medium rounded-full">{g}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {(anfrage.categories || []).length > 0 ? (
-                          <div className="space-y-3">
-                            {anfrage.categories.map((cat) => {
-                              const descKey = Object.keys(parsed).find(k => k === cat);
-                              return (
-                                <div key={cat} className="bg-background rounded-sm p-3 border">
-                                  <span className="text-sm font-medium text-primary">{cat}</span>
-                                  {descKey && parsed[descKey] && (
-                                    <p className="text-sm text-muted-foreground mt-1">{parsed[descKey]}</p>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Keine Kategorien ausgewählt</p>
-                        )}
-                        {anfrage.obj_address && (
-                          <div className="mt-3">
-                            <span className="text-sm font-medium">Objektadresse:</span>
-                            <p className="text-sm text-muted-foreground mt-0.5">{anfrage.obj_address}</p>
-                            <button
-                              onClick={() => {
-                                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.obj_address)}`;
-                                navigator.clipboard.writeText(url);
-                                toast.success("Maps-Link kopiert! In neuem Tab einfügen.");
-                              }}
-                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-                            >
-                              <Globe className="w-3 h-3" /> Karten-Link kopieren
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Nachricht & Notizen */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Nachricht</h4>
-                        {anfrage.nachricht ? (
-                          <div className="bg-background rounded-sm p-3 border">
-                            <p className="text-sm whitespace-pre-line">{anfrage.nachricht}</p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Keine Nachricht</p>
-                        )}
-                        {Object.entries(parsed).filter(([key]) => 
-                          !CATEGORIES.includes(key) && 
-                          key !== "Themen" && 
-                          key !== "Nachricht" &&
-                          key !== "Rolle" &&
-                          key !== "Firma"
-                        ).length > 0 && (
-                          <div className="mt-3 space-y-1">
-                            <span className="text-sm font-medium">Weitere Infos:</span>
-                            {Object.entries(parsed)
-                              .filter(([key]) => !CATEGORIES.includes(key) && key !== "Themen" && key !== "Nachricht" && key !== "Rolle" && key !== "Firma")
-                              .map(([key, val]) => (
-                                <p key={key} className="text-sm text-muted-foreground"><span className="font-medium">{key}:</span> {val}</p>
-                              ))
-                            }
-                          </div>
-                        )}
-
-                        {/* Schnellnotizen anzeigen */}
-                        {(() => {
-                          const quickNotes = (anfrage.notes || "").split("\n").filter(l => l.match(/^\[[\d.,: ]+\]/));
-                          if (quickNotes.length === 0) return null;
-                          return (
-                            <div className="mt-4" data-testid={`notizen-section-${anfrage.id}`}>
-                              <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide flex items-center gap-1">
-                                <MessageSquarePlus className="w-3.5 h-3.5" /> Notizen
-                              </h4>
-                              <div className="space-y-1.5">
-                                {quickNotes.map((note, i) => {
-                                  const tsMatch = note.match(/^\[(.*?)\]\s*(.*)/);
-                                  return (
-                                    <div key={i} className="bg-amber-50 border border-amber-200 rounded-sm px-3 py-2 text-sm">
-                                      {tsMatch ? (
-                                        <>
-                                          <span className="text-xs text-amber-600 font-medium">{tsMatch[1]}</span>
-                                          <p className="text-foreground mt-0.5">{tsMatch[2]}</p>
-                                        </>
-                                      ) : (
-                                        <p>{note}</p>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        <p className="text-xs text-muted-foreground mt-3">
-                          Quelle: {anfrage.source || "manuell"} | Erstellt: {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Aktionen */}
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-                      <PortalButtons email={anfrage.email} anfrageId={anfrage.id} />
-                      <Button size="sm" variant="outline" onClick={() => setEmailAnfrage(anfrage)} data-testid={`btn-mail-anfrage-${anfrage.id}`}>
-                        <Mail className="w-4 h-4" /> E-Mail senden
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => openQuickNote(anfrage)} data-testid={`btn-quicknote-expanded-${anfrage.id}`}>
-                        <MessageSquarePlus className="w-4 h-4" /> Schnellnotiz
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => openEdit(anfrage)} data-testid={`btn-edit-expanded-${anfrage.id}`}>
-                        <Pencil className="w-4 h-4" /> Bearbeiten
-                      </Button>
-                      <Button size="sm" onClick={() => handleConvert(anfrage.id)} data-testid={`btn-convert-expanded-${anfrage.id}`}>
-                        <UserCheck className="w-4 h-4" /> Als Kunde übernehmen
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(anfrage.id)}
-                        className={confirmDeleteId === anfrage.id ? 'bg-red-500 text-white border-red-500' : ''}
-                      >
-                        <Trash2 className="w-4 h-4" /> {confirmDeleteId === anfrage.id ? "Nochmal klicken!" : "Ablehnen"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </Card>
             );
           })}
         </div>
       )}
+
+      {/* Detail-Modal */}
+      {selectedAnfrage && (() => {
+        const anfrage = selectedAnfrage;
+        const parsed = parseNotes(anfrage.notes);
+        const quickNotes = (anfrage.notes || "").split("\n").filter(l => l.match(/^\[[\d.,: ]+\]/));
+        return (
+          <div className="fixed inset-0 z-50 flex items-start justify-center pt-12" data-testid="anfrage-detail-modal">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedAnfrage(null)} />
+            <div className="relative bg-background rounded-lg shadow-2xl w-full max-w-3xl mx-4 max-h-[calc(100vh-6rem)] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="sticky top-0 z-10 bg-background border-b px-5 py-3 flex items-center justify-between rounded-t-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
+                    {anfrage.name?.charAt(0)?.toUpperCase() || "?"}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-semibold truncate">{anfrage.name}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {anfrage.source !== "manual" && anfrage.source ? `Quelle: ${anfrage.source} · ` : ""}
+                      {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedAnfrage(null)} className="p-1.5 hover:bg-muted rounded-sm transition-colors" data-testid="btn-close-detail">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Kontaktdaten */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Kontaktdaten</h4>
+                    <div className="bg-muted/30 rounded-md p-3 space-y-1.5">
+                      {anfrage.email && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <a href={`mailto:${anfrage.email}`} className="text-primary hover:underline truncate">{anfrage.email}</a>
+                        </div>
+                      )}
+                      {anfrage.phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <a href={`tel:${anfrage.phone}`} className="text-primary hover:underline">{anfrage.phone}</a>
+                        </div>
+                      )}
+                      {anfrage.address && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                          <div>
+                            <p className="whitespace-pre-line">{anfrage.address}</p>
+                            <button onClick={() => { navigator.clipboard.writeText(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.address)}`); toast.success("Maps-Link kopiert!"); }}
+                              className="text-xs text-primary hover:underline mt-0.5">Karten-Link kopieren</button>
+                          </div>
+                        </div>
+                      )}
+                      {anfrage.firma && <p className="text-sm"><span className="font-medium">Firma:</span> {anfrage.firma}</p>}
+                      {anfrage.customer_type && <p className="text-sm"><span className="font-medium">Typ:</span> {anfrage.customer_type}</p>}
+                    </div>
+                  </div>
+
+                  {/* Kategorien */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Kategorien & Details</h4>
+                    {(anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : [])).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {(anfrage.reparaturgruppen || [anfrage.reparaturgruppe].filter(Boolean)).map((g) => (
+                          <span key={g} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                            <Wrench className="w-3 h-3" />{g}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {(anfrage.categories || []).length > 0 ? (
+                      <div className="space-y-2">
+                        {anfrage.categories.map((cat) => {
+                          const descKey = Object.keys(parsed).find(k => k === cat);
+                          return (
+                            <div key={cat} className="bg-muted/30 rounded-md p-3">
+                              <span className="text-sm font-medium text-primary">{cat}</span>
+                              {descKey && parsed[descKey] && <p className="text-sm text-muted-foreground mt-0.5">{parsed[descKey]}</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Keine Kategorien</p>
+                    )}
+                    {anfrage.obj_address && (
+                      <div className="bg-muted/30 rounded-md p-3">
+                        <span className="text-xs font-medium text-muted-foreground">Objektadresse</span>
+                        <p className="text-sm mt-0.5">{anfrage.obj_address}</p>
+                        <button onClick={() => { navigator.clipboard.writeText(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(anfrage.obj_address)}`); toast.success("Maps-Link kopiert!"); }}
+                          className="text-xs text-primary hover:underline mt-0.5">Karten-Link kopieren</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Nachricht */}
+                {anfrage.nachricht && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Nachricht</h4>
+                    <div className="bg-muted/30 rounded-md p-3">
+                      <p className="text-sm whitespace-pre-line">{anfrage.nachricht}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Weitere Infos */}
+                {Object.entries(parsed).filter(([key]) => !CATEGORIES.includes(key) && !["Themen","Nachricht","Rolle","Firma"].includes(key)).length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Weitere Infos</h4>
+                    <div className="bg-muted/30 rounded-md p-3 space-y-1">
+                      {Object.entries(parsed).filter(([key]) => !CATEGORIES.includes(key) && !["Themen","Nachricht","Rolle","Firma"].includes(key)).map(([key, val]) => (
+                        <p key={key} className="text-sm"><span className="font-medium">{key}:</span> <span className="text-muted-foreground">{val}</span></p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Notizen */}
+                {quickNotes.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <MessageSquarePlus className="w-3.5 h-3.5" /> Notizen ({quickNotes.length})
+                    </h4>
+                    <div className="space-y-1.5">
+                      {quickNotes.map((note, i) => {
+                        const tsMatch = note.match(/^\[(.*?)\]\s*(.*)/);
+                        return (
+                          <div key={i} className="bg-amber-50 border border-amber-200 rounded-sm px-3 py-2 text-sm">
+                            {tsMatch ? (<><span className="text-xs text-amber-600 font-medium">{tsMatch[1]}</span><p className="text-foreground mt-0.5">{tsMatch[2]}</p></>) : <p>{note}</p>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer-Aktionen */}
+              <div className="sticky bottom-0 bg-background border-t px-5 py-3 flex flex-wrap gap-2 rounded-b-lg">
+                <PortalButtons email={anfrage.email} anfrageId={anfrage.id} />
+                <Button size="sm" variant="outline" onClick={() => { setEmailAnfrage(anfrage); setSelectedAnfrage(null); }} data-testid="modal-btn-mail">
+                  <Mail className="w-4 h-4" /> E-Mail
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { openQuickNote(anfrage); setSelectedAnfrage(null); }} data-testid="modal-btn-note">
+                  <MessageSquarePlus className="w-4 h-4" /> Notiz
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { openEdit(anfrage); setSelectedAnfrage(null); }} data-testid="modal-btn-edit">
+                  <Pencil className="w-4 h-4" /> Bearbeiten
+                </Button>
+                <Button size="sm" onClick={() => { handleConvert(anfrage.id); setSelectedAnfrage(null); }} data-testid="modal-btn-convert">
+                  <UserCheck className="w-4 h-4" /> Als Kunde
+                </Button>
+                <div className="ml-auto">
+                  <Button size="sm" variant="outline" onClick={() => { handleDelete(anfrage.id); setSelectedAnfrage(null); }} data-testid="modal-btn-delete"
+                    className="text-destructive hover:bg-destructive/10">
+                    <Trash2 className="w-4 h-4" /> Ablehnen
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Edit Modal */}
       <Modal isOpen={!!editAnfrage} onClose={() => setEditAnfrage(null)} title="Anfrage bearbeiten" size="lg">
