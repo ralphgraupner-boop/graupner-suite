@@ -784,39 +784,6 @@ const AnfragenPage = () => {
             </div>
           </div>
 
-          {reparaturgruppen.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-1">
-                <Wrench className="w-4 h-4 text-orange-600" /> Reparaturgruppen (mehrfach auswählbar)
-              </label>
-              <div className="flex flex-wrap gap-2" data-testid="edit-anfrage-reparaturgruppe">
-                {reparaturgruppen.map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => {
-                      const cur = editForm.reparaturgruppen || [];
-                      setEditForm({
-                        ...editForm,
-                        reparaturgruppen: cur.includes(g) ? cur.filter(x => x !== g) : [...cur, g],
-                      });
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                      (editForm.reparaturgruppen || []).includes(g)
-                        ? "bg-orange-600 text-white shadow-sm"
-                        : "bg-orange-50 text-orange-700 hover:bg-orange-100"
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </div>
-              {(editForm.reparaturgruppen || []).length > 0 && (
-                <p className="text-xs text-orange-600 mt-1">{editForm.reparaturgruppen.length} ausgewählt</p>
-              )}
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium mb-1">Nachricht</label>
             <Textarea
