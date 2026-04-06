@@ -236,6 +236,14 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose, onSaveToStamm
             <Check className="w-3.5 h-3.5" /> VK-Preis übernehmen ({vkPreis.toFixed(2)} €)
           </button>
 
+          {item.id && (
+            <button onClick={() => { handleApply(); handleStammSave(); }} disabled={vkPreis <= 0}
+              className="w-full mt-1.5 h-8 flex items-center justify-center gap-1.5 rounded-md bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 disabled:opacity-40 transition-colors"
+              data-testid="kalk-overwrite-original-btn">
+              <Save className="w-3.5 h-3.5" /> Original überschreiben
+            </button>
+          )}
+
           {stammPrompt && (
             <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/80 p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150" data-testid="stamm-prompt">
               <p className="text-[11px] font-semibold text-amber-800">Kalkulationsdaten speichern?</p>
