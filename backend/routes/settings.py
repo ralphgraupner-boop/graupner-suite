@@ -57,3 +57,25 @@ async def test_smtp(data: dict):
         return {"success": True, "message": f"SMTP-Verbindung erfolgreich zu {server}:{port}"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"SMTP-Fehler: {str(e)}")
+
+
+
+# ── Anfragen-Kategorien ──
+DEFAULT_KATEGORIEN = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"]
+
+@router.get("/anfragen-kategorien")
+async def get_anfragen_kategorien():
+    doc = await db.settings.find_one({"id": "anfragen_kategorien"}, {"_id": 0})
+    if doc and "kategorien" in doc:
+        return doc["kategorien"]
+    return DEFAULT_KATEGORIEN
+
+@router.put("/anfragen-kategorien")
+async def update_anfragen_kategorien(body: dict):
+    kategorien = body.get("kategorien", [])
+    await db.settings.update_one(
+        {"id": "anfragen_kategorien"},
+        {"$set": {"id": "anfragen_kategorien", "kategorien": kategorien}},
+        upsert=True,
+    )
+    return kategorien

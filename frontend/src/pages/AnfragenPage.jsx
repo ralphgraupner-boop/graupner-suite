@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Plus, Check, GripVertical, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { PortalButtons } from "@/components/PortalButtons";
 import { api } from "@/lib/api";
-import { CATEGORIES } from "@/lib/constants";
 
 const AnfragenPage = () => {
   const [anfragen, setAnfragen] = useState([]);
@@ -23,10 +22,16 @@ const AnfragenPage = () => {
   const [vcfUploading, setVcfUploading] = useState(false);
   const [reparaturgruppen, setReparaturgruppen] = useState([]);
   const [emailAnfrage, setEmailAnfrage] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [editingCategories, setEditingCategories] = useState(false);
+  const [catDraft, setCatDraft] = useState([]);
+  const [newCatName, setNewCatName] = useState("");
+  const [catSaving, setCatSaving] = useState(false);
 
   useEffect(() => {
     loadAnfragen();
     loadConfig();
+    loadCategories();
   }, [activeCategory]);
 
   const loadConfig = async () => {
@@ -34,6 +39,24 @@ const AnfragenPage = () => {
       const res = await api.get("/einsatz-config");
       setReparaturgruppen(res.data.reparaturgruppen || []);
     } catch {}
+  };
+
+  const loadCategories = async () => {
+    try {
+      const res = await api.get("/anfragen-kategorien");
+      setCategories(res.data);
+    } catch {}
+  };
+
+  const saveCategories = async () => {
+    setCatSaving(true);
+    try {
+      await api.put("/anfragen-kategorien", { kategorien: catDraft.filter(c => c.trim()) });
+      setCategories(catDraft.filter(c => c.trim()));
+      setEditingCategories(false);
+      toast.success("Kategorien gespeichert");
+    } catch { toast.error("Fehler beim Speichern"); }
+    finally { setCatSaving(false); }
   };
 
   const loadAnfragen = async () => {
@@ -202,7 +225,7 @@ const AnfragenPage = () => {
         </label>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4" data-testid="anfragen-category-filter">
+      <div className="flex flex-wrap items-center gap-2 mb-4" data-testid="anfragen-category-filter">
         <button
           onClick={() => { setActiveCategory(""); setLoading(true); }}
           className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
@@ -214,7 +237,7 @@ const AnfragenPage = () => {
         >
           Alle ({anfragen.length})
         </button>
-        {CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => { setActiveCategory(cat); setLoading(true); }}
@@ -228,7 +251,78 @@ const AnfragenPage = () => {
             {cat}
           </button>
         ))}
+        <button
+          onClick={() => { setCatDraft([...categories]); setNewCatName(""); setEditingCategories(true); }}
+          className="p-1.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="Kategorien verwalten"
+          data-testid="btn-edit-categories"
+        >
+          <Settings2 className="w-4 h-4" />
+        </button>
       </div>
+
+      {/* Kategorie-Editor Inline */}
+      {editingCategories && (
+        <Card className="p-4 mb-4 border-primary/30 bg-primary/5 animate-in fade-in slide-in-from-top-2 duration-200" data-testid="category-editor">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-1.5">
+              <Settings2 className="w-4 h-4" /> Kategorien verwalten
+            </h3>
+            <button onClick={() => setEditingCategories(false)} className="p-1 hover:bg-muted rounded-sm">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-1.5 mb-3">
+            {catDraft.map((cat, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  value={cat}
+                  onChange={(e) => { const u = [...catDraft]; u[idx] = e.target.value; setCatDraft(u); }}
+                  className="flex-1 h-8 border rounded-sm px-3 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                  data-testid={`cat-input-${idx}`}
+                />
+                <button
+                  onClick={() => setCatDraft(catDraft.filter((_, i) => i !== idx))}
+                  className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-sm transition-colors"
+                  title="Löschen"
+                  data-testid={`cat-delete-${idx}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newCatName.trim()) {
+                  setCatDraft([...catDraft, newCatName.trim()]);
+                  setNewCatName("");
+                }
+              }}
+              placeholder="Neue Kategorie..."
+              className="flex-1 h-8 border border-dashed border-primary/40 rounded-sm px-3 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none"
+              data-testid="cat-new-input"
+            />
+            <button
+              onClick={() => { if (newCatName.trim()) { setCatDraft([...catDraft, newCatName.trim()]); setNewCatName(""); } }}
+              disabled={!newCatName.trim()}
+              className="h-8 px-3 text-xs font-medium bg-primary/10 text-primary rounded-sm hover:bg-primary/20 disabled:opacity-40 transition-colors flex items-center gap-1"
+              data-testid="cat-add-btn"
+            >
+              <Plus className="w-3.5 h-3.5" /> Hinzufügen
+            </button>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditingCategories(false)}>Abbrechen</Button>
+            <Button size="sm" onClick={saveCategories} disabled={catSaving} data-testid="cat-save-btn">
+              {catSaving ? "Speichern..." : "Speichern"}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-3 lg:p-4 mb-4 lg:mb-6">
         <div className="relative">
@@ -499,11 +593,11 @@ const AnfragenPage = () => {
                 )}
 
                 {/* Weitere Infos */}
-                {Object.entries(parsed).filter(([key]) => !CATEGORIES.includes(key) && !["Themen","Nachricht","Rolle","Firma"].includes(key)).length > 0 && (
+                {Object.entries(parsed).filter(([key]) => !categories.includes(key) && !["Themen","Nachricht","Rolle","Firma"].includes(key)).length > 0 && (
                   <div>
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Weitere Infos</h4>
                     <div className="bg-muted/30 rounded-md p-3 space-y-1">
-                      {Object.entries(parsed).filter(([key]) => !CATEGORIES.includes(key) && !["Themen","Nachricht","Rolle","Firma"].includes(key)).map(([key, val]) => (
+                      {Object.entries(parsed).filter(([key]) => !categories.includes(key) && !["Themen","Nachricht","Rolle","Firma"].includes(key)).map(([key, val]) => (
                         <p key={key} className="text-sm"><span className="font-medium">{key}:</span> <span className="text-muted-foreground">{val}</span></p>
                       ))}
                     </div>
@@ -651,7 +745,7 @@ const AnfragenPage = () => {
           <div>
             <label className="block text-sm font-medium mb-2">Kategorien</label>
             <div className="flex flex-wrap gap-2" data-testid="edit-anfrage-categories">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
