@@ -3,6 +3,7 @@ import { Package, Plus, Trash2, Edit, Search, Wrench, Users, Calculator, Clock, 
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import { ZeitInput, toHM, toDec, fmtHM } from "@/components/wysiwyg/KalkulationPanel";
 
 const TYPE_CONFIG = {
   Artikel: { label: "Artikel", color: "bg-blue-100 text-blue-800", icon: Package },
@@ -377,26 +378,15 @@ const ArtikelModal = ({ isOpen, onClose, item, onSave }) => {
 
                 {/* Zeitanteile */}
                 <div>
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">Zeitanteile (Stunden)</label>
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">Zeitanteile</label>
                   <div className="space-y-1.5">
-                    {[
-                      { label: "Meister", rate: meisterRate, val: zeitMeister, set: setZeitMeister, tid: "meister" },
-                      { label: "Geselle", rate: geselleRate, val: zeitGeselle, set: setZeitGeselle, tid: "geselle" },
-                      { label: "Azubi", rate: azubiRate, val: zeitAzubi, set: setZeitAzubi, tid: "azubi" },
-                      { label: "Helfer", rate: helferRate, val: zeitHelfer, set: setZeitHelfer, tid: "helfer" },
-                    ].map(z => (
-                      <div key={z.tid} className="flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground w-14 shrink-0">{z.label}</span>
-                        <input type="number" step="0.25" min="0" value={z.val || ""} onChange={e => z.set(parseFloat(e.target.value) || 0)}
-                          placeholder="0" className="w-16 h-7 border rounded px-1.5 text-xs font-mono text-right bg-white" data-testid={`modal-kalk-zeit-${z.tid}`} />
-                        <span className="text-[10px] text-muted-foreground">Std</span>
-                        <span className="text-[10px] text-muted-foreground/60 ml-auto">× {z.rate.toFixed(0)}€</span>
-                        <span className="text-xs font-mono w-16 text-right">{(z.val * z.rate).toFixed(2)}€</span>
-                      </div>
-                    ))}
+                    <ZeitInput label="Meister" rate={meisterRate} value={zeitMeister} onChange={setZeitMeister} tid="modal-meister" />
+                    <ZeitInput label="Geselle" rate={geselleRate} value={zeitGeselle} onChange={setZeitGeselle} tid="modal-geselle" />
+                    <ZeitInput label="Azubi" rate={azubiRate} value={zeitAzubi} onChange={setZeitAzubi} tid="modal-azubi" />
+                    <ZeitInput label="Helfer" rate={helferRate} value={zeitHelfer} onChange={setZeitHelfer} tid="modal-helfer" />
                     {gesamtStunden > 0 && (
                       <div className="flex items-center justify-between pt-1 border-t border-blue-100 mt-1">
-                        <span className="text-[10px] text-blue-700 font-medium">{gesamtStunden.toFixed(2)} Std gesamt</span>
+                        <span className="text-[10px] text-blue-700 font-medium">{fmtHM(gesamtStunden)} gesamt</span>
                         <span className="text-xs font-mono font-semibold text-blue-700">{lohnkosten.toFixed(2)} €</span>
                       </div>
                     )}
@@ -496,10 +486,10 @@ const ArtikelModal = ({ isOpen, onClose, item, onSave }) => {
                         <div className="border-t bg-white px-2 py-2 space-y-1 text-[10px]">
                           <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                             <span className="text-muted-foreground">EK-Preis:</span><span className="font-mono text-right">{entry.ek?.toFixed(2)} €</span>
-                            {entry.zeit_meister > 0 && (<><span className="text-muted-foreground">Meister:</span><span className="font-mono text-right">{entry.zeit_meister} Std × {entry.rate_meister?.toFixed(0)}€</span></>)}
-                            {entry.zeit_geselle > 0 && (<><span className="text-muted-foreground">Geselle:</span><span className="font-mono text-right">{entry.zeit_geselle} Std × {entry.rate_geselle?.toFixed(0)}€</span></>)}
-                            {entry.zeit_azubi > 0 && (<><span className="text-muted-foreground">Azubi:</span><span className="font-mono text-right">{entry.zeit_azubi} Std × {entry.rate_azubi?.toFixed(0)}€</span></>)}
-                            {entry.zeit_helfer > 0 && (<><span className="text-muted-foreground">Helfer:</span><span className="font-mono text-right">{entry.zeit_helfer} Std × {entry.rate_helfer?.toFixed(0)}€</span></>)}
+                            {entry.zeit_meister > 0 && (<><span className="text-muted-foreground">Meister:</span><span className="font-mono text-right">{fmtHM(entry.zeit_meister)} × {entry.rate_meister?.toFixed(0)}€</span></>)}
+                            {entry.zeit_geselle > 0 && (<><span className="text-muted-foreground">Geselle:</span><span className="font-mono text-right">{fmtHM(entry.zeit_geselle)} × {entry.rate_geselle?.toFixed(0)}€</span></>)}
+                            {entry.zeit_azubi > 0 && (<><span className="text-muted-foreground">Azubi:</span><span className="font-mono text-right">{fmtHM(entry.zeit_azubi)} × {entry.rate_azubi?.toFixed(0)}€</span></>)}
+                            {entry.zeit_helfer > 0 && (<><span className="text-muted-foreground">Helfer:</span><span className="font-mono text-right">{fmtHM(entry.zeit_helfer)} × {entry.rate_helfer?.toFixed(0)}€</span></>)}
                             {(entry.sonstige_kosten || []).map((s, si) => (
                               <><span key={`n${si}`} className="text-muted-foreground">{s.name || "Sonstige"}:</span><span key={`v${si}`} className="font-mono text-right">{s.betrag?.toFixed(2)} €</span></>
                             ))}
