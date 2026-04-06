@@ -308,7 +308,18 @@ const ArtikelModal = ({ isOpen, onClose, item, onSave }) => {
 
             <div>
               <label className="block text-sm font-medium mb-1">Beschreibung</label>
-              <Textarea data-testid="input-artikel-description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optionale Beschreibung..." rows={2} />
+              <textarea
+                data-testid="input-artikel-description"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Optionale Beschreibung..."
+                className="flex w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none overflow-hidden"
+                style={{ minHeight: "80px" }}
+                ref={(el) => {
+                  if (el) { el.style.height = "auto"; el.style.height = Math.max(80, el.scrollHeight) + "px"; }
+                }}
+                onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(80, e.target.scrollHeight) + "px"; }}
+              />
             </div>
 
             {form.typ === "Fremdleistung" && (
