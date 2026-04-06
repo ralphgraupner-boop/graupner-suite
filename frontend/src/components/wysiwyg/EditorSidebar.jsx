@@ -16,6 +16,7 @@ const EditorSidebar = ({
   const [editItem, setEditItem] = React.useState(null);
   const [editData, setEditData] = React.useState({});
   const [saving, setSaving] = React.useState(false);
+  const [deleteConfirm, setDeleteConfirm] = React.useState(null);
 
   const startEdit = (item) => {
     setEditItem(item.id);
@@ -30,6 +31,16 @@ const EditorSidebar = ({
   };
 
   const cancelEdit = () => { setEditItem(null); setEditData({}); };
+
+  const deleteItem = async (item) => {
+    try {
+      await api.delete(`/articles/${item.id}`);
+      toast.success(`"${item.name}" gelöscht`);
+      setSelectedItem(null);
+      setDeleteConfirm(null);
+      onItemUpdated?.();
+    } catch { toast.error("Fehler beim Löschen"); }
+  };
 
   const saveEdit = async (item) => {
     setSaving(true);
@@ -178,7 +189,31 @@ const EditorSidebar = ({
                 >
                   <Edit className="w-4 h-4" />
                 </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDeleteConfirm(deleteConfirm === item.id ? null : item.id); }}
+                  className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-input bg-card text-sm font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+                  data-testid={`btn-delete-item-${item.id}`} title="Löschen"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
+              {deleteConfirm === item.id && (
+                <div className="mt-2 rounded-md border border-red-200 bg-red-50/80 p-2.5 space-y-2 animate-in fade-in duration-150" data-testid="delete-confirm">
+                  <p className="text-xs text-red-800 font-medium">"{item.name}" wirklich löschen?</p>
+                  <div className="flex gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); deleteItem(item); }}
+                      className="flex-1 h-7 flex items-center justify-center gap-1 rounded bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors"
+                      data-testid="delete-confirm-btn">
+                      <Trash2 className="w-3 h-3" /> Löschen
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(null); }}
+                      className="flex-1 h-7 rounded border border-input bg-white text-xs font-medium hover:bg-muted transition-colors"
+                      data-testid="delete-cancel-btn">
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
               {kalkItem?.id === item.id && (
                 <KalkulationPanel item={item} settings={settings || {}} onApplyPrice={onApplyKalkPrice} onClose={() => setKalkItem(null)} />
               )}
