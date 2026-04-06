@@ -77,57 +77,37 @@ const DashboardPage = () => {
         <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">Übersicht Ihrer Geschäftstätigkeit</p>
       </div>
 
-      {/* Fälligkeits-Warnung */}
-      {(dueSoon.length > 0 || (stats?.overdue_count || 0) > 0) && (
-        <div className="mb-4 lg:mb-6 space-y-2" data-testid="dashboard-due-warnings">
+      {/* Kompakte Hinweisleiste */}
+      {(dueSoon.length > 0 || (stats?.overdue_count || 0) > 0 || followupQuotes.length > 0) && (
+        <div className="mb-4 lg:mb-6 flex flex-wrap gap-2" data-testid="dashboard-due-warnings">
           {dueSoon.length > 0 && (
-            <div className="flex items-center gap-3 p-3 lg:p-4 bg-amber-50 border border-amber-200 rounded-sm">
-              <Clock className="w-5 h-5 text-amber-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-amber-800">
-                  {dueSoon.length === 1
-                    ? `Rechnung ${dueSoon[0].invoice_number} an ${dueSoon[0].customer_name} wird in ${dueSoon[0].days_until_due === 0 ? "heute" : `${dueSoon[0].days_until_due} Tag(en)`} fällig`
-                    : `${dueSoon.length} Rechnungen werden in den nächsten 3 Tagen fällig`}
-                </p>
-              </div>
-              <Link to="/invoices">
-                <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 hover:bg-amber-100 shrink-0">
-                  Anzeigen
-                </Button>
-              </Link>
-            </div>
+            <Link to="/invoices" className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200/60 rounded-full hover:bg-amber-100 transition-colors group">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-xs font-medium text-amber-800">
+                {dueSoon.length === 1
+                  ? `${dueSoon[0].invoice_number} wird ${dueSoon[0].days_until_due === 0 ? "heute" : `in ${dueSoon[0].days_until_due} Tag(en)`} fällig`
+                  : `${dueSoon.length} Rechnungen bald fällig`}
+              </span>
+              <span className="text-[10px] text-amber-600 group-hover:text-amber-700 font-medium">Anzeigen</span>
+            </Link>
           )}
           {(stats?.overdue_count || 0) > 0 && (
-            <div className="flex items-center gap-3 p-3 lg:p-4 bg-red-50 border border-red-200 rounded-sm">
-              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-800">
-                  {stats.overdue_count} Rechnung(en) überfällig!
-                </p>
-              </div>
-              <Link to="/invoices">
-                <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-100 shrink-0" data-testid="btn-view-overdue">
-                  Mahnwesen
-                </Button>
-              </Link>
-            </div>
+            <Link to="/invoices" className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200/60 rounded-full hover:bg-red-100 transition-colors group">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+              <span className="text-xs font-medium text-red-800">{stats.overdue_count} Rechnung(en) überfällig</span>
+              <span className="text-[10px] text-red-600 group-hover:text-red-700 font-medium">Mahnwesen</span>
+            </Link>
           )}
           {followupQuotes.length > 0 && (
-            <div className="flex items-center gap-3 p-3 lg:p-4 bg-blue-50 border border-blue-200 rounded-sm">
-              <FileText className="w-5 h-5 text-blue-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-blue-800">
-                  {followupQuotes.length === 1
-                    ? `Angebot ${followupQuotes[0].quote_number} an ${followupQuotes[0].customer_name} wartet seit ${followupQuotes[0].days_waiting} Tagen`
-                    : `${followupQuotes.length} Angebote seit 7+ Tagen ohne Rückmeldung`}
-                </p>
-              </div>
-              <Link to="/quotes">
-                <Button variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100 shrink-0" data-testid="btn-view-followup">
-                  Wiedervorlage
-                </Button>
-              </Link>
-            </div>
+            <Link to="/quotes" className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-full hover:bg-blue-100 transition-colors group">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-xs font-medium text-blue-800">
+                {followupQuotes.length === 1
+                  ? `${followupQuotes[0].quote_number} wartet seit ${followupQuotes[0].days_since_created || "7+"} Tagen`
+                  : `${followupQuotes.length} Angebote ohne Rückmeldung`}
+              </span>
+              <span className="text-[10px] text-blue-600 group-hover:text-blue-700 font-medium">Wiedervorlage</span>
+            </Link>
           )}
         </div>
       )}
