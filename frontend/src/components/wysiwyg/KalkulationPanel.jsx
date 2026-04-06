@@ -16,7 +16,7 @@ const ZeitInput = ({ label, rate, value, onChange, tid }) => {
       <input type="number" min="0" value={h || ""} onChange={e => onChange(toDec(parseInt(e.target.value) || 0, m))}
         placeholder="0" className="w-10 h-7 border rounded px-1 text-xs font-mono text-right bg-white" data-testid={`kalk-h-${tid}`} />
       <span className="text-[10px] text-muted-foreground">Std</span>
-      <input type="number" min="0" max="59" step="5" value={m || ""} onChange={e => onChange(toDec(h, Math.min(parseInt(e.target.value) || 0, 59)))}
+      <input type="number" min="0" max="59" step="1" value={m || ""} onChange={e => onChange(toDec(h, Math.min(parseInt(e.target.value) || 0, 59)))}
         placeholder="0" className="w-10 h-7 border rounded px-1 text-xs font-mono text-right bg-white" data-testid={`kalk-m-${tid}`} />
       <span className="text-[10px] text-muted-foreground">Min</span>
       <span className="text-[10px] text-muted-foreground/60 ml-auto">× {rate.toFixed(0)}€</span>
