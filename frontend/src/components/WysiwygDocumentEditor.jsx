@@ -219,12 +219,25 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     } catch { toast.error("Fehler beim Speichern"); }
   };
 
-  const addFromStamm = (item) => {
-    const newIdx = positions.length;
+  const addFromStamm = (item, atIndex) => {
     const desc = item.name + (item.description ? ` - ${item.description}` : "");
-    setPositions([...positions, { type: "position", pos_nr: newIdx + 1, description: desc, quantity: 1, unit: item.unit, price_net: item.price_net, source_article_id: item.id, original_description: desc, original_unit: item.unit, original_price_net: item.price_net }]);
+    const newPos = { type: "position", pos_nr: 0, description: desc, quantity: 1, unit: item.unit, price_net: item.price_net, source_article_id: item.id, original_description: desc, original_unit: item.unit, original_price_net: item.price_net };
+    const insertIdx = atIndex != null ? atIndex : positions.length;
+    const updated = [...positions];
+    updated.splice(insertIdx, 0, newPos);
+    setPositions(updated);
     const ekPrice = item.ek_preis || item.purchase_price || 0;
-    if (ekPrice > 0) setCostPrices(prev => ({ ...prev, [newIdx]: ekPrice }));
+    if (ekPrice > 0) {
+      // Shift cost prices for positions after the insert point
+      const newCosts = {};
+      Object.entries(costPrices).forEach(([k, v]) => {
+        const idx = parseInt(k);
+        if (idx >= insertIdx) newCosts[idx + 1] = v;
+        else newCosts[idx] = v;
+      });
+      newCosts[insertIdx] = ekPrice;
+      setCostPrices(newCosts);
+    }
   };
 
   const handleDragStart = (e, item) => { e.dataTransfer.setData("application/json", JSON.stringify(item)); e.dataTransfer.effectAllowed = "copy"; };

@@ -15,6 +15,17 @@ const PositionsTable = ({
   articles, addFromStamm, services,
   onOpenKalkulation, activeKalkIdx,
 }) => {
+  const handleRowDrop = (e, idx) => {
+    const jsonData = e.dataTransfer.getData("application/json");
+    if (jsonData) {
+      e.preventDefault(); e.stopPropagation();
+      try { const item = JSON.parse(jsonData); addFromStamm(item, idx); toast.success(`"${item.name}" eingefügt`); } catch {}
+    } else if (dragIndex != null) {
+      movePosition(dragIndex, idx);
+    }
+    setDragIndex(null); setDragOverIndex(null);
+  };
+
   return (
     <div className="px-4 lg:px-10 py-4 lg:py-8">
       {/* Mobile Positions - Card Layout */}
@@ -145,7 +156,7 @@ const PositionsTable = ({
                   onDragStart={() => setDragIndex(idx)}
                   onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
                   onDragLeave={() => setDragOverIndex(null)}
-                  onDrop={() => { movePosition(dragIndex, idx); setDragIndex(null); setDragOverIndex(null); }}
+                  onDrop={(e) => handleRowDrop(e, idx)}
                   onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                   className={`border-b-2 border-amber-300/60 bg-amber-50/60 group ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
                   data-testid={`titel-row-${idx}`}
@@ -217,7 +228,7 @@ const PositionsTable = ({
               onDragStart={() => setDragIndex(idx)}
               onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
               onDragLeave={() => setDragOverIndex(null)}
-              onDrop={() => { movePosition(dragIndex, idx); setDragIndex(null); setDragOverIndex(null); }}
+              onDrop={(e) => handleRowDrop(e, idx)}
               onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
               className={`border-b border-slate-100 group transition-colors ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""} ${activeKalkIdx === idx ? "bg-blue-50/60 border-l-2 border-l-blue-400" : ""}`}
             >
