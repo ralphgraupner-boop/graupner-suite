@@ -1,6 +1,7 @@
 import React from "react";
-import { Search, Wrench, Package, Copy, GripVertical, ChevronDown, Plus, Edit, Trash2, Calculator } from "lucide-react";
+import { Search, Wrench, Package, Copy, GripVertical, ChevronDown, Plus, Edit, Trash2, Calculator, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import { KalkulationPanel } from "./KalkulationPanel";
 
 const EditorSidebar = ({
@@ -9,144 +10,219 @@ const EditorSidebar = ({
   selectedItem, setSelectedItem,
   addFromStamm, deleteLeistungsBlock, insertLeistungsBlock,
   handleDragStart, navigate,
-  settings, onApplyKalkPrice,
+  settings, onApplyKalkPrice, onItemUpdated,
 }) => {
   const [kalkItem, setKalkItem] = React.useState(null);
+  const [editItem, setEditItem] = React.useState(null);
+  const [editData, setEditData] = React.useState({});
+  const [saving, setSaving] = React.useState(false);
+
+  const startEdit = (item) => {
+    setEditItem(item.id);
+    setEditData({
+      name: item.name || "",
+      description: item.description || "",
+      price_net: item.price_net || 0,
+      ek_preis: item.ek_preis || 0,
+      unit: item.unit || "Stück",
+    });
+    setKalkItem(null);
+  };
+
+  const cancelEdit = () => { setEditItem(null); setEditData({}); };
+
+  const saveEdit = async (item) => {
+    setSaving(true);
+    try {
+      const existing = await api.get(`/articles/${item.id}`);
+      const updateData = { ...existing.data, ...editData };
+      delete updateData.id; delete updateData.created_at;
+      await api.put(`/articles/${item.id}`, updateData);
+      toast.success(`"${editData.name}" gespeichert`);
+      setEditItem(null);
+      onItemUpdated?.();
+    } catch { toast.error("Fehler beim Speichern"); }
+    setSaving(false);
+  };
+
+  const renderItemCard = (item) => (
+    <div key={item.id}>
+      <div
+        draggable="true"
+        onDragStart={(e) => handleDragStart(e, item)}
+        onClick={() => { setSelectedItem(selectedItem?.id === item.id ? null : item); if (editItem && editItem !== item.id) cancelEdit(); }}
+        className={`group flex items-start gap-2 p-2.5 rounded-md border cursor-grab active:cursor-grabbing transition-all ${selectedItem?.id === item.id ? "border-primary bg-primary/5 shadow-sm" : "border-input bg-card hover:border-primary/40 hover:shadow-sm"}`}
+        data-testid={`draggable-item-${item.id}`}
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium truncate">{item.name}</p>
+            {item.typ === "Fremdleistung" && (
+              <span className="text-[9px] bg-orange-100 text-orange-700 px-1 py-0 rounded font-medium shrink-0">Sub</span>
+            )}
+          </div>
+          {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
+          {item.subunternehmer && <p className="text-[10px] text-orange-600 truncate">{item.subunternehmer}</p>}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs font-mono font-semibold text-primary">{item.price_net.toFixed(2)} €</span>
+            <span className="text-[10px] text-muted-foreground">/ {item.unit}</span>
+            {item.ek_preis > 0 && <span className="text-[10px] text-muted-foreground font-mono">EK: {item.ek_preis.toFixed(2)}</span>}
+          </div>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground/40 shrink-0 mt-0.5 transition-transform ${selectedItem?.id === item.id ? "rotate-180 text-primary" : ""}`} />
+      </div>
+
+      {/* Expanded Detail / Edit View */}
+      {selectedItem?.id === item.id && (
+        <div className="mt-1 rounded-md border border-primary/20 bg-white p-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200" data-testid={`detail-view-${item.id}`}>
+          
+          {editItem === item.id ? (
+            /* ========= INLINE EDIT MODE ========= */
+            <div className="space-y-3" data-testid={`edit-form-${item.id}`}>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider">Bearbeiten</h4>
+                <button onClick={cancelEdit} className="p-1 hover:bg-slate-100 rounded" data-testid="edit-cancel-x">
+                  <X className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Name</label>
+                <input type="text" value={editData.name} onChange={e => setEditData(d => ({ ...d, name: e.target.value }))}
+                  className="w-full h-8 mt-0.5 px-2 border rounded text-sm bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                  data-testid="edit-name" />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Beschreibung</label>
+                <textarea value={editData.description} onChange={e => setEditData(d => ({ ...d, description: e.target.value }))}
+                  className="w-full mt-0.5 px-2 py-1.5 border rounded text-sm bg-slate-50 focus:ring-1 focus:ring-primary/30 min-h-[60px] resize-y"
+                  data-testid="edit-description" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">VK Netto (€)</label>
+                  <input type="number" step="0.01" value={editData.price_net} onChange={e => setEditData(d => ({ ...d, price_net: parseFloat(e.target.value) || 0 }))}
+                    className="w-full h-8 mt-0.5 px-2 border rounded text-sm font-mono bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                    data-testid="edit-price" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">EK (€)</label>
+                  <input type="number" step="0.01" value={editData.ek_preis} onChange={e => setEditData(d => ({ ...d, ek_preis: parseFloat(e.target.value) || 0 }))}
+                    className="w-full h-8 mt-0.5 px-2 border rounded text-sm font-mono bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                    data-testid="edit-ek" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Einheit</label>
+                <select value={editData.unit} onChange={e => setEditData(d => ({ ...d, unit: e.target.value }))}
+                  className="w-full h-8 mt-0.5 px-2 border rounded text-sm bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                  data-testid="edit-unit">
+                  <option value="Stück">Stück</option>
+                  <option value="Stunde">Stunde</option>
+                  <option value="Meter">Meter</option>
+                  <option value="m²">m²</option>
+                  <option value="m³">m³</option>
+                  <option value="lfm">lfm</option>
+                  <option value="kg">kg</option>
+                  <option value="Pauschal">Pauschal</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => saveEdit(item)} disabled={saving || !editData.name.trim()}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  data-testid="edit-save-btn">
+                  <Save className="w-4 h-4" /> {saving ? "Speichern..." : "Speichern"}
+                </button>
+                <button onClick={cancelEdit}
+                  className="flex items-center justify-center gap-1.5 h-9 px-4 rounded-md border border-input bg-card text-sm font-medium hover:bg-muted transition-colors"
+                  data-testid="edit-cancel-btn">
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ========= NORMAL VIEW ========= */
+            <>
+              <h4 className="font-semibold text-base mb-1">{item.name}</h4>
+              {item.description && <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">{item.description}</p>}
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="bg-slate-50 rounded-md p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Preis (Netto)</p>
+                  <p className="text-lg font-bold font-mono text-primary">{item.price_net.toFixed(2)} €</p>
+                </div>
+                <div className="bg-slate-50 rounded-md p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Einheit</p>
+                  <p className="text-lg font-bold">{item.unit}</p>
+                </div>
+              </div>
+              {item.category && <p className="text-xs text-muted-foreground mb-3">Kategorie: <span className="font-medium">{item.category}</span></p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  data-testid={`btn-add-item-${item.id}`}
+                >
+                  <Plus className="w-4 h-4" /> Ins Dokument
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setKalkItem(kalkItem?.id === item.id ? null : item); }}
+                  className={`flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border text-sm font-medium transition-colors ${kalkItem?.id === item.id ? "border-blue-400 bg-blue-50 text-blue-700" : "border-input bg-card hover:bg-muted"}`}
+                  data-testid={`btn-kalk-item-${item.id}`} title="Kalkulieren"
+                >
+                  <Calculator className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); startEdit(item); }}
+                  className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-input bg-card text-sm font-medium hover:bg-muted transition-colors"
+                  data-testid={`btn-edit-item-${item.id}`} title="Bearbeiten"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+              </div>
+              {kalkItem?.id === item.id && (
+                <KalkulationPanel item={item} settings={settings || {}} onApplyPrice={onApplyKalkPrice} onClose={() => setKalkItem(null)} />
+              )}
+              <p className="text-[10px] text-muted-foreground text-center mt-2">Oder per Drag & Drop ins Dokument ziehen</p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="hidden lg:block">
       <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pr-1">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Suchen..."
-            value={sidebarSearch}
-            onChange={(e) => setSidebarSearch(e.target.value)}
-            className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-card text-sm"
-            data-testid="sidebar-search"
-          />
+          <input type="text" placeholder="Suchen..." value={sidebarSearch} onChange={(e) => setSidebarSearch(e.target.value)}
+            className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-card text-sm" data-testid="sidebar-search" />
         </div>
 
         {/* Tabs */}
         <div className="flex rounded-md border border-input overflow-hidden">
-          <button
-            onClick={() => setSidebarTab("services")}
+          <button onClick={() => setSidebarTab("services")}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "services" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
-            data-testid="tab-services"
-          >
-            <Wrench className="w-3.5 h-3.5 inline mr-1" />
-            Leistungen ({filteredServices.length})
+            data-testid="tab-services">
+            <Wrench className="w-3.5 h-3.5 inline mr-1" /> Leistungen ({filteredServices.length})
           </button>
-          <button
-            onClick={() => setSidebarTab("articles")}
+          <button onClick={() => setSidebarTab("articles")}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "articles" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
-            data-testid="tab-articles"
-          >
-            <Package className="w-3.5 h-3.5 inline mr-1" />
-            Artikel ({filteredArticles.length})
+            data-testid="tab-articles">
+            <Package className="w-3.5 h-3.5 inline mr-1" /> Artikel ({filteredArticles.length})
           </button>
-          <button
-            onClick={() => setSidebarTab("blocks")}
+          <button onClick={() => setSidebarTab("blocks")}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "blocks" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
-            data-testid="tab-blocks"
-          >
-            <Copy className="w-3.5 h-3.5 inline mr-1" />
-            Blöcke ({leistungsBloecke.length})
+            data-testid="tab-blocks">
+            <Copy className="w-3.5 h-3.5 inline mr-1" /> Blöcke ({leistungsBloecke.length})
           </button>
         </div>
 
         {/* Items List */}
         {sidebarTab !== "blocks" ? (
         <div className="space-y-1.5">
-          {(sidebarTab === "services" ? filteredServices : filteredArticles).map((item) => (
-            <div key={item.id}>
-              <div
-                draggable="true"
-                onDragStart={(e) => handleDragStart(e, item)}
-                onClick={() => setSelectedItem(selectedItem?.id === item.id ? null : item)}
-                className={`group flex items-start gap-2 p-2.5 rounded-md border cursor-grab active:cursor-grabbing transition-all ${selectedItem?.id === item.id ? "border-primary bg-primary/5 shadow-sm" : "border-input bg-card hover:border-primary/40 hover:shadow-sm"}`}
-                data-testid={`draggable-item-${item.id}`}
-              >
-                <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    {item.typ === "Fremdleistung" && (
-                      <span className="text-[9px] bg-orange-100 text-orange-700 px-1 py-0 rounded font-medium shrink-0">Sub</span>
-                    )}
-                  </div>
-                  {item.description && (
-                    <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                  )}
-                  {item.subunternehmer && (
-                    <p className="text-[10px] text-orange-600 truncate">{item.subunternehmer}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-mono font-semibold text-primary">{item.price_net.toFixed(2)} €</span>
-                    <span className="text-[10px] text-muted-foreground">/ {item.unit}</span>
-                    {item.ek_preis > 0 && (
-                      <span className="text-[10px] text-muted-foreground font-mono">EK: {item.ek_preis.toFixed(2)}</span>
-                    )}
-                  </div>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-muted-foreground/40 shrink-0 mt-0.5 transition-transform ${selectedItem?.id === item.id ? "rotate-180 text-primary" : ""}`} />
-              </div>
-
-              {/* Expanded Detail View */}
-              {selectedItem?.id === item.id && (
-                <div className="mt-1 rounded-md border border-primary/20 bg-white p-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200" data-testid={`detail-view-${item.id}`}>
-                  <h4 className="font-semibold text-base mb-1">{item.name}</h4>
-                  {item.description && (
-                    <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">{item.description}</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className="bg-slate-50 rounded-md p-2.5">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Preis (Netto)</p>
-                      <p className="text-lg font-bold font-mono text-primary">{item.price_net.toFixed(2)} €</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-md p-2.5">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Einheit</p>
-                      <p className="text-lg font-bold">{item.unit}</p>
-                    </div>
-                  </div>
-                  {item.category && (
-                    <p className="text-xs text-muted-foreground mb-3">Kategorie: <span className="font-medium">{item.category}</span></p>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); addFromStamm(item); toast.success(`"${item.name}" hinzugefügt`); }}
-                      className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-                      data-testid={`btn-add-item-${item.id}`}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Ins Dokument
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setKalkItem(kalkItem?.id === item.id ? null : item); }}
-                      className={`flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border text-sm font-medium transition-colors ${kalkItem?.id === item.id ? "border-blue-400 bg-blue-50 text-blue-700" : "border-input bg-card hover:bg-muted"}`}
-                      data-testid={`btn-kalk-item-${item.id}`}
-                      title="Kalkulieren"
-                    >
-                      <Calculator className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/articles`); }}
-                      className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-input bg-card text-sm font-medium hover:bg-muted transition-colors"
-                      data-testid={`btn-edit-item-${item.id}`}
-                      title="Bearbeiten"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {kalkItem?.id === item.id && (
-                    <KalkulationPanel item={item} settings={settings || {}} onApplyPrice={onApplyKalkPrice} onClose={() => setKalkItem(null)} />
-                  )}
-                  <p className="text-[10px] text-muted-foreground text-center mt-2">Oder per Drag & Drop ins Dokument ziehen</p>
-                </div>
-              )}
-            </div>
-          ))}
+          {(sidebarTab === "services" ? filteredServices : filteredArticles).map(renderItemCard)}
           {(sidebarTab === "services" ? filteredServices : filteredArticles).length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-6">
               {sidebarSearch ? "Keine Ergebnisse" : `Keine ${sidebarTab === "services" ? "Leistungen" : "Artikel"} vorhanden`}
@@ -154,7 +230,6 @@ const EditorSidebar = ({
           )}
         </div>
         ) : (
-        /* Blöcke Tab */
         <div className="space-y-2">
           {leistungsBloecke.map(block => (
             <div key={block.id} className="border rounded-sm p-3 bg-card hover:border-primary/30 transition-colors">

@@ -537,6 +537,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             insertLeistungsBlock={insertLeistungsBlock}
             handleDragStart={handleDragStart} navigate={navigate}
             settings={settings} onApplyKalkPrice={handleApplyKalkPrice}
+            onItemUpdated={loadData}
           />
 
           <div>

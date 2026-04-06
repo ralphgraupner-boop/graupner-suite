@@ -19,21 +19,18 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] IMAP E-Mail-Empfang (manuell + Auto-Polling)
 - [x] 1-Click Kundenportal-Erstellung + Auto-E-Mail-Einladungen
 - [x] WysiwygDocumentEditor Refactoring (10 Sub-Komponenten)
-- [x] Artikelkalkulation im Editor-Sidebar (EK, Zeitanteile, Zuschläge)
-- [x] Kalkulationseinstellungen (Lohnstufen global konfigurierbar)
-- [x] Kalkulationshistorie (pro Artikel gespeichert + vorausgefüllt)
-- [x] Profi-Kalkulation in Artikel-Seite (2-Spalten-Modal)
+- [x] Profi-Kalkulation: Editor-Sidebar + Artikel-Seite + Historie
 - [x] Dashboard Pill Badges + Anfragen Modal
-- [x] **Positions-Kalkulation per Klick**: Calculator-Icon auf jeder Position, KalkulationPanel öffnet sich rechts und bleibt offen
-- [x] **Vorlagen-Button**: In Toolbar oben, togglet Vorlagen-Ansicht in rechter Sidebar
-- [x] **Rechte Sidebar umgebaut**: Tab-Bar entfernt, klick-basierte Kalkulation + Dokument-Kalkulation + Übersicht
-- [x] **Stammdaten-Prompt**: Nach VK-Preis-Übernahme wird gefragt ob Kalkulation in Stammdaten gespeichert werden soll (In Stammdaten übernehmen / Neue Leistung anlegen / Neuen Artikel anlegen)
+- [x] Positions-Kalkulation per Klick mit Calculator-Icon
+- [x] Stammdaten-Prompt nach VK-Übernahme (In Stammdaten / Neue Leistung / Neuer Artikel)
+- [x] Vorlagen-Button in Toolbar + Tab-Bar aus rechter Sidebar entfernt
+- [x] **Inline-Bearbeitung**: Artikel/Leistungen direkt in der linken Sidebar bearbeiten (Name, Beschreibung, VK, EK, Einheit) statt Navigation zur Artikel-Seite
 
 ## Key API Endpoints
 - `POST /api/kalkulation` - Kalkulation speichern
-- `GET /api/kalkulation/{article_id}` - Historie (max 20)
-- `GET /api/kalkulation/{article_id}/latest` - Letzte Kalkulation
+- `GET /api/kalkulation/{article_id}` - Historie
 - `POST /api/articles` - Neuen Artikel/Leistung anlegen
+- `PUT /api/articles/{id}` - Artikel aktualisieren
 
 ## Backlog
 - P1: N26 Bank Integration (CSV-Import / Open Banking)
