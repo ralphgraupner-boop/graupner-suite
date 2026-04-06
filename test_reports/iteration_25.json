@@ -1,0 +1,79 @@
+{
+  "summary": "Frontend-only testing of WYSIWYG document editor hover-based KalkulationPanel feature. All 12 features tested and working correctly. The right sidebar now shows KalkulationPanel on position hover, Vorlagen section on toolbar button toggle, and default view (hover hint + Dokument-Kalkulation) otherwise.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "PositionsTable mobile select",
+        "issues": ["Console warning: 'In HTML, <span> cannot be a child of <option>' - This is a React hydration warning but doesn't affect functionality"]
+      }
+    ]
+  },
+
+  "passed_tests": [
+    "Right sidebar no longer has Vorlagen/Kalkulation tab switcher buttons",
+    "Hovering over a non-Titel position row shows KalkulationPanel in right sidebar",
+    "KalkulationPanel shows item name (e.g., 'Anfahrtskosten 1 Mitarbeiter 5 Km')",
+    "KalkulationPanel shows EK-Preis input field",
+    "KalkulationPanel shows Zeitanteile fields (Meister, Geselle, Azubi, Helfer) with rates",
+    "KalkulationPanel shows Zuschläge (Materialzuschlag, Gewinnaufschlag)",
+    "KalkulationPanel shows VK-Preis (kalkuliert) and 'VK-Preis übernehmen' button",
+    "Moving mouse away from position row hides KalkulationPanel and shows default view",
+    "Hovering over a Titel row does NOT show KalkulationPanel",
+    "Clicking 'Vorlagen' button in top toolbar toggles the templates section in right sidebar",
+    "Vorlagen button exists in toolbar (data-testid='btn-vorlagen-topbar')",
+    "Übersicht section (Positionen count + Brutto) always visible in right sidebar",
+    "KalkulationPanel 'VK-Preis übernehmen' button updates the position price in the document (tested: 34.25€ -> 109.69€)",
+    "Editor works the same in Rechnungen (invoices) page - Vorlagen button and hover hint present",
+    "Left sidebar (Leistungen, Artikel, Blöcke) tabs all functional",
+    "Document drop zone exists for drag & drop",
+    "Save and Save & Exit buttons present and functional",
+    "Add Position and Add Titel buttons present"
+  ],
+
+  "test_report_links": [
+    "/app/frontend/src/components/WysiwygDocumentEditor.jsx",
+    "/app/frontend/src/components/wysiwyg/RightSidebar.jsx",
+    "/app/frontend/src/components/wysiwyg/PositionsTable.jsx",
+    "/app/frontend/src/components/wysiwyg/EditorToolbar.jsx",
+    "/app/frontend/src/components/wysiwyg/KalkulationPanel.jsx"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Hover-based KalkulationPanel implementation is clean with proper state management (hoveredKalkItem)",
+    "Position rows correctly have onMouseEnter/onMouseLeave handlers for desktop view",
+    "Titel rows correctly excluded from hover functionality (pos.type === 'titel' check)",
+    "Virtual items created for positions without source_article_id work correctly",
+    "Vorlagen toggle state (showVorlagen) properly managed in parent component",
+    "Minor: Console warning about <span> inside <option> in mobile select - cosmetic issue only"
+  ],
+
+  "updated_files": [],
+
+  "success_rate": {
+    "backend": "N/A (frontend-only testing)",
+    "frontend": "100% (18/18 features verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Modified position price in quote A-2026-0021 during testing (Anfahrtskosten: 34.25€ -> 109.69€)",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "WYSIWYG editor hover-based KalkulationPanel fully tested. Key test IDs: btn-vorlagen-topbar, hover-hint, hover-kalkulation-panel, kalkulation-panel, kalk-ek, kalk-h-meister, kalk-apply-btn, vorlagen-section. Test quote A-2026-0021 (c288214e-7f81-4832-8ccf-7fa863f65294) has Titel groups (Einrüstarbeiten, Dichtungsarbeiten) with positions. Orders page has 0 entries, Invoices page has 1 entry (R-2026-0015). Wage rates from settings: Meister=77€, Geselle=72€, Azubi=26€, Helfer=69€."
+}

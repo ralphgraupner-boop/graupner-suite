@@ -1,7 +1,8 @@
-import { Bookmark, BookmarkCheck, FileSearch, Calculator, ChevronDown, Copy, TrendingUp } from "lucide-react";
+import { Bookmark, BookmarkCheck, FileSearch, Calculator, ChevronDown, Copy, TrendingUp, MousePointerClick } from "lucide-react";
+import { KalkulationPanel } from "./KalkulationPanel";
 
 const RightSidebar = ({
-  rightTab, setRightTab,
+  showVorlagen, hoveredKalkItem, settings, onApplyKalkPrice, onClearHover,
   templateDocs, similarDocs, expandedDoc, setExpandedDoc,
   copyPositionsFromDoc, toggleDocTemplate,
   titles, type, positions,
@@ -12,30 +13,31 @@ const RightSidebar = ({
   return (
     <div className="hidden lg:block">
       <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pl-1">
-        {/* Right Tabs */}
-        <div className="flex rounded-md border border-input overflow-hidden">
-          <button
-            onClick={() => setRightTab("vorlagen")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${rightTab === "vorlagen" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
-            data-testid="tab-vorlagen"
-          >
-            <Bookmark className="w-3.5 h-3.5 inline mr-1" />
-            Vorlagen
-          </button>
-          <button
-            onClick={() => setRightTab("kalkulation")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${rightTab === "kalkulation" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
-            data-testid="tab-kalkulation"
-          >
-            <Calculator className="w-3.5 h-3.5 inline mr-1" />
-            Kalkulation
-          </button>
-        </div>
 
-        {/* Vorlagen Tab */}
-        {rightTab === "vorlagen" && (
-          <div className="space-y-3">
-            {/* Templates */}
+        {/* Hover-Kalkulation Panel */}
+        {hoveredKalkItem && (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-200" data-testid="hover-kalkulation-panel">
+            <KalkulationPanel
+              item={hoveredKalkItem}
+              settings={settings}
+              onApplyPrice={onApplyKalkPrice}
+              onClose={onClearHover}
+            />
+          </div>
+        )}
+
+        {/* Hover-Hint wenn keine Kalkulation */}
+        {!hoveredKalkItem && !showVorlagen && (
+          <div className="rounded-md border border-dashed border-blue-200 bg-blue-50/40 p-4 text-center space-y-2" data-testid="hover-hint">
+            <MousePointerClick className="w-6 h-6 text-blue-400 mx-auto" />
+            <p className="text-xs text-blue-600 font-medium">Mit der Maus über eine Position fahren</p>
+            <p className="text-[10px] text-muted-foreground">Kalkulation wird automatisch angezeigt</p>
+          </div>
+        )}
+
+        {/* Vorlagen Section (toggled from toolbar) */}
+        {showVorlagen && !hoveredKalkItem && (
+          <div className="space-y-3 animate-in fade-in duration-200" data-testid="vorlagen-section">
             <div className="rounded-md border border-input bg-card overflow-hidden">
               <div className="p-2.5 border-b bg-amber-50/50">
                 <p className="text-xs font-semibold flex items-center gap-1.5">
@@ -149,14 +151,15 @@ const RightSidebar = ({
           </div>
         )}
 
-        {/* Kalkulation Tab */}
-        {rightTab === "kalkulation" && (() => {
+        {/* Dokument-Kalkulation (general overview) */}
+        {!hoveredKalkItem && !showVorlagen && (() => {
           const kalk = calculateKalkulation();
           return (
             <div className="rounded-md border border-input bg-card p-3 space-y-3">
-              {/* Revenue Summary */}
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Erlöse</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                  <Calculator className="w-3 h-3" /> Dokument-Kalkulation
+                </p>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Netto</span>
                   <span className="font-mono font-medium">{subtotal.toFixed(2)} €</span>
@@ -173,11 +176,10 @@ const RightSidebar = ({
 
               <div className="h-px bg-border" />
 
-              {/* Cost Calculation */}
               <div className="space-y-1.5">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Kosten pro Position</p>
                 <p className="text-[10px] text-muted-foreground">EK-Preise eingeben für Margenberechnung</p>
-                {positions.map((pos, idx) => pos.description && (
+                {positions.map((pos, idx) => pos.description && pos.type !== "titel" && (
                   <div key={idx} className="flex items-center gap-1.5 text-xs">
                     <span className="text-muted-foreground w-5 shrink-0">{pos.pos_nr}.</span>
                     <span className="truncate flex-1" title={pos.description}>
@@ -185,10 +187,7 @@ const RightSidebar = ({
                     </span>
                     <div className="flex items-center shrink-0">
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="EK"
+                        type="number" step="0.01" min="0" placeholder="EK"
                         value={costPrices[idx] || ""}
                         onChange={(e) => updateCostPrice(idx, e.target.value)}
                         className="w-16 h-6 border rounded px-1.5 text-xs text-right font-mono bg-slate-50 focus:ring-1 focus:ring-primary/30"
@@ -200,7 +199,6 @@ const RightSidebar = ({
                 ))}
               </div>
 
-              {/* Margin Result */}
               {kalk.hasCosts && (
                 <>
                   <div className="h-px bg-border" />

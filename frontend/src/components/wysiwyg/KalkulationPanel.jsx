@@ -45,7 +45,7 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
   const helferRate = settings.kalk_helfer || 25;
 
   useEffect(() => {
-    if (!item?.id) return;
+    if (!item?.id) { setLoaded(true); return; }
     const load = async () => {
       try {
         const [latestRes, histRes] = await Promise.all([
@@ -80,18 +80,20 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
   const gesamtStunden = zeitMeister + zeitGeselle + zeitAzubi + zeitHelfer;
 
   const handleApply = async () => {
-    try {
-      await api.post("/kalkulation", {
-        article_id: item.id, article_name: item.name, ek,
-        zeit_meister: zeitMeister, zeit_geselle: zeitGeselle, zeit_azubi: zeitAzubi, zeit_helfer: zeitHelfer,
-        rate_meister: meisterRate, rate_geselle: geselleRate, rate_azubi: azubiRate, rate_helfer: helferRate,
-        sonstige_kosten: sonstige.filter(s => s.name || s.betrag > 0),
-        materialzuschlag, gewinnaufschlag, lohnkosten, sonstige_summe: sonstigeSum,
-        zwischensumme, material_betrag: materialBetrag, gewinn_betrag: gewinnBetrag, vk_preis: vkPreis,
-      });
-      const histRes = await api.get(`/kalkulation/${item.id}`);
-      setHistorie(histRes.data || []);
-    } catch {}
+    if (item.id) {
+      try {
+        await api.post("/kalkulation", {
+          article_id: item.id, article_name: item.name, ek,
+          zeit_meister: zeitMeister, zeit_geselle: zeitGeselle, zeit_azubi: zeitAzubi, zeit_helfer: zeitHelfer,
+          rate_meister: meisterRate, rate_geselle: geselleRate, rate_azubi: azubiRate, rate_helfer: helferRate,
+          sonstige_kosten: sonstige.filter(s => s.name || s.betrag > 0),
+          materialzuschlag, gewinnaufschlag, lohnkosten, sonstige_summe: sonstigeSum,
+          zwischensumme, material_betrag: materialBetrag, gewinn_betrag: gewinnBetrag, vk_preis: vkPreis,
+        });
+        const histRes = await api.get(`/kalkulation/${item.id}`);
+        setHistorie(histRes.data || []);
+      } catch {}
+    }
     onApplyPrice(item, vkPreis, ek);
   };
 
@@ -109,9 +111,12 @@ const KalkulationPanel = ({ item, settings, onApplyPrice, onClose }) => {
   return (
     <div className="mt-2 rounded-md border border-blue-200 bg-gradient-to-b from-blue-50/80 to-white p-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200" data-testid="kalkulation-panel">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1.5">
-          <Calculator className="w-3.5 h-3.5" /> Kalkulation
-        </h4>
+        <div className="min-w-0">
+          <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1.5">
+            <Calculator className="w-3.5 h-3.5" /> Kalkulation
+          </h4>
+          <p className="text-[10px] text-blue-600/70 truncate mt-0.5" title={item.name}>{item.name}</p>
+        </div>
         <div className="flex items-center gap-1">
           {historie.length > 0 && (
             <button onClick={() => setShowHistorie(!showHistorie)}

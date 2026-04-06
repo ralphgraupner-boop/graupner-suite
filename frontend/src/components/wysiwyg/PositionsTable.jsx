@@ -13,6 +13,7 @@ const PositionsTable = ({
   addPosition, addTitel,
   blockSaveName, setBlockSaveName, saveAsLeistungsBlock, setSelectedPositions,
   articles, addFromStamm, services,
+  onPositionHover, onPositionLeave,
 }) => {
   return (
     <div className="px-4 lg:px-10 py-4 lg:py-8">
@@ -218,6 +219,8 @@ const PositionsTable = ({
               onDragLeave={() => setDragOverIndex(null)}
               onDrop={() => { movePosition(dragIndex, idx); setDragIndex(null); setDragOverIndex(null); }}
               onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+              onMouseEnter={() => onPositionHover?.(idx)}
+              onMouseLeave={() => onPositionLeave?.()}
               className={`border-b border-slate-100 group transition-colors ${dragOverIndex === idx ? "bg-primary/5 border-primary/30" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
             >
               <td className="py-2 align-bottom">
