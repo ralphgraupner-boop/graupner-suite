@@ -27,6 +27,8 @@ const AnfragenPage = () => {
   const [catDraft, setCatDraft] = useState([]);
   const [newCatName, setNewCatName] = useState("");
   const [catSaving, setCatSaving] = useState(false);
+  const [catDragIdx, setCatDragIdx] = useState(null);
+  const [catDragOverIdx, setCatDragOverIdx] = useState(null);
 
   useEffect(() => {
     loadAnfragen();
@@ -274,7 +276,27 @@ const AnfragenPage = () => {
           </div>
           <div className="space-y-1.5 mb-3">
             {catDraft.map((cat, idx) => (
-              <div key={idx} className="flex items-center gap-2">
+              <div
+                key={idx}
+                draggable
+                onDragStart={() => setCatDragIdx(idx)}
+                onDragOver={(e) => { e.preventDefault(); setCatDragOverIdx(idx); }}
+                onDragLeave={() => setCatDragOverIdx(null)}
+                onDrop={() => {
+                  if (catDragIdx != null && catDragIdx !== idx) {
+                    const u = [...catDraft];
+                    const [moved] = u.splice(catDragIdx, 1);
+                    u.splice(idx, 0, moved);
+                    setCatDraft(u);
+                  }
+                  setCatDragIdx(null); setCatDragOverIdx(null);
+                }}
+                onDragEnd={() => { setCatDragIdx(null); setCatDragOverIdx(null); }}
+                className={`flex items-center gap-2 transition-all ${catDragOverIdx === idx ? "border-t-2 border-primary" : ""} ${catDragIdx === idx ? "opacity-40" : ""}`}
+              >
+                <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/50 hover:text-muted-foreground">
+                  <GripVertical className="w-4 h-4" />
+                </div>
                 <input
                   value={cat}
                   onChange={(e) => { const u = [...catDraft]; u[idx] = e.target.value; setCatDraft(u); }}
