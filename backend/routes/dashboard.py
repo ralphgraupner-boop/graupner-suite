@@ -79,6 +79,16 @@ async def update_anfrage(anfrage_id: str, data: AnfrageUpdate, user=Depends(get_
     return updated
 
 
+@router.put("/anfragen/{anfrage_id}/status")
+async def toggle_anfrage_status(anfrage_id: str, body: dict, user=Depends(get_current_user)):
+    status = body.get("bearbeitungsstatus", "ungelesen")
+    result = await db.anfragen.update_one({"id": anfrage_id}, {"$set": {"bearbeitungsstatus": status}})
+    if result.matched_count == 0:
+        raise HTTPException(404, "Anfrage nicht gefunden")
+    return {"ok": True, "bearbeitungsstatus": status}
+
+
+
 @router.post("/anfragen/{anfrage_id}/convert")
 async def convert_anfrage(anfrage_id: str, user=Depends(get_current_user)):
     """Anfrage in Kunde umwandeln"""

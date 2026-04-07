@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Plus, Check, GripVertical, Settings2 } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Plus, Check, GripVertical, Settings2, CircleDot } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { PortalButtons } from "@/components/PortalButtons";
@@ -29,6 +29,7 @@ const AnfragenPage = () => {
   const [catSaving, setCatSaving] = useState(false);
   const [catDragIdx, setCatDragIdx] = useState(null);
   const [catDragOverIdx, setCatDragOverIdx] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("");
 
   useEffect(() => {
     loadAnfragen();
@@ -166,6 +167,24 @@ const AnfragenPage = () => {
     }
   };
 
+  const STATUS_CYCLE = ["ungelesen", "zu_bearbeiten", "erledigt"];
+  const STATUS_LABELS = { ungelesen: "Ungelesen", zu_bearbeiten: "Zu bearbeiten", erledigt: "Erledigt" };
+  const STATUS_COLORS = {
+    ungelesen: "bg-red-500",
+    zu_bearbeiten: "bg-amber-500",
+    erledigt: "bg-green-500",
+  };
+
+  const toggleAnfrageStatus = async (anfrage) => {
+    const current = anfrage.bearbeitungsstatus || "ungelesen";
+    const idx = STATUS_CYCLE.indexOf(current);
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    try {
+      await api.put(`/anfragen/${anfrage.id}/status`, { bearbeitungsstatus: next });
+      setAnfragen(anfragen.map(a => a.id === anfrage.id ? { ...a, bearbeitungsstatus: next } : a));
+    } catch {}
+  };
+
   const handleVcfUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -199,6 +218,7 @@ const AnfragenPage = () => {
   };
 
   const filtered = anfragen.filter((a) => {
+    if (statusFilter && (a.bearbeitungsstatus || "ungelesen") !== statusFilter) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     const repGruppen = a.reparaturgruppen || (a.reparaturgruppe ? [a.reparaturgruppe] : []);
@@ -225,6 +245,29 @@ const AnfragenPage = () => {
           {vcfUploading ? "Importiere..." : "VCF importieren"}
           <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" disabled={vcfUploading} />
         </label>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="anfragen-status-filter">
+        {[
+          { key: "", label: "Alle", color: "" },
+          { key: "ungelesen", label: `Ungelesen (${anfragen.filter(a => !a.bearbeitungsstatus || a.bearbeitungsstatus === "ungelesen").length})`, color: "bg-red-500" },
+          { key: "zu_bearbeiten", label: `Zu bearbeiten (${anfragen.filter(a => a.bearbeitungsstatus === "zu_bearbeiten").length})`, color: "bg-amber-500" },
+          { key: "erledigt", label: `Erledigt (${anfragen.filter(a => a.bearbeitungsstatus === "erledigt").length})`, color: "bg-green-500" },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setStatusFilter(f.key)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              statusFilter === f.key
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+            data-testid={`status-filter-${f.key || "alle"}`}
+          >
+            {f.color && <span className={`w-2 h-2 rounded-full ${f.color}`} />}
+            {f.label}
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4" data-testid="anfragen-category-filter">
@@ -387,6 +430,12 @@ const AnfragenPage = () => {
                   className="flex items-center gap-4 p-3 lg:p-4"
                   onClick={() => setSelectedAnfrage(anfrage)}
                 >
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleAnfrageStatus(anfrage); }}
+                    className={`w-3 h-3 rounded-full shrink-0 transition-colors ${STATUS_COLORS[anfrage.bearbeitungsstatus || "ungelesen"]}`}
+                    title={STATUS_LABELS[anfrage.bearbeitungsstatus || "ungelesen"]}
+                    data-testid={`btn-status-${anfrage.id}`}
+                  />
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
                     {anfrage.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
