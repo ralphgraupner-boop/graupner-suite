@@ -5,7 +5,7 @@ import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Set
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/anfragen", icon: Inbox, label: "Anfragen" },
-  { path: "/posteingang", icon: MailOpen, label: "Posteingang" },
+  { path: "/email", icon: MailOpen, label: "E-Mail" },
   { path: "/einsaetze", icon: Wrench, label: "Einsatzplanung" },
   { path: "/customers", icon: Users, label: "Kunden" },
   { path: "/quotes", icon: FileText, label: "Angebote" },
@@ -13,7 +13,6 @@ const navItems = [
   { path: "/invoices", icon: Receipt, label: "Rechnungen" },
   { path: "/articles", icon: Package, label: "Artikel" },
   { path: "/portals", icon: Share2, label: "Kundenportale" },
-  { path: "/email-log", icon: MailCheck, label: "E-Mail-Protokoll" },
   { path: "/webhook", icon: Globe, label: "Website-Integration" },
   { path: "/settings", icon: Settings, label: "Einstellungen" }
 ];

@@ -90,7 +90,7 @@ const DashboardPage = () => {
       {(dueSoon.length > 0 || (stats?.overdue_count || 0) > 0 || followupQuotes.length > 0 || inboxStats.unread > 0) && (
         <div className="mb-4 lg:mb-6 flex flex-wrap gap-2" data-testid="dashboard-due-warnings">
           {inboxStats.unread > 0 && (
-            <Link to="/posteingang" className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full hover:bg-emerald-100 transition-colors group" data-testid="dashboard-inbox-hint">
+            <Link to="/email" className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full hover:bg-emerald-100 transition-colors group" data-testid="dashboard-inbox-hint">
               <MailOpen className="w-3.5 h-3.5 text-emerald-600" />
               <span className="text-xs font-medium text-emerald-800">
                 {inboxStats.unread} unbearbeitete E-Mail{inboxStats.unread !== 1 ? "s" : ""} im Posteingang
