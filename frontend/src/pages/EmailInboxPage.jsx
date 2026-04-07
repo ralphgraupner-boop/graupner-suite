@@ -362,15 +362,26 @@ const EmailInboxPage = () => {
                           onClick={() => handleArchive(mail.id)}
                           data-testid={`btn-archive-${mail.id}`}
                         >
-                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Archivieren
+                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Löschen
                         </Button>
                       </div>
                     )}
                     {isAssigned && (
-                      <p className="text-xs text-green-600 font-medium pt-2 border-t flex items-center gap-1">
-                        <ArrowRight className="w-3.5 h-3.5" />
-                        Zugeordnet: {mail.assigned_type === "anfrage" ? "Neue Anfrage erstellt" : "Kunde zugewiesen"}
-                      </p>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <p className="text-xs text-green-600 font-medium flex items-center gap-1">
+                          <ArrowRight className="w-3.5 h-3.5" />
+                          Zugeordnet: {mail.assigned_type === "anfrage" ? "Neue Anfrage erstellt" : "Kunde zugewiesen"}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleArchive(mail.id)}
+                          data-testid={`btn-delete-assigned-${mail.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Löschen
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
