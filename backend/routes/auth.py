@@ -115,3 +115,46 @@ async def change_password(username: str, data: dict, user=Depends(get_current_us
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
     return {"message": "Passwort geändert"}
+
+
+@router.post("/users/{username}/send-credentials")
+async def send_credentials_email(username: str, data: dict, user=Depends(get_current_user)):
+    """Sendet Zugangsdaten per E-Mail an den Benutzer"""
+    from utils import send_email
+    from utils.email_signatur import wrap_email_body
+
+    password = data.get("password", "")
+    if not password:
+        raise HTTPException(status_code=400, detail="Passwort fehlt")
+
+    db_user = await db.users.find_one({"username": username}, {"_id": 0, "password": 0})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+
+    email = db_user.get("email", "")
+    if not email:
+        raise HTTPException(status_code=400, detail="Keine E-Mail-Adresse hinterlegt")
+
+    role_labels = {"admin": "Administrator", "mitarbeiter": "Mitarbeiter", "buchhaltung": "Buchhaltung"}
+    role_label = role_labels.get(db_user.get("role", ""), db_user.get("role", ""))
+
+    body = f"""
+    <h2 style="color: #003366;">Ihre Zugangsdaten zur Graupner Suite</h2>
+    <p>Hallo <strong>{username}</strong>,</p>
+    <p>hier sind Ihre aktuellen Zugangsdaten:</p>
+    <table cellpadding="8" cellspacing="0" style="border: 1px solid #ddd; border-collapse: collapse; margin: 16px 0;">
+        <tr style="background: #f8f9fa;"><td style="border: 1px solid #ddd; font-weight: bold;">Benutzername</td><td style="border: 1px solid #ddd;">{username}</td></tr>
+        <tr><td style="border: 1px solid #ddd; font-weight: bold;">Passwort</td><td style="border: 1px solid #ddd; font-family: monospace; font-size: 15px;">{password}</td></tr>
+        <tr style="background: #f8f9fa;"><td style="border: 1px solid #ddd; font-weight: bold;">Rolle</td><td style="border: 1px solid #ddd;">{role_label}</td></tr>
+    </table>
+    <p style="color: #666; font-size: 13px;">Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.</p>
+    """
+
+    html = wrap_email_body(body)
+
+    try:
+        send_email(to_email=email, subject="Ihre Zugangsdaten – Graupner Suite", body_html=html)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"E-Mail konnte nicht gesendet werden: {str(e)}")
+
+    return {"message": f"Zugangsdaten an {email} gesendet"}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator } from "lucide-react";
+import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -848,6 +848,8 @@ const BenutzerTab = () => {
   const [newUser, setNewUser] = useState({ username: "", password: "", email: "", role: "mitarbeiter" });
   const [changePassword, setChangePassword] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saving, setSaving] = useState(false);
   const [portals, setPortals] = useState([]);
@@ -887,9 +889,37 @@ const BenutzerTab = () => {
     try {
       await api.put(`/users/${changePassword}/password`, { password: newPassword });
       toast.success("Passwort geändert");
-      setChangePassword(null);
-      setNewPassword("");
     } catch (err) { toast.error(err.response?.data?.detail || "Fehler"); }
+  };
+
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    const special = "!@#$%&*";
+    let pw = "";
+    for (let i = 0; i < 10; i++) pw += chars.charAt(Math.floor(Math.random() * chars.length));
+    pw += special.charAt(Math.floor(Math.random() * special.length));
+    setNewPassword(pw);
+    setShowPassword(true);
+  };
+
+  const copyPassword = () => {
+    if (!newPassword) return;
+    navigator.clipboard.writeText(newPassword);
+    toast.success("Passwort kopiert");
+  };
+
+  const sendCredentialsEmail = async () => {
+    if (!newPassword || newPassword.length < 4) { toast.error("Erst Passwort setzen/generieren"); return; }
+    const targetUser = users.find(u => u.username === changePassword);
+    if (!targetUser?.email) { toast.error("Keine E-Mail-Adresse beim Benutzer hinterlegt"); return; }
+    setSendingEmail(true);
+    try {
+      await api.put(`/users/${changePassword}/password`, { password: newPassword });
+      await api.post(`/users/${changePassword}/send-credentials`, { password: newPassword });
+      toast.success(`Zugangsdaten an ${targetUser.email} gesendet`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Senden");
+    } finally { setSendingEmail(false); }
   };
 
   return (
@@ -959,15 +989,46 @@ const BenutzerTab = () => {
       </Modal>
 
       {/* Change Password Modal */}
-      <Modal isOpen={!!changePassword} onClose={() => setChangePassword(null)} title={`Passwort ändern: ${changePassword}`}>
+      <Modal isOpen={!!changePassword} onClose={() => { setChangePassword(null); setNewPassword(""); setShowPassword(false); }} title={`Passwort ändern: ${changePassword}`}>
         <div className="space-y-4">
+          {(() => { const targetUser = users.find(u => u.username === changePassword); return targetUser?.email ? (
+            <p className="text-sm text-muted-foreground">E-Mail: <strong>{targetUser.email}</strong></p>
+          ) : (
+            <p className="text-sm text-amber-600 bg-amber-50 rounded p-2">Keine E-Mail hinterlegt – E-Mail-Versand nicht möglich.</p>
+          ); })()}
           <div>
             <label className="block text-sm font-medium mb-1">Neues Passwort</label>
-            <Input data-testid="input-change-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 4 Zeichen" />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input data-testid="input-change-password" type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 4 Zeichen" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1" data-testid="btn-toggle-pw-visibility">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <Button variant="outline" size="sm" onClick={generatePassword} data-testid="btn-generate-pw" title="Zufallspasswort generieren">
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={copyPassword} disabled={!newPassword} data-testid="btn-copy-pw" title="Passwort kopieren">
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setChangePassword(null)}>Abbrechen</Button>
-            <Button onClick={handlePasswordChange} data-testid="btn-change-password">Passwort ändern</Button>
+          {newPassword && showPassword && (
+            <div className="bg-muted/50 border rounded p-3 font-mono text-sm tracking-wider text-center select-all" data-testid="pw-display">
+              {newPassword}
+            </div>
+          )}
+          <div className="flex flex-col gap-2 pt-4 border-t">
+            <div className="flex justify-between gap-2">
+              <Button variant="outline" onClick={() => { setChangePassword(null); setNewPassword(""); setShowPassword(false); }}>Abbrechen</Button>
+              <Button onClick={handlePasswordChange} disabled={!newPassword || newPassword.length < 4} data-testid="btn-change-password">Passwort speichern</Button>
+            </div>
+            {(() => { const targetUser = users.find(u => u.username === changePassword); return targetUser?.email ? (
+              <Button variant="secondary" className="w-full" onClick={sendCredentialsEmail} disabled={sendingEmail || !newPassword || newPassword.length < 4} data-testid="btn-send-credentials">
+                <Mail className="w-4 h-4 mr-2" />
+                {sendingEmail ? "Wird gesendet..." : `Zugangsdaten an ${targetUser.email} senden`}
+              </Button>
+            ) : null; })()}
           </div>
         </div>
       </Modal>
