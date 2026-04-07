@@ -246,6 +246,12 @@ const EmailInboxPage = () => {
                           {mail.classification === "bekannt" && (
                             <Badge className="bg-blue-100 text-blue-700 text-[10px]">bekannt</Badge>
                           )}
+                          {mail.matched_customer && (
+                            <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">Kunde: {mail.matched_customer.name}</Badge>
+                          )}
+                          {mail.matched_anfragen?.length > 0 && (
+                            <Badge className="bg-amber-100 text-amber-700 text-[10px]">Anfrage: {mail.matched_anfragen[0].name}</Badge>
+                          )}
                           {isAssigned && (
                             <Badge className="bg-green-100 text-green-700 text-[10px]">zugeordnet</Badge>
                           )}
@@ -286,6 +292,22 @@ const EmailInboxPage = () => {
                         </p>
                       </div>
                     </div>
+
+                    {/* Match info */}
+                    {(mail.matched_customer || mail.matched_anfragen?.length > 0) && (
+                      <div className="flex flex-wrap gap-2 mb-3 p-2.5 bg-blue-50 border border-blue-100 rounded-sm">
+                        {mail.matched_customer && (
+                          <span className="text-xs font-medium text-blue-800 flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5" /> Kunde gefunden: <strong>{mail.matched_customer.name}</strong>
+                          </span>
+                        )}
+                        {mail.matched_anfragen?.map((a, i) => (
+                          <span key={i} className="text-xs font-medium text-amber-800 flex items-center gap-1">
+                            <Inbox className="w-3.5 h-3.5" /> Anfrage: <strong>{a.name}</strong>
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Body */}
                     <div className="bg-white rounded-sm border p-4 mb-4 text-sm whitespace-pre-wrap leading-relaxed max-h-80 overflow-y-auto">

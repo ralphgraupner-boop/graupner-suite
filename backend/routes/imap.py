@@ -182,14 +182,18 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
     email_ids = data[0].split()
     fetched = 0
 
-    # Pre-load known emails from customers and anfragen
-    known_emails = set()
-    async for c in db.customers.find({}, {"email": 1, "_id": 0}):
+    # Pre-load known emails from customers and anfragen with details
+    customer_by_email = {}
+    async for c in db.customers.find({}, {"_id": 0, "id": 1, "name": 1, "email": 1}):
         if c.get("email"):
-            known_emails.add(c["email"].lower())
-    async for a in db.anfragen.find({}, {"email": 1, "_id": 0}):
+            customer_by_email[c["email"].lower()] = {"id": c["id"], "name": c.get("name", "")}
+    anfrage_by_email = {}
+    async for a in db.anfragen.find({}, {"_id": 0, "id": 1, "name": 1, "email": 1}):
         if a.get("email"):
-            known_emails.add(a["email"].lower())
+            key = a["email"].lower()
+            if key not in anfrage_by_email:
+                anfrage_by_email[key] = []
+            anfrage_by_email[key].append({"id": a["id"], "name": a.get("name", "")})
 
     for eid in email_ids[-50:]:
         status, msg_data = mail.fetch(eid, "(RFC822)")
@@ -233,9 +237,13 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                 "size": att["size"],
             })
 
-        # Classify
-        is_known = sender_email in known_emails
-        classification = "bekannt" if is_known else "neu"
+        # Classify with match details
+        matched_customer = customer_by_email.get(sender_email)
+        matched_anfragen = anfrage_by_email.get(sender_email, [])
+        if matched_customer or matched_anfragen:
+            classification = "bekannt"
+        else:
+            classification = "neu"
 
         inbox_entry = {
             "id": str(uuid.uuid4()),
@@ -247,6 +255,8 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
             "date": date_header,
             "attachments": attachment_meta,
             "classification": classification,
+            "matched_customer": matched_customer,
+            "matched_anfragen": matched_anfragen[:5],
             "status": "ungelesen",
             "assigned_to": None,
             "assigned_type": None,
