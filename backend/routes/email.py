@@ -11,7 +11,9 @@ router = APIRouter()
 
 async def log_email(to_email: str, subject: str, doc_type: str, doc_id: str, doc_number: str, customer_name: str, status: str = "gesendet"):
     """E-Mail-Versand protokollieren"""
+    import uuid
     await db.email_logs.insert_one({
+        "id": str(uuid.uuid4()),
         "to_email": to_email,
         "subject": subject,
         "doc_type": doc_type,
