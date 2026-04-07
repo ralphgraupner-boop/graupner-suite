@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
+from fastapi.responses import StreamingResponse, Response
 from datetime import datetime, timezone
 from database import db, logger
 from auth import get_current_user
+from utils.storage import put_object, get_object
 import uuid
 import io
 import csv
@@ -474,13 +475,14 @@ async def export_csv(
 
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";", quoting=csv.QUOTE_ALL)
-    writer.writerow(["Belegnr.", "Datum", "Typ", "Kategorie", "Beschreibung", "Kunde", "Netto EUR", "MwSt %", "MwSt EUR", "Brutto EUR", "Rechnungs-Nr.", "Notizen"])
+    writer.writerow(["Belegnr.", "Datum", "Typ", "Kategorie", "Beschreibung", "Kunde", "Netto EUR", "MwSt %", "MwSt EUR", "Brutto EUR", "Rechnungs-Nr.", "Belege", "Notizen"])
 
     for b in buchungen:
         netto = float(b.get("betrag_netto", 0))
         brutto = float(b.get("betrag_brutto", 0))
         mwst_betrag = round(brutto - netto, 2)
         datum_str = b.get("datum", "")[:10] if b.get("datum") else ""
+        belege_namen = ", ".join([bl.get("original_filename", "") for bl in b.get("belege", [])])
         writer.writerow([
             b.get("belegnummer", ""),
             datum_str,
@@ -493,6 +495,7 @@ async def export_csv(
             f"{mwst_betrag:.2f}".replace(".", ","),
             f"{brutto:.2f}".replace(".", ","),
             b.get("rechnung_nr", ""),
+            belege_namen,
             b.get("notizen", ""),
         ])
 
@@ -554,3 +557,76 @@ async def get_monatsabschluss(
         })
     return {"jahr": jahr, "monate": result}
 
+
+
+# ===================== BELEGE (Attachments) =====================
+
+ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp", "pdf", "doc", "docx", "xls", "xlsx", "csv", "txt"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+@router.post("/buchhaltung/buchungen/{buchung_id}/belege")
+async def upload_beleg(buchung_id: str, file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Beleg an eine Buchung anhängen"""
+    buchung = await db.buchungen.find_one({"id": buchung_id})
+    if not buchung:
+        raise HTTPException(404, "Buchung nicht gefunden")
+
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "bin"
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"Dateityp .{ext} nicht erlaubt. Erlaubt: {', '.join(ALLOWED_EXTENSIONS)}")
+
+    data = await file.read()
+    if len(data) > MAX_FILE_SIZE:
+        raise HTTPException(400, "Datei zu groß (max. 10 MB)")
+
+    file_id = str(uuid.uuid4())
+    storage_path = f"graupner-suite/belege/{buchung_id}/{file_id}.{ext}"
+    put_object(storage_path, data, file.content_type or "application/octet-stream")
+
+    beleg = {
+        "id": file_id,
+        "storage_path": storage_path,
+        "original_filename": file.filename,
+        "content_type": file.content_type or "application/octet-stream",
+        "size": len(data),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await db.buchungen.update_one(
+        {"id": buchung_id},
+        {"$push": {"belege": beleg}}
+    )
+
+    return beleg
+
+
+@router.get("/buchhaltung/belege/{beleg_id}/download")
+async def download_beleg(beleg_id: str, user=Depends(get_current_user)):
+    """Beleg herunterladen"""
+    buchung = await db.buchungen.find_one(
+        {"belege.id": beleg_id},
+        {"_id": 0, "belege.$": 1}
+    )
+    if not buchung or not buchung.get("belege"):
+        raise HTTPException(404, "Beleg nicht gefunden")
+
+    beleg = buchung["belege"][0]
+    data, ct = get_object(beleg["storage_path"])
+    return Response(
+        content=data,
+        media_type=beleg.get("content_type", ct),
+        headers={"Content-Disposition": f'attachment; filename="{beleg["original_filename"]}"'}
+    )
+
+
+@router.delete("/buchhaltung/buchungen/{buchung_id}/belege/{beleg_id}")
+async def delete_beleg(buchung_id: str, beleg_id: str, user=Depends(get_current_user)):
+    """Beleg rückstandslos von einer Buchung entfernen"""
+    result = await db.buchungen.update_one(
+        {"id": buchung_id},
+        {"$pull": {"belege": {"id": beleg_id}}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Beleg nicht gefunden")
+    return {"message": "Beleg gelöscht"}

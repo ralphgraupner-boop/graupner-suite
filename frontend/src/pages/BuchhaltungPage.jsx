@@ -3,7 +3,8 @@ import {
   TrendingUp, TrendingDown, Plus, Trash2, Pencil, Search,
   Receipt, ArrowUpCircle, ArrowDownCircle, Settings2, X, Check,
   CreditCard, BarChart3, Calculator, BookOpen, Download,
-  HelpCircle, AlertTriangle, Info, ChevronDown, ChevronUp, CalendarDays
+  HelpCircle, AlertTriangle, Info, ChevronDown, ChevronUp, CalendarDays,
+  Paperclip, FileText, Image as ImageIcon, File as FileIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
@@ -49,6 +50,44 @@ const BuchhaltungPage = () => {
       await api.delete(`/buchhaltung/buchungen/${id}`);
       setBuchungen(buchungen.filter((b) => b.id !== id));
       toast.success("Buchung rückstandslos gelöscht");
+      loadAll();
+    } catch { toast.error("Fehler beim Löschen"); }
+  };
+
+  const handleUploadBeleg = async (buchungId, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await api.post(`/buchhaltung/buchungen/${buchungId}/belege`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(`Beleg "${file.name}" hochgeladen`);
+      loadAll();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Upload");
+    }
+  };
+
+  const handleDownloadBeleg = async (beleg) => {
+    try {
+      const res = await api.get(`/buchhaltung/belege/${beleg.id}/download`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = beleg.original_filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Fehler beim Herunterladen");
+    }
+  };
+
+  const handleDeleteBeleg = async (buchungId, belegId) => {
+    try {
+      await api.delete(`/buchhaltung/buchungen/${buchungId}/belege/${belegId}`);
+      toast.success("Beleg gelöscht");
       loadAll();
     } catch { toast.error("Fehler beim Löschen"); }
   };
@@ -175,7 +214,9 @@ const BuchhaltungPage = () => {
           {tab === "buchungen" && (
             <BuchungenTab buchungen={filtered} search={search} setSearch={setSearch}
               typFilter={typFilter} setTypFilter={setTypFilter}
-              onDelete={handleDeleteBuchung} onEdit={(b) => setEditBuchung(b)} />
+              onDelete={handleDeleteBuchung} onEdit={(b) => setEditBuchung(b)}
+              onUploadBeleg={handleUploadBeleg} onDownloadBeleg={handleDownloadBeleg}
+              onDeleteBeleg={handleDeleteBeleg} />
           )}
           {tab === "kassenbuch" && <KassenbuchTab zeitraum={zeitraum} />}
           {tab === "posten" && <OffenePostenTab posten={offenePosten} onMarkPaid={handleMarkPaid} onUndoPayment={handleUndoPayment} />}
@@ -233,6 +274,10 @@ const HilfeOverlay = ({ onClose }) => {
     {
       key: "ust", title: "USt/MwSt-Übersicht",
       content: `Zeigt die Umsatzsteuer-Berechnung:\n\n• Umsatzsteuer: MwSt die Sie von Kunden eingenommen haben\n• Vorsteuer: MwSt die Sie bei Einkäufen bezahlt haben\n• Zahllast: Differenz – diesen Betrag schulden Sie dem Finanzamt\n  (oder bekommen zurück, wenn Vorsteuer > Umsatzsteuer)`
+    },
+    {
+      key: "belege", title: "Belege anhängen",
+      content: `Zu jeder Buchung können Sie Belege anhängen (Quittungen, Rechnungen, Fotos).\n\n• Klicken Sie auf das Büroklammer-Symbol neben einer Buchung\n• Wählen Sie eine Datei (JPG, PNG, PDF, Word, Excel, etc.)\n• Mehrere Belege pro Buchung sind möglich\n• Belege können heruntergeladen und gelöscht werden\n• Beleg-Dateinamen werden im CSV-Export mit aufgelistet\n\nSo haben Sie alles an einem Ort – perfekt für den Steuerberater.`
     },
     {
       key: "plausibilitaet", title: "Plausibilitätsprüfung",
@@ -371,11 +416,28 @@ const UebersichtTab = ({ stats }) => {
 
 
 // ==================== BUCHUNGEN TAB ====================
-const BuchungenTab = ({ buchungen, search, setSearch, typFilter, setTypFilter, onDelete, onEdit }) => {
+const BuchungenTab = ({ buchungen, search, setSearch, typFilter, setTypFilter, onDelete, onEdit, onUploadBeleg, onDownloadBeleg, onDeleteBeleg }) => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const handleDelete = (id) => {
     if (confirmDeleteId !== id) { setConfirmDeleteId(id); setTimeout(() => setConfirmDeleteId(null), 3000); return; }
     onDelete(id); setConfirmDeleteId(null);
+  };
+
+  const handleFileSelect = (buchungId) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt";
+    input.onchange = (e) => {
+      if (e.target.files[0]) onUploadBeleg(buchungId, e.target.files[0]);
+    };
+    input.click();
+  };
+
+  const belegIcon = (filename) => {
+    const ext = (filename || "").split(".").pop().toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return <ImageIcon className="w-3 h-3" />;
+    if (ext === "pdf") return <FileText className="w-3 h-3" />;
+    return <FileIcon className="w-3 h-3" />;
   };
 
   return (
@@ -425,11 +487,30 @@ const BuchungenTab = ({ buchungen, search, setSearch, typFilter, setTypFilter, o
                       ))}
                     </div>
                   )}
+                  {/* Belege */}
+                  {b.belege?.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {b.belege.map((bl) => (
+                        <span key={bl.id} className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-sm group" data-testid={`beleg-${bl.id}`}>
+                          {belegIcon(bl.original_filename)}
+                          <button onClick={() => onDownloadBeleg(bl)} className="hover:underline truncate max-w-[120px]" title={bl.original_filename}>
+                            {bl.original_filename}
+                          </button>
+                          <button onClick={() => onDeleteBeleg(b.id, bl.id)} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity" title="Beleg löschen">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={`font-bold text-sm ${b.typ === "einnahme" ? "text-green-600" : "text-red-600"}`}>
                     {b.typ === "einnahme" ? "+" : "-"}{(b.betrag_brutto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR
                   </span>
+                  <button onClick={() => handleFileSelect(b.id)} className="p-2 rounded-sm text-muted-foreground hover:bg-blue-50 hover:text-blue-600 transition-colors" title="Beleg anhängen" data-testid={`btn-beleg-${b.id}`}>
+                    <Paperclip className="w-4 h-4" />
+                  </button>
                   <button onClick={() => onEdit(b)} className="p-2 rounded-sm text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors" title="Bearbeiten" data-testid={`btn-edit-buchung-${b.id}`}>
                     <Pencil className="w-4 h-4" />
                   </button>

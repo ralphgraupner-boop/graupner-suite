@@ -1,0 +1,83 @@
+{
+  "summary": "Comprehensive testing of Beleg-Upload (file attachments) feature for Buchungen. All 17 backend API tests passed. Frontend verified: Paperclip icon button per buchung, Hilfe overlay 'Belege anhängen' section with complete documentation.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: POST /api/buchhaltung/buchungen/{id}/belege uploads PDF file successfully",
+    "Backend: POST /api/buchhaltung/buchungen/{id}/belege uploads JPG image successfully",
+    "Backend: POST /api/buchhaltung/buchungen/{id}/belege uploads TXT file successfully",
+    "Backend: POST /api/buchhaltung/buchungen/{id}/belege uploads XLSX file successfully",
+    "Backend: GET /api/buchhaltung/belege/{beleg_id}/download returns file with correct content",
+    "Backend: GET /api/buchhaltung/belege/{beleg_id}/download returns correct Content-Type header",
+    "Backend: GET /api/buchhaltung/belege/{beleg_id}/download returns correct Content-Disposition header",
+    "Backend: GET /api/buchhaltung/belege/nonexistent/download returns 404",
+    "Backend: DELETE /api/buchhaltung/buchungen/{id}/belege/{beleg_id} removes beleg successfully",
+    "Backend: DELETE verifies beleg is no longer downloadable after deletion",
+    "Backend: DELETE /api/buchhaltung/buchungen/{id}/belege/nonexistent returns 404",
+    "Backend: Upload rejects .exe files with 400 error",
+    "Backend: Upload rejects .js files with 400 error",
+    "Backend: Upload rejects .php files with 400 error",
+    "Backend: Upload to non-existent buchung returns 404",
+    "Backend: Multiple belege (3) can be attached to single buchung",
+    "Backend: GET /api/buchhaltung/buchungen returns belege array with all attached files",
+    "Backend: GET /api/buchhaltung/export-csv includes 'Belege' column in header",
+    "Backend: CSV export includes comma-separated beleg filenames in Belege column",
+    "Backend: All beleg endpoints require authentication (401/403 without token)",
+    "Frontend: Buchungen tab shows Paperclip icon button per buchung",
+    "Frontend: Paperclip button has correct data-testid (btn-beleg-{buchung_id})",
+    "Frontend: Hilfe overlay has 'Belege anhängen' accordion section",
+    "Frontend: Hilfe 'Belege anhängen' section mentions Büroklammer-Symbol",
+    "Frontend: Hilfe 'Belege anhängen' section lists allowed file types (JPG, PNG, PDF, Word, Excel)",
+    "Frontend: Hilfe 'Belege anhängen' section mentions multiple belege per buchung",
+    "Frontend: Hilfe 'Belege anhängen' section mentions download and delete functionality",
+    "Frontend: Hilfe 'Belege anhängen' section mentions CSV-Export includes beleg filenames"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_beleg_upload.py",
+    "/app/test_reports/pytest/pytest_beleg_upload.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Beleg upload correctly validates file extensions against ALLOWED_EXTENSIONS set",
+    "Storage path uses structured format: graupner-suite/belege/{buchung_id}/{file_id}.{ext}",
+    "Beleg metadata stored in MongoDB as array on buchung document with id, storage_path, original_filename, content_type, size, created_at",
+    "CSV export correctly joins beleg filenames with comma separator",
+    "Download endpoint uses MongoDB projection to find beleg by id across all buchungen",
+    "Delete endpoint uses $pull operator to remove beleg from array"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_beleg_upload.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (all features verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Created and cleaned up TEST_Beleg_Upload_Buchung, TEST_Multiple_Belege, TEST_CSV_Belege_Export, TEST_Beleg_Frontend_Test buchungen for testing.",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Beleg-Upload feature fully tested. New endpoints: POST /api/buchhaltung/buchungen/{id}/belege (upload), GET /api/buchhaltung/belege/{id}/download (download), DELETE /api/buchhaltung/buchungen/{id}/belege/{id} (delete). Allowed extensions: jpg, jpeg, png, gif, webp, pdf, doc, docx, xls, xlsx, csv, txt. Max size: 10MB. Belege stored in Emergent Object Storage. Frontend data-testids: btn-beleg-{buchung_id} (paperclip button), beleg-{beleg_id} (blue tag). Hilfe section: hilfe-belege. CSV export includes 'Belege' column with comma-separated filenames."
+}
