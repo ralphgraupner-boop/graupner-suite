@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck } from "lucide-react";
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
@@ -13,6 +13,7 @@ const allNavItems = [
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/mahnwesen", icon: AlertTriangle, label: "Mahnwesen", roles: ["admin", "buchhaltung"] },
+  { path: "/mitarbeiter", icon: UserCheck, label: "Mitarbeiter", roles: ["admin", "buchhaltung"] },
   { path: "/articles", icon: Package, label: "Artikel", roles: ["admin"] },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
   { path: "/webhook", icon: Globe, label: "Website-Integration", roles: ["admin"] },

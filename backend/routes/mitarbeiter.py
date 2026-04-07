@@ -1,0 +1,385 @@
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from datetime import datetime, timezone, date
+from bson import ObjectId
+from database import db
+from auth import get_current_user
+import uuid
+
+router = APIRouter()
+
+
+def serialize_doc(doc):
+    if doc and "_id" in doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
+
+
+def serialize_list(docs):
+    return [serialize_doc(d) for d in docs]
+
+
+# ──────────────────── MITARBEITER CRUD ────────────────────
+
+@router.get("/mitarbeiter")
+async def list_mitarbeiter(user=Depends(get_current_user)):
+    docs = await db.mitarbeiter.find({}, {"_id": 0}).sort("nachname", 1).to_list(200)
+    return docs
+
+
+@router.get("/mitarbeiter/{ma_id}")
+async def get_mitarbeiter(ma_id: str, user=Depends(get_current_user)):
+    doc = await db.mitarbeiter.find_one({"id": ma_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Mitarbeiter nicht gefunden")
+    return doc
+
+
+@router.post("/mitarbeiter")
+async def create_mitarbeiter(data: dict, user=Depends(get_current_user)):
+    if user.get("role") not in ("admin",):
+        raise HTTPException(403, "Nur Admins dürfen Mitarbeiter anlegen")
+    ma_id = str(uuid.uuid4())[:8]
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": ma_id,
+        "personalnummer": data.get("personalnummer", ""),
+        "anrede": data.get("anrede", "Herr"),
+        "vorname": data.get("vorname", ""),
+        "nachname": data.get("nachname", ""),
+        "geburtsdatum": data.get("geburtsdatum", ""),
+        "strasse": data.get("strasse", ""),
+        "plz": data.get("plz", ""),
+        "ort": data.get("ort", ""),
+        "telefon": data.get("telefon", ""),
+        "email": data.get("email", ""),
+        "position": data.get("position", ""),
+        "eintrittsdatum": data.get("eintrittsdatum", ""),
+        "austrittsdatum": data.get("austrittsdatum", ""),
+        "status": data.get("status", "aktiv"),
+        # Steuer & Sozialversicherung
+        "steuer_id": data.get("steuer_id", ""),
+        "sv_nummer": data.get("sv_nummer", ""),
+        "krankenkasse": data.get("krankenkasse", ""),
+        "steuerklasse": data.get("steuerklasse", ""),
+        "kinderfreibetraege": data.get("kinderfreibetraege", 0),
+        # Lohn
+        "lohnart": data.get("lohnart", "stundenlohn"),
+        "stundenlohn": data.get("stundenlohn", 0),
+        "monatsgehalt": data.get("monatsgehalt", 0),
+        "vwl_betrag": data.get("vwl_betrag", 0),
+        "vwl_ag_anteil": data.get("vwl_ag_anteil", 0),
+        # Urlaub
+        "urlaubsanspruch": data.get("urlaubsanspruch", 30),
+        # Notfallkontakt
+        "notfallkontakt_name": data.get("notfallkontakt_name", ""),
+        "notfallkontakt_telefon": data.get("notfallkontakt_telefon", ""),
+        # Bemerkungen
+        "bemerkungen": data.get("bemerkungen", ""),
+        # Foto
+        "foto_url": data.get("foto_url", ""),
+        # Timestamps
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.mitarbeiter.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.put("/mitarbeiter/{ma_id}")
+async def update_mitarbeiter(ma_id: str, data: dict, user=Depends(get_current_user)):
+    if user.get("role") not in ("admin",):
+        raise HTTPException(403, "Nur Admins dürfen Mitarbeiter bearbeiten")
+    data.pop("id", None)
+    data.pop("_id", None)
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.mitarbeiter.update_one({"id": ma_id}, {"$set": data})
+    if result.matched_count == 0:
+        raise HTTPException(404, "Mitarbeiter nicht gefunden")
+    return {"message": "Gespeichert"}
+
+
+@router.delete("/mitarbeiter/{ma_id}")
+async def delete_mitarbeiter(ma_id: str, user=Depends(get_current_user)):
+    if user.get("role") not in ("admin",):
+        raise HTTPException(403, "Nur Admins dürfen Mitarbeiter löschen")
+    result = await db.mitarbeiter.delete_one({"id": ma_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Mitarbeiter nicht gefunden")
+    await db.mitarbeiter_urlaub.delete_many({"mitarbeiter_id": ma_id})
+    await db.mitarbeiter_krankmeldungen.delete_many({"mitarbeiter_id": ma_id})
+    await db.mitarbeiter_lohnhistorie.delete_many({"mitarbeiter_id": ma_id})
+    await db.mitarbeiter_dokumente.delete_many({"mitarbeiter_id": ma_id})
+    await db.mitarbeiter_fortbildungen.delete_many({"mitarbeiter_id": ma_id})
+    return {"message": "Mitarbeiter gelöscht"}
+
+
+# ──────────────────── URLAUB ────────────────────
+
+@router.get("/mitarbeiter/{ma_id}/urlaub")
+async def get_urlaub(ma_id: str, user=Depends(get_current_user)):
+    docs = await db.mitarbeiter_urlaub.find({"mitarbeiter_id": ma_id}, {"_id": 0}).sort("von", -1).to_list(500)
+    return docs
+
+
+@router.post("/mitarbeiter/{ma_id}/urlaub")
+async def create_urlaub(ma_id: str, data: dict, user=Depends(get_current_user)):
+    entry_id = str(uuid.uuid4())[:8]
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": entry_id,
+        "mitarbeiter_id": ma_id,
+        "von": data.get("von", ""),
+        "bis": data.get("bis", ""),
+        "tage": data.get("tage", 0),
+        "typ": data.get("typ", "urlaub"),
+        "status": data.get("status", "genehmigt"),
+        "bemerkung": data.get("bemerkung", ""),
+        "created_at": now,
+    }
+    await db.mitarbeiter_urlaub.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.put("/mitarbeiter/{ma_id}/urlaub/{entry_id}")
+async def update_urlaub(ma_id: str, entry_id: str, data: dict, user=Depends(get_current_user)):
+    data.pop("id", None)
+    data.pop("_id", None)
+    result = await db.mitarbeiter_urlaub.update_one({"id": entry_id, "mitarbeiter_id": ma_id}, {"$set": data})
+    if result.matched_count == 0:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    return {"message": "Aktualisiert"}
+
+
+@router.delete("/mitarbeiter/{ma_id}/urlaub/{entry_id}")
+async def delete_urlaub(ma_id: str, entry_id: str, user=Depends(get_current_user)):
+    result = await db.mitarbeiter_urlaub.delete_one({"id": entry_id, "mitarbeiter_id": ma_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    return {"message": "Gelöscht"}
+
+
+# ──────────────────── KRANKMELDUNGEN ────────────────────
+
+@router.get("/mitarbeiter/{ma_id}/krankmeldungen")
+async def get_krankmeldungen(ma_id: str, user=Depends(get_current_user)):
+    docs = await db.mitarbeiter_krankmeldungen.find({"mitarbeiter_id": ma_id}, {"_id": 0}).sort("von", -1).to_list(500)
+    return docs
+
+
+@router.post("/mitarbeiter/{ma_id}/krankmeldungen")
+async def create_krankmeldung(ma_id: str, data: dict, user=Depends(get_current_user)):
+    entry_id = str(uuid.uuid4())[:8]
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": entry_id,
+        "mitarbeiter_id": ma_id,
+        "von": data.get("von", ""),
+        "bis": data.get("bis", ""),
+        "tage": data.get("tage", 0),
+        "au_bescheinigung": data.get("au_bescheinigung", False),
+        "arzt": data.get("arzt", ""),
+        "bemerkung": data.get("bemerkung", ""),
+        "created_at": now,
+    }
+    await db.mitarbeiter_krankmeldungen.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.delete("/mitarbeiter/{ma_id}/krankmeldungen/{entry_id}")
+async def delete_krankmeldung(ma_id: str, entry_id: str, user=Depends(get_current_user)):
+    result = await db.mitarbeiter_krankmeldungen.delete_one({"id": entry_id, "mitarbeiter_id": ma_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    return {"message": "Gelöscht"}
+
+
+# ──────────────────── LOHNHISTORIE ────────────────────
+
+@router.get("/mitarbeiter/{ma_id}/lohnhistorie")
+async def get_lohnhistorie(ma_id: str, user=Depends(get_current_user)):
+    docs = await db.mitarbeiter_lohnhistorie.find({"mitarbeiter_id": ma_id}, {"_id": 0}).sort("gueltig_ab", -1).to_list(200)
+    return docs
+
+
+@router.post("/mitarbeiter/{ma_id}/lohnhistorie")
+async def create_lohnhistorie(ma_id: str, data: dict, user=Depends(get_current_user)):
+    if user.get("role") not in ("admin",):
+        raise HTTPException(403, "Nur Admins")
+    entry_id = str(uuid.uuid4())[:8]
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": entry_id,
+        "mitarbeiter_id": ma_id,
+        "gueltig_ab": data.get("gueltig_ab", ""),
+        "lohnart": data.get("lohnart", "stundenlohn"),
+        "stundenlohn": data.get("stundenlohn", 0),
+        "monatsgehalt": data.get("monatsgehalt", 0),
+        "bemerkung": data.get("bemerkung", ""),
+        "created_at": now,
+    }
+    await db.mitarbeiter_lohnhistorie.insert_one(doc)
+    doc.pop("_id", None)
+    # Update current salary on employee
+    update = {}
+    if data.get("lohnart") == "stundenlohn":
+        update = {"lohnart": "stundenlohn", "stundenlohn": data.get("stundenlohn", 0)}
+    else:
+        update = {"lohnart": "monatsgehalt", "monatsgehalt": data.get("monatsgehalt", 0)}
+    await db.mitarbeiter.update_one({"id": ma_id}, {"$set": update})
+    return doc
+
+
+# ──────────────────── DOKUMENTE ────────────────────
+
+@router.get("/mitarbeiter/{ma_id}/dokumente")
+async def get_dokumente(ma_id: str, user=Depends(get_current_user)):
+    docs = await db.mitarbeiter_dokumente.find({"mitarbeiter_id": ma_id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return docs
+
+
+@router.post("/mitarbeiter/{ma_id}/dokumente")
+async def upload_dokument(ma_id: str, file: UploadFile = File(...), kategorie: str = Form("sonstiges"), user=Depends(get_current_user)):
+    from utils.storage import upload_file
+    content = await file.read()
+    storage_key = f"mitarbeiter/{ma_id}/{uuid.uuid4().hex[:8]}_{file.filename}"
+    url = upload_file(storage_key, content, file.content_type)
+    entry_id = str(uuid.uuid4())[:8]
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": entry_id,
+        "mitarbeiter_id": ma_id,
+        "filename": file.filename,
+        "storage_key": storage_key,
+        "url": url,
+        "content_type": file.content_type,
+        "kategorie": kategorie,
+        "created_at": now,
+    }
+    await db.mitarbeiter_dokumente.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.delete("/mitarbeiter/{ma_id}/dokumente/{doc_id}")
+async def delete_dokument(ma_id: str, doc_id: str, user=Depends(get_current_user)):
+    result = await db.mitarbeiter_dokumente.delete_one({"id": doc_id, "mitarbeiter_id": ma_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Dokument nicht gefunden")
+    return {"message": "Gelöscht"}
+
+
+# ──────────────────── FORTBILDUNGEN ────────────────────
+
+@router.get("/mitarbeiter/{ma_id}/fortbildungen")
+async def get_fortbildungen(ma_id: str, user=Depends(get_current_user)):
+    docs = await db.mitarbeiter_fortbildungen.find({"mitarbeiter_id": ma_id}, {"_id": 0}).sort("datum", -1).to_list(200)
+    return docs
+
+
+@router.post("/mitarbeiter/{ma_id}/fortbildungen")
+async def create_fortbildung(ma_id: str, data: dict, user=Depends(get_current_user)):
+    entry_id = str(uuid.uuid4())[:8]
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": entry_id,
+        "mitarbeiter_id": ma_id,
+        "bezeichnung": data.get("bezeichnung", ""),
+        "anbieter": data.get("anbieter", ""),
+        "datum": data.get("datum", ""),
+        "bis_datum": data.get("bis_datum", ""),
+        "kosten": data.get("kosten", 0),
+        "zertifikat": data.get("zertifikat", False),
+        "bemerkung": data.get("bemerkung", ""),
+        "created_at": now,
+    }
+    await db.mitarbeiter_fortbildungen.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.delete("/mitarbeiter/{ma_id}/fortbildungen/{entry_id}")
+async def delete_fortbildung(ma_id: str, entry_id: str, user=Depends(get_current_user)):
+    result = await db.mitarbeiter_fortbildungen.delete_one({"id": entry_id, "mitarbeiter_id": ma_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    return {"message": "Gelöscht"}
+
+
+# ──────────────────── KALENDER / ABWESENHEITEN ────────────────────
+
+@router.get("/mitarbeiter-abwesenheiten")
+async def get_all_abwesenheiten(user=Depends(get_current_user)):
+    """Alle Urlaube und Krankmeldungen aller Mitarbeiter für Kalenderansicht"""
+    mitarbeiter = await db.mitarbeiter.find({}, {"_id": 0, "id": 1, "vorname": 1, "nachname": 1}).to_list(200)
+    ma_map = {m["id"]: f"{m['vorname']} {m['nachname']}" for m in mitarbeiter}
+
+    urlaube = await db.mitarbeiter_urlaub.find({}, {"_id": 0}).to_list(1000)
+    krankmeldungen = await db.mitarbeiter_krankmeldungen.find({}, {"_id": 0}).to_list(1000)
+
+    events = []
+    for u in urlaube:
+        name = ma_map.get(u["mitarbeiter_id"], "Unbekannt")
+        events.append({
+            "id": u["id"],
+            "mitarbeiter_id": u["mitarbeiter_id"],
+            "name": name,
+            "von": u["von"],
+            "bis": u["bis"],
+            "typ": u.get("typ", "urlaub"),
+            "status": u.get("status", "genehmigt"),
+            "tage": u.get("tage", 0),
+        })
+    for k in krankmeldungen:
+        name = ma_map.get(k["mitarbeiter_id"], "Unbekannt")
+        events.append({
+            "id": k["id"],
+            "mitarbeiter_id": k["mitarbeiter_id"],
+            "name": name,
+            "von": k["von"],
+            "bis": k["bis"],
+            "typ": "krank",
+            "status": "bestätigt",
+            "tage": k.get("tage", 0),
+        })
+
+    return events
+
+
+# ──────────────────── STATISTIKEN ────────────────────
+
+@router.get("/mitarbeiter/{ma_id}/statistiken")
+async def get_statistiken(ma_id: str, user=Depends(get_current_user)):
+    ma = await db.mitarbeiter.find_one({"id": ma_id}, {"_id": 0})
+    if not ma:
+        raise HTTPException(404, "Mitarbeiter nicht gefunden")
+
+    year = datetime.now().year
+    year_start = f"{year}-01-01"
+    year_end = f"{year}-12-31"
+
+    urlaube = await db.mitarbeiter_urlaub.find({
+        "mitarbeiter_id": ma_id,
+        "von": {"$gte": year_start, "$lte": year_end},
+        "status": {"$in": ["genehmigt", "genommen"]}
+    }, {"_id": 0}).to_list(500)
+
+    krankmeldungen = await db.mitarbeiter_krankmeldungen.find({
+        "mitarbeiter_id": ma_id,
+        "von": {"$gte": year_start, "$lte": year_end}
+    }, {"_id": 0}).to_list(500)
+
+    urlaub_genommen = sum(u.get("tage", 0) for u in urlaube)
+    anspruch = ma.get("urlaubsanspruch", 30)
+    krank_tage = sum(k.get("tage", 0) for k in krankmeldungen)
+
+    return {
+        "year": year,
+        "urlaubsanspruch": anspruch,
+        "urlaub_genommen": urlaub_genommen,
+        "urlaub_rest": anspruch - urlaub_genommen,
+        "kranktage": krank_tage,
+        "krankmeldungen_anzahl": len(krankmeldungen),
+    }

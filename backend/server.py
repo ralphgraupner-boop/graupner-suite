@@ -26,6 +26,7 @@ from routes.einsaetze import router as einsaetze_router
 from routes.imap import router as imap_router
 from routes.kalkulation import router as kalkulation_router
 from routes.buchhaltung import router as buchhaltung_router
+from routes.mitarbeiter import router as mitarbeiter_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -55,6 +56,7 @@ api_router.include_router(einsaetze_router)
 api_router.include_router(imap_router)
 api_router.include_router(kalkulation_router)
 api_router.include_router(buchhaltung_router)
+api_router.include_router(mitarbeiter_router)
 
 
 @api_router.get("/")

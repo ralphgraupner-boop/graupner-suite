@@ -22,6 +22,7 @@ import CustomerPortalPage from "@/pages/CustomerPortalPage";
 import { EinsaetzePage } from "@/pages/EinsaetzePage";
 import { EmailPage } from "@/pages/EmailPage";
 import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
+import MitarbeiterPage from "@/pages/MitarbeiterPage";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -61,6 +62,7 @@ function App() {
               <Route path="/orders" element={<MainLayout onLogout={logout}><OrdersPage readOnly={role === "buchhaltung"} /></MainLayout>} />
               <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage readOnly={role === "buchhaltung"} /></MainLayout>} />
               <Route path="/mahnwesen" element={<MainLayout onLogout={logout}><InvoicesPage readOnly={role === "buchhaltung"} defaultTab="overdue" /></MainLayout>} />
+              <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterPage /></MainLayout>} />
 
               {/* Admin-only routes */}
               {role === "admin" && (
