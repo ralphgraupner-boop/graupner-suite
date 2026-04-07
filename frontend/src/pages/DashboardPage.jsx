@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, Clock, Eye, Inbox, Filter, AlertTriangle } from "lucide-react";
+import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 import { Button, Card, StatCard } from "@/components/common";
@@ -13,12 +13,21 @@ const DashboardPage = () => {
   const [followupQuotes, setFollowupQuotes] = useState([]);
   const [overviewView, setOverviewView] = useState("anfragen");
   const [overviewData, setOverviewData] = useState(null);
+  const [inboxStats, setInboxStats] = useState({ unread: 0, total: 0 });
 
   useEffect(() => {
     loadStats();
     checkDueInvoices();
     checkFollowups();
+    loadInboxStats();
   }, []);
+
+  const loadInboxStats = async () => {
+    try {
+      const res = await api.get("/imap/inbox/stats");
+      setInboxStats(res.data);
+    } catch {}
+  };
 
   const loadStats = async () => {
     try {
@@ -78,8 +87,17 @@ const DashboardPage = () => {
       </div>
 
       {/* Kompakte Hinweisleiste */}
-      {(dueSoon.length > 0 || (stats?.overdue_count || 0) > 0 || followupQuotes.length > 0) && (
+      {(dueSoon.length > 0 || (stats?.overdue_count || 0) > 0 || followupQuotes.length > 0 || inboxStats.unread > 0) && (
         <div className="mb-4 lg:mb-6 flex flex-wrap gap-2" data-testid="dashboard-due-warnings">
+          {inboxStats.unread > 0 && (
+            <Link to="/posteingang" className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full hover:bg-emerald-100 transition-colors group" data-testid="dashboard-inbox-hint">
+              <MailOpen className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-xs font-medium text-emerald-800">
+                {inboxStats.unread} unbearbeitete E-Mail{inboxStats.unread !== 1 ? "s" : ""} im Posteingang
+              </span>
+              <span className="text-[10px] text-emerald-600 group-hover:text-emerald-700 font-medium">Anzeigen</span>
+            </Link>
+          )}
           {dueSoon.length > 0 && (
             <Link to="/invoices" className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200/60 rounded-full hover:bg-amber-100 transition-colors group">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
