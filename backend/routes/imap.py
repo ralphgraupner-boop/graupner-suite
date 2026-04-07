@@ -12,6 +12,51 @@ import base64
 
 router = APIRouter()
 
+DEFAULT_KEYWORDS = ["anfrage von", "Es gibt eine neue Anfrage."]
+
+
+def keyword_match(text, keywords):
+    """Check if any keyword appears in text"""
+    text_lower = text.lower()
+    return any(kw.lower() in text_lower for kw in keywords)
+
+
+def parse_vcf(vcf_text):
+    """Parse a VCF/vCard file and extract contact info"""
+    contact = {}
+    lines = vcf_text.replace("\r\n ", "").replace("\r\n\t", "").split("\r\n")
+    if len(lines) <= 1:
+        lines = vcf_text.replace("\n ", "").replace("\n\t", "").split("\n")
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("BEGIN:") or line.startswith("END:") or line.startswith("VERSION:"):
+            continue
+        # Handle property;params:value format
+        if ":" not in line:
+            continue
+        prop_part, _, value = line.partition(":")
+        prop = prop_part.split(";")[0].upper()
+        if prop == "FN":
+            contact["name"] = value.strip()
+        elif prop == "N":
+            parts = value.split(";")
+            if not contact.get("name"):
+                contact["name"] = f"{parts[1].strip()} {parts[0].strip()}".strip() if len(parts) > 1 else parts[0].strip()
+        elif prop == "EMAIL":
+            contact["email"] = value.strip().lower()
+        elif prop == "TEL":
+            contact["phone"] = value.strip()
+        elif prop in ("ADR", "ITEM1.ADR", "ITEM2.ADR"):
+            parts = value.split(";")
+            addr_parts = [p.strip() for p in parts if p.strip()]
+            if addr_parts:
+                contact["address"] = ", ".join(addr_parts)
+        elif prop == "ORG":
+            contact["firma"] = value.replace(";", " ").strip()
+        elif prop == "TITLE":
+            contact["rolle"] = value.strip()
+    return contact
+
 
 def decode_mime_header(header_value):
     if not header_value:
@@ -195,6 +240,10 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                 anfrage_by_email[key] = []
             anfrage_by_email[key].append({"id": a["id"], "name": a.get("name", "")})
 
+    # Load keywords for classification
+    kw_doc = await db.settings.find_one({"id": "email_keywords"}, {"_id": 0})
+    keywords = kw_doc["keywords"] if kw_doc and "keywords" in kw_doc else DEFAULT_KEYWORDS
+
     for eid in email_ids[-50:]:
         status, msg_data = mail.fetch(eid, "(RFC822)")
         if status != "OK":
@@ -240,8 +289,12 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
         # Classify with match details
         matched_customer = customer_by_email.get(sender_email)
         matched_anfragen = anfrage_by_email.get(sender_email, [])
+        has_vcf = any(a["filename"].lower().endswith(".vcf") for a in attachment_meta)
+
         if matched_customer or matched_anfragen:
             classification = "bekannt"
+        elif keyword_match(subject + " " + body, keywords):
+            classification = "anfrage"
         else:
             classification = "neu"
 
@@ -257,6 +310,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
             "classification": classification,
             "matched_customer": matched_customer,
             "matched_anfragen": matched_anfragen[:5],
+            "has_vcf": has_vcf,
             "status": "ungelesen",
             "assigned_to": None,
             "assigned_type": None,
@@ -399,4 +453,96 @@ async def get_attachment(att_id: str, user=Depends(get_current_user)):
         "content_type": att["content_type"],
         "size": att["size"],
         "data_b64": att["data_b64"],
+    }
+
+
+# ── Keyword management ──
+
+@router.get("/imap/keywords")
+async def get_keywords(user=Depends(get_current_user)):
+    doc = await db.settings.find_one({"id": "email_keywords"}, {"_id": 0})
+    if doc and "keywords" in doc:
+        return doc["keywords"]
+    return DEFAULT_KEYWORDS
+
+
+@router.put("/imap/keywords")
+async def update_keywords(body: dict, user=Depends(get_current_user)):
+    keywords = [k for k in body.get("keywords", []) if k.strip()]
+    await db.settings.update_one(
+        {"id": "email_keywords"},
+        {"$set": {"id": "email_keywords", "keywords": keywords}},
+        upsert=True,
+    )
+    return keywords
+
+
+# ── Komplett löschen (IMAP + DB) ──
+
+@router.delete("/imap/inbox/{email_id}/permanent")
+async def permanent_delete_email(email_id: str, user=Depends(get_current_user)):
+    """Delete email from inbox AND from IMAP server"""
+    mail_doc = await db.email_inbox.find_one({"id": email_id}, {"_id": 0})
+    if not mail_doc:
+        raise HTTPException(404, "E-Mail nicht gefunden")
+
+    # Try to delete from IMAP
+    message_id = mail_doc.get("message_id")
+    if message_id:
+        try:
+            creds = _get_imap_creds()
+            if creds["server"] and creds["user"] and creds["password"]:
+                imap = imaplib.IMAP4_SSL(creds["server"], creds["port"])
+                imap.login(creds["user"], creds["password"])
+                imap.select("INBOX", readonly=False)
+                status, data = imap.search(None, f'HEADER Message-ID "{message_id}"')
+                if status == "OK" and data[0]:
+                    for eid in data[0].split():
+                        imap.store(eid, "+FLAGS", "\\Deleted")
+                    imap.expunge()
+                imap.logout()
+        except Exception as e:
+            logger.warning(f"IMAP delete failed: {e}")
+
+    # Delete attachments from DB
+    for att in mail_doc.get("attachments", []):
+        await db.email_attachments.delete_one({"id": att["id"]})
+
+    # Delete from inbox
+    await db.email_inbox.delete_one({"id": email_id})
+    return {"ok": True, "message": "E-Mail komplett gelöscht"}
+
+
+# ── VCF parsing endpoint ──
+
+@router.post("/imap/parse-vcf/{att_id}")
+async def parse_vcf_attachment(att_id: str, user=Depends(get_current_user)):
+    """Parse a VCF attachment and check if contact exists"""
+    att = await db.email_attachments.find_one({"id": att_id}, {"_id": 0})
+    if not att:
+        raise HTTPException(404, "Anhang nicht gefunden")
+
+    try:
+        vcf_text = base64.b64decode(att["data_b64"]).decode("utf-8", errors="replace")
+    except Exception:
+        raise HTTPException(400, "VCF konnte nicht gelesen werden")
+
+    contact = parse_vcf(vcf_text)
+    if not contact:
+        raise HTTPException(400, "Keine Kontaktdaten in der VCF-Datei gefunden")
+
+    # Check if contact already exists
+    existing_customer = None
+    existing_anfrage = None
+    if contact.get("email"):
+        existing_customer = await db.customers.find_one({"email": {"$regex": f"^{re.escape(contact['email'])}$", "$options": "i"}}, {"_id": 0, "id": 1, "name": 1, "email": 1})
+        existing_anfrage = await db.anfragen.find_one({"email": {"$regex": f"^{re.escape(contact['email'])}$", "$options": "i"}}, {"_id": 0, "id": 1, "name": 1, "email": 1})
+    if not existing_customer and contact.get("name"):
+        existing_customer = await db.customers.find_one({"name": {"$regex": re.escape(contact["name"]), "$options": "i"}}, {"_id": 0, "id": 1, "name": 1, "email": 1})
+
+    return {
+        "contact": contact,
+        "existing_customer": existing_customer,
+        "existing_anfrage": existing_anfrage,
+        "already_exists": bool(existing_customer or existing_anfrage),
     }

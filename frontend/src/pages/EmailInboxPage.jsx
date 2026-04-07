@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Inbox, RefreshCw, Mail, Paperclip, UserPlus, Users, Trash2, ChevronDown, ChevronUp, Eye, Download, X, Search, MailOpen, ArrowRight } from "lucide-react";
+import { Inbox, RefreshCw, Mail, Paperclip, UserPlus, Users, Trash2, ChevronDown, ChevronUp, Eye, Download, X, Search, MailOpen, ArrowRight, Settings2, Plus, FileText, UserCheck, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Input, Card, Badge, Button, Modal } from "@/components/common";
+import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
 
 const EmailInboxPage = () => {
@@ -15,10 +15,18 @@ const EmailInboxPage = () => {
   const [assignDialog, setAssignDialog] = useState(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [attachmentPreview, setAttachmentPreview] = useState(null);
+  const [keywords, setKeywords] = useState([]);
+  const [editingKeywords, setEditingKeywords] = useState(false);
+  const [kwDraft, setKwDraft] = useState([]);
+  const [newKw, setNewKw] = useState("");
+  const [kwSaving, setKwSaving] = useState(false);
+  const [vcfPreview, setVcfPreview] = useState(null);
+  const [vcfLoading, setVcfLoading] = useState(false);
 
   useEffect(() => {
     loadInbox();
     loadCustomers();
+    loadKeywords();
   }, []);
 
   const loadInbox = async () => {
@@ -76,10 +84,68 @@ const EmailInboxPage = () => {
   const handleArchive = async (emailId) => {
     try {
       await api.delete(`/imap/inbox/${emailId}`);
-      toast.success("E-Mail archiviert");
+      toast.success("E-Mail aus Liste entfernt");
       setEmails(emails.filter(e => e.id !== emailId));
     } catch (err) {
-      toast.error("Fehler beim Archivieren");
+      toast.error("Fehler beim Entfernen");
+    }
+  };
+
+  const handlePermanentDelete = async (emailId) => {
+    try {
+      await api.delete(`/imap/inbox/${emailId}/permanent`);
+      toast.success("E-Mail komplett gelöscht (auch vom Server)");
+      setEmails(emails.filter(e => e.id !== emailId));
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
+  const loadKeywords = async () => {
+    try {
+      const res = await api.get("/imap/keywords");
+      setKeywords(res.data);
+    } catch {}
+  };
+
+  const saveKeywords = async () => {
+    setKwSaving(true);
+    try {
+      await api.put("/imap/keywords", { keywords: kwDraft.filter(k => k.trim()) });
+      setKeywords(kwDraft.filter(k => k.trim()));
+      setEditingKeywords(false);
+      toast.success("Schlüsselwörter gespeichert");
+    } catch { toast.error("Fehler beim Speichern"); }
+    finally { setKwSaving(false); }
+  };
+
+  const handleParseVcf = async (attId) => {
+    setVcfLoading(true);
+    try {
+      const res = await api.post(`/imap/parse-vcf/${attId}`);
+      setVcfPreview(res.data);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "VCF konnte nicht gelesen werden");
+    } finally { setVcfLoading(false); }
+  };
+
+  const handleCreateContactFromVcf = async () => {
+    if (!vcfPreview?.contact) return;
+    const c = vcfPreview.contact;
+    try {
+      await api.post("/customers", {
+        name: c.name || "",
+        email: c.email || "",
+        phone: c.phone || "",
+        address: c.address || "",
+        company: c.firma || "",
+        notes: c.rolle ? `Rolle: ${c.rolle}` : "",
+      });
+      toast.success(`Kontakt "${c.name}" angelegt`);
+      setVcfPreview(null);
+      loadCustomers();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Anlegen");
     }
   };
 
@@ -115,6 +181,7 @@ const EmailInboxPage = () => {
   const filtered = emails.filter(e => {
     if (filter === "ungelesen" && e.status !== "ungelesen") return false;
     if (filter === "bekannt" && e.classification !== "bekannt") return false;
+    if (filter === "anfrage" && e.classification !== "anfrage") return false;
     if (filter === "zugeordnet" && e.status !== "zugeordnet") return false;
     if (!search) return true;
     const s = search.toLowerCase();
@@ -177,6 +244,7 @@ const EmailInboxPage = () => {
           { key: "alle", label: `Alle (${emails.length})` },
           { key: "ungelesen", label: `Ungelesen (${unreadCount})` },
           { key: "bekannt", label: `Bekannt (${emails.filter(e => e.classification === "bekannt").length})` },
+          { key: "anfrage", label: `Anfrage (${emails.filter(e => e.classification === "anfrage").length})` },
           { key: "zugeordnet", label: `Zugeordnet (${emails.filter(e => e.status === "zugeordnet").length})` },
         ].map(f => (
           <button
@@ -192,7 +260,56 @@ const EmailInboxPage = () => {
             {f.label}
           </button>
         ))}
+        <button
+          onClick={() => { setKwDraft([...keywords]); setNewKw(""); setEditingKeywords(true); }}
+          className="p-1.5 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="Schlüsselwörter verwalten"
+          data-testid="btn-edit-keywords"
+        >
+          <Settings2 className="w-4 h-4" />
+        </button>
       </div>
+
+      {/* Keyword Editor */}
+      {editingKeywords && (
+        <Card className="p-4 mb-4 border-primary/30 bg-primary/5 animate-in fade-in slide-in-from-top-2 duration-200" data-testid="keyword-editor">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-1.5">
+              <Settings2 className="w-4 h-4" /> Schlüsselwörter für Anfrage-Erkennung
+            </h3>
+            <button onClick={() => setEditingKeywords(false)} className="p-1 hover:bg-muted rounded-sm"><X className="w-4 h-4" /></button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">E-Mails mit diesen Wörtern im Betreff/Text werden automatisch als "Anfrage" markiert.</p>
+          <div className="space-y-1.5 mb-3">
+            {kwDraft.map((kw, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  value={kw}
+                  onChange={(e) => { const u = [...kwDraft]; u[idx] = e.target.value; setKwDraft(u); }}
+                  className="flex-1 h-8 border rounded-sm px-3 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                  data-testid={`kw-input-${idx}`}
+                />
+                <button onClick={() => setKwDraft(kwDraft.filter((_, i) => i !== idx))} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-sm"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              value={newKw}
+              onChange={(e) => setNewKw(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && newKw.trim()) { setKwDraft([...kwDraft, newKw.trim()]); setNewKw(""); } }}
+              placeholder="Neues Schlüsselwort..."
+              className="flex-1 h-8 border border-dashed border-primary/40 rounded-sm px-3 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:outline-none"
+              data-testid="kw-new-input"
+            />
+            <button onClick={() => { if (newKw.trim()) { setKwDraft([...kwDraft, newKw.trim()]); setNewKw(""); } }} disabled={!newKw.trim()} className="h-8 px-3 text-xs font-medium bg-primary/10 text-primary rounded-sm hover:bg-primary/20 disabled:opacity-40 flex items-center gap-1" data-testid="kw-add-btn"><Plus className="w-3.5 h-3.5" /> Hinzufügen</button>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditingKeywords(false)}>Abbrechen</Button>
+            <Button size="sm" onClick={saveKeywords} disabled={kwSaving} data-testid="kw-save-btn">{kwSaving ? "Speichern..." : "Speichern"}</Button>
+          </div>
+        </Card>
+      )}
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -252,6 +369,12 @@ const EmailInboxPage = () => {
                           {mail.matched_anfragen?.length > 0 && (
                             <Badge className="bg-amber-100 text-amber-700 text-[10px]">Anfrage: {mail.matched_anfragen[0].name}</Badge>
                           )}
+                          {mail.classification === "anfrage" && !mail.matched_customer && !mail.matched_anfragen?.length && (
+                            <Badge className="bg-purple-100 text-purple-700 text-[10px]">Anfrage erkannt</Badge>
+                          )}
+                          {mail.has_vcf && (
+                            <Badge className="bg-teal-100 text-teal-700 text-[10px]">VCF</Badge>
+                          )}
                           {isAssigned && (
                             <Badge className="bg-green-100 text-green-700 text-[10px]">zugeordnet</Badge>
                           )}
@@ -269,8 +392,16 @@ const EmailInboxPage = () => {
                       <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(mail.fetched_at)}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleArchive(mail.id); }}
+                        className="p-1.5 rounded-sm text-muted-foreground/40 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                        title="Hier löschen"
+                        data-testid={`btn-hide-${mail.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handlePermanentDelete(mail.id); }}
                         className="p-1.5 rounded-sm text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        title="Löschen"
+                        title="Komplett löschen"
                         data-testid={`btn-delete-${mail.id}`}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -322,16 +453,26 @@ const EmailInboxPage = () => {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {mail.attachments.map(att => (
-                            <button
-                              key={att.id}
-                              onClick={() => handleViewAttachment(att.id)}
-                              className="flex items-center gap-2 px-3 py-2 bg-white border rounded-sm hover:bg-muted/50 transition-colors text-sm"
-                              data-testid={`btn-attachment-${att.id}`}
-                            >
-                              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span className="truncate max-w-[200px]">{att.filename}</span>
-                              <span className="text-xs text-muted-foreground">({formatSize(att.size)})</span>
-                            </button>
+                            <div key={att.id} className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleViewAttachment(att.id)}
+                                className="flex items-center gap-2 px-3 py-2 bg-white border rounded-sm hover:bg-muted/50 transition-colors text-sm"
+                                data-testid={`btn-attachment-${att.id}`}
+                              >
+                                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                                <span className="truncate max-w-[200px]">{att.filename}</span>
+                                <span className="text-xs text-muted-foreground">({formatSize(att.size)})</span>
+                              </button>
+                              {att.filename.toLowerCase().endsWith(".vcf") && (
+                                <button
+                                  onClick={() => handleParseVcf(att.id)}
+                                  className="px-2 py-2 bg-teal-50 border border-teal-200 rounded-sm hover:bg-teal-100 transition-colors text-xs font-medium text-teal-700"
+                                  data-testid={`btn-vcf-${att.id}`}
+                                >
+                                  <UserCheck className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -355,15 +496,26 @@ const EmailInboxPage = () => {
                         >
                           <Users className="w-3.5 h-3.5 mr-1.5" /> Kunde zuordnen
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => handleArchive(mail.id)}
-                          data-testid={`btn-archive-${mail.id}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Löschen
-                        </Button>
+                        <div className="ml-auto flex gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-orange-600 hover:bg-orange-50"
+                            onClick={() => handleArchive(mail.id)}
+                            data-testid={`btn-hide-open-${mail.id}`}
+                          >
+                            <X className="w-3.5 h-3.5 mr-1.5" /> Hier löschen
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10"
+                            onClick={() => handlePermanentDelete(mail.id)}
+                            data-testid={`btn-perm-delete-${mail.id}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Komplett löschen
+                          </Button>
+                        </div>
                       </div>
                     )}
                     {isAssigned && (
@@ -372,15 +524,14 @@ const EmailInboxPage = () => {
                           <ArrowRight className="w-3.5 h-3.5" />
                           Zugeordnet: {mail.assigned_type === "anfrage" ? "Neue Anfrage erstellt" : "Kunde zugewiesen"}
                         </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => handleArchive(mail.id)}
-                          data-testid={`btn-delete-assigned-${mail.id}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Löschen
-                        </Button>
+                        <div className="flex gap-1.5">
+                          <Button variant="outline" size="sm" className="text-orange-600 hover:bg-orange-50" onClick={() => handleArchive(mail.id)}>
+                            <X className="w-3.5 h-3.5 mr-1.5" /> Hier löschen
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => handlePermanentDelete(mail.id)}>
+                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Komplett löschen
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -459,6 +610,39 @@ const EmailInboxPage = () => {
                 <p className="text-sm text-muted-foreground">Vorschau nicht verfügbar. Bitte herunterladen.</p>
               </div>
             )}
+          </div>
+        </Modal>
+      )}
+      {/* VCF Contact Preview */}
+      {vcfPreview && (
+        <Modal isOpen onClose={() => setVcfPreview(null)} title="Kontakt aus VCF" size="md">
+          <div className="space-y-4">
+            {vcfPreview.already_exists && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800">Kontakt bereits vorhanden!</p>
+                  {vcfPreview.existing_customer && <p className="text-xs text-amber-700">Kunde: {vcfPreview.existing_customer.name} ({vcfPreview.existing_customer.email})</p>}
+                  {vcfPreview.existing_anfrage && <p className="text-xs text-amber-700">Anfrage: {vcfPreview.existing_anfrage.name} ({vcfPreview.existing_anfrage.email})</p>}
+                </div>
+              </div>
+            )}
+            <div className="bg-muted/30 rounded-sm p-4 space-y-2">
+              {vcfPreview.contact.name && <div className="flex gap-2"><span className="text-xs font-medium text-muted-foreground w-16">Name:</span><span className="text-sm font-semibold">{vcfPreview.contact.name}</span></div>}
+              {vcfPreview.contact.email && <div className="flex gap-2"><span className="text-xs font-medium text-muted-foreground w-16">E-Mail:</span><span className="text-sm">{vcfPreview.contact.email}</span></div>}
+              {vcfPreview.contact.phone && <div className="flex gap-2"><span className="text-xs font-medium text-muted-foreground w-16">Telefon:</span><span className="text-sm">{vcfPreview.contact.phone}</span></div>}
+              {vcfPreview.contact.address && <div className="flex gap-2"><span className="text-xs font-medium text-muted-foreground w-16">Adresse:</span><span className="text-sm">{vcfPreview.contact.address}</span></div>}
+              {vcfPreview.contact.firma && <div className="flex gap-2"><span className="text-xs font-medium text-muted-foreground w-16">Firma:</span><span className="text-sm">{vcfPreview.contact.firma}</span></div>}
+              {vcfPreview.contact.rolle && <div className="flex gap-2"><span className="text-xs font-medium text-muted-foreground w-16">Rolle:</span><span className="text-sm">{vcfPreview.contact.rolle}</span></div>}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setVcfPreview(null)}>Schließen</Button>
+              {!vcfPreview.already_exists && (
+                <Button size="sm" onClick={handleCreateContactFromVcf} data-testid="btn-create-vcf-contact">
+                  <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Kontakt anlegen
+                </Button>
+              )}
+            </div>
           </div>
         </Modal>
       )}
