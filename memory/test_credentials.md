@@ -1,18 +1,15 @@
 # Test Credentials
 
-## Admin Login
+## Admin
 - Username: admin
 - Password: admin123
+- Role: admin (Vollzugriff)
 
-## SMTP (E-Mail Versand)
-- Host: secure.emailsrvr.com
-- Port: 465
-- User: service24@tischlerei-graupner.de
-- Password: Service.24
-- From: service24@tischlerei-graupner.de
+## Buchhalterin (Heike Bolanka)
+- Username: h.bolanka
+- Password: Buch$2026!Grau
+- Role: buchhaltung (eingeschränkt: Buchhaltung voll, Rechnungen/Aufträge/Kunden nur lesen + PDF, Mahnwesen)
 
-## IMAP (E-Mail Empfang / Posteingang)
-- Server: secure.emailsrvr.com
-- Port: 993
-- User: service24@tischlerei-graupner.de
+## E-Mail (SMTP/IMAP)
+- E-Mail: service24@tischlerei-graupner.de
 - Password: Service.24
