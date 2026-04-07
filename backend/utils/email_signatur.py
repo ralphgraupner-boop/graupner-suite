@@ -75,7 +75,7 @@ def wrap_email_body(content_html):
     """Wickelt den E-Mail-Inhalt mit der Standard-Signatur ein"""
     signature = get_email_signature_html()
     return f"""
-    <div style="font-family: Arial, Helvetica, sans-serif; max-width: 700px; color: #333;">
+    <div style="font-family: Arial, Helvetica, sans-serif; color: #333;">
         {content_html}
         {signature}
     </div>
