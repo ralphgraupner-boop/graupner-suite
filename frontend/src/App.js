@@ -20,6 +20,7 @@ import { WebhookDocPage } from "@/pages/WebhookDocPage";
 import { PortalsPage } from "@/pages/PortalsPage";
 import CustomerPortalPage from "@/pages/CustomerPortalPage";
 import { EinsaetzePage } from "@/pages/EinsaetzePage";
+import { EmailInboxPage } from "@/pages/EmailInboxPage";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -66,6 +67,7 @@ function App() {
               <Route path="/articles" element={<MainLayout onLogout={logout}><ArtikelPage /></MainLayout>} />
               <Route path="/services" element={<Navigate to="/articles" replace />} />
               <Route path="/email-log" element={<MainLayout onLogout={logout}><EmailLogPage /></MainLayout>} />
+              <Route path="/posteingang" element={<MainLayout onLogout={logout}><EmailInboxPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
               <Route path="/webhook" element={<MainLayout onLogout={logout}><WebhookDocPage /></MainLayout>} />
               <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />

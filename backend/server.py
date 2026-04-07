@@ -76,21 +76,19 @@ async def startup_event():
 
 
 async def imap_polling_loop():
-    """Background task: poll IMAP every 5 minutes if enabled"""
+    """Background task: poll IMAP every 30 minutes"""
     import asyncio
     from database import db as _db
     while True:
         try:
-            await asyncio.sleep(300)  # 5 minutes
+            await asyncio.sleep(1800)  # 30 minutes
             settings = await _db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
             if not settings.get("imap_enabled"):
-                continue
-            if not settings.get("imap_server") or not settings.get("imap_user") or not settings.get("imap_password"):
                 continue
             from routes.imap import fetch_imap_emails_internal
             count = await fetch_imap_emails_internal(settings)
             if count > 0:
-                logger.info(f"IMAP auto-poll: {count} neue Anfragen importiert")
+                logger.info(f"IMAP auto-poll: {count} neue E-Mails abgerufen")
         except Exception as e:
             logger.warning(f"IMAP polling error: {e}")
             await asyncio.sleep(60)

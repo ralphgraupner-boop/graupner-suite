@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, MailCheck, Share2, Wrench } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, MailCheck, Share2, Wrench, MailOpen } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/anfragen", icon: Inbox, label: "Anfragen" },
+  { path: "/posteingang", icon: MailOpen, label: "Posteingang" },
   { path: "/einsaetze", icon: Wrench, label: "Einsatzplanung" },
   { path: "/customers", icon: Users, label: "Kunden" },
   { path: "/quotes", icon: FileText, label: "Angebote" },
