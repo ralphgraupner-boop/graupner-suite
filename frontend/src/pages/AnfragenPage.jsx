@@ -167,10 +167,11 @@ const AnfragenPage = () => {
     }
   };
 
-  const STATUS_CYCLE = ["ungelesen", "zu_bearbeiten", "erledigt"];
-  const STATUS_LABELS = { ungelesen: "Ungelesen", zu_bearbeiten: "Zu bearbeiten", erledigt: "Erledigt" };
+  const STATUS_CYCLE = ["ungelesen", "gelesen", "zu_bearbeiten", "erledigt"];
+  const STATUS_LABELS = { ungelesen: "Ungelesen", gelesen: "Gelesen", zu_bearbeiten: "Zu bearbeiten", erledigt: "Erledigt" };
   const STATUS_COLORS = {
     ungelesen: "bg-red-500",
+    gelesen: "bg-blue-500",
     zu_bearbeiten: "bg-amber-500",
     erledigt: "bg-green-500",
   };
@@ -251,6 +252,7 @@ const AnfragenPage = () => {
         {[
           { key: "", label: "Alle", color: "" },
           { key: "ungelesen", label: `Ungelesen (${anfragen.filter(a => !a.bearbeitungsstatus || a.bearbeitungsstatus === "ungelesen").length})`, color: "bg-red-500" },
+          { key: "gelesen", label: `Gelesen (${anfragen.filter(a => a.bearbeitungsstatus === "gelesen").length})`, color: "bg-blue-500" },
           { key: "zu_bearbeiten", label: `Zu bearbeiten (${anfragen.filter(a => a.bearbeitungsstatus === "zu_bearbeiten").length})`, color: "bg-amber-500" },
           { key: "erledigt", label: `Erledigt (${anfragen.filter(a => a.bearbeitungsstatus === "erledigt").length})`, color: "bg-green-500" },
         ].map(f => (

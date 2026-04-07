@@ -1,0 +1,81 @@
+{
+  "summary": "Tested new features: Anfragen 'Gelesen' status cycle and EmailLogPage action buttons (Rückstandslos löschen, Neu bearbeiten, Adresse prüfen). All backend APIs pass (16/16 tests). Frontend features working correctly.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/email/log",
+        "issue": "Old email log entries missing 'id' field - data migration needed for DELETE to work on old entries",
+        "priority": "LOW"
+      }
+    ]
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "Backend: DELETE /api/email/log/{log_id} returns 404 for nonexistent log",
+    "Backend: DELETE /api/email/log/{log_id} requires authentication",
+    "Backend: POST /api/email/check-address returns correct structure (anfragen, kunden, found)",
+    "Backend: POST /api/email/check-address finds existing customer email",
+    "Backend: POST /api/email/check-address finds existing anfrage email",
+    "Backend: POST /api/email/check-address returns found=false for unknown email",
+    "Backend: POST /api/email/check-address returns 400 for empty email",
+    "Backend: POST /api/email/check-address requires authentication",
+    "Backend: POST /api/email/resend validates required fields (to_email, message)",
+    "Backend: POST /api/email/resend requires authentication",
+    "Backend: PUT /api/anfragen/{id}/status updates status to gelesen",
+    "Backend: Full status cycle works: ungelesen → gelesen → zu_bearbeiten → erledigt",
+    "Frontend: Anfragen page shows all 5 status filter buttons (Alle, Ungelesen, Gelesen, Zu bearbeiten, Erledigt)",
+    "Frontend: Gelesen filter button shows with blue dot and count",
+    "Frontend: Status dot on anfrage card cycles through colors: red → blue → amber → green",
+    "Frontend: EmailLogPage shows 11 email log entries with 3 action buttons each",
+    "Frontend: 'Adresse prüfen' button shows inline result (Kunde/Anfrage found)",
+    "Frontend: 'Neu bearbeiten' button opens modal with prefilled to_email and subject",
+    "Frontend: Resend modal has all required fields (An, Betreff, Nachricht, E-Mail senden)",
+    "Frontend: 'Rückstandslos löschen' button exists on each log entry"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_email_new_features.py",
+    "/app/test_reports/pytest/pytest_email_new_features.xml"
+  ],
+
+  "action_items": [
+    "OPTIONAL: Add migration script to add 'id' field to existing email_logs entries for DELETE to work on old data"
+  ],
+
+  "critical_code_review_comments": [
+    "Status cycle implementation is clean with STATUS_CYCLE array and STATUS_COLORS mapping",
+    "EmailLogPage correctly implements all 3 action buttons with proper data-testid attributes",
+    "Resend modal correctly prefills to_email and subject from original log entry",
+    "Check address API correctly searches both anfragen and customers collections"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_email_new_features.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (all features verified)"
+  },
+
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  },
+
+  "seed_data_creation": "Created and deleted TEST_Status_Cycle anfrage for testing status cycle",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "New features tested: 1) Anfragen status cycle with 'gelesen' status (ungelesen→gelesen→zu_bearbeiten→erledigt). Status filter buttons at data-testid='status-filter-{status}'. Status toggle button at data-testid='btn-status-{anfrage_id}'. 2) EmailLogPage action buttons: btn-check-{log_id}, btn-resend-{log_id}, btn-delete-log-{log_id}. Note: Old email log entries don't have 'id' field so testids show 'undefined'. Resend modal at data-testid='resend-modal' with fields resend-to-email, resend-subject, resend-message, btn-send-resend."
+}

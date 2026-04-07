@@ -37,6 +37,69 @@ async def get_email_log_for_doc(doc_type: str, doc_id: str, user=Depends(get_cur
     return logs
 
 
+@router.delete("/email/log/{log_id}")
+async def delete_email_log(log_id: str, user=Depends(get_current_user)):
+    """Protokolleintrag rückstandslos löschen"""
+    result = await db.email_logs.delete_one({"id": log_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Protokolleintrag nicht gefunden")
+    return {"message": "Protokolleintrag gelöscht"}
+
+
+@router.post("/email/check-address")
+async def check_email_address(body: dict, user=Depends(get_current_user)):
+    """Prüfen ob eine E-Mail-Adresse in Anfragen oder Kunden existiert"""
+    email = body.get("email", "").strip().lower()
+    if not email:
+        raise HTTPException(400, "E-Mail-Adresse erforderlich")
+    results = {"anfragen": [], "kunden": []}
+    anfragen = await db.anfragen.find(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1}
+    ).to_list(10)
+    results["anfragen"] = anfragen
+    kunden = await db.customers.find(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1}
+    ).to_list(10)
+    results["kunden"] = kunden
+    results["found"] = len(anfragen) > 0 or len(kunden) > 0
+    return results
+
+
+@router.post("/email/resend")
+async def resend_email(body: dict, user=Depends(get_current_user)):
+    """E-Mail erneut versenden (bearbeitet)"""
+    to_email = body.get("to_email", "")
+    subject = body.get("subject", "")
+    message = body.get("message", "")
+    if not to_email or not message:
+        raise HTTPException(400, "E-Mail-Adresse und Nachricht erforderlich")
+
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    company = settings.get("company_name", "Tischlerei Graupner")
+
+    body_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <p>{message.replace(chr(10), '<br>')}</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
+        <p style="font-size: 12px; color: #64748B;">
+            {company}<br>
+            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
+            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
+        </p>
+    </div>
+    """
+
+    try:
+        send_email(to_email=to_email, subject=subject, body_html=body_html)
+        await log_email(to_email, subject, "resend", "", "", "", "gesendet")
+        return {"message": f"E-Mail an {to_email} gesendet"}
+    except Exception as e:
+        logger.error(f"Resend failed: {e}")
+        raise HTTPException(500, f"E-Mail-Versand fehlgeschlagen: {str(e)}")
+
+
 @router.post("/email/document/{doc_type}/{doc_id}")
 async def email_document(doc_type: str, doc_id: str, req: EmailRequest, user=Depends(get_current_user)):
     """Dokument per E-Mail versenden"""
