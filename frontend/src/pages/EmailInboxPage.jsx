@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Inbox, RefreshCw, Mail, Paperclip, UserPlus, Users, Trash2, ChevronDown, ChevronUp, Eye, Download, X, Search, MailOpen, ArrowRight, Settings2, Plus, FileText, UserCheck, AlertCircle } from "lucide-react";
+import { Inbox, RefreshCw, Mail, Paperclip, UserPlus, Users, Trash2, ChevronDown, ChevronUp, Eye, Download, X, Search, MailOpen, ArrowRight, Settings2, Plus, FileText, UserCheck, AlertCircle, Reply, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
@@ -22,6 +22,9 @@ const EmailInboxPage = () => {
   const [kwSaving, setKwSaving] = useState(false);
   const [vcfPreview, setVcfPreview] = useState(null);
   const [vcfLoading, setVcfLoading] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [replyForm, setReplyForm] = useState({ subject: "", message: "" });
+  const [replySending, setReplySending] = useState(false);
 
   useEffect(() => {
     loadInbox();
@@ -100,6 +103,37 @@ const EmailInboxPage = () => {
       toast.error("Fehler beim Löschen");
     }
   };
+
+  const openReply = (email) => {
+    const fromAddr = email.from_email || email.from || "";
+    const subj = email.subject || "";
+    const reSubject = subj.startsWith("Re:") ? subj : `Re: ${subj}`;
+    setReplyTo({ ...email, reply_to: fromAddr });
+    setReplyForm({ subject: reSubject, message: "" });
+  };
+
+  const handleSendReply = async () => {
+    if (!replyForm.message.trim()) {
+      toast.error("Bitte Nachricht eingeben");
+      return;
+    }
+    setReplySending(true);
+    try {
+      await api.post("/email/resend", {
+        to_email: replyTo.reply_to,
+        subject: replyForm.subject,
+        message: replyForm.message,
+      });
+      toast.success(`Antwort an ${replyTo.reply_to} gesendet`);
+      setReplyTo(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Senden");
+    } finally {
+      setReplySending(false);
+    }
+  };
+
+
 
   const loadKeywords = async () => {
     try {
@@ -391,6 +425,14 @@ const EmailInboxPage = () => {
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(mail.fetched_at)}</span>
                       <button
+                        onClick={(e) => { e.stopPropagation(); openReply(mail); }}
+                        className="p-1.5 rounded-sm text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors"
+                        title="Antworten"
+                        data-testid={`btn-reply-${mail.id}`}
+                      >
+                        <Reply className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={(e) => { e.stopPropagation(); handleArchive(mail.id); }}
                         className="p-1.5 rounded-sm text-muted-foreground/40 hover:text-orange-600 hover:bg-orange-50 transition-colors"
                         title="Hier löschen"
@@ -500,6 +542,15 @@ const EmailInboxPage = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="text-primary hover:bg-primary/10"
+                            onClick={() => openReply(mail)}
+                            data-testid={`btn-reply-open-${mail.id}`}
+                          >
+                            <Reply className="w-3.5 h-3.5 mr-1.5" /> Antworten
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="text-orange-600 hover:bg-orange-50"
                             onClick={() => handleArchive(mail.id)}
                             data-testid={`btn-hide-open-${mail.id}`}
@@ -525,6 +576,9 @@ const EmailInboxPage = () => {
                           Zugeordnet: {mail.assigned_type === "anfrage" ? "Neue Anfrage erstellt" : "Kunde zugewiesen"}
                         </p>
                         <div className="flex gap-1.5">
+                          <Button variant="outline" size="sm" className="text-primary hover:bg-primary/10" onClick={() => openReply(mail)} data-testid={`btn-reply-assigned-${mail.id}`}>
+                            <Reply className="w-3.5 h-3.5 mr-1.5" /> Antworten
+                          </Button>
                           <Button variant="outline" size="sm" className="text-orange-600 hover:bg-orange-50" onClick={() => handleArchive(mail.id)}>
                             <X className="w-3.5 h-3.5 mr-1.5" /> Hier löschen
                           </Button>
@@ -642,6 +696,44 @@ const EmailInboxPage = () => {
                   <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Kontakt anlegen
                 </Button>
               )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Reply Modal */}
+      {replyTo && (
+        <Modal isOpen onClose={() => setReplyTo(null)} title="Antworten" size="lg">
+          <div className="space-y-4" data-testid="reply-modal">
+            <div className="bg-muted/30 rounded-sm p-3">
+              <p className="text-xs text-muted-foreground">Antwort an:</p>
+              <p className="text-sm font-medium">{replyTo.reply_to}</p>
+              {replyTo.subject && <p className="text-xs text-muted-foreground mt-1">Betreff: {replyTo.subject}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Betreff</label>
+              <Input
+                value={replyForm.subject}
+                onChange={(e) => setReplyForm({ ...replyForm, subject: e.target.value })}
+                data-testid="reply-subject"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Nachricht</label>
+              <Textarea
+                value={replyForm.message}
+                onChange={(e) => setReplyForm({ ...replyForm, message: e.target.value })}
+                placeholder="Ihre Antwort..."
+                rows={8}
+                data-testid="reply-message"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setReplyTo(null)}>Abbrechen</Button>
+              <Button onClick={handleSendReply} disabled={replySending || !replyForm.message.trim()} data-testid="btn-send-reply">
+                <Send className="w-4 h-4 mr-1.5" />
+                {replySending ? "Sende..." : "Antwort senden"}
+              </Button>
             </div>
           </div>
         </Modal>
