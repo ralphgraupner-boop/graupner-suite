@@ -6,7 +6,7 @@ import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
-const InvoicesPage = () => {
+const InvoicesPage = ({ readOnly = false }) => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewInvoice, setPreviewInvoice] = useState(null);
@@ -203,7 +203,7 @@ const InvoicesPage = () => {
           <h1 className="text-2xl lg:text-4xl font-bold">Rechnungen</h1>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{invoices.length} Rechnungen gesamt</p>
         </div>
-        <Button data-testid="btn-new-invoice" onClick={() => navigate("/invoices/new")} size="sm" className="lg:h-10 lg:px-4">
+        <Button data-testid="btn-new-invoice" onClick={() => navigate("/invoices/new")} size="sm" className={`lg:h-10 lg:px-4 ${readOnly ? "hidden" : ""}`}>
           <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
           <span className="hidden sm:inline">Neue Rechnung</span>
           <span className="sm:hidden">Neu</span>
@@ -386,12 +386,12 @@ const InvoicesPage = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
-                  <button data-testid={`btn-edit-invoice-${invoice.id}`} onClick={(e) => handleEdit(invoice, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>
+                  {!readOnly && <button data-testid={`btn-edit-invoice-${invoice.id}`} onClick={(e) => handleEdit(invoice, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>}
                   <button onClick={(e) => handleDownloadPDF(invoice.id, invoice.invoice_number, e)} className="p-2 hover:bg-muted rounded-sm"><Download className="w-4 h-4" /></button>
-                  {invoice.status === "Offen" && (
+                  {!readOnly && invoice.status === "Offen" && (
                     <button onClick={(e) => handleMarkPaid(invoice.id, e)} className="p-2 hover:bg-green-100 text-green-700 rounded-sm"><CheckCircle className="w-4 h-4" /></button>
                   )}
-                  <button onClick={(e) => handleDelete(invoice.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"><Trash2 className="w-4 h-4" /></button>
+                  {!readOnly && <button onClick={(e) => handleDelete(invoice.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"><Trash2 className="w-4 h-4" /></button>}
                 </div>
               </Card>
             ))}
@@ -437,14 +437,14 @@ const InvoicesPage = () => {
                     <td className="p-4">{getStatusBadge(invoice.status)}</td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
-                        <button
+                        {!readOnly && <button
                           data-testid={`btn-edit-invoice-${invoice.id}`}
                           onClick={(e) => handleEdit(invoice, e)}
                           className="p-2 hover:bg-muted rounded-sm"
                           title="Bearbeiten"
                         >
                           <Edit className="w-4 h-4" />
-                        </button>
+                        </button>}
                         <button
                           data-testid={`btn-download-invoice-${invoice.id}`}
                           onClick={(e) => handleDownloadPDF(invoice.id, invoice.invoice_number, e)}
@@ -453,7 +453,7 @@ const InvoicesPage = () => {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        {invoice.status === "Offen" && (
+                        {!readOnly && invoice.status === "Offen" && (
                           <button
                             data-testid={`btn-mark-paid-${invoice.id}`}
                             onClick={(e) => handleMarkPaid(invoice.id, e)}
@@ -463,14 +463,14 @@ const InvoicesPage = () => {
                             <CheckCircle className="w-4 h-4" />
                           </button>
                         )}
-                        <button
+                        {!readOnly && <button
                           data-testid={`btn-delete-invoice-${invoice.id}`}
                           onClick={(e) => handleDelete(invoice.id, e)}
                           className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"
                           title="Löschen"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>}
                       </div>
                     </td>
                   </tr>

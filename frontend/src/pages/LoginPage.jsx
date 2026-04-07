@@ -20,7 +20,7 @@ const LoginPage = ({ onLogin }) => {
         ? { username, password, company_name: companyName }
         : { username, password };
       const res = await axios.post(`${API}${endpoint}`, data);
-      onLogin(res.data.token, res.data.username);
+      onLogin(res.data.token, { username: res.data.username, role: res.data.role });
       toast.success(isRegister ? "Registrierung erfolgreich!" : "Willkommen zurück!");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Fehler bei der Anmeldung");

@@ -27,7 +27,7 @@ async def register(user: UserCreate):
     await db.users.insert_one(user_doc)
 
     token = jwt.encode(
-        {"username": user.username, "exp": datetime.now(timezone.utc).timestamp() + 86400 * 30},
+        {"username": user.username, "role": user.role, "exp": datetime.now(timezone.utc).timestamp() + 86400 * 30},
         JWT_SECRET,
         algorithm="HS256"
     )
@@ -57,7 +57,7 @@ async def login(user: UserLogin):
         raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
 
     token = jwt.encode(
-        {"username": db_user["username"], "exp": datetime.now(timezone.utc).timestamp() + 86400 * 30},
+        {"username": db_user["username"], "role": db_user.get("role", "admin"), "exp": datetime.now(timezone.utc).timestamp() + 86400 * 30},
         JWT_SECRET,
         algorithm="HS256"
     )
@@ -66,7 +66,10 @@ async def login(user: UserLogin):
 
 @router.get("/auth/me")
 async def get_me(user=Depends(get_current_user)):
-    return {"username": user["username"]}
+    db_user = await db.users.find_one({"username": user["username"]}, {"_id": 0, "password": 0})
+    if not db_user:
+        return {"username": user["username"], "role": user.get("role", "admin")}
+    return {"username": db_user["username"], "role": db_user.get("role", "admin"), "email": db_user.get("email", "")}
 
 
 @router.get("/users")

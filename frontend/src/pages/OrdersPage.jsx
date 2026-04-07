@@ -6,7 +6,7 @@ import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
-const OrdersPage = () => {
+const OrdersPage = ({ readOnly = false }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewOrder, setPreviewOrder] = useState(null);
@@ -153,14 +153,14 @@ const OrdersPage = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
-                  <button data-testid={`btn-edit-order-${order.id}`} onClick={(e) => handleEdit(order, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>
+                  {!readOnly && <button data-testid={`btn-edit-order-${order.id}`} onClick={(e) => handleEdit(order, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>}
                   <button onClick={(e) => handleDownloadPDF(order.id, order.order_number, e)} className="p-2 hover:bg-muted rounded-sm"><Download className="w-4 h-4" /></button>
-                  {order.status !== "Abgerechnet" && (
+                  {!readOnly && order.status !== "Abgerechnet" && (
                     <button onClick={(e) => handleCreateInvoice(order.id, e)} className="p-2 hover:bg-primary/10 text-primary rounded-sm"><Receipt className="w-4 h-4" /></button>
                   )}
-                  <button data-testid={`btn-delete-order-${order.id}`} onClick={(e) => handleDelete(order.id, e)} className={`p-2 rounded-sm transition-colors ${confirmDeleteId === order.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`} title={confirmDeleteId === order.id ? "Nochmal klicken" : "Löschen"}>
+                  {!readOnly && <button data-testid={`btn-delete-order-${order.id}`} onClick={(e) => handleDelete(order.id, e)} className={`p-2 rounded-sm transition-colors ${confirmDeleteId === order.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`} title={confirmDeleteId === order.id ? "Nochmal klicken" : "Löschen"}>
                     {confirmDeleteId === order.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
-                  </button>
+                  </button>}
                 </div>
               </Card>
             ))}
@@ -200,14 +200,14 @@ const OrdersPage = () => {
                     <td className="p-4">{getStatusBadge(order.status)}</td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
-                        <button
+                        {!readOnly && <button
                           data-testid={`btn-edit-order-${order.id}`}
                           onClick={(e) => handleEdit(order, e)}
                           className="p-2 hover:bg-muted rounded-sm"
                           title="Bearbeiten"
                         >
                           <Edit className="w-4 h-4" />
-                        </button>
+                        </button>}
                         <button
                           data-testid={`btn-download-order-${order.id}`}
                           onClick={(e) => handleDownloadPDF(order.id, order.order_number, e)}
@@ -216,7 +216,7 @@ const OrdersPage = () => {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        {order.status !== "Abgerechnet" && (
+                        {!readOnly && order.status !== "Abgerechnet" && (
                           <button
                             data-testid={`btn-create-invoice-${order.id}`}
                             onClick={(e) => handleCreateInvoice(order.id, e)}
@@ -226,14 +226,14 @@ const OrdersPage = () => {
                             <Receipt className="w-4 h-4" />
                           </button>
                         )}
-                        <button
+                        {!readOnly && <button
                           data-testid={`btn-delete-order-${order.id}`}
                           onClick={(e) => handleDelete(order.id, e)}
                           className={`p-2 rounded-sm transition-colors ${confirmDeleteId === order.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
                           title={confirmDeleteId === order.id ? "Nochmal klicken zum Löschen" : "Löschen"}
                         >
                           {confirmDeleteId === order.id ? <span className="text-xs font-bold px-1">Löschen?</span> : <Trash2 className="w-4 h-4" />}
-                        </button>
+                        </button>}
                       </div>
                     </td>
                   </tr>

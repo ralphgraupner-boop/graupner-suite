@@ -7,7 +7,7 @@ import { PortalButtons } from "@/components/PortalButtons";
 import { api, API } from "@/lib/api";
 import { CATEGORIES, CUSTOMER_STATUSES } from "@/lib/constants";
 
-const CustomersPage = () => {
+const CustomersPage = ({ readOnly = false }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -65,7 +65,7 @@ const CustomersPage = () => {
           <h1 className="text-2xl lg:text-4xl font-bold">Kunden</h1>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{customers.length} Kunden gesamt</p>
         </div>
-        <Button
+        {!readOnly && <Button
           data-testid="btn-new-customer"
           size="sm"
           className="lg:h-10 lg:px-4"
@@ -77,7 +77,7 @@ const CustomersPage = () => {
           <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
           <span className="hidden sm:inline">Neuer Kunde</span>
           <span className="sm:hidden">Neu</span>
-        </Button>
+        </Button>}
       </div>
 
       <Card className="p-3 lg:p-4 mb-4 lg:mb-6">
@@ -198,22 +198,22 @@ const CustomersPage = () => {
                   </div>
                 )}
                 <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <button
+                  {!readOnly && <button
                     data-testid={`btn-edit-customer-${customer.id}`}
                     onClick={() => { setEditCustomer(customer); setShowModal(true); }}
                     className="p-2 hover:bg-muted rounded-sm"
                     title="Bearbeiten"
                   >
                     <Edit className="w-4 h-4" />
-                  </button>
-                  <button
+                  </button>}
+                  {!readOnly && <button
                     data-testid={`btn-delete-customer-${customer.id}`}
                     onClick={() => handleDelete(customer.id)}
                     className={`p-2 rounded-sm transition-colors ${confirmDeleteId === customer.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
                     title={confirmDeleteId === customer.id ? "Nochmal klicken" : "Löschen"}
                   >
                     {confirmDeleteId === customer.id ? <span className="text-xs font-bold">Löschen?</span> : <Trash2 className="w-4 h-4" />}
-                  </button>
+                  </button>}
                 </div>
                 <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
               </div>
