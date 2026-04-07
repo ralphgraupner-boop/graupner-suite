@@ -385,7 +385,7 @@ const EmailInboxPage = () => {
                           )}
                         </div>
                         <p className={`text-sm truncate ${isUnread ? "font-semibold" : ""}`}>{mail.subject || "(Kein Betreff)"}</p>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{mail.body?.substring(0, 120)}...</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3 whitespace-pre-line">{mail.body?.substring(0, 300)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
