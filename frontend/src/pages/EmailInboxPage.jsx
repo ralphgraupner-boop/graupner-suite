@@ -261,6 +261,14 @@ const EmailInboxPage = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(mail.fetched_at)}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleArchive(mail.id); }}
+                        className="p-1.5 rounded-sm text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Löschen"
+                        data-testid={`btn-delete-${mail.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                     </div>
                   </div>
