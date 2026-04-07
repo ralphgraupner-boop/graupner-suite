@@ -5,6 +5,7 @@ from database import db, logger
 from auth import get_current_user
 from utils import send_email
 from utils.pdf_generator import generate_document_pdf, generate_dunning_pdf
+from utils.email_signatur import wrap_email_body, get_email_signature_html, get_brief_signatur_html
 
 router = APIRouter()
 
@@ -76,20 +77,7 @@ async def resend_email(body: dict, user=Depends(get_current_user)):
     if not to_email or not message:
         raise HTTPException(400, "E-Mail-Adresse und Nachricht erforderlich")
 
-    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
-    company = settings.get("company_name", "Tischlerei Graupner")
-
-    body_html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <p>{message.replace(chr(10), '<br>')}</p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
-        <p style="font-size: 12px; color: #64748B;">
-            {company}<br>
-            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
-            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
-        </p>
-    </div>
-    """
+    body_html = wrap_email_body(f"<p>{message.replace(chr(10), '<br>')}</p>")
 
     try:
         send_email(to_email=to_email, subject=subject, body_html=body_html)
@@ -119,22 +107,15 @@ async def email_document(doc_type: str, doc_id: str, req: EmailRequest, user=Dep
 
     custom_msg = f"<p>{req.message}</p>" if req.message else ""
 
-    body_html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #14532D;">{doc_label} {doc_number}</h2>
+    email_content = f"""
+        <h2 style="color: #003366;">{doc_label} {doc_number}</h2>
         <p>Sehr geehrte Damen und Herren,</p>
         {custom_msg if custom_msg else f"<p>anbei erhalten Sie {doc_label} Nr. {doc_number}.</p>"}
         <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
         <br>
-        <p>Mit freundlichen Grüßen<br><strong>{company_name}</strong></p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
-        <p style="font-size: 12px; color: #64748B;">
-            {company_name}<br>
-            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
-            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
-        </p>
-    </div>
+        <p>Mit freundlichen Grüßen</p>
     """
+    body_html = wrap_email_body(email_content)
 
     try:
         send_email(
@@ -171,15 +152,14 @@ async def email_dunning(invoice_id: str, req: EmailRequest, user=Depends(get_cur
 
     custom_msg = f"<p>{req.message}</p>" if req.message else ""
 
-    body_html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: {'#DC2626' if level >= 2 else '#14532D'};">{level_label} zu Rechnung {invoice_number}</h2>
+    email_content = f"""
+        <h2 style="color: {'#DC2626' if level >= 2 else '#003366'};">{level_label} zu Rechnung {invoice_number}</h2>
         <p>Sehr geehrte Damen und Herren,</p>
         {custom_msg if custom_msg else f"<p>anbei erhalten Sie eine {level_label} zu Rechnung Nr. {invoice_number}.</p>"}
         <br>
-        <p>Mit freundlichen Grüßen<br><strong>{company_name}</strong></p>
-    </div>
+        <p>Mit freundlichen Grüßen</p>
     """
+    body_html = wrap_email_body(email_content)
 
     try:
         send_email(
@@ -212,23 +192,16 @@ async def send_followup_email(quote_id: str, req: EmailRequest, user=Depends(get
 
     custom_msg = f"<p>{req.message}</p>" if req.message else ""
 
-    body_html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <h2 style="color: #14532D;">Ihr Angebot {quote_number}</h2>
+    email_content = f"""
+        <h2 style="color: #003366;">Ihr Angebot {quote_number}</h2>
         <p>Sehr geehrte Damen und Herren,</p>
         {custom_msg if custom_msg else "<p>vor einiger Zeit haben wir Ihnen unser Angebot Nr. " + quote_number + " zugesandt. Gerne möchten wir nachfragen, ob Sie noch Interesse haben oder ob wir Ihnen weiterhelfen können.</p>"}
         <p>Zur Erinnerung finden Sie das Angebot nochmals anbei.</p>
         <p>Wir freuen uns auf Ihre Rückmeldung!</p>
         <br>
-        <p>Mit freundlichen Grüßen<br><strong>{company_name}</strong></p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
-        <p style="font-size: 12px; color: #64748B;">
-            {company_name}<br>
-            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
-            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
-        </p>
-    </div>
+        <p>Mit freundlichen Grüßen</p>
     """
+    body_html = wrap_email_body(email_content)
 
     try:
         send_email(
@@ -317,17 +290,7 @@ async def send_anfrage_email(anfrage_id: str, body: dict, user=Depends(get_curre
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     company = settings.get("company_name", "Tischlerei Graupner")
 
-    body_html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px;">
-        <p>{message.replace(chr(10), '<br>')}</p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;">
-        <p style="font-size: 12px; color: #64748B;">
-            {company}<br>
-            {settings.get('address', '').replace(chr(10), '<br>') if settings.get('address') else ''}
-            {('<br>Tel: ' + settings['phone']) if settings.get('phone') else ''}
-        </p>
-    </div>
-    """
+    body_html = wrap_email_body(f"<p>{message.replace(chr(10), '<br>')}</p>")
 
     try:
         send_email(
@@ -340,3 +303,15 @@ async def send_anfrage_email(anfrage_id: str, body: dict, user=Depends(get_curre
     except Exception as e:
         logger.error(f"Anfrage-Email failed: {e}")
         raise HTTPException(500, f"E-Mail-Versand fehlgeschlagen: {str(e)}")
+
+
+
+# ===================== SIGNATUR-VORSCHAU =====================
+
+@router.get("/email/signatur-vorschau")
+async def get_signatur_vorschau(user=Depends(get_current_user)):
+    """HTML-Vorschau der E-Mail-Signatur und Briefvorlage"""
+    return {
+        "email_signatur": get_email_signature_html(),
+        "brief_signatur": get_brief_signatur_html(),
+    }

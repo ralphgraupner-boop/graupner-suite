@@ -392,6 +392,43 @@ const TextbausteineTab = () => {
 };
 
 
+// ==================== SIGNATUR VORSCHAU ====================
+const SignaturVorschau = () => {
+  const [signatur, setSignatur] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const loadSignatur = async () => {
+    try {
+      const res = await api.get("/email/signatur-vorschau");
+      setSignatur(res.data.email_signatur);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { if (open && !signatur) loadSignatur(); }, [open]);
+
+  return (
+    <Card className="p-4 lg:p-6" data-testid="signatur-vorschau-card">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between text-left"
+      >
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <FileText className="w-5 h-5 text-primary" /> E-Mail-Signatur & DSGVO-Fußzeile
+        </h3>
+        <span className="text-xs text-muted-foreground">{open ? "Schließen" : "Vorschau anzeigen"}</span>
+      </button>
+      {open && signatur && (
+        <div className="mt-4 border rounded-sm p-4 bg-white" data-testid="signatur-vorschau-html" dangerouslySetInnerHTML={{ __html: signatur }} />
+      )}
+      <p className="text-xs text-muted-foreground mt-2">
+        Diese Signatur wird automatisch an alle ausgehenden E-Mails angehängt (inkl. Dokumente, Mahnungen, Antworten).
+        Datei: <code className="text-primary">utils/email_signatur.py</code>
+      </p>
+    </Card>
+  );
+};
+
+
 // ==================== EMAIL TAB ====================
 // ==================== E-MAIL VORLAGEN MANAGER ====================
 const EmailVorlagenManager = () => {
@@ -626,6 +663,9 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
       </Card>
 
       <WiedervorlageSettings settings={settings} setSettings={setSettings} onSave={onSave} saving={saving} />
+
+      {/* E-Mail-Signatur Vorschau */}
+      <SignaturVorschau />
 
       {/* E-Mail-Vorlagen */}
       <EmailVorlagenManager />
