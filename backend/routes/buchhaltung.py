@@ -1,10 +1,31 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 from database import db, logger
 from auth import get_current_user
 import uuid
+import io
+import csv
 
 router = APIRouter()
+
+
+async def get_next_belegnummer():
+    """Fortlaufende Belegnummer generieren"""
+    year = datetime.now(timezone.utc).year
+    prefix = f"B-{year}-"
+    last = await db.buchungen.find(
+        {"belegnummer": {"$regex": f"^{prefix}"}},
+        {"belegnummer": 1, "_id": 0}
+    ).sort("belegnummer", -1).to_list(1)
+    if last and last[0].get("belegnummer"):
+        try:
+            num = int(last[0]["belegnummer"].split("-")[-1]) + 1
+        except ValueError:
+            num = 1
+    else:
+        num = 1
+    return f"{prefix}{num:04d}"
 
 
 # ===================== BUCHUNGEN (Transactions) =====================
@@ -44,9 +65,12 @@ async def get_buchungen(
 @router.post("/buchhaltung/buchungen")
 async def create_buchung(body: dict, user=Depends(get_current_user)):
     """Neue Buchung erstellen (Einnahme oder Ausgabe)"""
+    belegnummer = await get_next_belegnummer()
+
     buchung = {
         "id": str(uuid.uuid4()),
-        "typ": body.get("typ", "ausgabe"),  # einnahme | ausgabe
+        "belegnummer": body.get("belegnummer") or belegnummer,
+        "typ": body.get("typ", "ausgabe"),
         "kategorie": body.get("kategorie", ""),
         "beschreibung": body.get("beschreibung", ""),
         "betrag_netto": float(body.get("betrag_netto", 0)),
@@ -65,6 +89,32 @@ async def create_buchung(body: dict, user=Depends(get_current_user)):
         buchung["betrag_brutto"] = round(buchung["betrag_netto"] * (1 + buchung["mwst_satz"] / 100), 2)
     elif buchung["betrag_brutto"] and not buchung["betrag_netto"]:
         buchung["betrag_netto"] = round(buchung["betrag_brutto"] / (1 + buchung["mwst_satz"] / 100), 2)
+
+    # Plausibilitätsprüfung
+    warnungen = []
+    if not buchung["kategorie"]:
+        warnungen.append("Keine Kategorie angegeben")
+    if buchung["betrag_brutto"] > 50000:
+        warnungen.append(f"Ungewöhnlich hoher Betrag: {buchung['betrag_brutto']} EUR")
+    if buchung["betrag_brutto"] <= 0 and buchung["betrag_netto"] <= 0:
+        warnungen.append("Betrag ist 0 oder negativ")
+    try:
+        d = buchung["datum"][:10]
+        if d > datetime.now(timezone.utc).strftime("%Y-%m-%d"):
+            warnungen.append("Datum liegt in der Zukunft")
+    except Exception:
+        pass
+    # Duplikat-Prüfung
+    dup = await db.buchungen.find_one({
+        "betrag_brutto": buchung["betrag_brutto"],
+        "datum": {"$regex": f"^{buchung['datum'][:10]}"},
+        "typ": buchung["typ"],
+        "beschreibung": buchung["beschreibung"],
+    }, {"_id": 0, "id": 1})
+    if dup:
+        warnungen.append("Mögliche doppelte Buchung erkannt (gleicher Betrag, Datum, Beschreibung)")
+
+    buchung["warnungen"] = warnungen
 
     await db.buchungen.insert_one(buchung)
     buchung.pop("_id", None)
@@ -272,6 +322,7 @@ async def mark_invoice_paid(invoice_id: str, body: dict = {}, user=Depends(get_c
 
         buchung = {
             "id": str(uuid.uuid4()),
+            "belegnummer": await get_next_belegnummer(),
             "typ": "einnahme",
             "kategorie": "Rechnung",
             "beschreibung": f"Zahlung Rechnung {invoice.get('invoice_number', '')} - {invoice.get('customer_name', '')}",
@@ -307,3 +358,199 @@ async def undo_invoice_payment(invoice_id: str, user=Depends(get_current_user)):
     await db.buchungen.delete_many({"rechnung_id": invoice_id})
 
     return {"message": f"Zahlung für Rechnung {invoice.get('invoice_number', '')} rückgängig gemacht"}
+
+
+# ===================== KASSENBUCH =====================
+
+@router.get("/buchhaltung/kassenbuch")
+async def get_kassenbuch(
+    zeitraum: str = Query("monat", description="monat|quartal|jahr|alle"),
+    user=Depends(get_current_user)
+):
+    """Kassenbuch: Chronologische Auflistung mit laufendem Saldo"""
+    query = {}
+    now = datetime.now(timezone.utc)
+
+    if zeitraum == "monat":
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        query["datum"] = {"$gte": start.isoformat()}
+    elif zeitraum == "quartal":
+        quarter_month = ((now.month - 1) // 3) * 3 + 1
+        start = now.replace(month=quarter_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+        query["datum"] = {"$gte": start.isoformat()}
+    elif zeitraum == "jahr":
+        start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        query["datum"] = {"$gte": start.isoformat()}
+
+    buchungen = await db.buchungen.find(query, {"_id": 0}).sort("datum", 1).to_list(5000)
+
+    # Calculate running balance
+    saldo = 0
+    kassenbuch = []
+    for b in buchungen:
+        brutto = float(b.get("betrag_brutto", 0))
+        if b.get("typ") == "einnahme":
+            saldo += brutto
+        else:
+            saldo -= brutto
+        kassenbuch.append({
+            **b,
+            "saldo": round(saldo, 2),
+        })
+
+    return {"eintraege": kassenbuch, "endsaldo": round(saldo, 2)}
+
+
+# ===================== PLAUSIBILITÄTSPRÜFUNG =====================
+
+@router.post("/buchhaltung/plausibilitaet")
+async def check_plausibility(body: dict, user=Depends(get_current_user)):
+    """Plausibilitätsprüfung für eine Buchung VOR dem Speichern"""
+    warnungen = []
+    betrag = float(body.get("betrag_brutto", 0))
+    netto = float(body.get("betrag_netto", 0))
+    kategorie = body.get("kategorie", "")
+    datum = body.get("datum", "")
+    beschreibung = body.get("beschreibung", "")
+    typ = body.get("typ", "ausgabe")
+
+    if not kategorie:
+        warnungen.append({"typ": "warnung", "text": "Keine Kategorie angegeben"})
+    if betrag <= 0 and netto <= 0:
+        warnungen.append({"typ": "fehler", "text": "Betrag ist 0 oder negativ"})
+    if betrag > 50000:
+        warnungen.append({"typ": "warnung", "text": f"Ungewöhnlich hoher Betrag: {betrag:.2f} EUR"})
+    if not beschreibung.strip():
+        warnungen.append({"typ": "hinweis", "text": "Beschreibung fehlt"})
+
+    # Datum-Prüfung
+    try:
+        d_str = datum[:10] if datum else ""
+        if d_str and d_str > datetime.now(timezone.utc).strftime("%Y-%m-%d"):
+            warnungen.append({"typ": "warnung", "text": "Datum liegt in der Zukunft"})
+    except Exception:
+        pass
+
+    # Duplikat-Prüfung
+    if betrag > 0:
+        dup_query = {
+            "betrag_brutto": betrag,
+            "typ": typ,
+        }
+        if datum:
+            dup_query["datum"] = {"$regex": f"^{datum[:10]}"}
+        dups = await db.buchungen.find(dup_query, {"_id": 0, "id": 1, "beschreibung": 1, "belegnummer": 1}).to_list(5)
+        if dups:
+            dup_info = ", ".join([d.get("belegnummer", d.get("id", "")[:8]) for d in dups])
+            warnungen.append({"typ": "warnung", "text": f"Mögliche Doppelbuchung: {len(dups)} ähnliche Buchung(en) gefunden ({dup_info})"})
+
+    return {"warnungen": warnungen, "ok": len([w for w in warnungen if w["typ"] == "fehler"]) == 0}
+
+
+# ===================== CSV-EXPORT =====================
+
+@router.get("/buchhaltung/export-csv")
+async def export_csv(
+    zeitraum: str = Query("jahr"),
+    token: str = Query(None),
+    user=Depends(get_current_user)
+):
+    """Buchungen als CSV exportieren (für Steuerberater)"""
+    query = {}
+    now = datetime.now(timezone.utc)
+
+    if zeitraum == "monat":
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        query["datum"] = {"$gte": start.isoformat()}
+    elif zeitraum == "quartal":
+        quarter_month = ((now.month - 1) // 3) * 3 + 1
+        start = now.replace(month=quarter_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+        query["datum"] = {"$gte": start.isoformat()}
+    elif zeitraum == "jahr":
+        start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        query["datum"] = {"$gte": start.isoformat()}
+
+    buchungen = await db.buchungen.find(query, {"_id": 0}).sort("datum", 1).to_list(5000)
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";", quoting=csv.QUOTE_ALL)
+    writer.writerow(["Belegnr.", "Datum", "Typ", "Kategorie", "Beschreibung", "Kunde", "Netto EUR", "MwSt %", "MwSt EUR", "Brutto EUR", "Rechnungs-Nr.", "Notizen"])
+
+    for b in buchungen:
+        netto = float(b.get("betrag_netto", 0))
+        brutto = float(b.get("betrag_brutto", 0))
+        mwst_betrag = round(brutto - netto, 2)
+        datum_str = b.get("datum", "")[:10] if b.get("datum") else ""
+        writer.writerow([
+            b.get("belegnummer", ""),
+            datum_str,
+            "Einnahme" if b.get("typ") == "einnahme" else "Ausgabe",
+            b.get("kategorie", ""),
+            b.get("beschreibung", ""),
+            b.get("kunde", ""),
+            f"{netto:.2f}".replace(".", ","),
+            f"{float(b.get('mwst_satz', 0)):.0f}",
+            f"{mwst_betrag:.2f}".replace(".", ","),
+            f"{brutto:.2f}".replace(".", ","),
+            b.get("rechnung_nr", ""),
+            b.get("notizen", ""),
+        ])
+
+    output.seek(0)
+    filename = f"Buchhaltung_{zeitraum}_{now.strftime('%Y%m%d')}.csv"
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode("utf-8-sig")),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+# ===================== MONATSABSCHLUSS =====================
+
+@router.get("/buchhaltung/monatsabschluss")
+async def get_monatsabschluss(
+    jahr: int = Query(None),
+    user=Depends(get_current_user)
+):
+    """Monatsabschluss-Übersicht: Zusammenfassung pro Monat"""
+    if not jahr:
+        jahr = datetime.now(timezone.utc).year
+
+    start = f"{jahr}-01-01T00:00:00"
+    end = f"{jahr + 1}-01-01T00:00:00"
+    buchungen = await db.buchungen.find(
+        {"datum": {"$gte": start, "$lt": end}},
+        {"_id": 0}
+    ).to_list(5000)
+
+    monate = {}
+    for b in buchungen:
+        monat = b.get("datum", "")[:7]
+        if monat not in monate:
+            monate[monat] = {"einnahmen": 0, "ausgaben": 0, "ust": 0, "vst": 0, "anzahl": 0}
+        brutto = float(b.get("betrag_brutto", 0))
+        netto = float(b.get("betrag_netto", 0))
+        mwst = brutto - netto
+        if b.get("typ") == "einnahme":
+            monate[monat]["einnahmen"] += brutto
+            monate[monat]["ust"] += mwst
+        else:
+            monate[monat]["ausgaben"] += brutto
+            monate[monat]["vst"] += mwst
+        monate[monat]["anzahl"] += 1
+
+    result = []
+    for m in sorted(monate.keys()):
+        d = monate[m]
+        result.append({
+            "monat": m,
+            "einnahmen": round(d["einnahmen"], 2),
+            "ausgaben": round(d["ausgaben"], 2),
+            "gewinn": round(d["einnahmen"] - d["ausgaben"], 2),
+            "ust": round(d["ust"], 2),
+            "vst": round(d["vst"], 2),
+            "zahllast": round(d["ust"] - d["vst"], 2),
+            "anzahl": d["anzahl"],
+        })
+    return {"jahr": jahr, "monate": result}
+
