@@ -1,16 +1,142 @@
-<analysis>type === titleWysiwygDocumentEditor.jsxpositionssubtotalfinal_amountservice24@tischlerei-graupner.de/app/landing_page/index.htmlaxios.getapi.gethttps://handwerk-platform.preview.emergentagent.com
-/app/
-├── backend/
-│   ├── routes/
-│   │   ├── articles.py       # Updated with ID auto-generation
-│   │   ├── pdf.py            # PDF Generation
-│   │   ├── settings.py       # Extended settings
-│   ├── models.py             # Updated with Betreff, discount fields
-├── frontend/
-│   ├── src/
-│   │   ├── pages/            # SettingsPage.jsx (Refactored to Tabs)
-│   │   ├── components/       # WysiwygDocumentEditor.jsx (Massively expanded)
-└── memory/
-    ├── PRD.md
-    └── test_credentials.md
-onDragStartonDroparticle_numbertext_typebetreffbemerkungdiscount_percent/app/frontend/src/components/WysiwygDocumentEditor.jsx/app/frontend/src/pages/SettingsPage.jsx/app/frontend/src/components/TextTemplateSelect.jsx/app/backend/routes/articles.pyWysiwygDocumentEditor.jsxPositionsTableDocumentTotalsDocumentHeaderGET /api/pdf/{type}/{id}POST /api/text-templatesPOST /api/articlesalign-bottom/app/landing_page/index.html/app/memory/PRD.md/app/memory/test_credentials.mdWysiwygDocumentEditor.jsx</analysis>
+<analysis>**original_problem_statement**: Complete craftsman management software (Graupner Suite) for a carpentry business. Features customer management, unified article/service database, Anfragen inbox, WYSIWYG 3-column document editor, and Buchhaltung. The user recently focused on creating a comprehensive Mitarbeiter (Employee) HR module with absence tracking, wage history, and document management, as well as an admin feature to generate and email secure passwords to staff.
+
+**User's preferred language**: German (INSTRUCT NEXT AGENT TO RESPOND IN GERMAN ONLY)
+
+**what currently exists?** 
+A robust full-stack React/FastAPI/MongoDB application. The system includes a newly built, highly detailed  (HR) module structured as a 6-step Wizard form to prevent UI lag. It tracks Stammdaten, Lohn & Gehalt, Urlaub, Krankmeldungen, Fortbildungen, and categorizes employee documents into 5 professional buckets (A1, BEA, etc.). The Settings page now includes a feature to generate new secure passwords and email them directly to employees.
+
+**Last working item**:
+    - Last item agent was working: Recovering from an accidental data wipe. The agent deleted test data to clean the DB but accidentally wiped out genuine employee data (Thorsten) that the user had manually entered earlier that morning. The base record was restored, but the agent was waiting for the user to provide the lost field data to re-enter it.
+    - Status: BLOCKED / USER VERIFICATION PENDING (Waiting on user input to restore data or proceed)
+    - Agent Testing Done: N/A (Waiting for data)
+    - Which testing method agent to use?: NA
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**:
+  Issue 1: Re-enter lost data for employee Thorsten Graupner (P0)
+  
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: The agent restored the base MongoDB document for Thorsten via bash script, but the specific HR fields (wage, address, etc.) entered manually by the user were permanently lost. 
+     - Next debug checklist: Politely ask the user for the specific data fields they entered that morning so you can insert them via DB script or the UI, OR confirm if the user prefers to fill them out themselves using the new Wizard.
+     - Why fix this issue and what will be achieved with the fix?: Restores user trust after accidental data loss and ensures the HR database is accurate.
+     - Status: BLOCKED on user input
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix?: NA
+     - Blocked on other issue: None
+
+**In progress Task List**:
+(None active besides restoring the lost data)
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - (P1) Bank Integration: N26 bank integration (CSV-Import / Open Banking) to automatically match paid invoices.
+    - (P1) Landing Page IONOS FTP Upload: Retry failed upload (User requested reminder for April 5/6, 2026).
+    - (P2) Dashboard-Widget für Abwesenheitskalender: An absence calendar on the dashboard showing who is on vacation or sick (Suggested by agent, highly relevant for the new Mitarbeiter module).
+    
+    Future Tasks:
+    - (P3) DATEV-Export / Lexoffice API connection.
+    - (P3) Windows Desktop App: Installation routine (e.g., Electron wrapper).
+    - (P4) Refactoring:  (>1000 lines), , , and  need to be split into sub-components.
+
+**Completed work in this session**
+- Verified DSGVO email signature full width via screenshot (DONE)
+- Added password generation, visibility toggle, copy-to-clipboard, and email dispatch to the Benutzer tab in Settings (DONE)
+- Created complete CRUD backend for Mitarbeiter (Employees) in  (DONE)
+- Created  with tabs for Stammdaten, Lohn, Urlaub, Krankmeldungen, Dokumente, Fortbildungen (DONE)
+- Refactored  into a 6-step Wizard form to fix a React re-rendering/focus-loss bug (DONE)
+- Replaced cumbersome Date pickers with simple  text inputs for Geburtsdatum, Eintrittsdatum, Austrittsdatum, and Lohnhistorie (DONE)
+- Added missing HR fields: Beschäftigungsart, Wochenstunden, IBAN, Führerscheinklasse, Konfession, Notfallkontakt Beziehung, Personengruppe/SV-Schlüssel (DONE)
+- Restructured HR Dokumente tab into 5 professional categories (Mitarbeiter, Arbeitgeber, A1, Entgelt, BEA) (DONE)
+- Fixed default state bugs so the Neuer Mitarbeiter wizard loads with completely blank fields and no pre-selected dropdowns (DONE)
+
+**Earlier issues found/mentioned but not fixed**
+None.
+
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: PDF blob downloads fail inside Emergent iframe preview due to browser security policies.
+  - Recurrence count: 1
+  - Status: RESOLVED (Standard direct file download link approach used; works perfectly via the standalone direct URL).
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Frontend**: React, Tailwind CSS, Shadcn UI. Complex state management using a multi-step Wizard pattern to preserve input focus.
+- **Backend**: FastAPI, Motor (async MongoDB), Bcrypt for password hashing.
+- **Database**: MongoDB. Be cautious with manual data deletion (no recycle bin).
+
+**key DB schema**
+  - : 
+
+**changes in tech stack**
+  - None.
+
+**All files of reference**
+-  (Created in this session, contains the complex Wizard UI).
+-  (Created API endpoints for the HR module).
+-  (Updated to handle email-based password resets).
+-  (Updated for password UI).
+
+**Areas that need refactoring**:
+-  (Now >1000 lines, Wizard steps should be extracted).
+-  (~1000 lines),  (>1200 lines), and  (>2100 lines) desperately need splitting.
+
+**key api endpoints**
+- : Sets a new hashed password and emails credentials to the user.
+- : Fetches all employees.
+- : Creates a new employee.
+
+**Critical Info for New Agent**
+- **Language Restrictions:** The user speaks German. Reply in German exclusively.
+- **Data Loss Warning:** In the last session, an agent used a bash script to wipe test data but accidentally deleted a real employee record (Thorsten) that the user had manually populated that morning. The user was frustrated. **NEVER execute  or drop collections to clean up test data without explicit user permission.**
+- **UI UX Note:** The user hates laggy inputs. The  was rewritten as a Wizard precisely because inline functional components caused React to re-render and lose focus on every keystroke. Maintain this stable component architecture.
+- **Sales Pitch context:** The previous agent confusingly tried to explain Emergent platform upgrades/live-deployments using the support agent, which confused the user. The user has confirmed they purchased an upgrade. Ignore the sales pitch and immediately resume normal software development.
+
+**documents and test reports created in this job**
+  - 
+  - 
+
+**Last 10 User Messages and any pending HUMAN messages** 
+1. *User*: füge personengruppe hinzu (Done)
+2. *User*: die felder lassen sich nicht richtig ausfüllen wenn ich bspw. felt ort ausfüllen möchte kann ich nicht flüssig reinschreiben... (Agent refactored form into a Wizard).
+3. *User*: warum ist die lohnhistorie ausgefüllt und alles bezieht sich irgentwie auf 2025 (Agent deleted DB entries to clear test data).
+4. *User*: irgentwie läuft das gerade nicht mit uns ! lohn und gehalt ist stundenlohn eingetragen eigentlich sollte alles leer sein... (Agent fixed defaults so forms start completely blank).
+5. *User*: du hast auch thorsten gelöscht wieder herstellen (Agent restored base record via bash).
+6. *User*: leider fehlen dieverse einträge von mir heute morgen gemacht bezüglich thorsten (Agent apologized and strangely started talking about upgrading the plan).
+7. *User*: was meinst du mit upgrade (Agent queried support_agent).
+8. *User*: ich versthe nicht worauf du hinaus willst preview upgrade , live-deployment (Agent queried support_agent again).
+9. *User*: welches upgrade soll ich machen ? (Agent explained plans).
+10. *User (PENDING)*: ich habe ein kostenpflichtiges upgrade gebucht (Agent acknowledged and asked if the user wants to provide the lost data for Thorsten to be re-entered or move to a new task).
+
+**Project Health Check:**
+- Broken: None technically, but manual DB data was lost.
+- Mocked: None.
+
+**3rd Party Integrations**
+	•	OpenAI GPT-5.2 — uses Emergent LLM Key
+	•	SMTP/IMAP Email — requires User Credentials
+    •	Emergent Object Storage — uses internal integration logic ()
+
+**Testing status**
+  - Testing agent used after significant changes: YES (iteration_32 for Mitarbeiter logic).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions: Accidental deletion of user-entered database records.
+
+**Credentials to test flow:**
+Check  for Admin and Buchhaltung credentials. E-Mail SMTP/IMAP credentials are also stored there.
+
+**What agent forgot to execute**
+The agent got distracted answering questions about Emergent's pricing plans instead of immediately offering a solution or UI fallback for the lost Thorsten data. 
+
+**Debugging checklist for current issue**
+    Issue: Re-enter lost data for Thorsten Graupner
+
+    Frontend files to check: NA
+  
+    Backend files to check: NA
+    
+    Database to check: 
+
+    Action: Greet the user warmly in German, congratulate them on the upgrade, apologize briefly once more for the data mix-up, and ask them if they would like to type the data for Thorsten back into the new fast Wizard UI themselves, or if they want to give you the values to inject directly via the backend. Once resolved, ask what feature to build next (e.g., the Dashboard Absence Calendar).</analysis>
