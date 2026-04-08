@@ -728,8 +728,7 @@ function DokumenteTab({ ma }) {
   useEffect(() => { load(); }, []);
   const load = async () => { try { const r = await api.get(`/mitarbeiter/${ma.id}/dokumente`); setDocs(r.data); } catch {} };
 
-  const handleUpload = async (e, sektion, kategorie) => {
-    const file = e.target.files?.[0];
+  const uploadFile = async (file, sektion, kategorie) => {
     if (!file) return;
     setUploading(sektion);
     try {
@@ -737,10 +736,16 @@ function DokumenteTab({ ma }) {
       fd.append("file", file);
       fd.append("kategorie", `${sektion}::${kategorie}`);
       await api.post(`/mitarbeiter/${ma.id}/dokumente`, fd, { headers: { "Content-Type": "multipart/form-data" } });
-      toast.success("Dokument hochgeladen");
+      toast.success(`"${file.name}" hochgeladen`);
       load();
     } catch { toast.error("Upload fehlgeschlagen"); }
-    finally { setUploading(null); e.target.value = ""; }
+    finally { setUploading(null); }
+  };
+
+  const handleUpload = async (e, sektion, kategorie) => {
+    const file = e.target.files?.[0];
+    uploadFile(file, sektion, kategorie);
+    e.target.value = "";
   };
 
   const handleDelete = async (id) => { try { await api.delete(`/mitarbeiter/${ma.id}/dokumente/${id}`); toast.success("Gelöscht"); load(); } catch {} };
@@ -762,7 +767,7 @@ function DokumenteTab({ ma }) {
             </button>
             {isOpen && (
               <div className="border-t px-4 pb-4 pt-3 space-y-3">
-                <DokUploadRow kategorien={section.kategorien} sectionKey={section.key} uploading={uploading === section.key} onUpload={handleUpload} />
+                <DokUploadRow kategorien={section.kategorien} sectionKey={section.key} uploading={uploading === section.key} onUpload={handleUpload} onDropFile={uploadFile} />
                 {sectionDocs.length > 0 ? (
                   <div className="grid gap-2">{sectionDocs.map(d => {
                     const katLabel = (d.kategorie || "").includes("::") ? d.kategorie.split("::")[1] : d.kategorie;
@@ -785,18 +790,82 @@ function DokumenteTab({ ma }) {
   );
 }
 
-function DokUploadRow({ kategorien, sectionKey, uploading, onUpload }) {
+function DokUploadRow({ kategorien, sectionKey, uploading, onUpload, onDropFile }) {
   const [kat, setKat] = useState(kategorien[0]);
+  const [dragging, setDragging] = useState(false);
   const fileRef = useRef(null);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    setDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) setDragging(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setDragging(false);
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        onDropFile(files[i], sectionKey, kat);
+      }
+    }
+  };
+
   return (
-    <div className="flex gap-2 items-center">
-      <select value={kat} onChange={e => setKat(e.target.value)} className="h-8 rounded-sm border border-input bg-background px-2 text-xs flex-1">
-        {kategorien.map(k => <option key={k} value={k}>{k}</option>)}
-      </select>
-      <input ref={fileRef} type="file" className="hidden" onChange={e => onUpload(e, sectionKey, kat)} disabled={uploading} />
-      <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading} className="text-xs h-8" data-testid={`btn-upload-${sectionKey}`}>
-        <Upload className="w-3.5 h-3.5 mr-1" /> {uploading ? "..." : "Hochladen"}
-      </Button>
+    <div className="space-y-2">
+      <div className="flex gap-2 items-center">
+        <select value={kat} onChange={e => setKat(e.target.value)} className="h-8 rounded-sm border border-input bg-background px-2 text-xs flex-1" data-testid={`dok-kat-select-${sectionKey}`}>
+          {kategorien.map(k => <option key={k} value={k}>{k}</option>)}
+        </select>
+        <input ref={fileRef} type="file" className="hidden" onChange={e => onUpload(e, sectionKey, kat)} disabled={uploading} />
+        <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading} className="text-xs h-8" data-testid={`btn-upload-${sectionKey}`}>
+          <Upload className="w-3.5 h-3.5 mr-1" /> {uploading ? "..." : "Hochladen"}
+        </Button>
+      </div>
+      <div
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onClick={() => !uploading && fileRef.current?.click()}
+        className={`relative flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-5 cursor-pointer transition-all ${
+          dragging
+            ? "border-primary bg-primary/5 scale-[1.01]"
+            : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
+        }`}
+        data-testid={`dropzone-${sectionKey}`}
+      >
+        {uploading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            Wird hochgeladen...
+          </div>
+        ) : (
+          <>
+            <Upload className={`w-6 h-6 ${dragging ? "text-primary" : "text-muted-foreground/50"}`} />
+            <p className="text-xs text-muted-foreground">
+              {dragging ? "Loslassen zum Hochladen" : "Dateien hierhin ziehen oder klicken"}
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }

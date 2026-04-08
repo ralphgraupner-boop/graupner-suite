@@ -252,10 +252,11 @@ async def get_dokumente(ma_id: str, user=Depends(get_current_user)):
 
 @router.post("/mitarbeiter/{ma_id}/dokumente")
 async def upload_dokument(ma_id: str, file: UploadFile = File(...), kategorie: str = Form("sonstiges"), user=Depends(get_current_user)):
-    from utils.storage import upload_file
+    from utils.storage import put_object
     content = await file.read()
     storage_key = f"mitarbeiter/{ma_id}/{uuid.uuid4().hex[:8]}_{file.filename}"
-    url = upload_file(storage_key, content, file.content_type)
+    result = put_object(storage_key, content, file.content_type)
+    url = result.get("url", "")
     entry_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc).isoformat()
     doc = {
