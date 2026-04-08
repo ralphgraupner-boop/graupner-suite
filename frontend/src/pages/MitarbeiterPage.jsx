@@ -37,12 +37,12 @@ const isoToDE = (iso) => { if (!iso) return ""; const p = iso.split("-"); return
 const deToISO = (de) => { const m = de.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : de; };
 
 const EMPTY_FORM = {
-  anrede: "Herr", vorname: "", nachname: "", geburtsdatum: "", personalnummer: "", status: "aktiv",
+  anrede: "", vorname: "", nachname: "", geburtsdatum: "", personalnummer: "", status: "aktiv",
   telefon: "", email: "", strasse: "", plz: "", ort: "",
-  position: "", beschaeftigungsart: "", wochenstunden: "", eintrittsdatum: "", austrittsdatum: "", urlaubsanspruch: 30,
-  steuer_id: "", sv_nummer: "", krankenkasse: "", steuerklasse: "", kinderfreibetraege: 0, konfession: "keine", personengruppe: "",
+  position: "", beschaeftigungsart: "", wochenstunden: "", eintrittsdatum: "", austrittsdatum: "", urlaubsanspruch: "",
+  steuer_id: "", sv_nummer: "", krankenkasse: "", steuerklasse: "", kinderfreibetraege: "", konfession: "", personengruppe: "",
   iban: "", bank: "", fuehrerschein: "",
-  lohnart: "stundenlohn", stundenlohn: 0, monatsgehalt: 0, vwl_betrag: 0, vwl_ag_anteil: 0,
+  lohnart: "", stundenlohn: "", monatsgehalt: "", vwl_betrag: "", vwl_ag_anteil: "",
   notfallkontakt_name: "", notfallkontakt_telefon: "", notfallkontakt_beziehung: "",
   bemerkungen: "",
 };
@@ -161,7 +161,7 @@ function WizardForm({ form, setForm, onSave, saving, isNew, onCancel }) {
       <Card className="p-6">
         {current.id === "person" && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <SelectField label="Anrede" value={form.anrede} onChange={updateField("anrede")} options={["Herr", "Frau", "Divers"]} testId="wiz-anrede" />
+            <SelectField label="Anrede" value={form.anrede} onChange={updateField("anrede")} options={[{value:"",label:"– Bitte wählen –"}, "Herr", "Frau", "Divers"]} testId="wiz-anrede" />
             <Field label="Vorname *" value={form.vorname} onChange={updateField("vorname")} testId="wiz-vorname" />
             <Field label="Nachname *" value={form.nachname} onChange={updateField("nachname")} testId="wiz-nachname" />
             <DateInput label="Geburtsdatum" value={form.geburtsdatum} onChange={updateField("geburtsdatum")} testId="wiz-geburtsdatum" />
@@ -199,7 +199,7 @@ function WizardForm({ form, setForm, onSave, saving, isNew, onCancel }) {
             <Field label="Krankenkasse" value={form.krankenkasse} onChange={updateField("krankenkasse")} testId="wiz-kk" />
             <SelectField label="Steuerklasse" value={form.steuerklasse} onChange={updateField("steuerklasse")} options={STEUERKLASSEN.map(s => s || { value: "", label: "– Bitte wählen –" })} testId="wiz-stkl" />
             <Field label="Kinderfreibeträge" value={form.kinderfreibetraege} onChange={updateField("kinderfreibetraege")} type="number" testId="wiz-kinder" />
-            <SelectField label="Konfession" value={form.konfession} onChange={updateField("konfession")} options={[{value:"keine",label:"Keine / Konfessionslos"},{value:"ev",label:"Evangelisch"},{value:"rk",label:"Röm.-Katholisch"},{value:"andere",label:"Andere"}]} testId="wiz-konfession" />
+            <SelectField label="Konfession" value={form.konfession} onChange={updateField("konfession")} options={[{value:"",label:"– Bitte wählen –"},{value:"keine",label:"Keine / Konfessionslos"},{value:"ev",label:"Evangelisch"},{value:"rk",label:"Röm.-Katholisch"},{value:"andere",label:"Andere"}]} testId="wiz-konfession" />
             <SelectField label="Personengruppe (SV-Schlüssel)" value={form.personengruppe} onChange={updateField("personengruppe")} options={PERSONENGRUPPEN.map(p => p || { value: "", label: "– Bitte wählen –" })} testId="wiz-pg" className="col-span-2 md:col-span-3" />
           </div>
         )}
@@ -211,12 +211,14 @@ function WizardForm({ form, setForm, onSave, saving, isNew, onCancel }) {
             <div className="col-span-2 md:col-span-3 border-t pt-4 mt-2">
               <p className="text-xs font-semibold text-primary mb-3">Vergütung</p>
             </div>
-            <SelectField label="Lohnart" value={form.lohnart} onChange={updateField("lohnart")} options={[{value:"stundenlohn",label:"Stundenlohn"},{value:"monatsgehalt",label:"Monatsgehalt"}]} testId="wiz-lohnart" />
-            {form.lohnart === "stundenlohn" ? (
+            <SelectField label="Lohnart" value={form.lohnart} onChange={updateField("lohnart")} options={[{value:"",label:"– Bitte wählen –"},{value:"stundenlohn",label:"Stundenlohn"},{value:"monatsgehalt",label:"Monatsgehalt"}]} testId="wiz-lohnart" />
+            {form.lohnart === "stundenlohn" && (
               <Field label="Stundenlohn (€)" value={form.stundenlohn} onChange={updateField("stundenlohn")} type="number" testId="wiz-stundenlohn" />
-            ) : (
+            )}
+            {form.lohnart === "monatsgehalt" && (
               <Field label="Monatsgehalt (€)" value={form.monatsgehalt} onChange={updateField("monatsgehalt")} type="number" testId="wiz-monatsgehalt" />
             )}
+            {!form.lohnart && <div />}
             <Field label="Wochenstunden" value={form.wochenstunden} onChange={updateField("wochenstunden")} type="number" testId="wiz-std2" />
             <Field label="VWL Arbeitnehmer (€)" value={form.vwl_betrag} onChange={updateField("vwl_betrag")} type="number" testId="wiz-vwl-an" />
             <Field label="VWL Arbeitgeber (€)" value={form.vwl_ag_anteil} onChange={updateField("vwl_ag_anteil")} type="number" testId="wiz-vwl-ag" />
@@ -460,7 +462,7 @@ function MitarbeiterDetail({ ma: initialMa, onBack, onUpdate }) {
           <KpiCard icon={Calendar} label="Resturlaub" value={`${stats.urlaub_rest} Tage`} color={stats.urlaub_rest < 5 ? "text-amber-600" : "text-green-600"} />
           <KpiCard icon={Calendar} label="Urlaub genommen" value={`${stats.urlaub_genommen}/${stats.urlaubsanspruch}`} />
           <KpiCard icon={Heart} label="Kranktage" value={stats.kranktage} color={stats.kranktage > 10 ? "text-red-600" : "text-muted-foreground"} />
-          <KpiCard icon={Euro} label={ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : "Stundenlohn"} value={ma.lohnart === "monatsgehalt" ? fmtEuro(ma.monatsgehalt) : fmtEuro(ma.stundenlohn)} />
+          <KpiCard icon={Euro} label={ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : ma.lohnart === "stundenlohn" ? "Stundenlohn" : "Lohn"} value={ma.lohnart === "monatsgehalt" ? fmtEuro(ma.monatsgehalt) : ma.lohnart === "stundenlohn" ? fmtEuro(ma.stundenlohn) : "–"} />
         </div>
       )}
 
@@ -508,8 +510,8 @@ function LohnTab({ ma, onUpdate }) {
       <Card className="p-5">
         <h3 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2"><Euro className="w-4 h-4" /> Aktueller Lohn</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div><p className="text-xs text-muted-foreground">Lohnart</p><p className="font-medium">{ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : "Stundenlohn"}</p></div>
-          <div><p className="text-xs text-muted-foreground">{ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : "Stundenlohn"}</p><p className="font-medium text-lg">{ma.lohnart === "monatsgehalt" ? fmtEuro(ma.monatsgehalt) : fmtEuro(ma.stundenlohn)}</p></div>
+          <div><p className="text-xs text-muted-foreground">Lohnart</p><p className="font-medium">{ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : ma.lohnart === "stundenlohn" ? "Stundenlohn" : "Nicht festgelegt"}</p></div>
+          <div><p className="text-xs text-muted-foreground">{ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : ma.lohnart === "stundenlohn" ? "Stundenlohn" : "Betrag"}</p><p className="font-medium text-lg">{ma.lohnart === "monatsgehalt" ? fmtEuro(ma.monatsgehalt) : ma.lohnart === "stundenlohn" ? fmtEuro(ma.stundenlohn) : "–"}</p></div>
           <div><p className="text-xs text-muted-foreground">Wochenstunden</p><p className="font-medium">{ma.wochenstunden || 40} Std.</p></div>
           <div><p className="text-xs text-muted-foreground">VWL (AN / AG)</p><p className="font-medium">{fmtEuro(ma.vwl_betrag)} / {fmtEuro(ma.vwl_ag_anteil)}</p></div>
         </div>
