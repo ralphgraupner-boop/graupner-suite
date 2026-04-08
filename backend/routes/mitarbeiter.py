@@ -558,47 +558,64 @@ async def execute_lexware_import(file: UploadFile = File(...), user=Depends(get_
                 await db.mitarbeiter.update_one({"id": ma_id}, {"$set": update_fields})
             import_log.append({"name": f"{vorname} {nachname}", "action": "aktualisiert", "id": ma_id, "fields": list(update_fields.keys())})
 
-        # Store PDF as document
+        # Store PDF as document (skip if same filename already exists for this employee)
         pdf_path = r.get("_pdf_path")
         if pdf_path and os.path.exists(pdf_path):
-            with open(pdf_path, "rb") as f:
-                pdf_content = f.read()
-
-            monat = r.get("abrechnungsmonat", "unbekannt")
             pdf_filename = r.get("_source_file", f"{vorname}_{nachname}_Lohnabrechnung.pdf")
-            storage_key = f"mitarbeiter/{ma_id}/lexware/{uuid.uuid4().hex[:8]}_{pdf_filename}"
-            result = put_object(storage_key, pdf_content, "application/pdf")
-            url = result.get("url", "")
-
-            doc_entry = {
-                "id": str(uuid.uuid4())[:8],
-                "mitarbeiter_id": ma_id,
-                "filename": pdf_filename,
-                "storage_key": storage_key,
-                "url": url,
-                "content_type": "application/pdf",
-                "kategorie": "entgelt::Verdienstbescheinigung",
-                "created_at": now,
-            }
-            await db.mitarbeiter_dokumente.insert_one(doc_entry)
-            doc_entry.pop("_id", None)
+            existing_doc = await db.mitarbeiter_dokumente.find_one(
+                {"mitarbeiter_id": ma_id, "filename": pdf_filename}, {"_id": 1}
+            )
+            if not existing_doc:
+                with open(pdf_path, "rb") as f:
+                    pdf_content = f.read()
+                storage_key = f"mitarbeiter/{ma_id}/lexware/{uuid.uuid4().hex[:8]}_{pdf_filename}"
+                result = put_object(storage_key, pdf_content, "application/pdf")
+                url = result.get("url", "")
+                doc_entry = {
+                    "id": str(uuid.uuid4())[:8],
+                    "mitarbeiter_id": ma_id,
+                    "filename": pdf_filename,
+                    "storage_key": storage_key,
+                    "url": url,
+                    "content_type": "application/pdf",
+                    "kategorie": "entgelt::Verdienstbescheinigung",
+                    "created_at": now,
+                }
+                await db.mitarbeiter_dokumente.insert_one(doc_entry)
+                doc_entry.pop("_id", None)
 
             os.unlink(pdf_path)
 
-        # Add to Lohnhistorie
+        # Add to Lohnhistorie (skip if same month already imported)
         if r.get("lohnart") and (r.get("monatsgehalt") or r.get("stundenlohn")):
-            lohn_entry = {
-                "id": str(uuid.uuid4())[:8],
-                "mitarbeiter_id": ma_id,
-                "gueltig_ab": r.get("eintrittsdatum", now[:10]),
-                "lohnart": r["lohnart"],
-                "stundenlohn": r.get("stundenlohn", 0),
-                "monatsgehalt": r.get("monatsgehalt", 0),
-                "bemerkung": f"Lexware Import {r.get('abrechnungsmonat', '')}",
-                "created_at": now,
-            }
-            await db.mitarbeiter_lohnhistorie.insert_one(lohn_entry)
-            lohn_entry.pop("_id", None)
+            bemerkung = f"Lexware Import {r.get('abrechnungsmonat', '')}"
+            existing_lohn = await db.mitarbeiter_lohnhistorie.find_one(
+                {"mitarbeiter_id": ma_id, "bemerkung": bemerkung}, {"_id": 1}
+            )
+            if not existing_lohn:
+                lohn_entry = {
+                    "id": str(uuid.uuid4())[:8],
+                    "mitarbeiter_id": ma_id,
+                    "gueltig_ab": r.get("eintrittsdatum", now[:10]),
+                    "lohnart": r["lohnart"],
+                    "stundenlohn": r.get("stundenlohn", 0),
+                    "monatsgehalt": r.get("monatsgehalt", 0),
+                    "bemerkung": bemerkung,
+                    "created_at": now,
+                }
+                await db.mitarbeiter_lohnhistorie.insert_one(lohn_entry)
+                lohn_entry.pop("_id", None)
+            else:
+                # Update existing entry with latest values
+                await db.mitarbeiter_lohnhistorie.update_one(
+                    {"mitarbeiter_id": ma_id, "bemerkung": bemerkung},
+                    {"$set": {
+                        "lohnart": r["lohnart"],
+                        "stundenlohn": r.get("stundenlohn", 0),
+                        "monatsgehalt": r.get("monatsgehalt", 0),
+                        "updated_at": now,
+                    }}
+                )
 
     # Cleanup
     try:
