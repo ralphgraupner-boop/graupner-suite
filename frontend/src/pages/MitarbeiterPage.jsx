@@ -318,14 +318,14 @@ export default function MitarbeiterPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{aktive} aktive Mitarbeiter</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {userPerms?.mitarbeiter_anlegen_loeschen && (
             <>
-              <Button variant="outline" onClick={() => setShowImport(true)} data-testid="btn-lexware-import">
-                <FileUp className="w-4 h-4 mr-1" /> Lexware Import
+              <Button variant="outline" size="lg" onClick={() => setShowImport(true)} className="border-primary/40 text-primary hover:bg-primary/5" data-testid="btn-lexware-import">
+                <FileUp className="w-5 h-5 mr-2" /> Lexware Import
               </Button>
-              <Button onClick={() => setShowNew(true)} data-testid="btn-new-mitarbeiter">
-                <UserPlus className="w-4 h-4 mr-1" /> Neuer Mitarbeiter
+              <Button size="lg" onClick={() => setShowNew(true)} data-testid="btn-new-mitarbeiter">
+                <UserPlus className="w-5 h-5 mr-2" /> Neuer Mitarbeiter
               </Button>
             </>
           )}
