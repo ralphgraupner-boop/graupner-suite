@@ -413,6 +413,67 @@ function KpiCard({ icon: Icon, label, value, color = "text-primary" }) {
   );
 }
 
+
+// ════════════════════ STATUS DROPDOWN ════════════════════
+
+function StatusDropdown({ ma, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const changeStatus = async (newStatus) => {
+    setSaving(true);
+    try {
+      await api.put(`/mitarbeiter/${ma.id}`, { ...ma, status: newStatus });
+      toast.success(`Status auf "${newStatus}" geändert`);
+      onUpdate();
+    } catch (err) { toast.error(err.response?.data?.detail || "Fehler"); }
+    finally { setSaving(false); setOpen(false); }
+  };
+
+  const statusConfig = {
+    aktiv: { bg: "bg-green-100 text-green-700 hover:bg-green-200", label: "Aktiv" },
+    inaktiv: { bg: "bg-gray-100 text-gray-600 hover:bg-gray-200", label: "Inaktiv" },
+    ausgeschieden: { bg: "bg-red-100 text-red-700 hover:bg-red-200", label: "Ausgeschieden" },
+  };
+  const current = statusConfig[ma.status] || statusConfig.aktiv;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className={`px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${current.bg}`}
+        data-testid="status-dropdown-trigger"
+      >
+        {saving ? "..." : current.label} <ChevronLeft className="w-3 h-3 inline-block -rotate-90 ml-1" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 min-w-[160px]" data-testid="status-dropdown-menu">
+          {Object.entries(statusConfig).map(([key, cfg]) => (
+            <button
+              key={key}
+              onClick={() => changeStatus(key)}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-muted/50 flex items-center gap-2 ${ma.status === key ? "font-semibold" : ""}`}
+              data-testid={`status-option-${key}`}
+            >
+              <span className={`w-2 h-2 rounded-full ${key === "aktiv" ? "bg-green-500" : key === "ausgeschieden" ? "bg-red-500" : "bg-gray-400"}`} />
+              {cfg.label}
+              {ma.status === key && <CheckCircle className="w-3.5 h-3.5 ml-auto text-primary" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ════════════════════ NEW EMPLOYEE (WIZARD) ════════════════════
 
 function NewMitarbeiterView({ onBack, onCreated }) {
@@ -495,9 +556,7 @@ function MitarbeiterDetail({ ma: initialMa, onBack, onUpdate, userPerms }) {
           <h1 className="text-xl font-bold">{ma.anrede} {ma.vorname} {ma.nachname}</h1>
           <p className="text-sm text-muted-foreground">{ma.position} {ma.personalnummer ? `· #${ma.personalnummer}` : ""}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${ma.status === "aktiv" ? "bg-green-100 text-green-700" : ma.status === "ausgeschieden" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
-          {ma.status === "aktiv" ? "Aktiv" : ma.status === "ausgeschieden" ? "Ausgeschieden" : "Inaktiv"}
-        </span>
+        <StatusDropdown ma={ma} onUpdate={() => { loadDetail(); onUpdate(); }} />
         {userPerms?.mitarbeiter_anlegen_loeschen && (
           <Button variant="destructive" size="sm" onClick={handleDelete} data-testid="btn-delete-ma"><Trash2 className="w-4 h-4" /></Button>
         )}
