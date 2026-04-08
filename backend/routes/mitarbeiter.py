@@ -422,3 +422,188 @@ async def get_statistiken(ma_id: str, user=Depends(get_current_user)):
         "kranktage": krank_tage,
         "krankmeldungen_anzahl": len(krankmeldungen),
     }
+
+
+# ──────────────────── LEXWARE IMPORT ────────────────────
+
+@router.post("/lexware-import/parse")
+async def parse_lexware_upload(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Parst eine Lexware ZIP-Datei und gibt die erkannten Daten zurück (Vorschau)."""
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Nur Admins dürfen importieren")
+
+    import tempfile, os
+    from utils.lexware_parser import parse_lexware_zip
+
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        results = parse_lexware_zip(tmp_path)
+    except Exception as e:
+        os.unlink(tmp_path)
+        raise HTTPException(400, f"Fehler beim Parsen: {str(e)}")
+    finally:
+        os.unlink(tmp_path)
+
+    # Match each result to existing Mitarbeiter
+    all_ma = await db.mitarbeiter.find({}, {"_id": 0, "id": 1, "vorname": 1, "nachname": 1, "personalnummer": 1}).to_list(200)
+
+    preview = []
+    for r in results:
+        matched_ma = None
+        for ma in all_ma:
+            if ma.get("vorname", "").lower() == r.get("vorname", "").lower() and ma.get("nachname", "").lower() == r.get("nachname", "").lower():
+                matched_ma = ma
+                break
+
+        # Clean up internal fields
+        display = {k: v for k, v in r.items() if not k.startswith("_")}
+        preview.append({
+            "parsed_data": display,
+            "matched_mitarbeiter": matched_ma,
+            "source_file": r.get("_source_file", ""),
+        })
+
+        # Clean up temp PDF files
+        pdf_path = r.get("_pdf_path")
+        if pdf_path:
+            try:
+                os.unlink(pdf_path)
+            except OSError:
+                pass
+
+    return preview
+
+
+@router.post("/lexware-import/execute")
+async def execute_lexware_import(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Führt den Lexware-Import aus: Stammdaten aktualisieren + PDFs als Dokumente speichern."""
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Nur Admins dürfen importieren")
+
+    import tempfile, os
+    from utils.lexware_parser import parse_lexware_zip
+    from utils.storage import put_object
+    import zipfile
+
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        results = parse_lexware_zip(tmp_path)
+    except Exception as e:
+        os.unlink(tmp_path)
+        raise HTTPException(400, f"Fehler beim Parsen: {str(e)}")
+
+    all_ma = await db.mitarbeiter.find({}, {"_id": 0}).to_list(200)
+    now = datetime.now(timezone.utc).isoformat()
+
+    import_log = []
+
+    for r in results:
+        vorname = r.get("vorname", "")
+        nachname = r.get("nachname", "")
+
+        # Find matching Mitarbeiter
+        matched = None
+        for ma in all_ma:
+            if ma.get("vorname", "").lower() == vorname.lower() and ma.get("nachname", "").lower() == nachname.lower():
+                matched = ma
+                break
+
+        # If no match, create new
+        if not matched:
+            ma_id = str(uuid.uuid4())[:8]
+            new_doc = {
+                "id": ma_id,
+                "status": "aktiv",
+                "created_at": now,
+                "updated_at": now,
+            }
+            # Fill all fields from parsed data
+            stamm_fields = ["anrede", "vorname", "nachname", "strasse", "plz", "ort",
+                           "personalnummer", "geburtsdatum", "steuerklasse", "konfession",
+                           "sv_nummer", "krankenkasse", "personengruppe", "beschaeftigungsart",
+                           "eintrittsdatum", "steuer_id", "bank", "iban",
+                           "monatsgehalt", "stundenlohn", "lohnart", "kinderfreibetraege"]
+            for f in stamm_fields:
+                if f in r:
+                    new_doc[f] = r[f]
+            await db.mitarbeiter.insert_one(new_doc)
+            new_doc.pop("_id", None)
+            matched = new_doc
+            import_log.append({"name": f"{vorname} {nachname}", "action": "neu_angelegt", "id": ma_id})
+        else:
+            # Update existing
+            ma_id = matched["id"]
+            update_fields = {}
+            stamm_fields = ["anrede", "strasse", "plz", "ort", "geburtsdatum",
+                           "steuerklasse", "konfession", "sv_nummer", "krankenkasse",
+                           "personengruppe", "beschaeftigungsart", "eintrittsdatum",
+                           "steuer_id", "bank", "iban", "monatsgehalt", "stundenlohn",
+                           "lohnart", "kinderfreibetraege"]
+            for f in stamm_fields:
+                if f in r and r[f]:
+                    update_fields[f] = r[f]
+            # Update personalnummer only if not set
+            if r.get("personalnummer") and not matched.get("personalnummer"):
+                update_fields["personalnummer"] = r["personalnummer"]
+            if update_fields:
+                update_fields["updated_at"] = now
+                await db.mitarbeiter.update_one({"id": ma_id}, {"$set": update_fields})
+            import_log.append({"name": f"{vorname} {nachname}", "action": "aktualisiert", "id": ma_id, "fields": list(update_fields.keys())})
+
+        # Store PDF as document
+        pdf_path = r.get("_pdf_path")
+        if pdf_path and os.path.exists(pdf_path):
+            with open(pdf_path, "rb") as f:
+                pdf_content = f.read()
+
+            monat = r.get("abrechnungsmonat", "unbekannt")
+            pdf_filename = r.get("_source_file", f"{vorname}_{nachname}_Lohnabrechnung.pdf")
+            storage_key = f"mitarbeiter/{ma_id}/lexware/{uuid.uuid4().hex[:8]}_{pdf_filename}"
+            result = put_object(storage_key, pdf_content, "application/pdf")
+            url = result.get("url", "")
+
+            doc_entry = {
+                "id": str(uuid.uuid4())[:8],
+                "mitarbeiter_id": ma_id,
+                "filename": pdf_filename,
+                "storage_key": storage_key,
+                "url": url,
+                "content_type": "application/pdf",
+                "kategorie": "entgelt::Verdienstbescheinigung",
+                "created_at": now,
+            }
+            await db.mitarbeiter_dokumente.insert_one(doc_entry)
+            doc_entry.pop("_id", None)
+
+            os.unlink(pdf_path)
+
+        # Add to Lohnhistorie
+        if r.get("lohnart") and (r.get("monatsgehalt") or r.get("stundenlohn")):
+            lohn_entry = {
+                "id": str(uuid.uuid4())[:8],
+                "mitarbeiter_id": ma_id,
+                "gueltig_ab": r.get("eintrittsdatum", now[:10]),
+                "lohnart": r["lohnart"],
+                "stundenlohn": r.get("stundenlohn", 0),
+                "monatsgehalt": r.get("monatsgehalt", 0),
+                "bemerkung": f"Lexware Import {r.get('abrechnungsmonat', '')}",
+                "created_at": now,
+            }
+            await db.mitarbeiter_lohnhistorie.insert_one(lohn_entry)
+            lohn_entry.pop("_id", None)
+
+    # Cleanup
+    try:
+        os.unlink(tmp_path)
+    except OSError:
+        pass
+
+    return {"message": f"{len(results)} Mitarbeiter importiert", "log": import_log}

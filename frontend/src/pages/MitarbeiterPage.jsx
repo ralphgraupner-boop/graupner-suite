@@ -6,7 +6,8 @@ import {
   Users, Plus, Pencil, Trash2, Search, UserPlus, Calendar, Heart,
   FileText, Euro, GraduationCap, Phone, Mail, MapPin, Shield, Clock,
   ChevronLeft, ChevronRight, Upload, Download, AlertTriangle, CheckCircle, X, Eye,
-  Briefcase, Building2, TrendingUp, XCircle, CreditCard, UserCircle, Globe, Save
+  Briefcase, Building2, TrendingUp, XCircle, CreditCard, UserCircle, Globe, Save,
+  FileUp, Loader2
 } from "lucide-react";
 
 const POSITIONS = ["Meister", "Geselle", "Azubi", "Büro", "Praktikant", "Aushilfe"];
@@ -278,6 +279,7 @@ export default function MitarbeiterPage() {
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userPerms, setUserPerms] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => { loadAll(); loadPerms(); }, []);
 
@@ -316,12 +318,23 @@ export default function MitarbeiterPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{aktive} aktive Mitarbeiter</p>
         </div>
-        {userPerms?.mitarbeiter_anlegen_loeschen && (
-          <Button onClick={() => setShowNew(true)} data-testid="btn-new-mitarbeiter">
-            <UserPlus className="w-4 h-4 mr-1" /> Neuer Mitarbeiter
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {userPerms?.mitarbeiter_anlegen_loeschen && (
+            <>
+              <Button variant="outline" onClick={() => setShowImport(true)} data-testid="btn-lexware-import">
+                <FileUp className="w-4 h-4 mr-1" /> Lexware Import
+              </Button>
+              <Button onClick={() => setShowNew(true)} data-testid="btn-new-mitarbeiter">
+                <UserPlus className="w-4 h-4 mr-1" /> Neuer Mitarbeiter
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      {showImport && (
+        <LexwareImportPanel onClose={() => setShowImport(false)} onDone={() => { setShowImport(false); loadAll(); }} />
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard icon={Users} label="Gesamt" value={mitarbeiter.length} />
@@ -938,5 +951,210 @@ function FortbildungenTab({ ma }) {
         </Card>
       ) : <p className="text-sm text-muted-foreground text-center py-4">Keine Fortbildungen eingetragen</p>}
     </div>
+  );
+}
+
+
+// ──────────────── LEXWARE IMPORT PANEL ────────────────
+
+function LexwareImportPanel({ onClose, onDone }) {
+  const [phase, setPhase] = useState("upload"); // upload | preview | importing | done
+  const [preview, setPreview] = useState(null);
+  const [file, setFile] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const fileRef = useRef(null);
+  const dragCounter = useRef(0);
+
+  const handleFile = async (f) => {
+    if (!f || !f.name.endsWith(".zip")) {
+      toast.error("Bitte eine ZIP-Datei auswählen");
+      return;
+    }
+    setFile(f);
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+      const res = await api.post("/lexware-import/parse", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setPreview(res.data);
+      setPhase("preview");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Lesen der ZIP-Datei");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setDragging(false);
+    const files = e.dataTransfer?.files;
+    if (files?.[0]) handleFile(files[0]);
+  };
+
+  const executeImport = async () => {
+    if (!file) return;
+    setPhase("importing");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api.post("/lexware-import/execute", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setResult(res.data);
+      setPhase("done");
+      toast.success(res.data.message);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Import fehlgeschlagen");
+      setPhase("preview");
+    }
+  };
+
+  const FIELD_LABELS = {
+    vorname: "Vorname", nachname: "Nachname", anrede: "Anrede", strasse: "Straße",
+    plz: "PLZ", ort: "Ort", geburtsdatum: "Geburtsdatum", personalnummer: "Personal-Nr.",
+    steuerklasse: "Steuerklasse", konfession: "Konfession", sv_nummer: "SV-Nummer",
+    krankenkasse: "Krankenkasse", personengruppe: "Personengruppe", beschaeftigungsart: "Beschäftigungsart",
+    eintrittsdatum: "Eintrittsdatum", steuer_id: "Steuer-ID", bank: "Bank", iban: "IBAN",
+    monatsgehalt: "Monatsgehalt", stundenlohn: "Stundenlohn", lohnart: "Lohnart",
+    brutto: "Brutto", netto: "Netto", urlaub_rest: "Urlaub Rest", kinderfreibetraege: "Kinderfreibeträge",
+    abrechnungsmonat: "Abrechnungsmonat",
+  };
+
+  return (
+    <Card className="border-primary/30" data-testid="lexware-import-panel">
+      <div className="p-5">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <FileUp className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-lg">Lexware Import</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:text-destructive"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* PHASE: UPLOAD */}
+        {phase === "upload" && (
+          <div
+            onDragEnter={(e) => { e.preventDefault(); dragCounter.current++; setDragging(true); }}
+            onDragLeave={(e) => { e.preventDefault(); dragCounter.current--; if (dragCounter.current === 0) setDragging(false); }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+            onClick={() => !loading && fileRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-10 cursor-pointer transition-all ${
+              dragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
+            }`}
+            data-testid="lexware-dropzone"
+          >
+            <input ref={fileRef} type="file" accept=".zip" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
+            {loading ? (
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <p className="text-sm">ZIP wird analysiert...</p>
+              </div>
+            ) : (
+              <>
+                <FileUp className={`w-10 h-10 ${dragging ? "text-primary" : "text-muted-foreground/40"}`} />
+                <div className="text-center">
+                  <p className="font-medium text-sm">{dragging ? "Loslassen zum Hochladen" : "Lexware ZIP-Datei hierhin ziehen"}</p>
+                  <p className="text-xs text-muted-foreground mt-1">oder klicken zum Auswählen</p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* PHASE: PREVIEW */}
+        {phase === "preview" && preview && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              <strong>{preview.length}</strong> Mitarbeiter in <em>{file?.name}</em> erkannt:
+            </p>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              {preview.map((item, idx) => (
+                <div key={idx} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCircle className="w-5 h-5 text-primary" />
+                      <span className="font-semibold">{item.parsed_data.vorname} {item.parsed_data.nachname}</span>
+                    </div>
+                    {item.matched_mitarbeiter ? (
+                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700" data-testid={`match-${idx}`}>
+                        Wird aktualisiert
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700" data-testid={`new-${idx}`}>
+                        Wird neu angelegt
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+                    {Object.entries(item.parsed_data)
+                      .filter(([k]) => k !== "vorname" && k !== "nachname" && k !== "abrechnungsmonat")
+                      .map(([k, v]) => (
+                        <div key={k} className="text-xs">
+                          <span className="text-muted-foreground">{FIELD_LABELS[k] || k}: </span>
+                          <span className="font-medium">{typeof v === "number" ? (k.includes("gehalt") || k.includes("lohn") || k === "brutto" || k === "netto" ? `${v.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €` : v) : String(v)}</span>
+                        </div>
+                      ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <FileText className="w-3 h-3" /> {item.source_file} — PDF wird als Dokument gespeichert
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => { setPhase("upload"); setPreview(null); setFile(null); }}>
+                Abbrechen
+              </Button>
+              <Button onClick={executeImport} data-testid="btn-execute-import">
+                <Download className="w-4 h-4 mr-1" /> Import starten
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* PHASE: IMPORTING */}
+        {phase === "importing" && (
+          <div className="flex flex-col items-center gap-3 py-10">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm font-medium">Daten werden importiert...</p>
+            <p className="text-xs text-muted-foreground">Stammdaten aktualisieren, PDFs speichern, Lohnhistorie anlegen</p>
+          </div>
+        )}
+
+        {/* PHASE: DONE */}
+        {phase === "done" && result && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
+              <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
+              <div>
+                <p className="font-semibold text-green-800">{result.message}</p>
+                <p className="text-xs text-green-600 mt-1">Stammdaten, Lohnhistorie und PDF-Dokumente wurden importiert</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {result.log?.map((entry, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-sm">
+                  {entry.action === "neu_angelegt" ? (
+                    <Plus className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Pencil className="w-4 h-4 text-blue-600" />
+                  )}
+                  <span className="font-medium">{entry.name}</span>
+                  <span className="text-muted-foreground">
+                    {entry.action === "neu_angelegt" ? "neu angelegt" : `aktualisiert (${entry.fields?.length || 0} Felder)`}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end pt-2 border-t">
+              <Button onClick={onDone} data-testid="btn-import-done">Fertig</Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
