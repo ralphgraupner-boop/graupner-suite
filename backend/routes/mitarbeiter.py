@@ -506,8 +506,12 @@ async def execute_lexware_import(file: UploadFile = File(...), user=Depends(get_
     import_log = []
 
     for r in results:
-        vorname = r.get("vorname", "")
-        nachname = r.get("nachname", "")
+        vorname = r.get("vorname", "").strip()
+        nachname = r.get("nachname", "").strip()
+
+        # Skip entries without a name
+        if not vorname and not nachname:
+            continue
 
         # Find matching Mitarbeiter
         matched = None

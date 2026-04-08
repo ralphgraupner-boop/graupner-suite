@@ -197,7 +197,7 @@ def parse_lexware_zip(zip_path: str) -> list:
             else:
                 individual.append(name)
 
-        # Prefer individual files
+        # Prefer individual files, only use combined if no individual files
         to_parse = individual if individual else combined
 
         for name in to_parse:
@@ -208,16 +208,42 @@ def parse_lexware_zip(zip_path: str) -> list:
 
             try:
                 doc = fitz.open(tmp_path)
-                full_text = ""
-                for page in doc:
-                    full_text += page.get_text()
-                doc.close()
+                if basename.startswith("Lohnabrechnungen_"):
+                    # Combined PDF: parse each page separately
+                    for page in doc:
+                        page_text = page.get_text()
+                        parsed = parse_lohnabrechnung_text(page_text)
+                        if parsed.get("vorname") or parsed.get("nachname"):
+                            page_name = f"{parsed.get('vorname', '')}_{parsed.get('nachname', '')}_Lohnabrechnung.pdf"
+                            parsed["_source_file"] = page_name
+                            # Create a temp single-page PDF
+                            single_doc = fitz.open()
+                            single_doc.insert_pdf(doc, from_page=page.number, to_page=page.number)
+                            single_path = tempfile.mktemp(suffix=".pdf")
+                            single_doc.save(single_path)
+                            single_doc.close()
+                            parsed["_pdf_path"] = single_path
+                            results.append(parsed)
+                    doc.close()
+                    os.unlink(tmp_path)
+                else:
+                    # Individual PDF
+                    full_text = ""
+                    for page in doc:
+                        full_text += page.get_text()
+                    doc.close()
 
-                parsed = parse_lohnabrechnung_text(full_text)
-                parsed["_source_file"] = basename
-                parsed["_pdf_path"] = tmp_path
-                results.append(parsed)
+                    parsed = parse_lohnabrechnung_text(full_text)
+                    if parsed.get("vorname") or parsed.get("nachname"):
+                        parsed["_source_file"] = basename
+                        parsed["_pdf_path"] = tmp_path
+                        results.append(parsed)
+                    else:
+                        os.unlink(tmp_path)
             except Exception:
-                os.unlink(tmp_path)
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
     return results
