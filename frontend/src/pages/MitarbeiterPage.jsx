@@ -255,15 +255,14 @@ function WizardForm({ form, setForm, onSave, saving, isNew, onCancel }) {
               <ChevronLeft className="w-4 h-4 mr-1" /> Zurück
             </Button>
           )}
-          {step < WIZARD_STEPS.length - 1 ? (
-            <Button onClick={next} data-testid="wiz-next">
+          {step < WIZARD_STEPS.length - 1 && (
+            <Button variant="outline" onClick={next} data-testid="wiz-next">
               Weiter <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
-          ) : (
-            <Button onClick={handleSave} disabled={saving} data-testid="wiz-save">
-              <Save className="w-4 h-4 mr-1" /> {saving ? "Speichern..." : (isNew ? "Mitarbeiter anlegen" : "Änderungen speichern")}
-            </Button>
           )}
+          <Button onClick={handleSave} disabled={saving} data-testid="wiz-save">
+            <Save className="w-4 h-4 mr-1" /> {saving ? "Speichern..." : (isNew ? "Mitarbeiter anlegen" : "Speichern")}
+          </Button>
         </div>
       </div>
     </div>
