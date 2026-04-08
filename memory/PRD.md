@@ -12,6 +12,7 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Urlaub: Anspruch, Einträge (Erholungsurlaub, Sonderurlaub, unbezahlt), Arbeitstageberechnung, Status (beantragt/genehmigt/genommen/abgelehnt)
 - [x] Krankmeldungen: Zeitraum, AU-Bescheinigung, Arzt, Arbeitstage
 - [x] Dokumente: Upload via Object Storage (Arbeitsvertrag, Zeugnis, Bescheinigung, etc.)
+- [x] Drag & Drop Upload für alle 5 Dokument-Kategorien (Apr 8, 2026)
 - [x] Fortbildungen: Bezeichnung, Anbieter, Kosten, Zertifikat
 - [x] KPI-Dashboard: Resturlaub, Urlaub genommen, Kranktage, aktueller Lohn
 - [x] Abwesenheitskalender-API für alle Mitarbeiter
