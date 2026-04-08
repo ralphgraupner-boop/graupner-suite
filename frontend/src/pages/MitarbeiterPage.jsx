@@ -21,6 +21,34 @@ const URLAUB_TYPEN = [
 const fmt = (d) => d ? new Date(d).toLocaleDateString("de-DE") : "-";
 const fmtEuro = (v) => Number(v || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
 
+// Konvertierung ISO → TT.MM.JJJJ und zurück
+const isoToDE = (iso) => { if (!iso) return ""; const p = iso.split("-"); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; };
+const deToISO = (de) => { const m = de.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : de; };
+
+function DateField({ label, value, editing, onChange }) {
+  const [display, setDisplay] = useState(isoToDE(value || ""));
+  useEffect(() => { setDisplay(isoToDE(value || "")); }, [value]);
+
+  const handleChange = (e) => {
+    let v = e.target.value.replace(/[^\d.]/g, "");
+    // Auto-Punkte setzen
+    const digits = v.replace(/\./g, "");
+    if (digits.length >= 2 && !v.includes(".")) v = digits.slice(0, 2) + "." + digits.slice(2);
+    if (digits.length >= 4 && v.split(".").length < 3) { const parts = v.split("."); v = parts[0] + "." + parts[1].slice(0, 2) + "." + (parts[1].slice(2) + (parts[2] || "")); }
+    if (v.length > 10) v = v.slice(0, 10);
+    setDisplay(v);
+    if (v.match(/^\d{2}\.\d{2}\.\d{4}$/)) onChange(deToISO(v));
+  };
+
+  if (!editing) return (<div><label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label><p className="text-sm font-medium">{display || "-"}</p></div>);
+  return (
+    <div>
+      <label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label>
+      <Input value={display} onChange={handleChange} placeholder="TT.MM.JJJJ" className="h-9" maxLength={10} data-testid="input-geburtsdatum" />
+    </div>
+  );
+}
+
 // ════════════════════ MAIN PAGE ════════════════════
 
 export default function MitarbeiterPage() {
@@ -380,7 +408,7 @@ function StammdatenTab({ ma, form, setForm, editing, setEditing, saving, onSave 
           <F label="Anrede" field="anrede" options={["Herr", "Frau", "Divers"]} />
           <F label="Vorname" field="vorname" />
           <F label="Nachname" field="nachname" />
-          <F label="Geburtsdatum" field="geburtsdatum" type="date" />
+          <DateField label="Geburtsdatum" value={editing ? form.geburtsdatum : ma.geburtsdatum} editing={editing} onChange={v => setForm({ ...form, geburtsdatum: v })} />
           <F label="Personalnummer" field="personalnummer" />
           <F label="Status" field="status" options={["aktiv", "inaktiv", "ausgeschieden"]} />
         </div>
