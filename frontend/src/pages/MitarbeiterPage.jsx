@@ -14,6 +14,15 @@ const STEUERKLASSEN = ["1", "2", "3", "4", "5", "6"];
 const KONFESSIONEN = ["keine", "ev", "rk", "andere"];
 const KONFESSION_LABELS = { keine: "Keine / Konfessionslos", ev: "Evangelisch", rk: "Römisch-Katholisch", andere: "Andere" };
 const BESCHAEFTIGUNGSARTEN = ["Vollzeit", "Teilzeit", "Minijob", "Azubi", "Werkstudent", "Praktikant"];
+const PERSONENGRUPPEN = [
+  "101 - Sozialversicherungspflichtig Beschäftigte ohne besondere Merkmale",
+  "102 - Auszubildende",
+  "109 - Geringfügig entlohnte Beschäftigte",
+  "110 - Kurzfristig Beschäftigte",
+  "119 - Versicherungsfreie Altersvollrentner",
+  "120 - Werkstudenten",
+  "190 - Geschäftsführer ohne SV-Pflicht",
+];
 const FUEHRERSCHEINE = ["B", "BE", "B96", "C", "CE", "C1", "C1E", "Keiner"];
 const DOK_KATEGORIEN = ["Arbeitsvertrag", "Zeugnis", "Bescheinigung", "AU-Bescheinigung", "Zertifikat", "Führerschein", "Sonstiges"];
 const URLAUB_TYPEN = [
@@ -463,6 +472,9 @@ function StammdatenTab({ ma, form, setForm, editing, setEditing, saving, onSave 
           <F label="Steuerklasse" field="steuerklasse" options={STEUERKLASSEN} />
           <F label="Kinderfreibeträge" field="kinderfreibetraege" type="number" />
           <F label="Konfession" field="konfession" options={KONFESSIONEN} />
+          <div className="col-span-2 md:col-span-3">
+            <F label="Personengruppe (SV-Schlüssel)" field="personengruppe" options={PERSONENGRUPPEN} />
+          </div>
         </div>
       </Card>
 

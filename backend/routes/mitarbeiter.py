@@ -65,6 +65,7 @@ async def create_mitarbeiter(data: dict, user=Depends(get_current_user)):
         "steuerklasse": data.get("steuerklasse", ""),
         "kinderfreibetraege": data.get("kinderfreibetraege", 0),
         "konfession": data.get("konfession", "keine"),
+        "personengruppe": data.get("personengruppe", "101 - Sozialversicherungspflichtig Beschäftigte ohne besondere Merkmale"),
         # Bankverbindung
         "iban": data.get("iban", ""),
         "bank": data.get("bank", ""),
