@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy } from "lucide-react";
+import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -854,6 +854,19 @@ const BenutzerTab = () => {
   const [saving, setSaving] = useState(false);
   const [portals, setPortals] = useState([]);
   const [portalsLoading, setPortalsLoading] = useState(true);
+  const [editPerms, setEditPerms] = useState(null);
+  const [perms, setPerms] = useState({});
+  const [permsSaving, setPermsSaving] = useState(false);
+
+  const PERM_LABELS = {
+    mitarbeiter_stammdaten: "Stammdaten bearbeiten",
+    mitarbeiter_lohn: "Lohn & Gehalt",
+    mitarbeiter_urlaub: "Urlaub verwalten",
+    mitarbeiter_krankmeldungen: "Krankmeldungen",
+    mitarbeiter_dokumente: "Dokumente verwalten",
+    mitarbeiter_fortbildungen: "Fortbildungen",
+    mitarbeiter_anlegen_loeschen: "Mitarbeiter anlegen/löschen",
+  };
 
   useEffect(() => { loadUsers(); loadPortals(); }, []);
 
@@ -863,6 +876,24 @@ const BenutzerTab = () => {
 
   const loadUsers = async () => {
     try { const res = await api.get("/users"); setUsers(res.data); } catch { toast.error("Fehler beim Laden"); }
+  };
+
+  const loadPerms = async (username) => {
+    try {
+      const res = await api.get(`/users/${username}/berechtigungen`);
+      setPerms(res.data);
+      setEditPerms(username);
+    } catch { toast.error("Fehler beim Laden der Berechtigungen"); }
+  };
+
+  const savePerms = async () => {
+    setPermsSaving(true);
+    try {
+      await api.put(`/users/${editPerms}/berechtigungen`, perms);
+      toast.success("Berechtigungen gespeichert");
+      setEditPerms(null);
+    } catch (err) { toast.error(err.response?.data?.detail || "Fehler"); }
+    finally { setPermsSaving(false); }
   };
 
   const handleCreate = async () => {
@@ -943,6 +974,9 @@ const BenutzerTab = () => {
               <p className="text-xs text-muted-foreground">{u.email || "Keine E-Mail"} &middot; {u.role || "admin"}</p>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => loadPerms(u.username)} data-testid={`btn-perms-${u.username}`}>
+                <Shield className="w-3.5 h-3.5" /> Rechte
+              </Button>
               <Button variant="outline" size="sm" onClick={() => { setChangePassword(u.username); setNewPassword(""); }} data-testid={`btn-pw-${u.username}`}>
                 <Key className="w-3.5 h-3.5" /> Passwort
               </Button>
@@ -978,6 +1012,7 @@ const BenutzerTab = () => {
             <label className="block text-sm font-medium mb-1">Rolle</label>
             <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid="select-new-role">
               <option value="admin">Admin</option>
+              <option value="buchhaltung">Buchhaltung</option>
               <option value="mitarbeiter">Mitarbeiter</option>
             </select>
           </div>
@@ -1029,6 +1064,33 @@ const BenutzerTab = () => {
                 {sendingEmail ? "Wird gesendet..." : `Zugangsdaten an ${targetUser.email} senden`}
               </Button>
             ) : null; })()}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Berechtigungen Modal */}
+      <Modal isOpen={!!editPerms} onClose={() => setEditPerms(null)} title={`Berechtigungen: ${editPerms}`}>
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground mb-4">Welche Mitarbeiter-Bereiche darf <strong>{editPerms}</strong> bearbeiten?</p>
+          {Object.entries(PERM_LABELS).map(([key, label]) => (
+            <label key={key} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors" data-testid={`perm-${key}`}>
+              <input
+                type="checkbox"
+                checked={perms[key] || false}
+                onChange={(e) => setPerms(prev => ({ ...prev, [key]: e.target.checked }))}
+                className="rounded w-4 h-4 accent-primary"
+              />
+              <span className="text-sm font-medium">{label}</span>
+            </label>
+          ))}
+          <div className="flex justify-between items-center pt-4 border-t mt-4">
+            <button onClick={() => { const all = {}; Object.keys(PERM_LABELS).forEach(k => all[k] = true); setPerms(all); }} className="text-xs text-primary hover:underline" data-testid="btn-select-all-perms">Alle auswählen</button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditPerms(null)}>Abbrechen</Button>
+              <Button onClick={savePerms} disabled={permsSaving} data-testid="btn-save-perms">
+                <Save className="w-4 h-4 mr-1" /> {permsSaving ? "..." : "Speichern"}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

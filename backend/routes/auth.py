@@ -9,6 +9,33 @@ from auth import get_current_user
 router = APIRouter()
 
 
+BERECHTIGUNG_KEYS = [
+    "mitarbeiter_stammdaten",
+    "mitarbeiter_lohn",
+    "mitarbeiter_urlaub",
+    "mitarbeiter_krankmeldungen",
+    "mitarbeiter_dokumente",
+    "mitarbeiter_fortbildungen",
+    "mitarbeiter_anlegen_loeschen",
+]
+
+
+def get_default_berechtigungen(role: str) -> dict:
+    if role == "admin":
+        return {k: True for k in BERECHTIGUNG_KEYS}
+    if role == "buchhaltung":
+        return {
+            "mitarbeiter_stammdaten": True,
+            "mitarbeiter_lohn": True,
+            "mitarbeiter_urlaub": True,
+            "mitarbeiter_krankmeldungen": True,
+            "mitarbeiter_dokumente": True,
+            "mitarbeiter_fortbildungen": True,
+            "mitarbeiter_anlegen_loeschen": False,
+        }
+    return {k: False for k in BERECHTIGUNG_KEYS}
+
+
 @router.post("/auth/register", response_model=TokenResponse)
 async def register(user: UserCreate):
     existing = await db.users.find_one({"username": user.username}, {"_id": 0})
@@ -68,8 +95,10 @@ async def login(user: UserLogin):
 async def get_me(user=Depends(get_current_user)):
     db_user = await db.users.find_one({"username": user["username"]}, {"_id": 0, "password": 0})
     if not db_user:
-        return {"username": user["username"], "role": user.get("role", "admin")}
-    return {"username": db_user["username"], "role": db_user.get("role", "admin"), "email": db_user.get("email", "")}
+        return {"username": user["username"], "role": user.get("role", "admin"), "berechtigungen": get_default_berechtigungen("admin")}
+    result = {"username": db_user["username"], "role": db_user.get("role", "admin"), "email": db_user.get("email", "")}
+    result["berechtigungen"] = db_user.get("berechtigungen", get_default_berechtigungen(db_user.get("role", "admin")))
+    return result
 
 
 @router.get("/users")
@@ -115,6 +144,28 @@ async def change_password(username: str, data: dict, user=Depends(get_current_us
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
     return {"message": "Passwort geändert"}
+
+
+@router.get("/users/{username}/berechtigungen")
+async def get_berechtigungen(username: str, user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Nur Admins")
+    db_user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not db_user:
+        raise HTTPException(404, "Benutzer nicht gefunden")
+    return db_user.get("berechtigungen", get_default_berechtigungen(db_user.get("role", "admin")))
+
+
+@router.put("/users/{username}/berechtigungen")
+async def update_berechtigungen(username: str, data: dict, user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Nur Admins")
+    db_user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not db_user:
+        raise HTTPException(404, "Benutzer nicht gefunden")
+    cleaned = {k: bool(data.get(k, False)) for k in BERECHTIGUNG_KEYS}
+    await db.users.update_one({"username": username}, {"$set": {"berechtigungen": cleaned}})
+    return {"message": "Berechtigungen aktualisiert", "berechtigungen": cleaned}
 
 
 @router.post("/users/{username}/send-credentials")

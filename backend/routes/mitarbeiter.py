@@ -8,6 +8,18 @@ import uuid
 router = APIRouter()
 
 
+async def check_berechtigung(user: dict, bereich: str):
+    """Prüft ob der Benutzer die Berechtigung für einen bestimmten Bereich hat."""
+    if user.get("role") == "admin":
+        return True
+    db_user = await db.users.find_one({"username": user.get("username")}, {"_id": 0, "berechtigungen": 1, "role": 1})
+    if not db_user:
+        return False
+    from routes.auth import get_default_berechtigungen
+    perms = db_user.get("berechtigungen", get_default_berechtigungen(db_user.get("role", "")))
+    return perms.get(bereich, False)
+
+
 def serialize_doc(doc):
     if doc and "_id" in doc:
         doc["_id"] = str(doc["_id"])
@@ -36,8 +48,8 @@ async def get_mitarbeiter(ma_id: str, user=Depends(get_current_user)):
 
 @router.post("/mitarbeiter")
 async def create_mitarbeiter(data: dict, user=Depends(get_current_user)):
-    if user.get("role") not in ("admin",):
-        raise HTTPException(403, "Nur Admins dürfen Mitarbeiter anlegen")
+    if not await check_berechtigung(user, "mitarbeiter_anlegen_loeschen"):
+        raise HTTPException(403, "Keine Berechtigung zum Anlegen von Mitarbeitern")
     ma_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -98,8 +110,8 @@ async def create_mitarbeiter(data: dict, user=Depends(get_current_user)):
 
 @router.put("/mitarbeiter/{ma_id}")
 async def update_mitarbeiter(ma_id: str, data: dict, user=Depends(get_current_user)):
-    if user.get("role") not in ("admin",):
-        raise HTTPException(403, "Nur Admins dürfen Mitarbeiter bearbeiten")
+    if not await check_berechtigung(user, "mitarbeiter_stammdaten"):
+        raise HTTPException(403, "Keine Berechtigung zum Bearbeiten von Stammdaten")
     data.pop("id", None)
     data.pop("_id", None)
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -111,8 +123,8 @@ async def update_mitarbeiter(ma_id: str, data: dict, user=Depends(get_current_us
 
 @router.delete("/mitarbeiter/{ma_id}")
 async def delete_mitarbeiter(ma_id: str, user=Depends(get_current_user)):
-    if user.get("role") not in ("admin",):
-        raise HTTPException(403, "Nur Admins dürfen Mitarbeiter löschen")
+    if not await check_berechtigung(user, "mitarbeiter_anlegen_loeschen"):
+        raise HTTPException(403, "Keine Berechtigung zum Löschen von Mitarbeitern")
     result = await db.mitarbeiter.delete_one({"id": ma_id})
     if result.deleted_count == 0:
         raise HTTPException(404, "Mitarbeiter nicht gefunden")
@@ -134,6 +146,8 @@ async def get_urlaub(ma_id: str, user=Depends(get_current_user)):
 
 @router.post("/mitarbeiter/{ma_id}/urlaub")
 async def create_urlaub(ma_id: str, data: dict, user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_urlaub"):
+        raise HTTPException(403, "Keine Berechtigung für Urlaubsverwaltung")
     entry_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -164,6 +178,8 @@ async def update_urlaub(ma_id: str, entry_id: str, data: dict, user=Depends(get_
 
 @router.delete("/mitarbeiter/{ma_id}/urlaub/{entry_id}")
 async def delete_urlaub(ma_id: str, entry_id: str, user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_urlaub"):
+        raise HTTPException(403, "Keine Berechtigung für Urlaubsverwaltung")
     result = await db.mitarbeiter_urlaub.delete_one({"id": entry_id, "mitarbeiter_id": ma_id})
     if result.deleted_count == 0:
         raise HTTPException(404, "Eintrag nicht gefunden")
@@ -180,6 +196,8 @@ async def get_krankmeldungen(ma_id: str, user=Depends(get_current_user)):
 
 @router.post("/mitarbeiter/{ma_id}/krankmeldungen")
 async def create_krankmeldung(ma_id: str, data: dict, user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_krankmeldungen"):
+        raise HTTPException(403, "Keine Berechtigung für Krankmeldungen")
     entry_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -200,6 +218,8 @@ async def create_krankmeldung(ma_id: str, data: dict, user=Depends(get_current_u
 
 @router.delete("/mitarbeiter/{ma_id}/krankmeldungen/{entry_id}")
 async def delete_krankmeldung(ma_id: str, entry_id: str, user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_krankmeldungen"):
+        raise HTTPException(403, "Keine Berechtigung für Krankmeldungen")
     result = await db.mitarbeiter_krankmeldungen.delete_one({"id": entry_id, "mitarbeiter_id": ma_id})
     if result.deleted_count == 0:
         raise HTTPException(404, "Eintrag nicht gefunden")
@@ -216,8 +236,8 @@ async def get_lohnhistorie(ma_id: str, user=Depends(get_current_user)):
 
 @router.post("/mitarbeiter/{ma_id}/lohnhistorie")
 async def create_lohnhistorie(ma_id: str, data: dict, user=Depends(get_current_user)):
-    if user.get("role") not in ("admin",):
-        raise HTTPException(403, "Nur Admins")
+    if not await check_berechtigung(user, "mitarbeiter_lohn"):
+        raise HTTPException(403, "Keine Berechtigung für Lohn & Gehalt")
     entry_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -252,6 +272,8 @@ async def get_dokumente(ma_id: str, user=Depends(get_current_user)):
 
 @router.post("/mitarbeiter/{ma_id}/dokumente")
 async def upload_dokument(ma_id: str, file: UploadFile = File(...), kategorie: str = Form("sonstiges"), user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_dokumente"):
+        raise HTTPException(403, "Keine Berechtigung für Dokumente")
     from utils.storage import put_object
     content = await file.read()
     storage_key = f"mitarbeiter/{ma_id}/{uuid.uuid4().hex[:8]}_{file.filename}"
@@ -276,6 +298,8 @@ async def upload_dokument(ma_id: str, file: UploadFile = File(...), kategorie: s
 
 @router.delete("/mitarbeiter/{ma_id}/dokumente/{doc_id}")
 async def delete_dokument(ma_id: str, doc_id: str, user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_dokumente"):
+        raise HTTPException(403, "Keine Berechtigung für Dokumente")
     result = await db.mitarbeiter_dokumente.delete_one({"id": doc_id, "mitarbeiter_id": ma_id})
     if result.deleted_count == 0:
         raise HTTPException(404, "Dokument nicht gefunden")
@@ -292,6 +316,8 @@ async def get_fortbildungen(ma_id: str, user=Depends(get_current_user)):
 
 @router.post("/mitarbeiter/{ma_id}/fortbildungen")
 async def create_fortbildung(ma_id: str, data: dict, user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_fortbildungen"):
+        raise HTTPException(403, "Keine Berechtigung für Fortbildungen")
     entry_id = str(uuid.uuid4())[:8]
     now = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -313,6 +339,8 @@ async def create_fortbildung(ma_id: str, data: dict, user=Depends(get_current_us
 
 @router.delete("/mitarbeiter/{ma_id}/fortbildungen/{entry_id}")
 async def delete_fortbildung(ma_id: str, entry_id: str, user=Depends(get_current_user)):
+    if not await check_berechtigung(user, "mitarbeiter_fortbildungen"):
+        raise HTTPException(403, "Keine Berechtigung für Fortbildungen")
     result = await db.mitarbeiter_fortbildungen.delete_one({"id": entry_id, "mitarbeiter_id": ma_id})
     if result.deleted_count == 0:
         raise HTTPException(404, "Eintrag nicht gefunden")
