@@ -6,7 +6,7 @@ import {
   Users, Plus, Pencil, Trash2, Search, UserPlus, Calendar, Heart,
   FileText, Euro, GraduationCap, Phone, Mail, MapPin, Shield, Clock,
   ChevronLeft, Upload, Download, AlertTriangle, CheckCircle, X, Eye,
-  Briefcase, Baby, Building2, TrendingUp, XCircle, Car, CreditCard, UserCircle
+  Briefcase, Baby, Building2, TrendingUp, XCircle, Car, CreditCard, UserCircle, Globe
 } from "lucide-react";
 
 const POSITIONS = ["Meister", "Geselle", "Azubi", "Büro", "Praktikant", "Aushilfe"];
@@ -831,65 +831,122 @@ function KrankmeldungenTab({ ma, onUpdate }) {
 
 // ════════════════════ DOKUMENTE TAB ════════════════════
 
+const DOK_SEKTIONEN = [
+  { key: "mitarbeiter", label: "Dokumente für Ihre Mitarbeiter", icon: UserCircle, hint: "Lohnabrechnungen, Bescheinigungen, Verträge für den Mitarbeiter",
+    kategorien: ["Lohnabrechnung", "Arbeitsvertrag", "Nachtrag", "Zeugnis", "Bescheinigung", "Sonstiges"] },
+  { key: "arbeitgeber", label: "Dokumente für Sie als Arbeitgeber", icon: Building2, hint: "Bewerbungsunterlagen, Personalfragebogen, Steuer-Anmeldung",
+    kategorien: ["Bewerbung", "Personalfragebogen", "Steuer-Anmeldung", "SV-Meldung", "Führungszeugnis", "Gesundheitszeugnis", "Sonstiges"] },
+  { key: "entsendung", label: "Entsendungen (A1)", icon: Globe, hint: "A1-Bescheinigungen für Auslandseinsätze (EU)",
+    kategorien: ["A1-Bescheinigung", "Entsendungsvertrag", "Sonstiges"] },
+  { key: "entgelt", label: "Entgeltbescheinigungen", icon: Euro, hint: "Verdienstbescheinigungen, ELStAM, Jahresmeldungen",
+    kategorien: ["Verdienstbescheinigung", "ELStAM", "Jahresmeldung", "Sonstiges"] },
+  { key: "bea", label: "Arbeitsbescheinigungen (BEA)", icon: FileText, hint: "Arbeitsbescheinigungen für die Agentur für Arbeit",
+    kategorien: ["Arbeitsbescheinigung", "EU-Bescheinigung", "Nebeneinkommensbescheinigung", "Sonstiges"] },
+];
+
 function DokumenteTab({ ma }) {
   const [docs, setDocs] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [kategorie, setKategorie] = useState("Sonstiges");
+  const [uploading, setUploading] = useState(null);
+  const [expandedSection, setExpandedSection] = useState(null);
 
   useEffect(() => { load(); }, []);
   const load = async () => { try { const r = await api.get(`/mitarbeiter/${ma.id}/dokumente`); setDocs(r.data); } catch {} };
 
-  const handleUpload = async (e) => {
+  const handleUpload = async (e, sektion, kategorie) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
+    setUploading(sektion);
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("kategorie", kategorie);
+      fd.append("kategorie", `${sektion}::${kategorie}`);
       await api.post(`/mitarbeiter/${ma.id}/dokumente`, fd, { headers: { "Content-Type": "multipart/form-data" } });
       toast.success("Dokument hochgeladen");
       load();
-    } catch (err) { toast.error("Upload fehlgeschlagen"); }
-    finally { setUploading(false); e.target.value = ""; }
+    } catch { toast.error("Upload fehlgeschlagen"); }
+    finally { setUploading(null); e.target.value = ""; }
   };
 
   const handleDelete = async (id) => {
     try { await api.delete(`/mitarbeiter/${ma.id}/dokumente/${id}`); toast.success("Gelöscht"); load(); } catch {}
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-sm font-semibold">Dokumente</h3>
-        <div className="flex gap-2 items-center">
-          <select value={kategorie} onChange={e => setKategorie(e.target.value)} className="h-9 rounded-sm border border-input bg-background px-3 text-sm">
-            {DOK_KATEGORIEN.map(k => <option key={k} value={k}>{k}</option>)}
-          </select>
-          <label className="cursor-pointer">
-            <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
-            <Button size="sm" as="span" disabled={uploading} data-testid="btn-upload-doc">
-              <Upload className="w-4 h-4 mr-1" /> {uploading ? "..." : "Hochladen"}
-            </Button>
-          </label>
-        </div>
-      </div>
+  const getDocsForSection = (sectionKey) => docs.filter(d => (d.kategorie || "").startsWith(sectionKey + "::") || (!d.kategorie?.includes("::") && sectionKey === "mitarbeiter" && DOK_SEKTIONEN[0].kategorien.some(k => k === d.kategorie)));
 
-      {docs.length > 0 ? (
-        <div className="grid gap-2">
-          {docs.map(d => (
-            <Card key={d.id} className="p-3 flex items-center gap-3">
-              <FileText className="w-5 h-5 text-primary shrink-0" />
+  return (
+    <div className="space-y-4" data-testid="dokumente-tab">
+      {DOK_SEKTIONEN.map(section => {
+        const sectionDocs = getDocsForSection(section.key);
+        const isOpen = expandedSection === section.key;
+        return (
+          <Card key={section.key} className="overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(isOpen ? null : section.key)}
+              className="w-full p-4 flex items-center gap-3 text-left hover:bg-muted/30 transition-colors"
+              data-testid={`dok-section-${section.key}`}
+            >
+              <section.icon className="w-5 h-5 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{d.filename}</p>
-                <p className="text-xs text-muted-foreground">{d.kategorie} · {fmt(d.created_at)}</p>
+                <p className="text-sm font-semibold">{section.label}</p>
+                <p className="text-xs text-muted-foreground">{section.hint}</p>
               </div>
-              {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="p-1 hover:text-primary"><Download className="w-4 h-4" /></a>}
-              <button onClick={() => handleDelete(d.id)} className="p-1 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
-            </Card>
-          ))}
-        </div>
-      ) : <p className="text-sm text-muted-foreground text-center py-4">Keine Dokumente hochgeladen</p>}
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted">{sectionDocs.length}</span>
+              <ChevronLeft className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "-rotate-90" : ""}`} />
+            </button>
+
+            {isOpen && (
+              <div className="border-t px-4 pb-4 pt-3 space-y-3">
+                {/* Upload */}
+                <DokUploadRow
+                  kategorien={section.kategorien}
+                  sectionKey={section.key}
+                  uploading={uploading === section.key}
+                  onUpload={handleUpload}
+                />
+
+                {/* Files list */}
+                {sectionDocs.length > 0 ? (
+                  <div className="grid gap-2">
+                    {sectionDocs.map(d => {
+                      const katLabel = (d.kategorie || "").includes("::") ? d.kategorie.split("::")[1] : d.kategorie;
+                      return (
+                        <div key={d.id} className="flex items-center gap-3 p-2 rounded-md bg-muted/30">
+                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{d.filename}</p>
+                            <p className="text-xs text-muted-foreground">{katLabel} · {fmt(d.created_at)}</p>
+                          </div>
+                          {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="p-1 hover:text-primary" title="Herunterladen"><Download className="w-4 h-4" /></a>}
+                          <button onClick={() => handleDelete(d.id)} className="p-1 hover:text-red-600" title="Löschen"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">Keine Dokumente in dieser Kategorie</p>
+                )}
+              </div>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+function DokUploadRow({ kategorien, sectionKey, uploading, onUpload }) {
+  const [kat, setKat] = useState(kategorien[0]);
+  const fileRef = React.useRef(null);
+
+  return (
+    <div className="flex gap-2 items-center">
+      <select value={kat} onChange={e => setKat(e.target.value)} className="h-8 rounded-sm border border-input bg-background px-2 text-xs flex-1">
+        {kategorien.map(k => <option key={k} value={k}>{k}</option>)}
+      </select>
+      <input ref={fileRef} type="file" className="hidden" onChange={e => onUpload(e, sectionKey, kat)} disabled={uploading} />
+      <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading} className="text-xs h-8" data-testid={`btn-upload-${sectionKey}`}>
+        <Upload className="w-3.5 h-3.5 mr-1" /> {uploading ? "..." : "Hochladen"}
+      </Button>
     </div>
   );
 }
