@@ -278,13 +278,18 @@ export default function MitarbeiterPage() {
   const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userPerms, setUserPerms] = useState(null);
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { loadAll(); loadPerms(); }, []);
 
   const loadAll = async () => {
     try { const res = await api.get("/mitarbeiter"); setMitarbeiter(res.data); }
     catch { toast.error("Fehler beim Laden"); }
     finally { setLoading(false); }
+  };
+
+  const loadPerms = async () => {
+    try { const res = await api.get("/auth/me"); setUserPerms(res.data.berechtigungen || {}); } catch {}
   };
 
   const filtered = useMemo(() => {
@@ -300,7 +305,7 @@ export default function MitarbeiterPage() {
   }
 
   if (selected) {
-    return <MitarbeiterDetail ma={selected} onBack={() => { setSelected(null); loadAll(); }} onUpdate={loadAll} />;
+    return <MitarbeiterDetail ma={selected} onBack={() => { setSelected(null); loadAll(); }} onUpdate={loadAll} userPerms={userPerms} />;
   }
 
   return (
@@ -312,9 +317,11 @@ export default function MitarbeiterPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{aktive} aktive Mitarbeiter</p>
         </div>
-        <Button onClick={() => setShowNew(true)} data-testid="btn-new-mitarbeiter">
-          <UserPlus className="w-4 h-4 mr-1" /> Neuer Mitarbeiter
-        </Button>
+        {userPerms?.mitarbeiter_anlegen_loeschen && (
+          <Button onClick={() => setShowNew(true)} data-testid="btn-new-mitarbeiter">
+            <UserPlus className="w-4 h-4 mr-1" /> Neuer Mitarbeiter
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -398,7 +405,7 @@ function NewMitarbeiterView({ onBack, onCreated }) {
 
 // ════════════════════ DETAIL VIEW ════════════════════
 
-function MitarbeiterDetail({ ma: initialMa, onBack, onUpdate }) {
+function MitarbeiterDetail({ ma: initialMa, onBack, onUpdate, userPerms }) {
   const [ma, setMa] = useState(initialMa);
   const [activeTab, setActiveTab] = useState("stammdaten");
   const [form, setForm] = useState({ ...initialMa });
@@ -454,7 +461,9 @@ function MitarbeiterDetail({ ma: initialMa, onBack, onUpdate }) {
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${ma.status === "aktiv" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
           {ma.status === "aktiv" ? "Aktiv" : "Inaktiv"}
         </span>
-        <Button variant="destructive" size="sm" onClick={handleDelete} data-testid="btn-delete-ma"><Trash2 className="w-4 h-4" /></Button>
+        {userPerms?.mitarbeiter_anlegen_loeschen && (
+          <Button variant="destructive" size="sm" onClick={handleDelete} data-testid="btn-delete-ma"><Trash2 className="w-4 h-4" /></Button>
+        )}
       </div>
 
       {stats && (

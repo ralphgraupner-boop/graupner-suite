@@ -18,6 +18,15 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Abwesenheitskalender-API für alle Mitarbeiter
 - [x] Zugriff für Admin und Buchhaltung-Rolle
 
+### Berechtigungssystem (Permissions) – NEU Apr 8, 2026
+- [x] Granulare Berechtigungen pro Benutzer für 7 Mitarbeiter-Bereiche
+- [x] Bereiche: Stammdaten, Lohn & Gehalt, Urlaub, Krankmeldungen, Dokumente, Fortbildungen, Anlegen/Löschen
+- [x] Admin hat immer Vollzugriff (hardcoded)
+- [x] Buchhaltung-Rolle: Standard alle Bereiche außer Anlegen/Löschen
+- [x] Einstellungen -> Benutzer -> "Rechte"-Button öffnet Berechtigungs-Modal
+- [x] Frontend blendet Buttons aus wenn Berechtigung fehlt (Neuer Mitarbeiter, Löschen)
+- [x] Backend prüft Berechtigungen bei jedem Schreibzugriff
+
 ### Passwort-Management – NEU Apr 7, 2026
 - [x] Zufallspasswort generieren
 - [x] Passwort sichtbar anzeigen (Toggle)
