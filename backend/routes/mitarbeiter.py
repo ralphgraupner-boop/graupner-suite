@@ -53,6 +53,8 @@ async def create_mitarbeiter(data: dict, user=Depends(get_current_user)):
         "telefon": data.get("telefon", ""),
         "email": data.get("email", ""),
         "position": data.get("position", ""),
+        "beschaeftigungsart": data.get("beschaeftigungsart", ""),
+        "wochenstunden": data.get("wochenstunden", 40),
         "eintrittsdatum": data.get("eintrittsdatum", ""),
         "austrittsdatum": data.get("austrittsdatum", ""),
         "status": data.get("status", "aktiv"),
@@ -62,6 +64,12 @@ async def create_mitarbeiter(data: dict, user=Depends(get_current_user)):
         "krankenkasse": data.get("krankenkasse", ""),
         "steuerklasse": data.get("steuerklasse", ""),
         "kinderfreibetraege": data.get("kinderfreibetraege", 0),
+        "konfession": data.get("konfession", "keine"),
+        # Bankverbindung
+        "iban": data.get("iban", ""),
+        "bank": data.get("bank", ""),
+        # Führerschein
+        "fuehrerschein": data.get("fuehrerschein", ""),
         # Lohn
         "lohnart": data.get("lohnart", "stundenlohn"),
         "stundenlohn": data.get("stundenlohn", 0),
@@ -73,6 +81,7 @@ async def create_mitarbeiter(data: dict, user=Depends(get_current_user)):
         # Notfallkontakt
         "notfallkontakt_name": data.get("notfallkontakt_name", ""),
         "notfallkontakt_telefon": data.get("notfallkontakt_telefon", ""),
+        "notfallkontakt_beziehung": data.get("notfallkontakt_beziehung", ""),
         # Bemerkungen
         "bemerkungen": data.get("bemerkungen", ""),
         # Foto

@@ -6,12 +6,16 @@ import {
   Users, Plus, Pencil, Trash2, Search, UserPlus, Calendar, Heart,
   FileText, Euro, GraduationCap, Phone, Mail, MapPin, Shield, Clock,
   ChevronLeft, Upload, Download, AlertTriangle, CheckCircle, X, Eye,
-  Briefcase, Baby, Building2, TrendingUp, XCircle
+  Briefcase, Baby, Building2, TrendingUp, XCircle, Car, CreditCard, UserCircle
 } from "lucide-react";
 
 const POSITIONS = ["Meister", "Geselle", "Azubi", "Büro", "Praktikant", "Aushilfe"];
 const STEUERKLASSEN = ["1", "2", "3", "4", "5", "6"];
-const DOK_KATEGORIEN = ["Arbeitsvertrag", "Zeugnis", "Bescheinigung", "AU-Bescheinigung", "Zertifikat", "Sonstiges"];
+const KONFESSIONEN = ["keine", "ev", "rk", "andere"];
+const KONFESSION_LABELS = { keine: "Keine / Konfessionslos", ev: "Evangelisch", rk: "Römisch-Katholisch", andere: "Andere" };
+const BESCHAEFTIGUNGSARTEN = ["Vollzeit", "Teilzeit", "Minijob", "Azubi", "Werkstudent", "Praktikant"];
+const FUEHRERSCHEINE = ["B", "BE", "B96", "C", "CE", "C1", "C1E", "Keiner"];
+const DOK_KATEGORIEN = ["Arbeitsvertrag", "Zeugnis", "Bescheinigung", "AU-Bescheinigung", "Zertifikat", "Führerschein", "Sonstiges"];
 const URLAUB_TYPEN = [
   { value: "urlaub", label: "Erholungsurlaub" },
   { value: "sonderurlaub", label: "Sonderurlaub" },
@@ -226,9 +230,19 @@ function NewMitarbeiterModal({ isOpen, onClose, onCreated }) {
               {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+          <DateField label="Eintrittsdatum" value={form.eintrittsdatum} editing={true} onChange={v => setForm({ ...form, eintrittsdatum: v })} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Eintrittsdatum</label>
-            <Input type="date" value={form.eintrittsdatum} onChange={e => setForm({ ...form, eintrittsdatum: e.target.value })} data-testid="input-eintritt" />
+            <label className="block text-sm font-medium mb-1">Beschäftigungsart</label>
+            <select value={form.beschaeftigungsart || ""} onChange={e => setForm({ ...form, beschaeftigungsart: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid="select-beschaeftigung">
+              <option value="">Bitte wählen</option>
+              {BESCHAEFTIGUNGSARTEN.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Wochenstunden</label>
+            <Input type="number" value={form.wochenstunden || ""} onChange={e => setForm({ ...form, wochenstunden: Number(e.target.value) })} placeholder="z.B. 40" data-testid="input-wochenstunden" />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -431,8 +445,10 @@ function StammdatenTab({ ma, form, setForm, editing, setEditing, saving, onSave 
         <h3 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2"><Briefcase className="w-4 h-4" /> Beschäftigung</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <F label="Position" field="position" options={POSITIONS} />
-          <F label="Eintrittsdatum" field="eintrittsdatum" type="date" />
-          <F label="Austrittsdatum" field="austrittsdatum" type="date" />
+          <F label="Beschäftigungsart" field="beschaeftigungsart" options={BESCHAEFTIGUNGSARTEN} />
+          <F label="Wochenstunden" field="wochenstunden" type="number" />
+          <DateField label="Eintrittsdatum" value={editing ? form.eintrittsdatum : ma.eintrittsdatum} editing={editing} onChange={v => setForm({ ...form, eintrittsdatum: v })} />
+          <DateField label="Austrittsdatum" value={editing ? form.austrittsdatum : ma.austrittsdatum} editing={editing} onChange={v => setForm({ ...form, austrittsdatum: v })} />
           <F label="Urlaubsanspruch (Tage/Jahr)" field="urlaubsanspruch" type="number" />
         </div>
       </Card>
@@ -446,15 +462,27 @@ function StammdatenTab({ ma, form, setForm, editing, setEditing, saving, onSave 
           <F label="Krankenkasse" field="krankenkasse" />
           <F label="Steuerklasse" field="steuerklasse" options={STEUERKLASSEN} />
           <F label="Kinderfreibeträge" field="kinderfreibetraege" type="number" />
+          <F label="Konfession" field="konfession" options={KONFESSIONEN} />
+        </div>
+      </Card>
+
+      {/* Bankverbindung & Führerschein */}
+      <Card className="p-5">
+        <h3 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2"><CreditCard className="w-4 h-4" /> Bankverbindung & Sonstiges</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <F label="IBAN" field="iban" />
+          <F label="Bank" field="bank" />
+          <F label="Führerscheinklasse" field="fuehrerschein" options={FUEHRERSCHEINE} />
         </div>
       </Card>
 
       {/* Notfall */}
       <Card className="p-5">
         <h3 className="text-sm font-semibold text-primary mb-4 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Notfallkontakt</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <F label="Name" field="notfallkontakt_name" />
           <F label="Telefon" field="notfallkontakt_telefon" />
+          <F label="Beziehung" field="notfallkontakt_beziehung" options={["Ehepartner/in", "Eltern", "Kind", "Geschwister", "Partner/in", "Sonstige"]} />
         </div>
       </Card>
 
@@ -503,8 +531,8 @@ function LohnTab({ ma, onUpdate }) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div><p className="text-xs text-muted-foreground">Lohnart</p><p className="font-medium">{ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : "Stundenlohn"}</p></div>
           <div><p className="text-xs text-muted-foreground">{ma.lohnart === "monatsgehalt" ? "Monatsgehalt" : "Stundenlohn"}</p><p className="font-medium text-lg">{ma.lohnart === "monatsgehalt" ? fmtEuro(ma.monatsgehalt) : fmtEuro(ma.stundenlohn)}</p></div>
-          <div><p className="text-xs text-muted-foreground">VWL Arbeitnehmer</p><p className="font-medium">{fmtEuro(ma.vwl_betrag)}</p></div>
-          <div><p className="text-xs text-muted-foreground">VWL Arbeitgeber</p><p className="font-medium">{fmtEuro(ma.vwl_ag_anteil)}</p></div>
+          <div><p className="text-xs text-muted-foreground">Wochenstunden</p><p className="font-medium">{ma.wochenstunden || 40} Std.</p></div>
+          <div><p className="text-xs text-muted-foreground">VWL (AN / AG)</p><p className="font-medium">{fmtEuro(ma.vwl_betrag)} / {fmtEuro(ma.vwl_ag_anteil)}</p></div>
         </div>
       </Card>
 
@@ -517,10 +545,7 @@ function LohnTab({ ma, onUpdate }) {
       {showNew && (
         <Card className="p-4 border-primary/30">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs font-medium mb-1">Gültig ab *</label>
-              <Input type="date" value={form.gueltig_ab} onChange={e => setForm({ ...form, gueltig_ab: e.target.value })} />
-            </div>
+            <DateField label="Gültig ab *" value={form.gueltig_ab} editing={true} onChange={v => setForm({ ...form, gueltig_ab: v })} />
             <div>
               <label className="block text-xs font-medium mb-1">Lohnart</label>
               <select value={form.lohnart} onChange={e => setForm({ ...form, lohnart: e.target.value })} className="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm">
