@@ -18,6 +18,13 @@ Complete craftsman management software ("Graupner Suite") for a carpentry busine
 - [x] Abwesenheitskalender-API für alle Mitarbeiter
 - [x] Zugriff für Admin und Buchhaltung-Rolle
 
+### Lexware Import – NEU Apr 8, 2026
+- [x] ZIP-Upload mit Drag & Drop oder Dateiauswahl
+- [x] PDF-Parser erkennt automatisch: Name, Adresse, Geburtsdatum, Steuer-ID, SV-Nr, Krankenkasse, Steuerklasse, Konfession, Personengruppe, IBAN, Bank, Gehalt/Stundenlohn, Urlaub-Rest, Kinderfreibeträge
+- [x] Vorschau: Zeigt erkannte Daten + ob Mitarbeiter aktualisiert oder neu angelegt wird
+- [x] Import: Aktualisiert bestehende Stammdaten, legt neue Mitarbeiter an, speichert PDFs als Dokumente (Kategorie: Verdienstbescheinigung), erstellt Lohnhistorie-Einträge
+- [x] Zuordnung über Vorname + Nachname
+
 ### Berechtigungssystem (Permissions) – NEU Apr 8, 2026
 - [x] Granulare Berechtigungen pro Benutzer für 7 Mitarbeiter-Bereiche
 - [x] Bereiche: Stammdaten, Lohn & Gehalt, Urlaub, Krankmeldungen, Dokumente, Fortbildungen, Anlegen/Löschen
