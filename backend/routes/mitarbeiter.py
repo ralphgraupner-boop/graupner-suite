@@ -306,6 +306,30 @@ async def delete_dokument(ma_id: str, doc_id: str, user=Depends(get_current_user
     return {"message": "Gelöscht"}
 
 
+@router.get("/mitarbeiter/{ma_id}/dokumente/{doc_id}/download")
+async def download_dokument(ma_id: str, doc_id: str, user=Depends(get_current_user)):
+    """Lädt ein Dokument aus dem Object Storage und gibt es als Download zurück."""
+    doc = await db.mitarbeiter_dokumente.find_one({"id": doc_id, "mitarbeiter_id": ma_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Dokument nicht gefunden")
+    storage_key = doc.get("storage_key")
+    if not storage_key:
+        raise HTTPException(404, "Datei nicht im Storage")
+    try:
+        from utils.storage import get_object
+        file_data, content_type = get_object(storage_key)
+        from fastapi.responses import Response
+        filename = doc.get("filename", "download")
+        return Response(
+            content=file_data,
+            media_type=content_type or "application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Download fehlgeschlagen: {str(e)}")
+
+
+
 # ──────────────────── FORTBILDUNGEN ────────────────────
 
 @router.get("/mitarbeiter/{ma_id}/fortbildungen")

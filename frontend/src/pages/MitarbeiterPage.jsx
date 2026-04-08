@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { api } from "@/lib/api";
+import { api, API } from "@/lib/api";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { toast } from "sonner";
 import {
@@ -880,8 +880,18 @@ function DokumenteTab({ ma }) {
                       <div key={d.id} className="flex items-center gap-3 p-2 rounded-md bg-muted/30">
                         <FileText className="w-4 h-4 text-primary shrink-0" />
                         <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{d.filename}</p><p className="text-xs text-muted-foreground">{katLabel} · {fmt(d.created_at)}</p></div>
-                        {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="p-1 hover:text-primary"><Download className="w-4 h-4" /></a>}
-                        <button onClick={() => handleDelete(d.id)} className="p-1 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={async () => {
+                          try {
+                            const res = await api.get(`/mitarbeiter/${ma.id}/dokumente/${d.id}/download`, { responseType: "blob" });
+                            const url = window.URL.createObjectURL(res.data);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = d.filename;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                          } catch { toast.error("Download fehlgeschlagen"); }
+                        }} className="p-1.5 rounded hover:bg-primary/10 hover:text-primary transition-colors" title="Herunterladen" data-testid={`btn-download-${d.id}`}><Download className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded hover:bg-red-50 hover:text-red-600 transition-colors" title="Löschen"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     );
                   })}</div>
