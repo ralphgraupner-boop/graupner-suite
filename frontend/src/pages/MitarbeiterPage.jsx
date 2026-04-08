@@ -280,6 +280,7 @@ export default function MitarbeiterPage() {
   const [loading, setLoading] = useState(true);
   const [userPerms, setUserPerms] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("alle");
 
   useEffect(() => { loadAll(); loadPerms(); }, []);
 
@@ -294,12 +295,17 @@ export default function MitarbeiterPage() {
   };
 
   const filtered = useMemo(() => {
-    if (!search) return mitarbeiter;
+    let list = mitarbeiter;
+    if (statusFilter === "aktiv") list = list.filter(m => m.status === "aktiv");
+    else if (statusFilter === "ausgeschieden") list = list.filter(m => m.status === "ausgeschieden");
+    else if (statusFilter === "inaktiv") list = list.filter(m => m.status === "inaktiv");
+    if (!search) return list;
     const s = search.toLowerCase();
-    return mitarbeiter.filter(m => `${m.vorname} ${m.nachname} ${m.position} ${m.personalnummer}`.toLowerCase().includes(s));
-  }, [mitarbeiter, search]);
+    return list.filter(m => `${m.vorname} ${m.nachname} ${m.position} ${m.personalnummer}`.toLowerCase().includes(s));
+  }, [mitarbeiter, search, statusFilter]);
 
   const aktive = mitarbeiter.filter(m => m.status === "aktiv").length;
+  const ausgeschieden = mitarbeiter.filter(m => m.status === "ausgeschieden").length;
 
   if (showNew) {
     return <NewMitarbeiterView onBack={() => setShowNew(false)} onCreated={(ma) => { loadAll(); setSelected(ma); setShowNew(false); }} />;
@@ -339,20 +345,39 @@ export default function MitarbeiterPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard icon={Users} label="Gesamt" value={mitarbeiter.length} />
         <KpiCard icon={CheckCircle} label="Aktiv" value={aktive} color="text-green-600" />
-        <KpiCard icon={Briefcase} label="Positionen" value={[...new Set(mitarbeiter.map(m => m.position).filter(Boolean))].length} />
+        <KpiCard icon={XCircle} label="Ausgeschieden" value={ausgeschieden} color="text-red-500" />
         <KpiCard icon={GraduationCap} label="Azubis" value={mitarbeiter.filter(m => m.position === "Azubi").length} color="text-blue-600" />
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Mitarbeiter suchen..." className="pl-10" data-testid="search-mitarbeiter" />
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Mitarbeiter suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" data-testid="search-mitarbeiter" />
+        </div>
+        <div className="flex gap-1 rounded-lg border p-1" data-testid="status-filter">
+          {[
+            { key: "alle", label: "Alle" },
+            { key: "aktiv", label: "Aktiv" },
+            { key: "ausgeschieden", label: "Ausgeschieden" },
+            { key: "inaktiv", label: "Inaktiv" },
+          ].map(f => (
+            <button
+              key={f.key}
+              onClick={() => setStatusFilter(f.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${statusFilter === f.key ? "bg-primary text-white" : "hover:bg-muted"}`}
+              data-testid={`filter-${f.key}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-3">
         {loading ? <p className="text-center text-muted-foreground py-8">Laden...</p> :
         filtered.length === 0 ? <p className="text-center text-muted-foreground py-8">Keine Mitarbeiter gefunden</p> :
         filtered.map(m => (
-          <Card key={m.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer border-l-4" style={{ borderLeftColor: m.status === "aktiv" ? "#16a34a" : "#9ca3af" }} onClick={() => setSelected(m)} data-testid={`ma-card-${m.id}`}>
+          <Card key={m.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer border-l-4" style={{ borderLeftColor: m.status === "aktiv" ? "#16a34a" : m.status === "ausgeschieden" ? "#dc2626" : "#9ca3af" }} onClick={() => setSelected(m)} data-testid={`ma-card-${m.id}`}>
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
                 {m.vorname?.charAt(0)}{m.nachname?.charAt(0)}
@@ -366,8 +391,8 @@ export default function MitarbeiterPage() {
                 {m.email && <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{m.email}</span>}
                 <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />seit {fmt(m.eintrittsdatum)}</span>
               </div>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "aktiv" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                {m.status === "aktiv" ? "Aktiv" : "Inaktiv"}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "aktiv" ? "bg-green-100 text-green-700" : m.status === "ausgeschieden" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                {m.status === "aktiv" ? "Aktiv" : m.status === "ausgeschieden" ? "Ausgeschieden" : "Inaktiv"}
               </span>
             </div>
           </Card>
@@ -470,8 +495,8 @@ function MitarbeiterDetail({ ma: initialMa, onBack, onUpdate, userPerms }) {
           <h1 className="text-xl font-bold">{ma.anrede} {ma.vorname} {ma.nachname}</h1>
           <p className="text-sm text-muted-foreground">{ma.position} {ma.personalnummer ? `· #${ma.personalnummer}` : ""}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${ma.status === "aktiv" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-          {ma.status === "aktiv" ? "Aktiv" : "Inaktiv"}
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${ma.status === "aktiv" ? "bg-green-100 text-green-700" : ma.status === "ausgeschieden" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+          {ma.status === "aktiv" ? "Aktiv" : ma.status === "ausgeschieden" ? "Ausgeschieden" : "Inaktiv"}
         </span>
         {userPerms?.mitarbeiter_anlegen_loeschen && (
           <Button variant="destructive" size="sm" onClick={handleDelete} data-testid="btn-delete-ma"><Trash2 className="w-4 h-4" /></Button>
