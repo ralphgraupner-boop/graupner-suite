@@ -1,522 +1,405 @@
+#!/usr/bin/env python3
+"""
+Comprehensive Backend API Test for Graupner Suite
+Tests all major API endpoints with proper authentication
+"""
+
 import requests
-import sys
-from datetime import datetime
 import json
+import sys
+import os
+from datetime import datetime
 
-class GraupnerSuiteAPITester:
-    def __init__(self, base_url="https://code-import-flow-1.preview.emergentagent.com/api"):
-        self.base_url = base_url
+# Get backend URL from frontend .env
+BACKEND_URL = "https://code-import-flow-1.preview.emergentagent.com/api"
+
+# Test credentials
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "Graupner!Suite2026"
+
+class GraupnerAPITester:
+    def __init__(self):
+        self.base_url = BACKEND_URL
         self.token = None
-        self.tests_run = 0
-        self.tests_passed = 0
-        self.customer_id = None
-        self.article_id = None  
-        self.quote_id = None
-        self.order_id = None
-        self.invoice_id = None
-
-    def run_test(self, name, method, endpoint, expected_status, data=None):
-        """Run a single API test"""
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        headers = {'Content-Type': 'application/json'}
-        if self.token:
-            url += f"?token={self.token}" if '?' not in url else f"&token={self.token}"
-
-        self.tests_run += 1
-        print(f"\n🔍 Testing {name}...")
-        print(f"   URL: {url}")
-        
-        try:
-            if method == 'GET':
-                response = requests.get(url, headers=headers, timeout=30)
-            elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=30)
-            elif method == 'PUT':
-                response = requests.put(url, json=data, headers=headers, timeout=30)
-            elif method == 'DELETE':
-                response = requests.delete(url, headers=headers, timeout=30)
-
-            success = response.status_code == expected_status
-            if success:
-                self.tests_passed += 1
-                print(f"✅ Passed - Status: {response.status_code}")
-                try:
-                    return success, response.json()
-                except:
-                    return success, {}
-            else:
-                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
-                try:
-                    error_data = response.json()
-                    print(f"   Error: {error_data}")
-                except:
-                    print(f"   Error text: {response.text[:200]}")
-
-            return False, {}
-
-        except Exception as e:
-            print(f"❌ Failed - Error: {str(e)}")
-            return False, {}
-
-    def test_root_endpoint(self):
-        """Test root API endpoint"""
-        success, response = self.run_test("Root API", "GET", "/", 200)
-        return success
-
-    def test_login(self):
-        """Test login with admin credentials"""
-        success, response = self.run_test(
-            "Login",
-            "POST", 
-            "/auth/login",
-            200,
-            data={"username": "admin", "password": "admin123"}
-        )
-        if success and 'token' in response:
-            self.token = response['token']
-            print(f"   Token received: {self.token[:20]}...")
-            return True
-        return False
-
-    def test_dashboard_stats(self):
-        """Test dashboard statistics"""
-        success, response = self.run_test("Dashboard Stats", "GET", "/dashboard/stats", 200)
+        self.session = requests.Session()
+        self.results = {
+            "passed": [],
+            "failed": [],
+            "errors": []
+        }
+    
+    def log_result(self, test_name, success, details=""):
+        """Log test result"""
         if success:
-            print(f"   Customers: {response.get('customers_count', 0)}")
-            print(f"   Quotes: {response.get('quotes', {}).get('total', 0)}")
-            print(f"   Orders: {response.get('orders', {}).get('total', 0)}")
-            print(f"   Invoices: {response.get('invoices', {}).get('total', 0)}")
-        return success
-
-    def test_customer_crud(self):
-        """Test customer CRUD operations"""
-        # Create customer
-        customer_data = {
-            "name": "Test Kunde für Testing",
-            "email": "test@example.com",
-            "phone": "+49 123 456789",
-            "address": "Teststraße 123\n12345 Teststadt",
-            "notes": "Test customer for automated testing"
-        }
-        
-        success, response = self.run_test(
-            "Create Customer",
-            "POST",
-            "/customers",
-            200,
-            data=customer_data
-        )
-        
-        if not success:
-            return False
+            self.results["passed"].append(f"✅ {test_name}")
+            print(f"✅ {test_name}")
+        else:
+            self.results["failed"].append(f"❌ {test_name}: {details}")
+            print(f"❌ {test_name}: {details}")
+    
+    def log_error(self, test_name, error):
+        """Log test error"""
+        error_msg = f"🔥 {test_name}: {str(error)}"
+        self.results["errors"].append(error_msg)
+        print(error_msg)
+    
+    def test_auth_login(self):
+        """Test authentication login"""
+        try:
+            url = f"{self.base_url}/auth/login"
+            payload = {
+                "username": ADMIN_USERNAME,
+                "password": ADMIN_PASSWORD
+            }
             
-        self.customer_id = response.get('id')
-        print(f"   Created customer ID: {self.customer_id}")
-
-        # Get all customers
-        success, _ = self.run_test("Get All Customers", "GET", "/customers", 200)
-        if not success:
-            return False
-
-        # Get specific customer
-        success, response = self.run_test(
-            "Get Customer",
-            "GET",
-            f"/customers/{self.customer_id}",
-            200
-        )
-        if not success:
-            return False
-
-        # Update customer
-        updated_data = {
-            "name": "Updated Test Kunde",
-            "email": "updated@example.com",
-            "phone": "+49 987 654321",
-            "address": "Updated Teststraße 456\n54321 Updated Stadt",
-            "notes": "Updated test customer"
-        }
-        
-        success, _ = self.run_test(
-            "Update Customer",
-            "PUT",
-            f"/customers/{self.customer_id}",
-            200,
-            data=updated_data
-        )
-        
-        return success
-
-    def test_article_crud(self):
-        """Test article CRUD operations"""
-        # Create article
-        article_data = {
-            "name": "Test Schrank",
-            "description": "Test Schrank für automatische Tests",
-            "unit": "Stück",
-            "price_net": 299.99
-        }
-        
-        success, response = self.run_test(
-            "Create Article",
-            "POST",
-            "/articles",
-            200,
-            data=article_data
-        )
-        
-        if not success:
-            return False
+            response = self.session.post(url, json=payload)
             
-        self.article_id = response.get('id')
-        print(f"   Created article ID: {self.article_id}")
-
-        # Get all articles
-        success, _ = self.run_test("Get All Articles", "GET", "/articles", 200)
-        if not success:
+            if response.status_code == 200:
+                data = response.json()
+                if "token" in data:
+                    self.token = data["token"]
+                    self.session.headers.update({"Authorization": f"Bearer {self.token}"})
+                    self.log_result("Auth Login", True, f"Token received, role: {data.get('role', 'unknown')}")
+                    return True
+                else:
+                    self.log_result("Auth Login", False, "No token in response")
+                    return False
+            else:
+                self.log_result("Auth Login", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Auth Login", e)
             return False
-
-        # Update article
-        updated_data = {
-            "name": "Updated Test Schrank",
-            "description": "Updated description",
-            "unit": "Stück",
-            "price_net": 399.99
-        }
-        
-        success, _ = self.run_test(
-            "Update Article",
-            "PUT",
-            f"/articles/{self.article_id}",
-            200,
-            data=updated_data
-        )
-        
-        return success
-
-    def test_quote_operations(self):
-        """Test quote creation and operations"""
-        if not self.customer_id:
-            print("❌ No customer ID available for quote test")
+    
+    def test_auth_me(self):
+        """Test auth/me endpoint"""
+        try:
+            url = f"{self.base_url}/auth/me"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_result("Auth Me", True, f"User: {data.get('username', 'unknown')}")
+                return True
+            else:
+                self.log_result("Auth Me", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Auth Me", e)
             return False
-
-        # Create quote
-        quote_data = {
-            "customer_id": self.customer_id,
-            "positions": [
-                {
-                    "pos_nr": 1,
-                    "description": "Test Schrank aus Eiche",
-                    "quantity": 1,
-                    "unit": "Stück", 
-                    "price_net": 500.00
-                },
-                {
-                    "pos_nr": 2,
-                    "description": "Montage",
-                    "quantity": 2,
-                    "unit": "Stunden",
-                    "price_net": 50.00
+    
+    def test_dashboard_stats(self):
+        """Test dashboard stats endpoint"""
+        try:
+            url = f"{self.base_url}/dashboard/stats"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                customers_count = data.get("customers_count", 0)
+                self.log_result("Dashboard Stats", True, f"Customers: {customers_count}")
+                return True
+            else:
+                self.log_result("Dashboard Stats", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Dashboard Stats", e)
+            return False
+    
+    def test_customers_crud(self):
+        """Test customers CRUD operations"""
+        try:
+            # Test GET customers
+            url = f"{self.base_url}/customers"
+            response = self.session.get(url)
+            
+            if response.status_code != 200:
+                self.log_result("Customers GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+            
+            customers = response.json()
+            self.log_result("Customers GET", True, f"Found {len(customers)} customers")
+            
+            # Test POST customer
+            new_customer = {
+                "name": "Max Mustermann",
+                "email": "max.mustermann@example.com",
+                "phone": "+49 123 456789",
+                "address": "Musterstraße 123, 12345 Musterstadt",
+                "customer_type": "Privat",
+                "anrede": "Herr",
+                "notes": "Test customer created by API test"
+            }
+            
+            response = self.session.post(url, json=new_customer)
+            
+            if response.status_code == 200:
+                created_customer = response.json()
+                customer_id = created_customer.get("id")
+                self.log_result("Customers POST", True, f"Created customer ID: {customer_id}")
+                
+                # Test GET specific customer
+                if customer_id:
+                    get_url = f"{self.base_url}/customers/{customer_id}"
+                    response = self.session.get(get_url)
+                    if response.status_code == 200:
+                        self.log_result("Customers GET by ID", True)
+                    else:
+                        self.log_result("Customers GET by ID", False, f"Status {response.status_code}")
+                
+                return True
+            else:
+                self.log_result("Customers POST", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Customers CRUD", e)
+            return False
+    
+    def test_articles_api(self):
+        """Test articles API"""
+        try:
+            url = f"{self.base_url}/articles"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                articles = response.json()
+                self.log_result("Articles GET", True, f"Found {len(articles)} articles")
+                
+                # Test POST article
+                new_article = {
+                    "name": "Test Artikel",
+                    "description": "Test Artikel für API Test",
+                    "price": 99.99,
+                    "unit": "Stück",
+                    "category": "Sonstiges"
                 }
-            ],
-            "notes": "Test quote für automated testing",
-            "vat_rate": 19.0,
-            "valid_days": 30
-        }
-        
-        success, response = self.run_test(
-            "Create Quote",
-            "POST",
-            "/quotes",
-            200,
-            data=quote_data
-        )
-        
-        if not success:
+                
+                response = self.session.post(url, json=new_article)
+                if response.status_code == 200:
+                    self.log_result("Articles POST", True)
+                else:
+                    self.log_result("Articles POST", False, f"Status {response.status_code}: {response.text}")
+                
+                return True
+            else:
+                self.log_result("Articles GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Articles API", e)
             return False
+    
+    def test_quotes_api(self):
+        """Test quotes API"""
+        try:
+            url = f"{self.base_url}/quotes"
+            response = self.session.get(url)
             
-        self.quote_id = response.get('id')
-        quote_number = response.get('quote_number')
-        print(f"   Created quote ID: {self.quote_id}")
-        print(f"   Quote number: {quote_number}")
-        print(f"   Total: {response.get('total_gross', 0)} €")
-
-        # Get all quotes
-        success, _ = self.run_test("Get All Quotes", "GET", "/quotes", 200)
-        if not success:
+            if response.status_code == 200:
+                quotes = response.json()
+                self.log_result("Quotes GET", True, f"Found {len(quotes)} quotes")
+                return True
+            else:
+                self.log_result("Quotes GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Quotes API", e)
             return False
-
-        # Get specific quote
-        success, _ = self.run_test(
-            "Get Quote",
-            "GET",
-            f"/quotes/{self.quote_id}",
-            200
-        )
-        if not success:
-            return False
-
-        # Test PDF download 
-        success, _ = self.run_test(
-            "Get Quote PDF",
-            "GET",
-            f"/pdf/quote/{self.quote_id}",
-            200
-        )
-        
-        return success
-
-    def test_order_operations(self):
-        """Test order creation from quote"""
-        if not self.quote_id:
-            print("❌ No quote ID available for order test")
-            return False
-
-        # Create order from quote
-        success, response = self.run_test(
-            "Create Order from Quote",
-            "POST",
-            f"/orders/from-quote/{self.quote_id}",
-            200
-        )
-        
-        if not success:
-            return False
+    
+    def test_orders_api(self):
+        """Test orders API"""
+        try:
+            url = f"{self.base_url}/orders"
+            response = self.session.get(url)
             
-        self.order_id = response.get('id')
-        order_number = response.get('order_number')
-        print(f"   Created order ID: {self.order_id}")
-        print(f"   Order number: {order_number}")
-
-        # Get all orders
-        success, _ = self.run_test("Get All Orders", "GET", "/orders", 200)
-        if not success:
+            if response.status_code == 200:
+                orders = response.json()
+                self.log_result("Orders GET", True, f"Found {len(orders)} orders")
+                return True
+            else:
+                self.log_result("Orders GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Orders API", e)
             return False
-
-        # Get specific order
-        success, _ = self.run_test(
-            "Get Order",
-            "GET",
-            f"/orders/{self.order_id}",
-            200
-        )
-        if not success:
-            return False
-
-        # Test PDF download
-        success, _ = self.run_test(
-            "Get Order PDF",
-            "GET",
-            f"/pdf/order/{self.order_id}",
-            200
-        )
-        
-        return success
-
-    def test_invoice_operations(self):
-        """Test invoice creation and operations"""
-        if not self.order_id:
-            print("❌ No order ID available for invoice test")
-            return False
-
-        # Create invoice from order
-        success, response = self.run_test(
-            "Create Invoice from Order", 
-            "POST",
-            f"/invoices/from-order/{self.order_id}",
-            200,
-            data={"due_days": 14}
-        )
-        
-        if not success:
-            return False
+    
+    def test_invoices_api(self):
+        """Test invoices API"""
+        try:
+            url = f"{self.base_url}/invoices"
+            response = self.session.get(url)
             
-        self.invoice_id = response.get('id')
-        invoice_number = response.get('invoice_number')
-        print(f"   Created invoice ID: {self.invoice_id}")
-        print(f"   Invoice number: {invoice_number}")
-
-        # Get all invoices
-        success, _ = self.run_test("Get All Invoices", "GET", "/invoices", 200)
-        if not success:
+            if response.status_code == 200:
+                invoices = response.json()
+                self.log_result("Invoices GET", True, f"Found {len(invoices)} invoices")
+                return True
+            else:
+                self.log_result("Invoices GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Invoices API", e)
             return False
-
-        # Get specific invoice
-        success, _ = self.run_test(
-            "Get Invoice",
-            "GET",
-            f"/invoices/{self.invoice_id}",
-            200
-        )
-        if not success:
+    
+    def test_buchhaltung_api(self):
+        """Test buchhaltung (accounting) API"""
+        try:
+            # Test buchungen endpoint
+            url = f"{self.base_url}/buchhaltung/buchungen"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                buchungen = response.json()
+                self.log_result("Buchhaltung Buchungen", True, f"Found {len(buchungen)} buchungen")
+            else:
+                self.log_result("Buchhaltung Buchungen", False, f"Status {response.status_code}: {response.text}")
+            
+            # Test statistiken endpoint (correct endpoint name)
+            url = f"{self.base_url}/buchhaltung/statistiken"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                statistiken = response.json()
+                self.log_result("Buchhaltung Statistiken", True)
+                return True
+            else:
+                self.log_result("Buchhaltung Statistiken", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Buchhaltung API", e)
             return False
-
-        # Mark invoice as paid
-        success, _ = self.run_test(
-            "Mark Invoice as Paid",
-            "PUT",
-            f"/invoices/{self.invoice_id}/status",
-            200,
-            data={"status": "Bezahlt"}
-        )
-        if not success:
+    
+    def test_mitarbeiter_api(self):
+        """Test mitarbeiter (employees) API"""
+        try:
+            url = f"{self.base_url}/mitarbeiter"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                mitarbeiter = response.json()
+                self.log_result("Mitarbeiter GET", True, f"Found {len(mitarbeiter)} employees")
+                
+                # Test POST mitarbeiter
+                new_employee = {
+                    "name": "Hans Müller",
+                    "email": "hans.mueller@example.com",
+                    "phone": "+49 987 654321",
+                    "position": "Tischler",
+                    "hourly_rate": 25.50,
+                    "start_date": datetime.now().isoformat()
+                }
+                
+                response = self.session.post(url, json=new_employee)
+                if response.status_code == 200:
+                    self.log_result("Mitarbeiter POST", True)
+                else:
+                    self.log_result("Mitarbeiter POST", False, f"Status {response.status_code}: {response.text}")
+                
+                return True
+            else:
+                self.log_result("Mitarbeiter GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Mitarbeiter API", e)
             return False
-
-        # Test PDF download
-        success, _ = self.run_test(
-            "Get Invoice PDF",
-            "GET",
-            f"/pdf/invoice/{self.invoice_id}",
-            200
-        )
-        
-        return success
-
-    def test_settings(self):
-        """Test settings operations"""
-        # Get settings
-        success, response = self.run_test("Get Settings", "GET", "/settings", 200)
-        if not success:
+    
+    def test_einsaetze_api(self):
+        """Test einsaetze (job scheduling) API"""
+        try:
+            url = f"{self.base_url}/einsaetze"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                einsaetze = response.json()
+                self.log_result("Einsaetze GET", True, f"Found {len(einsaetze)} job assignments")
+                return True
+            else:
+                self.log_result("Einsaetze GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Einsaetze API", e)
             return False
-
-        # Update settings
-        settings_data = {
-            "id": "company_settings",
-            "company_name": "Test Tischlerei Graupner",
-            "owner_name": "Max Test Graupner",
-            "address": "Test Werkstattstraße 1\n12345 Test München",
-            "phone": "+49 89 123456789",
-            "email": "test@tischlerei-graupner.de",
-            "tax_id": "123/456/78901",
-            "bank_name": "Test Sparkasse",
-            "iban": "DE89370400440532013000",
-            "bic": "COBADEFFXXX",
-            "default_vat_rate": 19.0,
-            "is_small_business": False,
-            "logo_base64": ""
-        }
+    
+    def test_settings_api(self):
+        """Test settings API"""
+        try:
+            url = f"{self.base_url}/settings"
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                settings = response.json()
+                self.log_result("Settings GET", True)
+                return True
+            else:
+                self.log_result("Settings GET", False, f"Status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_error("Settings API", e)
+            return False
+    
+    def run_all_tests(self):
+        """Run all API tests"""
+        print(f"🚀 Starting Graupner Suite API Tests")
+        print(f"Backend URL: {self.base_url}")
+        print("=" * 60)
         
-        success, _ = self.run_test(
-            "Update Settings",
-            "PUT",
-            "/settings",
-            200,
-            data=settings_data
-        )
+        # Authentication is required first
+        if not self.test_auth_login():
+            print("❌ Authentication failed - cannot continue with other tests")
+            return False
         
-        return success
-
-    def cleanup_test_data(self):
-        """Clean up test data created during testing"""
-        print(f"\n🧹 Cleaning up test data...")
+        # Test auth/me
+        self.test_auth_me()
         
-        # Delete test invoice
-        if self.invoice_id:
-            success, _ = self.run_test(
-                "Delete Test Invoice",
-                "DELETE", 
-                f"/invoices/{self.invoice_id}",
-                200
-            )
+        # Test all other endpoints
+        self.test_dashboard_stats()
+        self.test_customers_crud()
+        self.test_articles_api()
+        self.test_quotes_api()
+        self.test_orders_api()
+        self.test_invoices_api()
+        self.test_buchhaltung_api()
+        self.test_mitarbeiter_api()
+        self.test_einsaetze_api()
+        self.test_settings_api()
+        
+        # Print summary
+        print("\n" + "=" * 60)
+        print("📊 TEST SUMMARY")
+        print("=" * 60)
+        
+        print(f"✅ Passed: {len(self.results['passed'])}")
+        for test in self.results['passed']:
+            print(f"  {test}")
+        
+        if self.results['failed']:
+            print(f"\n❌ Failed: {len(self.results['failed'])}")
+            for test in self.results['failed']:
+                print(f"  {test}")
+        
+        if self.results['errors']:
+            print(f"\n🔥 Errors: {len(self.results['errors'])}")
+            for test in self.results['errors']:
+                print(f"  {test}")
+        
+        total_tests = len(self.results['passed']) + len(self.results['failed']) + len(self.results['errors'])
+        success_rate = (len(self.results['passed']) / total_tests * 100) if total_tests > 0 else 0
+        print(f"\n📈 Success Rate: {success_rate:.1f}% ({len(self.results['passed'])}/{total_tests})")
+        
+        return len(self.results['failed']) == 0 and len(self.results['errors']) == 0
 
-        # Delete test order
-        if self.order_id:
-            success, _ = self.run_test(
-                "Delete Test Order",
-                "DELETE",
-                f"/orders/{self.order_id}",
-                200
-            )
-
-        # Delete test quote
-        if self.quote_id:
-            success, _ = self.run_test(
-                "Delete Test Quote",
-                "DELETE",
-                f"/quotes/{self.quote_id}",
-                200
-            )
-
-        # Delete test article
-        if self.article_id:
-            success, _ = self.run_test(
-                "Delete Test Article",
-                "DELETE",
-                f"/articles/{self.article_id}",
-                200
-            )
-
-        # Delete test customer
-        if self.customer_id:
-            success, _ = self.run_test(
-                "Delete Test Customer",
-                "DELETE",
-                f"/customers/{self.customer_id}",
-                200
-            )
-
-def main():
-    print("🚀 Starting Graupner Suite API Testing")
-    print("=" * 50)
-    
-    tester = GraupnerSuiteAPITester()
-
-    # Test sequence
-    test_results = []
-
-    # Basic connectivity
-    print(f"\n📡 Testing API Connectivity")
-    test_results.append(("Root API", tester.test_root_endpoint()))
-    
-    # Authentication
-    print(f"\n🔐 Testing Authentication")
-    test_results.append(("Login", tester.test_login()))
-    
-    if not tester.token:
-        print("❌ Authentication failed - stopping tests")
-        return 1
-
-    # Dashboard
-    print(f"\n📊 Testing Dashboard")
-    test_results.append(("Dashboard Stats", tester.test_dashboard_stats()))
-
-    # CRUD Operations
-    print(f"\n👥 Testing Customer Operations")  
-    test_results.append(("Customer CRUD", tester.test_customer_crud()))
-
-    print(f"\n📦 Testing Article Operations")
-    test_results.append(("Article CRUD", tester.test_article_crud()))
-
-    print(f"\n📄 Testing Quote Operations")
-    test_results.append(("Quote Operations", tester.test_quote_operations()))
-
-    print(f"\n📋 Testing Order Operations")
-    test_results.append(("Order Operations", tester.test_order_operations()))
-
-    print(f"\n🧾 Testing Invoice Operations")
-    test_results.append(("Invoice Operations", tester.test_invoice_operations()))
-
-    print(f"\n⚙️ Testing Settings")
-    test_results.append(("Settings", tester.test_settings()))
-
-    # Cleanup
-    tester.cleanup_test_data()
-
-    # Final Results
-    print(f"\n" + "=" * 50)
-    print(f"📊 FINAL TEST RESULTS")
-    print(f"=" * 50)
-    print(f"Total tests run: {tester.tests_run}")
-    print(f"Tests passed: {tester.tests_passed}")
-    print(f"Tests failed: {tester.tests_run - tester.tests_passed}")
-    print(f"Success rate: {(tester.tests_passed / tester.tests_run * 100):.1f}%")
-    
-    print(f"\n📋 Test Summary:")
-    for test_name, passed in test_results:
-        status = "✅ PASS" if passed else "❌ FAIL"
-        print(f"  {status}: {test_name}")
-
-    return 0 if tester.tests_passed == tester.tests_run else 1
 
 if __name__ == "__main__":
-    sys.exit(main())
+    tester = GraupnerAPITester()
+    success = tester.run_all_tests()
+    sys.exit(0 if success else 1)
