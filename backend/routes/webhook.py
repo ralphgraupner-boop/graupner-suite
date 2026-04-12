@@ -342,7 +342,7 @@ textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 <p style="font-size:12px;font-weight:600;color:#14532D;margin-bottom:8px">Welche Art Schiebet&uuml;r?</p>
 <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
 <label class="st-opt"><input type="checkbox" name="st_typ[]" value="Hebeschiebekipptuer"> Hebeschiebekippt&uuml;r (HSK)</label>
-<label class="st-opt"><input type="checkbox" name="st_typ[]" value="Hebeschiebetuer"> Hebeschiabet&uuml;r (HS)</label>
+<label class="st-opt"><input type="checkbox" name="st_typ[]" value="Hebeschiebetuer"> Hebeschiebetür (HS)</label>
 <label class="st-opt"><input type="checkbox" name="st_typ[]" value="PSK-Schiebetuer"> PSK-Schiebet&uuml;r (Parallelschiebekipp)</label>
 <label class="st-opt"><input type="checkbox" name="st_typ[]" value="Schiebetuer innen"> Schiebet&uuml;r innen</label>
 </div>
