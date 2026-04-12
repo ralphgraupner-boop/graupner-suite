@@ -417,6 +417,9 @@ Bei dringenden Anliegen erreichen Sie uns unter:<br>
 </div>
 
 <script>
+// Prevent browser default drag behavior (would replace page with image)
+document.addEventListener('dragover',function(e){{e.preventDefault();}});
+document.addEventListener('drop',function(e){{e.preventDefault();}});
 var formSubmitted=false;
 function handleSubmit(e){{
   e.preventDefault();
