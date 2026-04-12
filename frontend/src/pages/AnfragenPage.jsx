@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Plus, Check, GripVertical, Settings2, CircleDot } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Plus, Check, GripVertical, Settings2, CircleDot, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { PortalButtons } from "@/components/PortalButtons";
@@ -452,6 +452,7 @@ const AnfragenPage = () => {
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       {anfrage.phone && <span><Phone className="w-3 h-3 inline mr-1" />{anfrage.phone}</span>}
                       {anfrage.email && <span className="truncate hidden sm:inline"><Mail className="w-3 h-3 inline mr-1" />{anfrage.email}</span>}
+                      {anfrage.photos && anfrage.photos.length > 0 && <span className="text-primary"><ImageIcon className="w-3 h-3 inline mr-1" />{anfrage.photos.length} Bild{anfrage.photos.length > 1 ? 'er' : ''}</span>}
                       <span className="text-xs">
                         {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </span>
@@ -643,6 +644,28 @@ const AnfragenPage = () => {
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Nachricht</h4>
                     <div className="bg-muted/30 rounded-md p-3">
                       <p className="text-sm whitespace-pre-line">{anfrage.nachricht}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bilder / Fotos */}
+                {anfrage.photos && anfrage.photos.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <ImageIcon className="w-3.5 h-3.5" /> Bilder ({anfrage.photos.length})
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {anfrage.photos.map((photo, idx) => {
+                        const backendUrl = (import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
+                        const imgUrl = `${backendUrl}/api/storage/${photo}`;
+                        return (
+                          <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer"
+                            className="block aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-pointer group">
+                            <img src={imgUrl} alt={`Bild ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-muted/50 text-muted-foreground text-xs">Bild nicht verfügbar</div>'; }} />
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

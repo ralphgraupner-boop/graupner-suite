@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import Response
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 from models import Customer, Anfrage, AnfrageUpdate
@@ -52,6 +53,18 @@ async def list_anfragen(category: str = "", user=Depends(get_current_user)):
     anfragen = await db.anfragen.find(query, {"_id": 0}).to_list(1000)
     anfragen.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return anfragen
+
+
+@router.get("/storage/{path:path}")
+async def serve_storage_file(path: str):
+    """Serve a file from object storage - public access for image display"""
+    try:
+        from utils.storage import get_object
+        content, content_type = get_object(path)
+        return Response(content=content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Datei nicht gefunden: {str(e)}")
+
 
 
 @router.delete("/anfragen/{anfrage_id}")

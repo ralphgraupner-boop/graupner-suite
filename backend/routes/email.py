@@ -6,6 +6,7 @@ from auth import get_current_user
 from utils import send_email
 from utils.pdf_generator import generate_document_pdf, generate_dunning_pdf
 from utils.email_signatur import wrap_email_body, get_email_signature_html, get_brief_signatur_html
+import os
 
 router = APIRouter()
 
@@ -290,7 +291,21 @@ async def send_anfrage_email(anfrage_id: str, body: dict, user=Depends(get_curre
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     company = settings.get("company_name", "Tischlerei Graupner")
 
-    body_html = wrap_email_body(f"<p>{message.replace(chr(10), '<br>')}</p>")
+    # Build HTML with images if present
+    html_parts = [f"<p>{message.replace(chr(10), '<br>')}</p>"]
+    
+    photos = anfrage.get("photos", [])
+    if photos and body.get("include_photos", True):
+        backend_url = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
+        html_parts.append("<hr style='border:none;border-top:1px solid #e0e0e0;margin:16px 0'>")
+        html_parts.append(f"<p style='font-size:13px;color:#666'><strong>{len(photos)} Bild{'er' if len(photos)>1 else ''} beigef&uuml;gt:</strong></p>")
+        html_parts.append("<div style='display:flex;flex-wrap:wrap;gap:8px'>")
+        for idx, photo in enumerate(photos):
+            img_url = f"{backend_url}/api/storage/{photo}"
+            html_parts.append(f"<a href='{img_url}' target='_blank' style='display:inline-block'><img src='{img_url}' alt='Bild {idx+1}' style='max-width:200px;max-height:150px;border-radius:8px;border:1px solid #ddd'></a>")
+        html_parts.append("</div>")
+
+    body_html = wrap_email_body("".join(html_parts))
 
     try:
         send_email(
