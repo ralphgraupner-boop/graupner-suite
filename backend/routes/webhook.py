@@ -205,7 +205,7 @@ textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 .topic-icon{{font-size:16px;opacity:0.5}}
 .topic-item.active .topic-icon{{opacity:1}}
 .topic-desc{{max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease;padding:0 16px}}
-.topic-item.active .topic-desc{{max-height:200px;padding:0 16px 14px}}
+.topic-item.active .topic-desc{{max-height:500px;padding:0 16px 14px}}
 .topic-desc textarea{{width:100%;padding:9px 12px;border:1.5px solid #d4e8d6;border-radius:9px;font-size:13px;min-height:60px;resize:vertical;background:#fff}}
 .topic-desc textarea:focus{{outline:none;border-color:#14532D;box-shadow:0 0 0 3px rgba(20,83,45,0.08)}}
 .copy-check{{display:flex;align-items:center;gap:10px;padding:11px 16px;background:#f5f3f0;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:14px;border:1.5px solid transparent;transition:all 0.2s}}
@@ -344,7 +344,24 @@ Kontaktadresse als Objektadresse &uuml;bernehmen
 <div class="topic-grid" id="topicGrid">
 <div class="topic-item" data-topic="Schiebet&uuml;r">
 <div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span class="topic-icon">&#128682;</span><span>Schiebet&uuml;r</span></div>
-<div class="topic-desc"><textarea name="desc_schiebetuer" placeholder="Was ist das Problem? z.B. Schiebet&uuml;r klemmt, l&auml;sst sich schwer &ouml;ffnen..."></textarea></div>
+<div class="topic-desc">
+<p style="font-size:12px;font-weight:600;color:#14532D;margin-bottom:8px">Welche Art Schiebet&uuml;r?</p>
+<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px" id="stTypen">
+<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
+<input type="checkbox" name="st_typ[]" value="Hebeschiebekippt&uuml;r" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> Hebeschiebekippt&uuml;r (HSK)
+</label>
+<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
+<input type="checkbox" name="st_typ[]" value="Hebeschiebetür" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> Hebeschiebetür (HS)
+</label>
+<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
+<input type="checkbox" name="st_typ[]" value="PSK-Schiebet&uuml;r" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> PSK-Schiebet&uuml;r (Parallelschiebekipp)
+</label>
+<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
+<input type="checkbox" name="st_typ[]" value="Schiebet&uuml;r innen" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> Schiebet&uuml;r innen
+</label>
+</div>
+<textarea name="desc_schiebetuer" placeholder="Was ist das Problem? z.B. Schiebet&uuml;r klemmt, l&auml;sst sich schwer &ouml;ffnen..."></textarea>
+</div>
 <input type="hidden" name="topic[]" value="" class="topic-val">
 </div>
 <div class="topic-item" data-topic="Fenster">
@@ -420,6 +437,11 @@ Bei dringenden Anliegen erreichen Sie uns unter:<br>
 // Prevent browser default drag behavior (would replace page with image)
 document.addEventListener('dragover',function(e){{e.preventDefault();}});
 document.addEventListener('drop',function(e){{e.preventDefault();}});
+function updateStTyp(cb){{
+  var lbl=cb.closest('label');
+  if(cb.checked){{lbl.style.borderColor='#14532D';lbl.style.background='#e8f5e9';}}
+  else{{lbl.style.borderColor='#d4e8d6';lbl.style.background='#fff';}}
+}}
 var formSubmitted=false;
 function handleSubmit(e){{
   e.preventDefault();
