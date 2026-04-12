@@ -143,21 +143,21 @@ async def landing_page_preview():
 
 @router.get("/kontakt", response_class=HTMLResponse)
 async def kontakt_form_page():
-    """Public contact form page - no auth required"""
+    """Public contact form page - multi-step wizard - no auth required"""
     backend_url = os.environ.get("REACT_APP_BACKEND_URL", "")
     return HTMLResponse(content=f"""<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anfrage stellen - Tischlerei R.Graupner | Fenster &amp; T&uuml;ren seit 1960</title>
-<meta name="description" content="Kontaktieren Sie die Tischlerei Graupner in Hamburg. Kostenlose Anfrage f&uuml;r Schiebet&uuml;r-, Fenster- und T&uuml;ren-Reparatur. Antwort innerhalb 24 Stunden.">
+<title>Anfrage stellen - Tischlerei R.Graupner | Fenster &amp; Tueren seit 1960</title>
+<meta name="description" content="Kontaktieren Sie die Tischlerei Graupner in Hamburg. Kostenlose Anfrage fuer Schiebetuer-, Fenster- und Tueren-Reparatur. Antwort innerhalb 24 Stunden.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2c3e2d;line-height:1.6;min-height:100vh;background:#f5f3f0;}}
+body{{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2c3e2d;line-height:1.6;min-height:100vh;background:#f5f3f0}}
 .header{{background:linear-gradient(135deg,rgba(20,83,45,0.78) 0%,rgba(26,107,58,0.72) 100%),url('https://customer-assets.emergentagent.com/job_code-import-flow-1/artifacts/pzbkw22f_1726918839.jpg') center/cover no-repeat;color:#fff;padding:32px 16px;text-align:center;position:relative;overflow:hidden}}
 .header::after{{content:'';position:absolute;bottom:-1px;left:0;right:0;height:40px;background:linear-gradient(to top,#f5f3f0,transparent)}}
 .header-inner{{max-width:640px;margin:0 auto;position:relative;z-index:1}}
@@ -167,100 +167,89 @@ body{{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,s
 .header p{{font-size:14px;opacity:0.7;margin-top:4px}}
 .header-contact{{display:flex;justify-content:center;gap:20px;margin-top:14px;flex-wrap:wrap}}
 .header-contact a{{color:rgba(255,255,255,0.8);text-decoration:none;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;transition:color 0.2s}}
-.header-contact a:hover{{color:#c8956c}}
+.header-contact a:hover{{color:#a8d5a2}}
 .header-contact svg{{width:14px;height:14px;opacity:0.7}}
 .container{{max-width:640px;margin:24px auto;padding:0 16px 40px}}
-.steps{{display:flex;gap:8px;margin-bottom:20px;padding:0 4px}}
-.step{{flex:1;text-align:center;font-size:11px;font-weight:600;color:#999;position:relative;padding-bottom:10px}}
-.step::after{{content:'';position:absolute;bottom:0;left:10%;right:10%;height:3px;background:#e0ddd8;border-radius:3px;transition:background 0.3s}}
-.step.active{{color:#14532D}}
-.step.active::after{{background:#14532D}}
-.step.done{{color:#14532D}}
-.step.done::after{{background:#14532D}}
-.card{{background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,0.06);padding:28px;margin-bottom:16px;border:1px solid #eae8e4}}
+.steps{{display:flex;gap:4px;margin-bottom:20px}}
+.step{{flex:1;text-align:center;font-size:11px;font-weight:600;color:#999;position:relative;padding-bottom:10px;cursor:pointer;transition:color 0.3s}}
+.step::after{{content:'';position:absolute;bottom:0;left:4%;right:4%;height:4px;background:#e0ddd8;border-radius:3px;transition:background 0.4s}}
+.step.active{{color:#14532D}}.step.active::after{{background:#14532D}}
+.step.done{{color:#14532D}}.step.done::after{{background:#14532D}}
+.card{{background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,0.06);padding:28px;margin-bottom:16px;border:1px solid #eae8e4;animation:fadeIn 0.35s ease}}
 .card h2{{font-size:16px;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f0ede8;color:#14532D;display:flex;align-items:center;gap:8px}}
 .card h2 svg{{width:18px;height:18px;color:#c8956c}}
 .row{{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}}
 .field{{flex:1;min-width:160px}}
 label{{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#444}}
 input[type=text],input[type=email],input[type=tel],textarea{{width:100%;padding:10px 13px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:inherit;transition:all 0.2s;background:#faf9f7;color:#2c3e2d}}
-input[type=text]::placeholder,input[type=email]::placeholder,input[type=tel]::placeholder,textarea::placeholder{{color:#b0aaa0}}
+input::placeholder,textarea::placeholder{{color:#b0aaa0}}
 input:focus,textarea:focus{{outline:none;border-color:#14532D;box-shadow:0 0 0 3px rgba(20,83,45,0.1);background:#fff}}
-.submitted input:invalid,.submitted textarea:invalid{{border-color:#e74c3c;background:#fef8f7}}
 textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 .radio-group{{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}}
 .radio-group label{{display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid #e0ddd8;border-radius:9px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s;background:#faf9f7;color:#555}}
-.radio-group label:hover{{border-color:#bbb;background:#f5f3f0}}
-.radio-group label:has(input:checked){{border-color:#14532D;background:#e8f5e9;color:#14532D}}
+.radio-group label:hover{{border-color:#bbb}}.radio-group label:has(input:checked){{border-color:#14532D;background:#e8f5e9;color:#14532D}}
 .radio-group input[type=radio]{{accent-color:#14532D}}
+.type-toggle{{display:flex;gap:0;margin-bottom:14px;border:1.5px solid #e0ddd8;border-radius:9px;overflow:hidden}}
+.type-toggle label{{flex:1;text-align:center;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.2s;border-right:1px solid #e0ddd8;color:#777}}
+.type-toggle label:last-child{{border-right:none}}
+.type-toggle label.privat-label:has(input:checked){{background:#14532D;color:#fff}}
+.type-toggle label.firma-label:has(input:checked){{background:#1e40af;color:#fff}}
+.type-toggle input{{display:none}}
+.firma-field{{max-height:0;overflow:hidden;transition:max-height 0.3s;margin-bottom:0}}.firma-field.show{{max-height:70px;margin-bottom:12px}}
 .topic-grid{{display:flex;flex-direction:column;gap:8px}}
 .topic-item{{border:1.5px solid #e0ddd8;border-radius:11px;overflow:hidden;transition:all 0.3s;background:#faf9f7}}
 .topic-item.active{{border-color:#14532D;background:#f0faf2}}
 .topic-header{{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.2s;user-select:none;color:#444}}
-.topic-header:hover{{background:rgba(0,0,0,0.02)}}
-.topic-item.active .topic-header{{color:#14532D}}
+.topic-header:hover{{background:rgba(0,0,0,0.02)}}.topic-item.active .topic-header{{color:#14532D}}
 .topic-check{{width:20px;height:20px;border-radius:50%;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}}
 .topic-item.active .topic-check{{background:#14532D;border-color:#14532D}}
 .topic-item.active .topic-check::after{{content:'';width:6px;height:6px;background:#fff;border-radius:50%}}
-.topic-icon{{font-size:16px;opacity:0.5}}
-.topic-item.active .topic-icon{{opacity:1}}
+.topic-icon{{font-size:16px;opacity:0.5}}.topic-item.active .topic-icon{{opacity:1}}
 .topic-desc{{max-height:0;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease;padding:0 16px}}
 .topic-item.active .topic-desc{{max-height:500px;padding:0 16px 14px}}
 .topic-desc textarea{{width:100%;padding:9px 12px;border:1.5px solid #d4e8d6;border-radius:9px;font-size:13px;min-height:60px;resize:vertical;background:#fff}}
 .topic-desc textarea:focus{{outline:none;border-color:#14532D;box-shadow:0 0 0 3px rgba(20,83,45,0.08)}}
+.st-opt{{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff}}
+.st-opt:hover{{border-color:#14532D}}.st-opt:has(input:checked){{border-color:#14532D;background:#e8f5e9}}
+.st-opt input{{accent-color:#14532D;width:16px;height:16px}}
 .copy-check{{display:flex;align-items:center;gap:10px;padding:11px 16px;background:#f5f3f0;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:14px;border:1.5px solid transparent;transition:all 0.2s}}
-.copy-check:hover{{background:#edeae6}}
-.copy-check:has(input:checked){{border-color:#14532D;background:#e8f5e9}}
+.copy-check:hover{{background:#edeae6}}.copy-check:has(input:checked){{border-color:#14532D;background:#e8f5e9}}
 .copy-check input{{width:17px;height:17px;accent-color:#14532D;cursor:pointer}}
-.obj-fields{{transition:opacity 0.3s;}}
-.btn{{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#14532D 0%,#1a6b3a 100%);color:#fff;border:none;border-radius:11px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.25s;font-family:inherit;letter-spacing:0.2px}}
-.btn:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(20,83,45,0.3)}}
-.btn:active{{transform:translateY(0)}}
+.obj-fields{{transition:opacity 0.3s}}
+.nav-btns{{display:flex;gap:10px;margin-top:8px}}
+.btn{{display:flex;align-items:center;justify-content:center;gap:8px;flex:1;padding:14px;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.25s;font-family:inherit}}
+.btn-next{{background:linear-gradient(135deg,#14532D 0%,#1a6b3a 100%);color:#fff}}
+.btn-next:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(20,83,45,0.3)}}
+.btn-back{{background:#f0ede8;color:#555}}.btn-back:hover{{background:#e5e2dc}}
+.btn-submit{{background:linear-gradient(135deg,#14532D 0%,#1a6b3a 100%);color:#fff}}
+.btn-submit:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(20,83,45,0.3)}}
 .btn:disabled{{opacity:0.6;cursor:not-allowed;transform:none;box-shadow:none}}
-.btn svg{{width:18px;height:18px}}
+.btn svg{{width:16px;height:16px}}
 .required::after{{content:" *";color:#e74c3c}}
 .privacy{{display:flex;align-items:start;gap:10px;padding:14px 16px;background:#fff;border-radius:11px;border:1.5px solid #e0ddd8;cursor:pointer;font-size:13px;margin-bottom:16px;line-height:1.5;color:#555}}
-.privacy:hover{{border-color:#ccc}}
-.privacy input{{width:18px;height:18px;margin-top:1px;flex-shrink:0;cursor:pointer;accent-color:#14532D}}
+.privacy:hover{{border-color:#ccc}}.privacy input{{width:18px;height:18px;margin-top:1px;flex-shrink:0;cursor:pointer;accent-color:#14532D}}
 .privacy a{{color:#14532D;font-weight:600;text-decoration:underline}}
-.file-area{{margin-top:12px;border:2px dashed #e0ddd8;border-radius:10px;padding:16px;text-align:center;transition:all 0.2s;cursor:pointer;position:relative}}
-.file-area:hover{{border-color:#c8956c;background:#fdf9f5}}
-.file-area input[type=file]{{position:absolute;inset:0;opacity:0;cursor:pointer}}
-.file-area p{{font-size:13px;color:#888;margin-top:4px}}
-.file-area .file-icon{{font-size:24px;margin-bottom:4px;color:#c8956c}}
-.file-label{{font-size:14px;font-weight:600;color:#555}}
-.type-toggle{{display:flex;gap:0;margin-bottom:14px;border:1.5px solid #e0ddd8;border-radius:9px;overflow:hidden}}
-.type-toggle label{{flex:1;text-align:center;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.2s;border-right:1px solid #e0ddd8;color:#777}}
-.type-toggle label:last-child{{border-right:none}}
-.type-toggle label:hover{{background:#f5f3f0}}
-.type-toggle label.privat-label:has(input:checked){{background:#14532D;color:#fff}}
-.type-toggle label.firma-label:has(input:checked){{background:#1e40af;color:#fff}}
-.type-toggle input{{display:none}}
-.firma-field{{max-height:0;overflow:hidden;transition:max-height 0.3s ease;margin-bottom:0}}
-.firma-field.show{{max-height:70px;margin-bottom:12px}}
+.praise{{background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:#2e7d32;animation:fadeIn 0.4s ease}}
+.praise svg{{width:20px;height:20px;flex-shrink:0}}
+.summary-row{{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ede8;font-size:13px}}.summary-row:last-child{{border:none}}
+.summary-label{{color:#888;font-weight:500}}.summary-value{{font-weight:600;color:#2c3e2d;text-align:right}}
+.summary-section{{margin-bottom:16px}}.summary-section h3{{font-size:13px;font-weight:700;color:#14532D;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}}
+.summary-tags{{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}}
+.summary-tag{{background:#e8f5e9;color:#14532D;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600}}
+.page{{display:none}}.page.active{{display:block}}
 .success-box{{display:none;text-align:center;padding:48px 24px;max-width:500px;margin:60px auto}}
 .success-box.show{{display:block}}
 .success-check{{width:80px;height:80px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px}}
 .success-check svg{{width:40px;height:40px;color:#2e7d32}}
 .success-box h2{{font-size:24px;font-weight:700;color:#14532D;margin-bottom:8px}}
-.success-box p{{font-size:15px;color:#666;line-height:1.7;margin-bottom:8px}}
+.success-box p{{font-size:15px;color:#666;line-height:1.7}}
 .success-info{{background:#fff;border-radius:12px;padding:20px;margin:24px 0;text-align:left;font-size:14px;color:#444;line-height:1.7;border:1px solid #e0ddd8}}
 .success-info b{{color:#14532D}}
 .footer-mini{{text-align:center;padding:24px 16px;font-size:12px;color:#999}}
-.footer-mini a{{color:#777;text-decoration:none}}
-.footer-mini a:hover{{color:#14532D}}
-@media(max-width:600px){{
-  .row{{flex-direction:column;gap:10px}}
-  .field{{min-width:100%}}
-  .header h1{{font-size:20px}}
-  .card{{padding:20px}}
-  .header-contact{{gap:12px}}
-}}
+.footer-mini a{{color:#777;text-decoration:none}}.footer-mini a:hover{{color:#14532D}}
+@media(max-width:600px){{.row{{flex-direction:column;gap:10px}}.field{{min-width:100%}}.header h1{{font-size:20px}}.card{{padding:20px}}.header-contact{{gap:12px}}}}
 @keyframes fadeIn{{from{{opacity:0;transform:translateY(12px)}}to{{opacity:1;transform:translateY(0)}}}}
-.card{{animation:fadeIn 0.4s ease}}
-.card:nth-child(2){{animation-delay:0.05s}}
-.card:nth-child(3){{animation-delay:0.1s}}
-.card:nth-child(4){{animation-delay:0.15s}}
+@keyframes spin{{to{{transform:rotate(360deg)}}}}
 </style>
 </head>
 <body>
@@ -275,20 +264,20 @@ textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 </div>
 </div>
 </div>
-
 <div class="container" id="formContainer">
 <div class="steps">
-<div class="step active" id="step1">1. Kontakt</div>
-<div class="step" id="step2">2. Objekt</div>
-<div class="step" id="step3">3. Anliegen</div>
-<div class="step" id="step4">4. Absenden</div>
+<div class="step active" id="step1" onclick="goTo(1)">1. Kontakt</div>
+<div class="step" id="step2" onclick="goTo(2)">2. Objekt</div>
+<div class="step" id="step3" onclick="goTo(3)">3. Anliegen</div>
+<div class="step" id="step4" onclick="goTo(4)">4. Absenden</div>
 </div>
+<form id="kontaktForm" action="{backend_url}/api/kontakt/submit" method="POST" enctype="multipart/form-data" novalidate>
+<input type="hidden" name="rolle" value="Eigentuemer/Vermieter">
 
-<form id="kontaktForm" action="{backend_url}/api/kontakt/submit" method="POST" enctype="multipart/form-data" novalidate onsubmit="return handleSubmit(event)">
-<input type="hidden" name="rolle" value="Eigent&uuml;mer/Vermieter">
-
+<!-- SEITE 1: KONTAKTDATEN -->
+<div class="page active" id="page1">
 <div class="card">
-<h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Kontaktdaten</h2>
+<h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Ihre Kontaktdaten</h2>
 <div class="type-toggle">
 <label class="privat-label"><input type="radio" name="kundentyp" value="Privat" checked onchange="toggleFirma()"><span>Privat</span></label>
 <label class="firma-label"><input type="radio" name="kundentyp" value="Firma" onchange="toggleFirma()"><span>Firma</span></label>
@@ -307,23 +296,23 @@ textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 </div>
 <div class="row">
 <div class="field"><label class="required">Telefon</label><input type="tel" name="telefon" id="k_telefon" required placeholder="040 123 456 78"></div>
+<div class="field"><label class="required">E-Mail</label><input type="email" name="email" id="k_email" required placeholder="max@beispiel.de"></div>
 </div>
 <div class="row">
-<div class="field"><label class="required">E-Mail</label><input type="email" name="email" required placeholder="max@beispiel.de"></div>
-</div>
-<div class="row">
-<div class="field"><label class="required">Stra&szlig;e, Nr.</label><input type="text" name="strasse" id="k_strasse" required minlength="5" placeholder="Musterstra&szlig;e 12" pattern=".*\\d+.*" title="Bitte Stra&szlig;e mit Hausnummer eingeben"></div>
+<div class="field"><label class="required">Stra&szlig;e, Nr.</label><input type="text" name="strasse" id="k_strasse" required minlength="5" placeholder="Musterstra&szlig;e 12"></div>
 <div class="field" style="max-width:100px"><label class="required">PLZ</label><input type="text" name="plz" id="k_plz" required placeholder="22453"></div>
 <div class="field"><label class="required">Stadt</label><input type="text" name="stadt" id="k_stadt" required placeholder="Hamburg"></div>
 </div>
 </div>
+<div class="nav-btns"><button type="button" class="btn btn-next" onclick="next(1)">Weiter &#8594;</button></div>
+</div>
 
+<!-- SEITE 2: OBJEKTADRESSE -->
+<div class="page" id="page2">
+<div class="praise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Super! Kontaktdaten erfasst.</div>
 <div class="card">
 <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg> Objektadresse</h2>
-<label class="copy-check">
-<input type="checkbox" id="copyAddr" onchange="toggleCopy()">
-Kontaktadresse als Objektadresse &uuml;bernehmen
-</label>
+<label class="copy-check"><input type="checkbox" id="copyAddr" onchange="toggleCopy()"> Kontaktadresse als Objektadresse &uuml;bernehmen</label>
 <div class="obj-fields" id="objFields">
 <div class="row">
 <div class="field"><label>Vorname</label><input type="text" name="objvorname" id="o_vorname" placeholder="Vorname Ansprechpartner"></div>
@@ -337,28 +326,25 @@ Kontaktadresse als Objektadresse &uuml;bernehmen
 </div>
 </div>
 </div>
+<div class="nav-btns"><button type="button" class="btn btn-back" onclick="prev(2)">&#8592; Zur&uuml;ck</button><button type="button" class="btn btn-next" onclick="next(2)">Weiter &#8594;</button></div>
+</div>
 
+<!-- SEITE 3: ANLIEGEN -->
+<div class="page" id="page3">
+<div class="praise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Sehr gut! Objektadresse gespeichert.</div>
 <div class="card">
 <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg> Was wird ben&ouml;tigt?</h2>
 <p style="font-size:13px;color:#888;margin:-8px 0 14px">W&auml;hlen Sie ein oder mehrere Themen</p>
-<div class="topic-grid" id="topicGrid">
-<div class="topic-item" data-topic="Schiebet&uuml;r">
+<div class="topic-grid">
+<div class="topic-item" data-topic="Schiebetuer">
 <div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span class="topic-icon">&#128682;</span><span>Schiebet&uuml;r</span></div>
 <div class="topic-desc">
 <p style="font-size:12px;font-weight:600;color:#14532D;margin-bottom:8px">Welche Art Schiebet&uuml;r?</p>
-<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px" id="stTypen">
-<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
-<input type="checkbox" name="st_typ[]" value="Hebeschiebekippt&uuml;r" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> Hebeschiebekippt&uuml;r (HSK)
-</label>
-<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
-<input type="checkbox" name="st_typ[]" value="Hebeschiebetür" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> Hebeschiebetür (HS)
-</label>
-<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
-<input type="checkbox" name="st_typ[]" value="PSK-Schiebet&uuml;r" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> PSK-Schiebet&uuml;r (Parallelschiebekipp)
-</label>
-<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid #d4e8d6;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;background:#fff" onmouseover="this.style.borderColor='#14532D'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='#d4e8d6'">
-<input type="checkbox" name="st_typ[]" value="Schiebet&uuml;r innen" style="accent-color:#14532D;width:16px;height:16px" onchange="updateStTyp(this)"> Schiebet&uuml;r innen
-</label>
+<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+<label class="st-opt"><input type="checkbox" name="st_typ[]" value="Hebeschiebekipptuer"> Hebeschiebekippt&uuml;r (HSK)</label>
+<label class="st-opt"><input type="checkbox" name="st_typ[]" value="Hebeschiebetuer"> Hebeschiabet&uuml;r (HS)</label>
+<label class="st-opt"><input type="checkbox" name="st_typ[]" value="PSK-Schiebetuer"> PSK-Schiebet&uuml;r (Parallelschiebekipp)</label>
+<label class="st-opt"><input type="checkbox" name="st_typ[]" value="Schiebetuer innen"> Schiebet&uuml;r innen</label>
 </div>
 <textarea name="desc_schiebetuer" placeholder="Was ist das Problem? z.B. Schiebet&uuml;r klemmt, l&auml;sst sich schwer &ouml;ffnen..."></textarea>
 </div>
@@ -369,12 +355,12 @@ Kontaktadresse als Objektadresse &uuml;bernehmen
 <div class="topic-desc"><textarea name="desc_fenster" placeholder="Was ist das Problem? z.B. Fenster undicht, Beschlag defekt..."></textarea></div>
 <input type="hidden" name="topic[]" value="" class="topic-val">
 </div>
-<div class="topic-item" data-topic="Innent&uuml;r">
+<div class="topic-item" data-topic="Innentuer">
 <div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span class="topic-icon">&#128682;</span><span>Innent&uuml;r</span></div>
 <div class="topic-desc"><textarea name="desc_innentuer" placeholder="Was ist das Problem? z.B. T&uuml;r schlie&szlig;t nicht richtig, Scharnier locker..."></textarea></div>
 <input type="hidden" name="topic[]" value="" class="topic-val">
 </div>
-<div class="topic-item" data-topic="Eingangst&uuml;r">
+<div class="topic-item" data-topic="Eingangstuer">
 <div class="topic-header" onclick="toggleTopic(this)"><div class="topic-check"></div><span class="topic-icon">&#127968;</span><span>Eingangst&uuml;r</span></div>
 <div class="topic-desc"><textarea name="desc_eingangstuer" placeholder="Was ist das Problem? z.B. Haust&uuml;r verzogen, Schloss defekt..."></textarea></div>
 <input type="hidden" name="topic[]" value="" class="topic-val">
@@ -386,213 +372,108 @@ Kontaktadresse als Objektadresse &uuml;bernehmen
 </div>
 </div>
 </div>
-
 <div class="card">
 <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Nachricht &amp; Bilder</h2>
 <textarea name="nachricht" placeholder="Beschreiben Sie Ihr Anliegen, z.B. wie dringend ist es, wann sind Sie erreichbar..." rows="4"></textarea>
 <div style="margin-top:12px">
-<label style="font-weight:600;margin-bottom:8px;display:block">Bilder hochladen <span style="font-weight:400;color:#888">(optional, max. 10 Bilder)</span></label>
+<label style="font-weight:600;margin-bottom:8px;display:block">Bilder hochladen <span style="font-weight:400;color:#888">(optional, max. 10)</span></label>
 <input type="file" name="bilder" accept="image/*" multiple id="fileInput" onchange="handleFiles(this.files)" style="display:none">
-<div id="dropZone" style="border:2px dashed #e0ddd8;border-radius:10px;padding:20px;text-align:center;transition:all 0.2s;cursor:pointer" ondragover="event.preventDefault();this.style.borderColor='#14532D';this.style.background='#e8f5e9'" ondragleave="this.style.borderColor='#e0ddd8';this.style.background=''" ondrop="handleDrop(event)" onclick="document.getElementById('fileInput').click()">
+<div id="dropZone" style="border:2px dashed #e0ddd8;border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s" ondragover="event.preventDefault();this.style.borderColor='#14532D';this.style.background='#e8f5e9'" ondragleave="this.style.borderColor='#e0ddd8';this.style.background=''" ondrop="handleDrop(event)" onclick="document.getElementById('fileInput').click()">
 <div style="font-size:24px;margin-bottom:4px;color:#c8956c">&#128247;</div>
 <div id="fileLabel" style="font-size:14px;font-weight:600;color:#555">Klicken oder Bilder hierher ziehen</div>
-<p style="font-size:13px;color:#888;margin-top:4px">JPG, PNG &middot; max. 50 MB gesamt</p>
+<p style="font-size:13px;color:#888;margin-top:4px">JPG, PNG &middot; max. 50 MB</p>
 </div>
 <div id="imagePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
 <div id="imageCount" style="font-size:12px;color:#888;margin-top:4px"></div>
-<div id="addMoreBtn" style="display:none;margin-top:8px"><button type="button" onclick="document.getElementById('fileInput').click()" style="padding:8px 16px;background:#f5f3f0;border:1.5px solid #e0ddd8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#555;font-family:inherit;transition:all 0.2s">+ Weitere Bilder hinzuf&uuml;gen</button></div>
+<div id="addMoreBtn" style="display:none;margin-top:8px"><button type="button" onclick="document.getElementById('fileInput').click()" style="padding:8px 16px;background:#f5f3f0;border:1.5px solid #e0ddd8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#555;font-family:inherit">+ Weitere Bilder</button></div>
 </div>
 </div>
+<div class="nav-btns"><button type="button" class="btn btn-back" onclick="prev(3)">&#8592; Zur&uuml;ck</button><button type="button" class="btn btn-next" onclick="next(3)">Weiter zur &Uuml;bersicht &#8594;</button></div>
+</div>
 
-<label class="privacy">
-<input type="checkbox" name="dataprivacy" id="privacyCheck" required>
-<span>Ich habe die <a href="https://www.tischlerei-graupner.de/j/privacy" target="_blank">Datenschutzerkl&auml;rung</a> gelesen und stimme der Verarbeitung meiner Daten zu.</span>
-</label>
-
-<button type="submit" class="btn" id="submitBtn">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
-Anfrage absenden
-</button>
+<!-- SEITE 4: ZUSAMMENFASSUNG -->
+<div class="page" id="page4">
+<div class="praise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Fast geschafft! Bitte pr&uuml;fen Sie Ihre Angaben.</div>
+<div class="card">
+<h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> Ihre Anfrage im &Uuml;berblick</h2>
+<div id="summaryContent"></div>
+</div>
+<label class="privacy"><input type="checkbox" name="dataprivacy" id="privacyCheck" required><span>Ich habe die <a href="https://www.tischlerei-graupner.de/j/privacy" target="_blank">Datenschutzerkl&auml;rung</a> gelesen und stimme der Verarbeitung meiner Daten zu.</span></label>
+<div class="nav-btns">
+<button type="button" class="btn btn-back" onclick="prev(4)">&#8592; Zur&uuml;ck</button>
+<button type="submit" class="btn btn-submit" id="submitBtn" onclick="return doSubmit(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg> Anfrage absenden</button>
+</div>
+</div>
 </form>
-
-<div class="footer-mini">
-&copy; 2026 Tischlerei R.Graupner &middot; <a href="https://www.tischlerei-graupner.de">www.tischlerei-graupner.de</a>
+<div class="footer-mini">&copy; 2026 Tischlerei R.Graupner &middot; <a href="https://www.tischlerei-graupner.de">www.tischlerei-graupner.de</a></div>
 </div>
-</div>
-
 <div class="success-box" id="successBox">
 <div class="success-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
 <h2>Vielen Dank!</h2>
 <p>Ihre Anfrage wurde erfolgreich gesendet.</p>
-<div class="success-info">
-<b>So geht es weiter:</b><br>
-Wir melden uns schnellstm&ouml;glich bei Ihnen &ndash; in der Regel innerhalb von <b>24 Stunden</b>.<br><br>
-Bei dringenden Anliegen erreichen Sie uns unter:<br>
-<b><a href="tel:04055567744" style="color:#14532D;text-decoration:none">&#9742; 040 555 677 44</a></b>
-</div>
+<div class="success-info"><b>So geht es weiter:</b><br>Wir melden uns schnellstm&ouml;glich bei Ihnen &ndash; in der Regel innerhalb von <b>24 Stunden</b>.<br><br>Bei dringenden Anliegen erreichen Sie uns unter:<br><b><a href="tel:04055567744" style="color:#14532D;text-decoration:none">&#9742; 040 555 677 44</a></b></div>
 <a href="https://www.tischlerei-graupner.de" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#14532D;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px">Zur&uuml;ck zur Website</a>
 </div>
-
 <script>
-// Prevent browser default drag behavior (would replace page with image)
 document.addEventListener('dragover',function(e){{e.preventDefault();}});
 document.addEventListener('drop',function(e){{e.preventDefault();}});
-function updateStTyp(cb){{
-  var lbl=cb.closest('label');
-  if(cb.checked){{lbl.style.borderColor='#14532D';lbl.style.background='#e8f5e9';}}
-  else{{lbl.style.borderColor='#d4e8d6';lbl.style.background='#fff';}}
+var cur=1;
+function show(n){{for(var i=1;i<=4;i++){{document.getElementById('page'+i).classList.remove('active');var s=document.getElementById('step'+i);s.classList.remove('active','done');if(i<n)s.classList.add('done');if(i===n)s.classList.add('active');}}document.getElementById('page'+n).classList.add('active');window.scrollTo({{top:0,behavior:'smooth'}});cur=n;}}
+function goTo(n){{if(n<=cur)show(n);}}
+function next(from){{
+  if(from===1){{
+    var fields=[['k_nachname','Bitte Nachname eingeben'],['k_telefon','Bitte Telefonnummer eingeben'],['k_email','Bitte E-Mail eingeben'],['k_strasse','Bitte Strasse mit Hausnummer eingeben'],['k_plz','Bitte PLZ eingeben'],['k_stadt','Bitte Stadt eingeben']];
+    for(var i=0;i<fields.length;i++){{var v=document.getElementById(fields[i][0]).value.trim();if(!v){{alert(fields[i][1]);document.getElementById(fields[i][0]).focus();return;}}}}
+  }}
+  if(from===3)buildSummary();
+  show(from+1);
 }}
-var formSubmitted=false;
-function handleSubmit(e){{
-  e.preventDefault();
-  var form=document.getElementById('kontaktForm');
-  form.classList.add('submitted');
-  var strasse=document.getElementById('k_strasse').value.trim();
-  if(!strasse||strasse.length<5){{
-    showError('Bitte geben Sie eine Stra\u00dfe mit Hausnummer ein.');
-    document.getElementById('k_strasse').focus();
-    return false;
-  }}
-  if(!/\d/.test(strasse)){{
-    showError('Bitte geben Sie auch die Hausnummer ein (z.B. Musterstra\u00dfe 12).');
-    document.getElementById('k_strasse').focus();
-    return false;
-  }}
-  if(!form.checkValidity()){{
-    var first=form.querySelector(':invalid');
-    if(first){{first.focus();first.scrollIntoView({{behavior:'smooth',block:'center'}});}}
-    return false;
-  }}
-  var btn=document.getElementById('submitBtn');
-  btn.disabled=true;
-  btn.innerHTML='<svg style="animation:spin 1s linear infinite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Wird gesendet...';
-  var formData=new FormData(form);
-  fetch(form.action,{{method:'POST',body:formData}}).then(function(){{
-    document.getElementById('formContainer').style.display='none';
-    var sb=document.getElementById('successBox');
-    sb.classList.add('show');
-    sb.scrollIntoView({{behavior:'smooth',block:'start'}});
-  }}).catch(function(){{
-    document.getElementById('formContainer').style.display='none';
-    var sb=document.getElementById('successBox');
-    sb.classList.add('show');
-    sb.scrollIntoView({{behavior:'smooth',block:'start'}});
-  }});
+function prev(from){{show(from-1);}}
+function buildSummary(){{
+  var s='';var vn=document.getElementById('k_vorname').value;var nn=document.getElementById('k_nachname').value;
+  var ar=document.querySelector('input[name="anrede"]:checked');ar=ar?ar.value+' ':'';
+  s+='<div class="summary-section"><h3>Kontaktdaten</h3>';
+  s+='<div class="summary-row"><span class="summary-label">Name</span><span class="summary-value">'+ar+vn+' '+nn+'</span></div>';
+  s+='<div class="summary-row"><span class="summary-label">Telefon</span><span class="summary-value">'+document.getElementById('k_telefon').value+'</span></div>';
+  s+='<div class="summary-row"><span class="summary-label">E-Mail</span><span class="summary-value">'+document.getElementById('k_email').value+'</span></div>';
+  s+='<div class="summary-row"><span class="summary-label">Adresse</span><span class="summary-value">'+document.getElementById('k_strasse').value+', '+document.getElementById('k_plz').value+' '+document.getElementById('k_stadt').value+'</span></div></div>';
+  s+='<div class="summary-section"><h3>Objektadresse</h3>';
+  if(document.getElementById('copyAddr').checked){{s+='<div class="summary-row"><span class="summary-value" style="color:#14532D">&#10003; Gleich wie Kontaktadresse</span></div>';}}
+  else{{var os=document.getElementById('o_strasse').value;if(os)s+='<div class="summary-row"><span class="summary-label">Adresse</span><span class="summary-value">'+os+', '+document.getElementById('o_plz').value+' '+document.getElementById('o_stadt').value+'</span></div>';else s+='<div class="summary-row"><span class="summary-value" style="color:#888">Keine separate Objektadresse</span></div>';}}
+  s+='</div>';
+  var topics=document.querySelectorAll('.topic-item.active');
+  s+='<div class="summary-section"><h3>Anliegen</h3>';
+  if(topics.length>0){{s+='<div class="summary-tags">';topics.forEach(function(t){{s+='<span class="summary-tag">'+t.getAttribute('data-topic')+'</span>';}});s+='</div>';}}
+  else{{s+='<div class="summary-row"><span class="summary-value" style="color:#888">Kein Thema gewaehlt</span></div>';}}
+  var stT=document.querySelectorAll('input[name="st_typ[]"]:checked');
+  if(stT.length>0){{s+='<div class="summary-tags" style="margin-top:6px">';stT.forEach(function(cb){{s+='<span class="summary-tag" style="background:#e3f2fd;color:#1565c0">&#8594; '+cb.value+'</span>';}});s+='</div>';}}
+  s+='</div>';
+  var msg=document.querySelector('textarea[name="nachricht"]').value;
+  if(msg){{s+='<div class="summary-section"><h3>Nachricht</h3><p style="font-size:13px;color:#555;background:#faf9f7;padding:10px;border-radius:8px;white-space:pre-wrap">'+msg.replace(/</g,'&lt;')+'</p></div>';}}
+  if(allFiles.length>0){{s+='<div class="summary-section"><h3>Bilder</h3><p style="font-size:13px;color:#14532D;font-weight:600">'+allFiles.length+' Bild'+(allFiles.length>1?'er':'')+' werden hochgeladen</p></div>';}}
+  document.getElementById('summaryContent').innerHTML=s;
+}}
+function doSubmit(e){{
+  e.preventDefault();if(!document.getElementById('privacyCheck').checked){{alert('Bitte stimmen Sie der Datenschutzerklaerung zu.');return false;}}
+  var btn=document.getElementById('submitBtn');btn.disabled=true;
+  btn.innerHTML='<svg style="animation:spin 1s linear infinite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg> Wird gesendet...';
+  var form=document.getElementById('kontaktForm');var fd=new FormData(form);
+  fetch(form.action,{{method:'POST',body:fd}}).then(function(){{document.getElementById('formContainer').style.display='none';document.getElementById('successBox').classList.add('show');window.scrollTo({{top:0,behavior:'smooth'}});}}).catch(function(){{document.getElementById('formContainer').style.display='none';document.getElementById('successBox').classList.add('show');window.scrollTo({{top:0,behavior:'smooth'}});}});
   return false;
 }}
-function showError(msg){{
-  alert(msg);
-}}
-function toggleFirma(){{
-  var isFirma=document.querySelector('input[name="kundentyp"][value="Firma"]').checked;
-  var field=document.getElementById('firmaField');
-  var input=document.getElementById('firmaInput');
-  if(isFirma){{field.classList.add('show');input.required=true;setTimeout(function(){{input.focus();}},300);}}
-  else{{field.classList.remove('show');input.required=false;input.value='';}}
-}}
-function toggleTopic(header){{
-  var item=header.parentElement;
-  var isActive=item.classList.contains('active');
-  var hiddenInput=item.querySelector('.topic-val');
-  var topic=item.getAttribute('data-topic');
-  if(isActive){{item.classList.remove('active');hiddenInput.value='';}}
-  else{{item.classList.add('active');hiddenInput.value=topic;var ta=item.querySelector('textarea');if(ta)setTimeout(function(){{ta.focus();}},300);}}
-  updateSteps();
-}}
-function toggleCopy(){{
-  var c=document.getElementById('copyAddr').checked;
-  var pairs=[['k_vorname','o_vorname'],['k_nachname','o_nachname'],['k_telefon','o_telefon'],['k_strasse','o_strasse'],['k_plz','o_plz'],['k_stadt','o_stadt']];
-  var fields=document.getElementById('objFields');
-  if(c){{
-    pairs.forEach(function(p){{document.getElementById(p[1]).value=document.getElementById(p[0]).value;}});
-    fields.style.opacity='0.4';
-    fields.querySelectorAll('input').forEach(function(i){{i.readOnly=true;}});
-  }}else{{
-    fields.style.opacity='1';
-    fields.querySelectorAll('input').forEach(function(i){{i.readOnly=false;}});
-  }}
-  updateSteps();
-}}
-function updateFileLabel(input){{
-  var label=document.getElementById('fileLabel');
-  if(input.files.length>0){{
-    label.textContent=input.files.length+' Datei'+(input.files.length>1?'en':'')+' ausgew\u00e4hlt';
-  }}else{{
-    label.textContent='Klicken oder Bilder hierher ziehen';
-  }}
-}}
-var allFiles=[];
-var MAX_FILES=10;
-function handleFiles(newFiles){{
-  for(var i=0;i<newFiles.length;i++){{
-    if(allFiles.length>=MAX_FILES)break;
-    if(newFiles[i].type.startsWith('image/')){{
-      allFiles.push(newFiles[i]);
-    }}
-  }}
-  updatePreview();
-}}
-function handleDrop(e){{
-  e.preventDefault();
-  e.currentTarget.style.borderColor='#e0ddd8';
-  e.currentTarget.style.background='';
-  if(e.dataTransfer.files)handleFiles(e.dataTransfer.files);
-}}
-function removeImage(idx){{
-  allFiles.splice(idx,1);
-  updatePreview();
-}}
-function updatePreview(){{
-  var preview=document.getElementById('imagePreview');
-  var countEl=document.getElementById('imageCount');
-  var label=document.getElementById('fileLabel');
-  preview.innerHTML='';
-  allFiles.forEach(function(file,idx){{
-    var wrap=document.createElement('div');
-    wrap.style.cssText='position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1.5px solid #e0ddd8;flex-shrink:0';
-    var img=document.createElement('img');
-    img.style.cssText='width:100%;height:100%;object-fit:cover';
-    img.src=URL.createObjectURL(file);
-    var btn=document.createElement('button');
-    btn.type='button';
-    btn.innerHTML='&times;';
-    btn.style.cssText='position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center';
-    btn.onclick=function(){{removeImage(idx);}};
-    wrap.appendChild(img);
-    wrap.appendChild(btn);
-    preview.appendChild(wrap);
-  }});
-  if(allFiles.length>0){{
-    countEl.textContent=allFiles.length+'/'+MAX_FILES+' Bilder ausgew\u00e4hlt';
-    label.textContent=allFiles.length+' Bild'+(allFiles.length>1?'er':'')+' ausgew\u00e4hlt \u2013 klicken f\u00fcr mehr';
-    document.getElementById('addMoreBtn').style.display='block';
-  }}else{{
-    countEl.textContent='';
-    label.textContent='Klicken oder Bilder hierher ziehen';
-    document.getElementById('addMoreBtn').style.display='none';
-  }}
-  // Rebuild file input with DataTransfer
-  try{{
-    var dt=new DataTransfer();
-    allFiles.forEach(function(f){{dt.items.add(f);}});
-    document.getElementById('fileInput').files=dt.files;
-  }}catch(e){{}}
-}}
-function updateSteps(){{
-  var s1=document.getElementById('k_nachname').value&&document.getElementById('k_telefon').value;
-  var s2=document.getElementById('copyAddr').checked||(document.getElementById('o_strasse').value!='');
-  var s3=document.querySelectorAll('.topic-item.active').length>0;
-  document.getElementById('step1').className='step'+(s1?' done':' active');
-  document.getElementById('step2').className='step'+(s2?' done':(s1?' active':''));
-  document.getElementById('step3').className='step'+(s3?' done':(s2?' active':''));
-  document.getElementById('step4').className='step'+(s3?' active':'');
-}}
-document.querySelectorAll('#kontaktForm input,#kontaktForm textarea').forEach(function(el){{
-  el.addEventListener('input',updateSteps);
-  el.addEventListener('change',updateSteps);
-}});
+function toggleFirma(){{var f=document.querySelector('input[name="kundentyp"][value="Firma"]').checked;var el=document.getElementById('firmaField');var inp=document.getElementById('firmaInput');if(f){{el.classList.add('show');inp.required=true;}}else{{el.classList.remove('show');inp.required=false;inp.value='';}}}}
+function toggleTopic(h){{var it=h.parentElement;var a=it.classList.contains('active');var hi=it.querySelector('.topic-val');var tp=it.getAttribute('data-topic');if(a){{it.classList.remove('active');hi.value='';}}else{{it.classList.add('active');hi.value=tp;var ta=it.querySelector('textarea');if(ta)setTimeout(function(){{ta.focus();}},300);}}}}
+function toggleCopy(){{var c=document.getElementById('copyAddr').checked;var p=[['k_vorname','o_vorname'],['k_nachname','o_nachname'],['k_telefon','o_telefon'],['k_strasse','o_strasse'],['k_plz','o_plz'],['k_stadt','o_stadt']];var f=document.getElementById('objFields');if(c){{p.forEach(function(x){{document.getElementById(x[1]).value=document.getElementById(x[0]).value;}});f.style.opacity='0.4';f.querySelectorAll('input').forEach(function(i){{i.readOnly=true;}});}}else{{f.style.opacity='1';f.querySelectorAll('input').forEach(function(i){{i.readOnly=false;}});}}}}
+var allFiles=[];var MAX_FILES=10;
+function handleFiles(nf){{for(var i=0;i<nf.length;i++){{if(allFiles.length>=MAX_FILES)break;if(nf[i].type.startsWith('image/'))allFiles.push(nf[i]);}}updatePrev();}}
+function handleDrop(e){{e.preventDefault();e.currentTarget.style.borderColor='#e0ddd8';e.currentTarget.style.background='';if(e.dataTransfer.files)handleFiles(e.dataTransfer.files);}}
+function removeImg(i){{allFiles.splice(i,1);updatePrev();}}
+function updatePrev(){{var pv=document.getElementById('imagePreview');var ct=document.getElementById('imageCount');var lb=document.getElementById('fileLabel');pv.innerHTML='';
+allFiles.forEach(function(f,i){{var w=document.createElement('div');w.style.cssText='position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1.5px solid #e0ddd8;flex-shrink:0';var im=document.createElement('img');im.style.cssText='width:100%;height:100%;object-fit:cover';im.src=URL.createObjectURL(f);var b=document.createElement('button');b.type='button';b.innerHTML='&times;';b.style.cssText='position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center';b.onclick=function(){{removeImg(i);}};w.appendChild(im);w.appendChild(b);pv.appendChild(w);}});
+if(allFiles.length>0){{ct.textContent=allFiles.length+'/'+MAX_FILES+' Bilder';lb.textContent=allFiles.length+' Bild'+(allFiles.length>1?'er':'')+' - klicken fuer mehr';document.getElementById('addMoreBtn').style.display='block';}}
+else{{ct.textContent='';lb.textContent='Klicken oder Bilder hierher ziehen';document.getElementById('addMoreBtn').style.display='none';}}
+try{{var dt=new DataTransfer();allFiles.forEach(function(f){{dt.items.add(f);}});document.getElementById('fileInput').files=dt.files;}}catch(e){{}}}}
 </script>
-<style>@keyframes spin{{to{{transform:rotate(360deg)}}}}</style>
 </body>
 </html>""")
 
@@ -708,6 +589,57 @@ async def kontakt_relay(request: Request):
         if topics:
             push_body += f" ({', '.join(topics[:2])})"
         await send_push_to_all(title="Neue Anfrage", body=push_body, url="/anfragen")
+        
+        # Send confirmation email to customer
+        try:
+            from utils import send_email
+            from utils.email_signatur import wrap_email_body
+            
+            customer_email = form_dict.get("email", "").strip()
+            if customer_email:
+                # Build topic summary
+                topics_html = ""
+                if topics:
+                    topics_html = "<ul style='margin:10px 0;padding-left:20px'>"
+                    for topic in topics:
+                        topics_html += f"<li style='margin:4px 0'>{topic}</li>"
+                    topics_html += "</ul>"
+                
+                confirmation_content = f"""
+                    <h2 style="color:#14532D;margin-bottom:16px">Vielen Dank für Ihre Anfrage!</h2>
+                    <p style="line-height:1.7">Sehr geehrte(r) {name},</p>
+                    <p style="line-height:1.7">wir haben Ihre Anfrage erfolgreich erhalten und werden uns schnellstmöglich bei Ihnen melden.</p>
+                    
+                    <div style="background:#f5f3f0;border-left:4px solid #14532D;padding:16px;margin:24px 0;border-radius:8px">
+                        <h3 style="color:#14532D;font-size:15px;margin:0 0 12px 0">Ihre Anfrage im Überblick:</h3>
+                        <p style="margin:6px 0"><strong>Name:</strong> {name}</p>
+                        <p style="margin:6px 0"><strong>Telefon:</strong> {form_dict.get('telefon', '')}</p>
+                        <p style="margin:6px 0"><strong>E-Mail:</strong> {customer_email}</p>
+                        {f'<p style="margin:6px 0"><strong>Themen:</strong>{topics_html}</p>' if topics else ''}
+                    </div>
+                    
+                    <div style="background:#e8f5e9;padding:16px;margin:20px 0;border-radius:8px;border:1px solid #a5d6a7">
+                        <p style="margin:0;color:#2e7d32;font-weight:600">📞 Wir melden uns in der Regel innerhalb von 24 Stunden bei Ihnen!</p>
+                    </div>
+                    
+                    <p style="line-height:1.7">Bei dringenden Anliegen erreichen Sie uns auch telefonisch unter:</p>
+                    <p style="font-size:18px;font-weight:700;color:#14532D;margin:12px 0">☎ 040 555 677 44</p>
+                    
+                    <p style="margin-top:24px;line-height:1.7">Mit freundlichen Grüßen<br>Ihr Team der Tischlerei R. Graupner</p>
+                """
+                
+                body_html = wrap_email_body(confirmation_content)
+                
+                send_email(
+                    to_email=customer_email,
+                    subject="Ihre Anfrage bei Tischlerei R. Graupner - Bestätigung",
+                    body_html=body_html
+                )
+                logger.info(f"Bestätigungs-E-Mail an {customer_email} gesendet")
+        except Exception as email_err:
+            logger.error(f"Fehler beim Versand der Bestätigungs-E-Mail: {email_err}")
+            # Don't fail the whole request if confirmation email fails
+            
     except Exception as e:
         logger.error(f"Fehler beim Speichern in Graupner Suite: {e}")
 
