@@ -375,14 +375,15 @@ Kontaktadresse als Objektadresse &uuml;bernehmen
 <textarea name="nachricht" placeholder="Beschreiben Sie Ihr Anliegen, z.B. wie dringend ist es, wann sind Sie erreichbar..." rows="4"></textarea>
 <div style="margin-top:12px">
 <label style="font-weight:600;margin-bottom:8px;display:block">Bilder hochladen <span style="font-weight:400;color:#888">(optional, max. 10 Bilder)</span></label>
-<div class="file-area" id="dropZone" ondragover="event.preventDefault();this.style.borderColor='#14532D';this.style.background='#e8f5e9'" ondragleave="this.style.borderColor='#e0ddd8';this.style.background=''" ondrop="handleDrop(event)">
-<input type="file" name="bilder" accept="image/*" multiple id="fileInput" onchange="handleFiles(this.files)">
-<div class="file-icon">&#128247;</div>
-<div class="file-label" id="fileLabel">Klicken oder Bilder hierher ziehen</div>
-<p>JPG, PNG &middot; max. 50 MB gesamt</p>
+<input type="file" name="bilder" accept="image/*" multiple id="fileInput" onchange="handleFiles(this.files)" style="display:none">
+<div id="dropZone" style="border:2px dashed #e0ddd8;border-radius:10px;padding:20px;text-align:center;transition:all 0.2s;cursor:pointer" ondragover="event.preventDefault();this.style.borderColor='#14532D';this.style.background='#e8f5e9'" ondragleave="this.style.borderColor='#e0ddd8';this.style.background=''" ondrop="handleDrop(event)" onclick="document.getElementById('fileInput').click()">
+<div style="font-size:24px;margin-bottom:4px;color:#c8956c">&#128247;</div>
+<div id="fileLabel" style="font-size:14px;font-weight:600;color:#555">Klicken oder Bilder hierher ziehen</div>
+<p style="font-size:13px;color:#888;margin-top:4px">JPG, PNG &middot; max. 50 MB gesamt</p>
 </div>
 <div id="imagePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
 <div id="imageCount" style="font-size:12px;color:#888;margin-top:4px"></div>
+<div id="addMoreBtn" style="display:none;margin-top:8px"><button type="button" onclick="document.getElementById('fileInput').click()" style="padding:8px 16px;background:#f5f3f0;border:1.5px solid #e0ddd8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#555;font-family:inherit;transition:all 0.2s">+ Weitere Bilder hinzuf&uuml;gen</button></div>
 </div>
 </div>
 
@@ -538,10 +539,12 @@ function updatePreview(){{
   }});
   if(allFiles.length>0){{
     countEl.textContent=allFiles.length+'/'+MAX_FILES+' Bilder ausgew\u00e4hlt';
-    label.textContent=allFiles.length+' Bild'+(allFiles.length>1?'er':'')+' ausgew\u00e4hlt \u2013 weitere hinzuf\u00fcgen';
+    label.textContent=allFiles.length+' Bild'+(allFiles.length>1?'er':'')+' ausgew\u00e4hlt \u2013 klicken f\u00fcr mehr';
+    document.getElementById('addMoreBtn').style.display='block';
   }}else{{
     countEl.textContent='';
     label.textContent='Klicken oder Bilder hierher ziehen';
+    document.getElementById('addMoreBtn').style.display='none';
   }}
   // Rebuild file input with DataTransfer
   try{{
