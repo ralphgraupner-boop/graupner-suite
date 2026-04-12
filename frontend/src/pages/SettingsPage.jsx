@@ -857,6 +857,9 @@ const BenutzerTab = () => {
   const [editPerms, setEditPerms] = useState(null);
   const [perms, setPerms] = useState({});
   const [permsSaving, setPermsSaving] = useState(false);
+  const [authPrompt, setAuthPrompt] = useState(null); // {action: "perms"|"password"|"delete", username: "..."}
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
 
   const PERM_LABELS = {
     mitarbeiter_stammdaten: "Stammdaten bearbeiten",
@@ -884,6 +887,23 @@ const BenutzerTab = () => {
       setPerms(res.data);
       setEditPerms(username);
     } catch { toast.error("Fehler beim Laden der Berechtigungen"); }
+  };
+
+  const verifyAdminPassword = async () => {
+    try {
+      const res = await api.post("/auth/login", { username: "admin", password: authPassword });
+      if (res.data.token) {
+        const { action, username } = authPrompt;
+        setAuthPrompt(null);
+        setAuthPassword("");
+        setAuthError("");
+        if (action === "perms") loadPerms(username);
+        else if (action === "password") { setChangePassword(username); setNewPassword(""); }
+        else if (action === "delete") setConfirmDelete(username);
+      }
+    } catch {
+      setAuthError("Falsches Passwort");
+    }
   };
 
   const savePerms = async () => {
@@ -974,24 +994,53 @@ const BenutzerTab = () => {
               <p className="text-xs text-muted-foreground">{u.email || "Keine E-Mail"} &middot; {u.role || "admin"}</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => loadPerms(u.username)} data-testid={`btn-perms-${u.username}`}>
+              <Button variant="outline" size="sm" onClick={() => { setAuthPrompt({ action: "perms", username: u.username }); setAuthPassword(""); setAuthError(""); }} data-testid={`btn-perms-${u.username}`}>
                 <Shield className="w-3.5 h-3.5" /> Rechte
               </Button>
-              <Button variant="outline" size="sm" onClick={() => { setChangePassword(u.username); setNewPassword(""); }} data-testid={`btn-pw-${u.username}`}>
+              <Button variant="outline" size="sm" onClick={() => { setAuthPrompt({ action: "password", username: u.username }); setAuthPassword(""); setAuthError(""); }} data-testid={`btn-pw-${u.username}`}>
                 <Key className="w-3.5 h-3.5" /> Passwort
               </Button>
               <button
-                onClick={() => handleDelete(u.username)}
-                className={`p-2 rounded-sm transition-colors ${confirmDelete === u.username ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
+                onClick={() => { setAuthPrompt({ action: "delete", username: u.username }); setAuthPassword(""); setAuthError(""); }}
+                className="p-2 rounded-sm transition-colors hover:bg-destructive/10 hover:text-destructive"
                 data-testid={`btn-delete-${u.username}`}
               >
-                {confirmDelete === u.username ? <span className="text-xs font-bold px-1">OK?</span> : <Trash2 className="w-4 h-4" />}
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
         ))}
         {users.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Keine Benutzer gefunden</p>}
       </div>
+
+
+      {/* Admin-Passwort Bestätigung */}
+      <Modal isOpen={!!authPrompt} onClose={() => setAuthPrompt(null)} title="Admin-Passwort bestätigen">
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Bitte geben Sie Ihr Admin-Passwort ein um fortzufahren.
+          </p>
+          <div>
+            <Input
+              type="password"
+              value={authPassword}
+              onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && authPassword) verifyAdminPassword(); }}
+              placeholder="Admin-Passwort"
+              autoFocus
+              data-testid="input-auth-password"
+            />
+            {authError && <p className="text-xs text-red-500 mt-1">{authError}</p>}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setAuthPrompt(null)}>Abbrechen</Button>
+            <Button onClick={verifyAdminPassword} disabled={!authPassword} data-testid="btn-auth-confirm">
+              Bestätigen
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
 
       {/* New User Modal */}
       <Modal isOpen={showNew} onClose={() => setShowNew(false)} title="Neuer Benutzer">
