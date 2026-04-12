@@ -157,13 +157,13 @@ async def kontakt_form_page():
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;line-height:1.6;min-height:100vh;background:#f5f3f0;}}
-.header{{background:linear-gradient(135deg,#1a1a2e 0%,#2a2a4e 100%);color:#fff;padding:28px 16px;text-align:center;position:relative;overflow:hidden}}
+body{{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2c3e2d;line-height:1.6;min-height:100vh;background:#f5f3f0;}}
+.header{{background:linear-gradient(135deg,#14532D 0%,#1a6b3a 100%);color:#fff;padding:28px 16px;text-align:center;position:relative;overflow:hidden}}
 .header::after{{content:'';position:absolute;bottom:-1px;left:0;right:0;height:40px;background:linear-gradient(to top,#f5f3f0,transparent)}}
 .header-inner{{max-width:640px;margin:0 auto;position:relative;z-index:1}}
-.header-badge{{display:inline-flex;align-items:center;gap:6px;background:rgba(200,149,108,0.2);border:1px solid rgba(200,149,108,0.35);color:#c8956c;font-size:11px;font-weight:600;padding:5px 14px;border-radius:50px;margin-bottom:12px;letter-spacing:0.8px;text-transform:uppercase}}
+.header-badge{{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:50px;margin-bottom:12px;letter-spacing:0.8px;text-transform:uppercase}}
 .header h1{{font-size:24px;font-weight:700;letter-spacing:-0.3px}}
-.header h1 span{{color:#c8956c}}
+.header h1 span{{color:#a8d5a2}}
 .header p{{font-size:14px;opacity:0.7;margin-top:4px}}
 .header-contact{{display:flex;justify-content:center;gap:20px;margin-top:14px;flex-wrap:wrap}}
 .header-contact a{{color:rgba(255,255,255,0.8);text-decoration:none;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;transition:color 0.2s}}
@@ -173,26 +173,26 @@ body{{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,s
 .steps{{display:flex;gap:8px;margin-bottom:20px;padding:0 4px}}
 .step{{flex:1;text-align:center;font-size:11px;font-weight:600;color:#999;position:relative;padding-bottom:10px}}
 .step::after{{content:'';position:absolute;bottom:0;left:10%;right:10%;height:3px;background:#e0ddd8;border-radius:3px;transition:background 0.3s}}
-.step.active{{color:#1a1a2e}}
+.step.active{{color:#14532D}}
 .step.active::after{{background:#14532D}}
 .step.done{{color:#14532D}}
 .step.done::after{{background:#14532D}}
 .card{{background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,0.06);padding:28px;margin-bottom:16px;border:1px solid #eae8e4}}
-.card h2{{font-size:16px;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f0ede8;color:#1a1a2e;display:flex;align-items:center;gap:8px}}
+.card h2{{font-size:16px;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f0ede8;color:#14532D;display:flex;align-items:center;gap:8px}}
 .card h2 svg{{width:18px;height:18px;color:#c8956c}}
 .row{{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}}
 .field{{flex:1;min-width:160px}}
 label{{display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:#444}}
-input[type=text],input[type=email],input[type=tel],textarea{{width:100%;padding:10px 13px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:inherit;transition:all 0.2s;background:#faf9f7;color:#1a1a2e}}
+input[type=text],input[type=email],input[type=tel],textarea{{width:100%;padding:10px 13px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:inherit;transition:all 0.2s;background:#faf9f7;color:#2c3e2d}}
 input[type=text]::placeholder,input[type=email]::placeholder,input[type=tel]::placeholder,textarea::placeholder{{color:#b0aaa0}}
-input:focus,textarea:focus{{outline:none;border-color:#1a1a2e;box-shadow:0 0 0 3px rgba(26,26,46,0.08);background:#fff}}
+input:focus,textarea:focus{{outline:none;border-color:#14532D;box-shadow:0 0 0 3px rgba(20,83,45,0.1);background:#fff}}
 .submitted input:invalid,.submitted textarea:invalid{{border-color:#e74c3c;background:#fef8f7}}
 textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 .radio-group{{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}}
 .radio-group label{{display:flex;align-items:center;gap:6px;padding:8px 16px;border:1.5px solid #e0ddd8;border-radius:9px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s;background:#faf9f7;color:#555}}
 .radio-group label:hover{{border-color:#bbb;background:#f5f3f0}}
-.radio-group label:has(input:checked){{border-color:#1a1a2e;background:#f0f0ff;color:#1a1a2e}}
-.radio-group input[type=radio]{{accent-color:#1a1a2e}}
+.radio-group label:has(input:checked){{border-color:#14532D;background:#e8f5e9;color:#14532D}}
+.radio-group input[type=radio]{{accent-color:#14532D}}
 .topic-grid{{display:flex;flex-direction:column;gap:8px}}
 .topic-item{{border:1.5px solid #e0ddd8;border-radius:11px;overflow:hidden;transition:all 0.3s;background:#faf9f7}}
 .topic-item.active{{border-color:#14532D;background:#f0faf2}}
@@ -210,8 +210,8 @@ textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 .topic-desc textarea:focus{{outline:none;border-color:#14532D;box-shadow:0 0 0 3px rgba(20,83,45,0.08)}}
 .copy-check{{display:flex;align-items:center;gap:10px;padding:11px 16px;background:#f5f3f0;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:14px;border:1.5px solid transparent;transition:all 0.2s}}
 .copy-check:hover{{background:#edeae6}}
-.copy-check:has(input:checked){{border-color:#1a1a2e;background:#eef0ff}}
-.copy-check input{{width:17px;height:17px;accent-color:#1a1a2e;cursor:pointer}}
+.copy-check:has(input:checked){{border-color:#14532D;background:#e8f5e9}}
+.copy-check input{{width:17px;height:17px;accent-color:#14532D;cursor:pointer}}
 .obj-fields{{transition:opacity 0.3s;}}
 .btn{{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;background:linear-gradient(135deg,#14532D 0%,#1a6b3a 100%);color:#fff;border:none;border-radius:11px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.25s;font-family:inherit;letter-spacing:0.2px}}
 .btn:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(20,83,45,0.3)}}
@@ -222,7 +222,7 @@ textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 .privacy{{display:flex;align-items:start;gap:10px;padding:14px 16px;background:#fff;border-radius:11px;border:1.5px solid #e0ddd8;cursor:pointer;font-size:13px;margin-bottom:16px;line-height:1.5;color:#555}}
 .privacy:hover{{border-color:#ccc}}
 .privacy input{{width:18px;height:18px;margin-top:1px;flex-shrink:0;cursor:pointer;accent-color:#14532D}}
-.privacy a{{color:#1a1a2e;font-weight:600;text-decoration:underline}}
+.privacy a{{color:#14532D;font-weight:600;text-decoration:underline}}
 .file-area{{margin-top:12px;border:2px dashed #e0ddd8;border-radius:10px;padding:16px;text-align:center;transition:all 0.2s;cursor:pointer;position:relative}}
 .file-area:hover{{border-color:#c8956c;background:#fdf9f5}}
 .file-area input[type=file]{{position:absolute;inset:0;opacity:0;cursor:pointer}}
@@ -242,13 +242,13 @@ textarea{{resize:vertical;min-height:80px;font-family:inherit}}
 .success-box.show{{display:block}}
 .success-check{{width:80px;height:80px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px}}
 .success-check svg{{width:40px;height:40px;color:#2e7d32}}
-.success-box h2{{font-size:24px;font-weight:700;color:#1a1a2e;margin-bottom:8px}}
+.success-box h2{{font-size:24px;font-weight:700;color:#14532D;margin-bottom:8px}}
 .success-box p{{font-size:15px;color:#666;line-height:1.7;margin-bottom:8px}}
 .success-info{{background:#fff;border-radius:12px;padding:20px;margin:24px 0;text-align:left;font-size:14px;color:#444;line-height:1.7;border:1px solid #e0ddd8}}
-.success-info b{{color:#1a1a2e}}
+.success-info b{{color:#14532D}}
 .footer-mini{{text-align:center;padding:24px 16px;font-size:12px;color:#999}}
 .footer-mini a{{color:#777;text-decoration:none}}
-.footer-mini a:hover{{color:#1a1a2e}}
+.footer-mini a:hover{{color:#14532D}}
 @media(max-width:600px){{
   .row{{flex-direction:column;gap:10px}}
   .field{{min-width:100%}}
@@ -407,7 +407,7 @@ Wir melden uns schnellstm&ouml;glich bei Ihnen &ndash; in der Regel innerhalb vo
 Bei dringenden Anliegen erreichen Sie uns unter:<br>
 <b><a href="tel:04055567744" style="color:#14532D;text-decoration:none">&#9742; 040 555 677 44</a></b>
 </div>
-<a href="https://www.tischlerei-graupner.de" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#1a1a2e;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px">Zur&uuml;ck zur Website</a>
+<a href="https://www.tischlerei-graupner.de" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#14532D;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px">Zur&uuml;ck zur Website</a>
 </div>
 
 <script>
@@ -641,15 +641,15 @@ async def kontakt_relay(request: Request):
 <title>Anfrage gesendet - Tischlerei Graupner</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8f9fa;color:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8f9fa;color:#14532D;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .box{text-align:center;max-width:500px;padding:48px 32px;background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
 .check{width:72px;height:72px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
 .check svg{width:36px;height:36px;color:#2e7d32}
 h1{font-size:22px;margin-bottom:8px}
 p{font-size:15px;color:#666;line-height:1.6;margin-bottom:16px}
 .info{background:#f0f4ff;border-radius:10px;padding:16px;margin:20px 0;text-align:left;font-size:13px;color:#444;line-height:1.7}
-.info b{color:#1a1a2e}
-a.btn{display:inline-block;margin-top:20px;padding:12px 32px;background:#1a1a2e;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px}
+.info b{color:#14532D}
+a.btn{display:inline-block;margin-top:20px;padding:12px 32px;background:#14532D;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px}
 a.btn:hover{background:#2a2a4e}
 </style>
 </head>
