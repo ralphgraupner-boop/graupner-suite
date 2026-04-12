@@ -2,7 +2,7 @@
 
 ## Admin
 - Username: admin
-- Password: admin123
+- Password: Graupner!Suite2026
 - Role: admin (Vollzugriff)
 
 ## Buchhalterin (Heike Bolanka)
