@@ -589,6 +589,30 @@ async def kontakt_relay(request: Request):
             obj_address=obj_addr,
             nachricht=form_dict.get("nachricht", "")
         )
+
+        # Save uploaded images to object storage
+        photo_urls = []
+        if files_list:
+            from utils.storage import put_object
+            for file_key, (filename, content, content_type) in files_list:
+                if content and len(content) > 0:
+                    try:
+                        import uuid as _uuid
+                        safe_name = filename.replace(" ", "_") if filename else "bild.jpg"
+                        storage_path = f"anfragen/{anfrage.id}/{_uuid.uuid4().hex[:8]}_{safe_name}"
+                        result = put_object(storage_path, content, content_type)
+                        if result and result.get("url"):
+                            photo_urls.append(result["url"])
+                            logger.info(f"Bild gespeichert: {storage_path}")
+                        elif result and result.get("path"):
+                            photo_urls.append(result["path"])
+                            logger.info(f"Bild gespeichert: {storage_path}")
+                    except Exception as img_err:
+                        logger.error(f"Fehler beim Speichern von Bild {filename}: {img_err}")
+
+        if photo_urls:
+            anfrage.photos = photo_urls
+
         await db.anfragen.insert_one(anfrage.model_dump())
         logger.info(f"Neue Anfrage über Kontaktformular-Relay: {name}")
 
