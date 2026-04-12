@@ -30,6 +30,7 @@ const AnfragenPage = () => {
   const [catDragIdx, setCatDragIdx] = useState(null);
   const [catDragOverIdx, setCatDragOverIdx] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
+  const [lightboxImg, setLightboxImg] = useState(null);
 
   useEffect(() => {
     loadAnfragen();
@@ -657,13 +658,15 @@ const AnfragenPage = () => {
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {anfrage.photos.map((photo, idx) => {
                         const backendUrl = (import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
-                        const imgUrl = `${backendUrl}/api/storage/${photo}`;
+                        const encodedPath = photo.split('/').map(segment => encodeURIComponent(segment)).join('/');
+                        const imgUrl = `${backendUrl}/api/storage/${encodedPath}`;
                         return (
-                          <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer"
-                            className="block aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors cursor-pointer group">
+                          <div key={idx}
+                            className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary hover:shadow-md transition-all cursor-pointer group"
+                            onClick={(e) => { e.stopPropagation(); setLightboxImg(imgUrl); }}>
                             <img src={imgUrl} alt={`Bild ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-muted/50 text-muted-foreground text-xs">Bild nicht verfügbar</div>'; }} />
-                          </a>
+                          </div>
                         );
                       })}
                     </div>
@@ -878,6 +881,19 @@ const AnfragenPage = () => {
           anfrage={emailAnfrage}
           onClose={() => setEmailAnfrage(null)}
         />
+      )}
+
+      {/* Lightbox für Vollbild-Ansicht */}
+      {lightboxImg && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4" onClick={() => setLightboxImg(null)}>
+          <button onClick={() => setLightboxImg(null)} className="absolute top-4 right-4 text-white hover:text-gray-300 bg-black/50 rounded-full p-2 z-10">
+            <X className="w-6 h-6" />
+          </button>
+          <a href={lightboxImg} download className="absolute top-4 left-4 text-white hover:text-gray-300 bg-black/50 rounded-full px-4 py-2 text-sm font-medium z-10" onClick={(e) => e.stopPropagation()}>
+            ⬇ Herunterladen
+          </a>
+          <img src={lightboxImg} alt="Vollbild" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
+        </div>
       )}
     </div>
   );
