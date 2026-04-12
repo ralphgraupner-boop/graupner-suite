@@ -158,7 +158,7 @@ async def kontakt_form_page():
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2c3e2d;line-height:1.6;min-height:100vh;background:#f5f3f0;}}
-.header{{background:linear-gradient(135deg,rgba(20,83,45,0.92) 0%,rgba(26,107,58,0.88) 100%),url('https://customer-assets.emergentagent.com/job_code-import-flow-1/artifacts/pzbkw22f_1726918839.jpg') center/cover no-repeat;color:#fff;padding:32px 16px;text-align:center;position:relative;overflow:hidden}}
+.header{{background:linear-gradient(135deg,rgba(20,83,45,0.78) 0%,rgba(26,107,58,0.72) 100%),url('https://customer-assets.emergentagent.com/job_code-import-flow-1/artifacts/pzbkw22f_1726918839.jpg') center/cover no-repeat;color:#fff;padding:32px 16px;text-align:center;position:relative;overflow:hidden}}
 .header::after{{content:'';position:absolute;bottom:-1px;left:0;right:0;height:40px;background:linear-gradient(to top,#f5f3f0,transparent)}}
 .header-inner{{max-width:640px;margin:0 auto;position:relative;z-index:1}}
 .header-badge{{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:50px;margin-bottom:12px;letter-spacing:0.8px;text-transform:uppercase}}
