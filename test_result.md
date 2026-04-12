@@ -288,12 +288,15 @@ frontend:
       - working: true
         agent: "main"
         comment: "Manually verified - Kunden, Mitarbeiter, Buchhaltung, E-Mail, Einsatzplanung all render correctly"
+      - working: true
+        agent: "testing"
+        comment: "✅ COMPREHENSIVE UI TEST PASSED - All 13 main pages tested with Playwright automation. Login page renders correctly with admin credentials working. Dashboard shows all KPI cards (Neue Anfragen, Kunden, Offene Angebote, Offene Aufträge, Unbezahlte Rechnungen), Umsatz chart, Rechnungsstatus chart, Letzte Anfragen widget, and Umsatzübersicht. All navigation pages verified: Anfragen (with search & VCF import), E-Mail (Posteingang & Versandprotokoll tabs), Einsatzplanung (search, Neuer Einsatz button, config), Kunden (search, category filters, status filters, Neuer Kunde button), Angebote, Aufträge, Rechnungen, Buchhaltung (6 tabs: Übersicht, Buchungen, Kassenbuch, Offene Posten, Monatsabschluss, USt/MwSt with Einnahmen/Ausgaben/Gewinn cards), Mahnwesen, Mitarbeiter (KPI cards, Lexware Import, Neuer Mitarbeiter button, search), and Artikel (search, Neu button, type filters). No console errors detected. Navigation between all pages working smoothly."
 
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
-  run_ui: false
+  test_sequence: 3
+  run_ui: true
 
 test_plan:
   current_focus: []
@@ -306,3 +309,5 @@ agent_communication:
     message: "Initial testing round. All services running. Backend on port 8001. Login credentials: admin / Graupner!Suite2026. Please test all main API endpoints - auth, customers, dashboard, buchhaltung, mitarbeiter, quotes, invoices, articles, einsatzplanung. All endpoints are prefixed with /api. The app uses JWT auth - login first at POST /api/auth/login with {username, password} to get a token, then use Bearer token for protected routes."
   - agent: "testing"
     message: "✅ COMPREHENSIVE BACKEND TESTING COMPLETED - ALL APIS WORKING! Tested 17 endpoints with 100% success rate. Auth system working perfectly with JWT tokens. All CRUD operations functional for customers, articles, mitarbeiter. Dashboard stats, buchhaltung statistics, quotes, orders, invoices, einsaetze, and settings all responding correctly. Backend is production-ready. Note: buchhaltung uses /statistiken endpoint, not /uebersicht."
+  - agent: "testing"
+    message: "✅ COMPREHENSIVE FRONTEND UI TESTING COMPLETED - ALL PAGES WORKING PERFECTLY! Executed automated Playwright test covering all 13 main pages as requested. Login flow working with admin credentials (admin/Graupner!Suite2026). Dashboard fully functional with all KPI cards, charts (Umsatz, Rechnungsstatus), widgets (Letzte Anfragen), and overview section. All navigation pages verified and accessible: Anfragen, E-Mail (with Posteingang & Versandprotokoll tabs), Einsatzplanung, Kunden (with search, category filters, status filters), Angebote, Aufträge, Rechnungen, Buchhaltung (all 6 tabs present: Übersicht, Buchungen, Kassenbuch, Offene Posten, Monatsabschluss, USt/MwSt), Mahnwesen, Mitarbeiter (with KPI cards, Lexware Import, search), and Artikel. All expected UI elements (search bars, buttons, filters, tabs) are present and functional. No console errors or critical issues detected. The application is production-ready from a frontend perspective."
