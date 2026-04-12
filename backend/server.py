@@ -28,6 +28,7 @@ from routes.kalkulation import router as kalkulation_router
 from routes.buchhaltung import router as buchhaltung_router
 from routes.mitarbeiter import router as mitarbeiter_router
 from routes.diverses import router as diverses_router
+from routes.backup import router as backup_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -59,6 +60,7 @@ api_router.include_router(kalkulation_router)
 api_router.include_router(buchhaltung_router)
 api_router.include_router(mitarbeiter_router)
 api_router.include_router(diverses_router)
+api_router.include_router(backup_router)
 
 
 @api_router.get("/")
