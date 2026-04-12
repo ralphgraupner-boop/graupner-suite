@@ -373,11 +373,16 @@ Kontaktadresse als Objektadresse &uuml;bernehmen
 <div class="card">
 <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Nachricht &amp; Bilder</h2>
 <textarea name="nachricht" placeholder="Beschreiben Sie Ihr Anliegen, z.B. wie dringend ist es, wann sind Sie erreichbar..." rows="4"></textarea>
-<div class="file-area">
-<input type="file" name="upload_file1" accept="image/*" multiple onchange="updateFileLabel(this)">
+<div style="margin-top:12px">
+<label style="font-weight:600;margin-bottom:8px;display:block">Bilder hochladen <span style="font-weight:400;color:#888">(optional, max. 10 Bilder)</span></label>
+<div class="file-area" id="dropZone" ondragover="event.preventDefault();this.style.borderColor='#14532D';this.style.background='#e8f5e9'" ondragleave="this.style.borderColor='#e0ddd8';this.style.background=''" ondrop="handleDrop(event)">
+<input type="file" name="bilder" accept="image/*" multiple id="fileInput" onchange="handleFiles(this.files)">
 <div class="file-icon">&#128247;</div>
-<div class="file-label" id="fileLabel">Bilder hochladen</div>
-<p>Fotos vom Schaden/Objekt hochladen (optional, max. 50 MB)</p>
+<div class="file-label" id="fileLabel">Klicken oder Bilder hierher ziehen</div>
+<p>JPG, PNG &middot; max. 50 MB gesamt</p>
+</div>
+<div id="imagePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+<div id="imageCount" style="font-size:12px;color:#888;margin-top:4px"></div>
 </div>
 </div>
 
@@ -487,8 +492,63 @@ function updateFileLabel(input){{
   if(input.files.length>0){{
     label.textContent=input.files.length+' Datei'+(input.files.length>1?'en':'')+' ausgew\u00e4hlt';
   }}else{{
-    label.textContent='Bilder hochladen';
+    label.textContent='Klicken oder Bilder hierher ziehen';
   }}
+}}
+var allFiles=[];
+var MAX_FILES=10;
+function handleFiles(newFiles){{
+  for(var i=0;i<newFiles.length;i++){{
+    if(allFiles.length>=MAX_FILES)break;
+    if(newFiles[i].type.startsWith('image/')){{
+      allFiles.push(newFiles[i]);
+    }}
+  }}
+  updatePreview();
+}}
+function handleDrop(e){{
+  e.preventDefault();
+  e.currentTarget.style.borderColor='#e0ddd8';
+  e.currentTarget.style.background='';
+  if(e.dataTransfer.files)handleFiles(e.dataTransfer.files);
+}}
+function removeImage(idx){{
+  allFiles.splice(idx,1);
+  updatePreview();
+}}
+function updatePreview(){{
+  var preview=document.getElementById('imagePreview');
+  var countEl=document.getElementById('imageCount');
+  var label=document.getElementById('fileLabel');
+  preview.innerHTML='';
+  allFiles.forEach(function(file,idx){{
+    var wrap=document.createElement('div');
+    wrap.style.cssText='position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1.5px solid #e0ddd8;flex-shrink:0';
+    var img=document.createElement('img');
+    img.style.cssText='width:100%;height:100%;object-fit:cover';
+    img.src=URL.createObjectURL(file);
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.innerHTML='&times;';
+    btn.style.cssText='position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center';
+    btn.onclick=function(){{removeImage(idx);}};
+    wrap.appendChild(img);
+    wrap.appendChild(btn);
+    preview.appendChild(wrap);
+  }});
+  if(allFiles.length>0){{
+    countEl.textContent=allFiles.length+'/'+MAX_FILES+' Bilder ausgew\u00e4hlt';
+    label.textContent=allFiles.length+' Bild'+(allFiles.length>1?'er':'')+' ausgew\u00e4hlt \u2013 weitere hinzuf\u00fcgen';
+  }}else{{
+    countEl.textContent='';
+    label.textContent='Klicken oder Bilder hierher ziehen';
+  }}
+  // Rebuild file input with DataTransfer
+  try{{
+    var dt=new DataTransfer();
+    allFiles.forEach(function(f){{dt.items.add(f);}});
+    document.getElementById('fileInput').files=dt.files;
+  }}catch(e){{}}
 }}
 function updateSteps(){{
   var s1=document.getElementById('k_nachname').value&&document.getElementById('k_telefon').value;
