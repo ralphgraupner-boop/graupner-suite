@@ -609,22 +609,22 @@ async def kontakt_relay(request: Request):
             # Build photos section
             photos_section = ""
             if photo_urls:
-                photos_html = ""
-                for idx, photo_url in enumerate(photo_urls, 1):
-                    photos_html += f"""
-                    <div style="display:inline-block;margin:8px;text-align:center">
-                        <img src="{photo_url}" alt="Bild {idx}" style="max-width:200px;max-height:200px;border-radius:8px;border:2px solid #e0ddd8;display:block">
-                        <p style="font-size:11px;color:#888;margin:4px 0 0 0">Bild {idx}</p>
-                    </div>
-                    """
                 photos_section = f"""
                 <div style="background:#f0f7ff;border-left:4px solid #2563eb;padding:16px;margin:20px 0;border-radius:8px">
-                    <h3 style="color:#2563eb;font-size:15px;margin:0 0 12px 0">📷 {len(photo_urls)} Bild(er) hochgeladen</h3>
-                    <div style="text-align:left">
-                        {photos_html}
-                    </div>
+                    <h3 style="color:#2563eb;font-size:15px;margin:0 0 8px 0">📷 {len(photo_urls)} Bild(er) hochgeladen</h3>
+                    <p style="font-size:13px;color:#666;margin:0">Die Bilder sind als Anhänge an dieser E-Mail.</p>
                 </div>
                 """
+            
+            # Prepare attachments
+            attachments = []
+            if files_list:
+                for idx, (file_key, (filename, content, content_type)) in enumerate(files_list, 1):
+                    if content and len(content) > 0:
+                        attachments.append({
+                            "data": content,
+                            "filename": f"Bild_{idx}_{filename}" if filename else f"Bild_{idx}.jpg"
+                        })
             
             admin_content = f"""
                 <h2 style="color:#14532D;margin-bottom:16px">🔔 Neue Kundenanfrage eingegangen</h2>
@@ -672,9 +672,10 @@ async def kontakt_relay(request: Request):
             send_email(
                 to_email=admin_email,
                 subject=f"Neue Anfrage: {name} - {topics[0] if topics else 'Kontaktanfrage'}",
-                body_html=body_html
+                body_html=body_html,
+                attachments=attachments if attachments else None
             )
-            logger.info(f"Admin-Benachrichtigung an {admin_email} gesendet")
+            logger.info(f"Admin-Benachrichtigung an {admin_email} gesendet (mit {len(attachments)} Anhängen)" if attachments else f"Admin-Benachrichtigung an {admin_email} gesendet")
         except Exception as email_err:
             logger.error(f"Fehler beim Versand der Admin-Benachrichtigung: {email_err}")
             # Don't fail the whole request
