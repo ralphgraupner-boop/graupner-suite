@@ -12,7 +12,7 @@ import base64
 
 router = APIRouter()
 
-DEFAULT_KEYWORDS = ["anfrage von", "Es gibt eine neue Anfrage."]
+DEFAULT_KEYWORDS = ["neue anfrage", "anfrage von"]
 
 
 def keyword_match(text, keywords):
@@ -320,6 +320,32 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
         inbox_entry.pop("_id", None)
         fetched += 1
         mail.store(eid, "+FLAGS", "\\Seen")
+        
+        # Auto-import als Anfrage wenn "anfrage" klassifiziert
+        if classification == "anfrage":
+            try:
+                from models import Anfrage
+                anfrage = Anfrage(
+                    name=sender_name or "Unbekannt",
+                    email=sender_email,
+                    phone="",
+                    address="",
+                    notes=f"Betreff: {subject}\n\nNachricht:\n{body[:1000]}",
+                    categories=["E-Mail Anfrage"],
+                    customer_type="Privat",
+                    source="email_auto_import",
+                    nachricht=body[:1000]
+                )
+                await db.anfragen.insert_one(anfrage.model_dump())
+                logger.info(f"✅ Auto-Import: E-Mail als Anfrage gespeichert - {sender_name} ({sender_email})")
+                
+                # Update inbox entry
+                await db.email_inbox.update_one(
+                    {"id": inbox_entry["id"]},
+                    {"$set": {"assigned_type": "anfrage", "assigned_to": anfrage.id}}
+                )
+            except Exception as e:
+                logger.error(f"❌ Fehler beim Auto-Import der Anfrage: {e}")
 
     mail.logout()
     return fetched
