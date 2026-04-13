@@ -657,9 +657,8 @@ const AnfragenPage = () => {
                     </h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {anfrage.photos.map((photo, idx) => {
-                        const backendUrl = (import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
-                        const encodedPath = photo.split('/').map(segment => encodeURIComponent(segment)).join('/');
-                        const imgUrl = `${backendUrl}/api/storage/${encodedPath}`;
+                        const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+                        const imgUrl = `${backendUrl}/api/storage/${photo}`;
                         return (
                           <div key={idx}
                             className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary hover:shadow-md transition-all cursor-pointer group"

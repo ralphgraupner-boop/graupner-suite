@@ -605,6 +605,16 @@ async def kontakt_relay(request: Request):
                         topics_html += f"<li style='margin:4px 0'>{topic}</li>"
                     topics_html += "</ul>"
                 
+                # Build photo gallery
+                photos_html = ""
+                if photo_urls:
+                    photos_html = f"""
+                    <div style="margin:20px 0">
+                        <h3 style="color:#14532D;font-size:15px;margin:0 0 12px 0">📷 Ihre hochgeladenen Bilder ({len(photo_urls)})</h3>
+                        <p style="font-size:13px;color:#666;margin-bottom:10px">Die Bilder wurden erfolgreich hochgeladen und sind in Ihrer Anfrage enthalten.</p>
+                    </div>
+                    """
+                
                 confirmation_content = f"""
                     <h2 style="color:#14532D;margin-bottom:16px">Vielen Dank für Ihre Anfrage!</h2>
                     <p style="line-height:1.7">Sehr geehrte(r) {name},</p>
@@ -617,6 +627,8 @@ async def kontakt_relay(request: Request):
                         <p style="margin:6px 0"><strong>E-Mail:</strong> {customer_email}</p>
                         {f'<p style="margin:6px 0"><strong>Themen:</strong>{topics_html}</p>' if topics else ''}
                     </div>
+                    
+                    {photos_html}
                     
                     <div style="background:#e8f5e9;padding:16px;margin:20px 0;border-radius:8px;border:1px solid #a5d6a7">
                         <p style="margin:0;color:#2e7d32;font-weight:600">📞 Wir melden uns in der Regel innerhalb von 24 Stunden bei Ihnen!</p>
