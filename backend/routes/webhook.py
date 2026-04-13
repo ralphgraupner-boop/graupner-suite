@@ -590,6 +590,84 @@ async def kontakt_relay(request: Request):
             push_body += f" ({', '.join(topics[:2])})"
         await send_push_to_all(title="Neue Anfrage", body=push_body, url="/anfragen")
         
+        # Send Admin notification email
+        try:
+            from utils import send_email
+            from utils.email_signatur import wrap_email_body
+            
+            admin_email = "service24@tischlerei-graupner.de"
+            
+            # Build categories list
+            categories_html = ""
+            if topics:
+                categories_html = "<ul style='margin:10px 0;padding-left:20px'>"
+                for topic in topics:
+                    categories_html += f"<li style='margin:4px 0'><strong>{topic}</strong></li>"
+                categories_html += "</ul>"
+            
+            # Build photos section
+            photos_section = ""
+            if photo_urls:
+                photos_section = f"""
+                <div style="background:#f0f7ff;border-left:4px solid #2563eb;padding:16px;margin:20px 0;border-radius:8px">
+                    <h3 style="color:#2563eb;font-size:15px;margin:0 0 8px 0">📷 {len(photo_urls)} Bild(er) hochgeladen</h3>
+                    <p style="font-size:13px;color:#666;margin:0">Die Bilder sind in der Graupner Suite unter "Anfragen" → "{name}" sichtbar.</p>
+                </div>
+                """
+            
+            admin_content = f"""
+                <h2 style="color:#14532D;margin-bottom:16px">🔔 Neue Kundenanfrage eingegangen</h2>
+                
+                <div style="background:#f5f3f0;border-left:4px solid #14532D;padding:16px;margin:24px 0;border-radius:8px">
+                    <h3 style="color:#14532D;font-size:16px;margin:0 0 16px 0">Kontaktdaten</h3>
+                    <p style="margin:6px 0"><strong>Name:</strong> {anrede} {name}</p>
+                    <p style="margin:6px 0"><strong>Telefon:</strong> <a href="tel:{form_dict.get('telefon', '')}" style="color:#14532D;text-decoration:none">{form_dict.get('telefon', '')}</a></p>
+                    <p style="margin:6px 0"><strong>E-Mail:</strong> <a href="mailto:{form_dict.get('email', '')}" style="color:#14532D;text-decoration:none">{form_dict.get('email', '')}</a></p>
+                    <p style="margin:6px 0"><strong>Adresse:</strong> {address}</p>
+                    {f'<p style="margin:6px 0"><strong>Firma:</strong> {form_dict.get("firma", "")}</p>' if form_dict.get("firma") else ''}
+                </div>
+                
+                {f'''<div style="margin:20px 0">
+                    <h3 style="color:#14532D;font-size:15px;margin:0 0 10px 0">Anliegen / Kategorien</h3>
+                    {categories_html}
+                </div>''' if topics else ''}
+                
+                {f'''<div style="margin:20px 0">
+                    <h3 style="color:#14532D;font-size:15px;margin:0 0 10px 0">Nachricht</h3>
+                    <div style="background:#faf9f7;padding:12px;border-radius:8px;border:1px solid #e0ddd8">
+                        <p style="white-space:pre-wrap;margin:0">{form_dict.get('nachricht', '').strip()}</p>
+                    </div>
+                </div>''' if form_dict.get('nachricht', '').strip() else ''}
+                
+                {photos_section}
+                
+                {f'''<div style="margin:20px 0">
+                    <h3 style="color:#14532D;font-size:15px;margin:0 0 10px 0">Objektadresse</h3>
+                    <p style="margin:0;color:#666">{obj_addr}</p>
+                </div>''' if obj_addr and obj_addr != address else ''}
+                
+                <div style="background:#e8f5e9;padding:16px;margin:24px 0;border-radius:8px;border:1px solid #a5d6a7">
+                    <p style="margin:0;color:#2e7d32;font-weight:600">📋 Diese Anfrage finden Sie in der Graupner Suite unter "Anfragen"</p>
+                </div>
+                
+                <p style="color:#666;font-size:13px;margin-top:24px">
+                    Eingegangen am: {datetime.now(timezone.utc).strftime('%d.%m.%Y um %H:%M Uhr')}<br>
+                    Quelle: Öffentliches Kontaktformular
+                </p>
+            """
+            
+            body_html = wrap_email_body(admin_content)
+            
+            send_email(
+                to_email=admin_email,
+                subject=f"Neue Anfrage: {name} - {topics[0] if topics else 'Kontaktanfrage'}",
+                body_html=body_html
+            )
+            logger.info(f"Admin-Benachrichtigung an {admin_email} gesendet")
+        except Exception as email_err:
+            logger.error(f"Fehler beim Versand der Admin-Benachrichtigung: {email_err}")
+            # Don't fail the whole request
+        
         # Send confirmation email to customer
         try:
             from utils import send_email
