@@ -109,7 +109,7 @@ app.add_middleware(
         "https://anfrage.schiebetür-reparatur-hamburg.de",  # IONOS Subdomain
         "https://anfrage.xn--schiebetr-reparatur-hamburg-fic.de",  # IONOS Subdomain (IDN encoded)
         "https://code-import-flow-1.preview.emergentagent.com",  # Preview URL
-        # Deployment URL will be added after deployment
+        "https://code-import-flow-1.emergent.host",  # Final Deployment URL
     ],
     allow_methods=["*"],
     allow_headers=["*"],
