@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download } from "lucide-react";
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
@@ -38,9 +38,61 @@ const Sidebar = ({ onLogout }) => {
   const navItems = getFilteredNavItems();
   const role = getUserRole();
   const username = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "null"); return typeof u === "object" ? u.username : u; } catch { return ""; } })();
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowBackupDialog(true);
+  };
+
+  const handleBackupAndLogout = async () => {
+    setIsCreatingBackup(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backup/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const filename = response.headers.get('Content-Disposition')?.split('filename=')[1] || 
+                        `Graupner_Backup_${new Date().toISOString().slice(0,10)}.zip`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Kurze Verzögerung damit Download startet
+        setTimeout(() => {
+          setShowBackupDialog(false);
+          onLogout();
+        }, 500);
+      } else {
+        alert('Backup fehlgeschlagen. Möchten Sie trotzdem abmelden?');
+        setShowBackupDialog(false);
+        onLogout();
+      }
+    } catch (error) {
+      alert('Backup fehlgeschlagen. Möchten Sie trotzdem abmelden?');
+      setShowBackupDialog(false);
+      onLogout();
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleLogoutWithoutBackup = () => {
+    setShowBackupDialog(false);
+    onLogout();
+  };
 
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-card border-r flex-col z-30">
+    <>
+      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-card border-r flex-col z-30">
       <div className="p-6 border-b">
         <h1 className="text-2xl font-bold text-primary">Graupner Suite</h1>
         <p className="text-sm text-muted-foreground mt-1">Tischlerei-Software</p>
@@ -69,7 +121,7 @@ const Sidebar = ({ onLogout }) => {
       </nav>
       <div className="p-4 border-t">
         <button
-          onClick={onLogout}
+          onClick={handleLogoutClick}
           data-testid="btn-logout"
           className="flex items-center gap-3 px-4 py-3 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-sm transition-smooth"
         >
@@ -78,14 +130,112 @@ const Sidebar = ({ onLogout }) => {
         </button>
       </div>
     </aside>
+
+    {/* Backup Dialog */}
+    {showBackupDialog && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowBackupDialog(false)}>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Download className="w-5 h-5 text-primary" />
+            Backup vor dem Abmelden?
+          </h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            Möchten Sie vor dem Abmelden ein Backup Ihrer Daten erstellen? Dies sichert alle Anfragen, Kunden, Rechnungen und Einstellungen.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={handleBackupAndLogout}
+              disabled={isCreatingBackup}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {isCreatingBackup ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Erstelle Backup...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Backup & Abmelden
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleLogoutWithoutBackup}
+              disabled={isCreatingBackup}
+              className="flex-1 px-4 py-2.5 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              Ohne Backup abmelden
+            </button>
+          </div>
+          <button
+            onClick={() => setShowBackupDialog(false)}
+            disabled={isCreatingBackup}
+            className="mt-3 w-full text-sm text-muted-foreground hover:text-foreground"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    )}
+  </>
   );
 };
 
 const MobileNav = ({ onLogout }) => {
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const navItems = getFilteredNavItems();
   const role = getUserRole();
+
+  const handleLogoutClick = () => {
+    setMoreOpen(false);
+    setShowBackupDialog(true);
+  };
+
+  const handleBackupAndLogout = async () => {
+    setIsCreatingBackup(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backup/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const filename = response.headers.get('Content-Disposition')?.split('filename=')[1] || 
+                        `Graupner_Backup_${new Date().toISOString().slice(0,10)}.zip`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setTimeout(() => {
+          setShowBackupDialog(false);
+          onLogout();
+        }, 500);
+      } else {
+        setShowBackupDialog(false);
+        onLogout();
+      }
+    } catch (error) {
+      setShowBackupDialog(false);
+      onLogout();
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleLogoutWithoutBackup = () => {
+    setShowBackupDialog(false);
+    onLogout();
+  };
 
   const mobileTabItems = role === "buchhaltung"
     ? [
@@ -136,10 +286,58 @@ const MobileNav = ({ onLogout }) => {
                 <Icon className="w-5 h-5" /><span className="font-medium">{label}</span>
               </Link>
             ))}
-            <button onClick={() => { setMoreOpen(false); onLogout(); }}
+            <button onClick={handleLogoutClick}
               className="flex items-center gap-3 px-4 py-3 w-full text-destructive rounded-sm mt-2 border-t pt-4">
               <LogOut className="w-5 h-5" /><span className="font-medium">Abmelden</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Backup Dialog für Mobile */}
+      {showBackupDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !isCreatingBackup && setShowBackupDialog(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Download className="w-5 h-5 text-primary" />
+              Backup vor dem Abmelden?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Möchten Sie vor dem Abmelden ein Backup Ihrer Daten erstellen? Dies sichert alle Anfragen, Kunden, Rechnungen und Einstellungen.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleBackupAndLogout}
+                disabled={isCreatingBackup}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {isCreatingBackup ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Erstelle Backup...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Backup & Abmelden
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleLogoutWithoutBackup}
+                disabled={isCreatingBackup}
+                className="px-4 py-3 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Ohne Backup abmelden
+              </button>
+              <button
+                onClick={() => setShowBackupDialog(false)}
+                disabled={isCreatingBackup}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Abbrechen
+              </button>
+            </div>
           </div>
         </div>
       )}
