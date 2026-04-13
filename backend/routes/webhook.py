@@ -563,9 +563,11 @@ async def kontakt_relay(request: Request):
         # Save uploaded images to object storage
         photo_urls = []
         photo_attachments = []  # Speichere Bilder für E-Mail-Anhänge
+        logger.info(f"DEBUG: files_list hat {len(files_list)} Dateien")
         if files_list:
             from utils.storage import put_object
             for idx, (file_key, (filename, content, content_type)) in enumerate(files_list, 1):
+                logger.info(f"DEBUG: Verarbeite Datei {idx}: {filename}, Größe: {len(content)} bytes")
                 if content and len(content) > 0:
                     try:
                         # Speichere Bild-Daten für E-Mail-Anhang
@@ -573,6 +575,7 @@ async def kontakt_relay(request: Request):
                             "data": content,
                             "filename": f"Bild_{idx}_{filename}" if filename else f"Bild_{idx}.jpg"
                         })
+                        logger.info(f"DEBUG: Anhang hinzugefügt: Bild_{idx}_{filename}, photo_attachments Anzahl: {len(photo_attachments)}")
                         
                         import uuid as _uuid
                         safe_name = filename.replace(" ", "_") if filename else "bild.jpg"
@@ -586,6 +589,7 @@ async def kontakt_relay(request: Request):
                             logger.info(f"Bild gespeichert: {storage_path}")
                     except Exception as img_err:
                         logger.error(f"Fehler beim Speichern von Bild {filename}: {img_err}")
+        logger.info(f"DEBUG: photo_attachments Gesamt: {len(photo_attachments)} Anhänge")
 
         if photo_urls:
             anfrage.photos = photo_urls
@@ -625,6 +629,7 @@ async def kontakt_relay(request: Request):
             
             # Prepare attachments
             attachments = photo_attachments if photo_attachments else []
+            logger.info(f"DEBUG: E-Mail wird gesendet mit {len(attachments)} Anhängen")
             
             admin_content = f"""
                 <h2 style="color:#14532D;margin-bottom:16px">🔔 Neue Kundenanfrage eingegangen</h2>
