@@ -562,11 +562,18 @@ async def kontakt_relay(request: Request):
 
         # Save uploaded images to object storage
         photo_urls = []
+        photo_attachments = []  # Speichere Bilder für E-Mail-Anhänge
         if files_list:
             from utils.storage import put_object
-            for file_key, (filename, content, content_type) in files_list:
+            for idx, (file_key, (filename, content, content_type)) in enumerate(files_list, 1):
                 if content and len(content) > 0:
                     try:
+                        # Speichere Bild-Daten für E-Mail-Anhang
+                        photo_attachments.append({
+                            "data": content,
+                            "filename": f"Bild_{idx}_{filename}" if filename else f"Bild_{idx}.jpg"
+                        })
+                        
                         import uuid as _uuid
                         safe_name = filename.replace(" ", "_") if filename else "bild.jpg"
                         storage_path = f"anfragen/{anfrage.id}/{_uuid.uuid4().hex[:8]}_{safe_name}"
@@ -617,14 +624,7 @@ async def kontakt_relay(request: Request):
                 """
             
             # Prepare attachments
-            attachments = []
-            if files_list:
-                for idx, (file_key, (filename, content, content_type)) in enumerate(files_list, 1):
-                    if content and len(content) > 0:
-                        attachments.append({
-                            "data": content,
-                            "filename": f"Bild_{idx}_{filename}" if filename else f"Bild_{idx}.jpg"
-                        })
+            attachments = photo_attachments if photo_attachments else []
             
             admin_content = f"""
                 <h2 style="color:#14532D;margin-bottom:16px">🔔 Neue Kundenanfrage eingegangen</h2>
