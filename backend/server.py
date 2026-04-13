@@ -104,7 +104,13 @@ async def imap_polling_loop():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=[
+        "*",  # Temporarily allow all for development
+        "https://anfrage.schiebetür-reparatur-hamburg.de",  # IONOS Subdomain
+        "https://anfrage.xn--schiebetr-reparatur-hamburg-fic.de",  # IONOS Subdomain (IDN encoded)
+        "https://code-import-flow-1.preview.emergentagent.com",  # Preview URL
+        # Deployment URL will be added after deployment
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
