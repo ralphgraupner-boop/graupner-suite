@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 import jwt
 import bcrypt
-from models import UserLogin, UserCreate, TokenResponse
+from models import UserLogin, UserCreate, UserUpdate, TokenResponse
 from database import db, JWT_SECRET
 from auth import get_current_user
 
