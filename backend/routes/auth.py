@@ -63,7 +63,9 @@ async def register(user: UserCreate):
 
 @router.post("/auth/login", response_model=TokenResponse)
 async def login(user: UserLogin):
+    print(f"Login-Versuch: username={user.username}, password_len={len(user.password)}")
     db_user = await db.users.find_one({"username": user.username}, {"_id": 0})
+    print(f"DB-User gefunden: {db_user is not None}")
     if not db_user:
         # Auto-create admin if no users exist
         count = await db.users.count_documents({})

@@ -13,3 +13,6 @@
 ## E-Mail (SMTP/IMAP)
 - E-Mail: service24@tischlerei-graupner.de
 - Password: Service.24
+
+---
+**Hinweis:** Nach einem Fork wird automatisch das Seed-Script `/app/backend/seed_users.py` ausgeführt, um beide Benutzer anzulegen.
