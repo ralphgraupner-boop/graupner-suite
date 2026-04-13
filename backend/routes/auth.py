@@ -126,6 +126,30 @@ async def create_user(data: UserCreate, user=Depends(get_current_user)):
     return {"message": "Benutzer erstellt", "username": data.username}
 
 
+@router.put("/users/{username}")
+async def update_user(username: str, data: UserUpdate, user=Depends(get_current_user)):
+    """Bearbeitet Benutzerdaten (E-Mail, Rolle)"""
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Nur Admins können Benutzer bearbeiten")
+    
+    db_user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not db_user:
+        raise HTTPException(404, "Benutzer nicht gefunden")
+    
+    update_data = {}
+    if data.email is not None:
+        update_data["email"] = data.email
+    if data.role is not None:
+        update_data["role"] = data.role
+        # Berechtigungen zurücksetzen bei Rollenänderung
+        update_data["berechtigungen"] = get_default_berechtigungen(data.role)
+    
+    if update_data:
+        await db.users.update_one({"username": username}, {"$set": update_data})
+    
+    return {"message": "Benutzer aktualisiert"}
+
+
 @router.delete("/users/{username}")
 async def delete_user(username: str, user=Depends(get_current_user)):
     if username == user.get("username"):

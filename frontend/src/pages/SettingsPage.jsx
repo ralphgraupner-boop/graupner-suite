@@ -849,6 +849,8 @@ const BenutzerTab = () => {
   const [users, setUsers] = useState([]);
   const [showNew, setShowNew] = useState(false);
   const [newUser, setNewUser] = useState({ username: "", password: "", email: "", role: "mitarbeiter" });
+  const [editUser, setEditUser] = useState(null);
+  const [editData, setEditData] = useState({ email: "", role: "" });
   const [changePassword, setChangePassword] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -860,7 +862,7 @@ const BenutzerTab = () => {
   const [editPerms, setEditPerms] = useState(null);
   const [perms, setPerms] = useState({});
   const [permsSaving, setPermsSaving] = useState(false);
-  const [authPrompt, setAuthPrompt] = useState(null); // {action: "perms"|"password"|"delete", username: "..."}
+  const [authPrompt, setAuthPrompt] = useState(null); // {action: "perms"|"password"|"delete"|"edit", username: "..."}
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
@@ -903,6 +905,13 @@ const BenutzerTab = () => {
         if (action === "perms") loadPerms(username);
         else if (action === "password") { setChangePassword(username); setNewPassword(""); }
         else if (action === "delete") setConfirmDelete(username);
+        else if (action === "edit") {
+          const user = users.find(u => u.username === username);
+          if (user) {
+            setEditData({ email: user.email || "", role: user.role || "mitarbeiter" });
+            setEditUser(username);
+          }
+        }
       }
     } catch {
       setAuthError("Falsches Passwort");
@@ -927,6 +936,18 @@ const BenutzerTab = () => {
       toast.success("Benutzer erstellt");
       setShowNew(false);
       setNewUser({ username: "", password: "", email: "", role: "mitarbeiter" });
+      loadUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler");
+    } finally { setSaving(false); }
+  };
+
+  const handleEdit = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/users/${editUser}`, editData);
+      toast.success("Benutzer aktualisiert");
+      setEditUser(null);
       loadUsers();
     } catch (err) {
       toast.error(err.response?.data?.detail || "Fehler");
@@ -997,6 +1018,9 @@ const BenutzerTab = () => {
               <p className="text-xs text-muted-foreground">{u.email || "Keine E-Mail"} &middot; {u.role || "admin"}</p>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setAuthPrompt({ action: "edit", username: u.username }); setAuthPassword(""); setAuthError(""); }} data-testid={`btn-edit-${u.username}`}>
+                <Pencil className="w-4 h-4" />
+              </Button>
               <Button variant="outline" size="sm" onClick={() => { setAuthPrompt({ action: "perms", username: u.username }); setAuthPassword(""); setAuthError(""); }} data-testid={`btn-perms-${u.username}`}>
                 <Shield className="w-3.5 h-3.5" /> Rechte
               </Button>
@@ -1074,6 +1098,45 @@ const BenutzerTab = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Benutzer bearbeiten Modal */}
+      <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} title={`Benutzer bearbeiten: ${editUser}`}>
+        <div className="space-y-4">
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+            <strong>Hinweis:</strong> Der Benutzername kann nicht geändert werden.
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">E-Mail</label>
+            <Input 
+              type="email" 
+              value={editData.email} 
+              onChange={(e) => setEditData({ ...editData, email: e.target.value })} 
+              placeholder="benutzer@firma.de" 
+              data-testid="input-edit-email" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Rolle</label>
+            <select 
+              value={editData.role} 
+              onChange={(e) => setEditData({ ...editData, role: e.target.value })} 
+              className="w-full h-10 rounded-sm border border-input bg-background px-3"
+              data-testid="select-edit-role"
+            >
+              <option value="admin">Admin</option>
+              <option value="buchhaltung">Buchhaltung</option>
+              <option value="mitarbeiter">Mitarbeiter</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setEditUser(null)}>Abbrechen</Button>
+            <Button onClick={handleEdit} disabled={saving} data-testid="btn-save-edit-user">
+              {saving ? "..." : "Speichern"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
 
       {/* Change Password Modal */}
       <Modal isOpen={!!changePassword} onClose={() => { setChangePassword(null); setNewPassword(""); setShowPassword(false); }} title={`Passwort ändern: ${changePassword}`}>

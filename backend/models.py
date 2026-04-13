@@ -14,6 +14,10 @@ class UserCreate(BaseModel):
     email: str = ""
     role: str = "admin"
 
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    role: Optional[str] = None
+
 class TokenResponse(BaseModel):
     token: str
     username: str
