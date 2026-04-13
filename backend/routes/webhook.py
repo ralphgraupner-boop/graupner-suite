@@ -734,41 +734,12 @@ async def kontakt_relay(request: Request):
     except Exception as e:
         logger.error(f"Fehler beim Speichern in Graupner Suite: {e}")
 
-    # 2. Forward to original response.php
-    try:
-        import requests as sync_requests
-        import concurrent.futures
-
-        forward_items = []
-        for key, value in form_dict.items():
-            if isinstance(value, list):
-                for v in value:
-                    forward_items.append((key, v))
-            else:
-                forward_items.append((key, value))
-
-        forward_files = []
-        for key, (filename, content, content_type) in files_list:
-            forward_files.append((key, (filename, content, content_type)))
-
-        def do_forward():
-            try:
-                if forward_files:
-                    resp = sync_requests.post(ORIGINAL_FORM_URL, data=forward_items, files=forward_files, timeout=15, verify=False)
-                else:
-                    resp = sync_requests.post(ORIGINAL_FORM_URL, data=forward_items, timeout=15, verify=False)
-                logger.info(f"Weiterleitung an response.php: HTTP {resp.status_code}")
-                return resp
-            except Exception as ex:
-                logger.error(f"Forward-Fehler: {ex}")
-                return None
-
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            future = pool.submit(do_forward)
-            resp = future.result(timeout=20)
-
-        if resp and resp.status_code == 200:
-            return HTMLResponse(content="""<!DOCTYPE html>
+    # 2. Forward to original response.php - DEAKTIVIERT
+    # Nur Admin-Benachrichtigung wird verwendet (doppelte E-Mails vermeiden)
+    logger.info("response.php Weiterleitung deaktiviert - nur Admin-Benachrichtigung aktiv")
+    
+    # Erfolgsseite zurückgeben
+    return HTMLResponse(content="""<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -785,7 +756,7 @@ p{font-size:15px;color:#666;line-height:1.6;margin-bottom:16px}
 .info{background:#f0f4ff;border-radius:10px;padding:16px;margin:20px 0;text-align:left;font-size:13px;color:#444;line-height:1.7}
 .info b{color:#14532D}
 a.btn{display:inline-block;margin-top:20px;padding:12px 32px;background:#14532D;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px}
-a.btn:hover{background:#2a2a4e}
+a.btn:hover{background:#1a6b3a}
 </style>
 </head>
 <body>
@@ -795,21 +766,11 @@ a.btn:hover{background:#2a2a4e}
 <p>Ihre Anfrage wurde erfolgreich gesendet.</p>
 <div class="info">
 <b>So geht es weiter:</b><br>
-Wir melden uns schnellstm&ouml;glich bei Ihnen &ndash; in der Regel innerhalb von 24 Stunden. Bei dringenden Anliegen erreichen Sie uns telefonisch unter <b>040 / 55 42 10 44</b>.
+Wir melden uns schnellstmöglich bei Ihnen &ndash; in der Regel innerhalb von <b>24 Stunden</b>.<br><br>
+Bei dringenden Anliegen erreichen Sie uns unter:<br>
+<b>☎ 040 555 677 44</b>
 </div>
-<a href="https://www.tischlerei-graupner.de" class="btn">Zur&uuml;ck zur Website</a>
+<a href="https://www.tischlerei-graupner.de" class="btn">Zurück zur Website</a>
 </div>
 </body>
 </html>""")
-        else:
-            raise Exception(f"response.php returned {resp.status_code if resp else 'None'}")
-    except Exception as e:
-        logger.error(f"Fehler beim Weiterleiten an response.php: {e}")
-        return HTMLResponse(content="""
-            <html><body style="font-family:sans-serif;text-align:center;padding:40px;">
-            <h2>Vielen Dank!</h2>
-            <p>Ihre Anfrage wurde erfolgreich gespeichert.</p>
-            <p style="color:#888;font-size:14px;">(Die Weiterleitung an das Hauptsystem war vorübergehend nicht möglich. Wir kümmern uns darum.)</p>
-            <a href="https://www.tischlerei-graupner.de">Zurück zur Website</a>
-            </body></html>
-        """)
