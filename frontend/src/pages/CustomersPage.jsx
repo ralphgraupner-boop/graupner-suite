@@ -328,6 +328,7 @@ const CustomersPage = ({ readOnly = false }) => {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         customer={editCustomer}
+        customerStatuses={customerStatuses}
         onSave={() => {
           setShowModal(false);
           loadCustomers();
@@ -337,7 +338,7 @@ const CustomersPage = ({ readOnly = false }) => {
   );
 };
 
-const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
+const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_STATUSES, onSave }) => {
   const [form, setForm] = useState({
     name: "",
     email: "",
