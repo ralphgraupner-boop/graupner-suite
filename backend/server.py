@@ -29,6 +29,7 @@ from routes.buchhaltung import router as buchhaltung_router
 from routes.mitarbeiter import router as mitarbeiter_router
 from routes.diverses import router as diverses_router
 from routes.backup import router as backup_router
+from routes.auto_backup import router as auto_backup_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -61,6 +62,7 @@ api_router.include_router(buchhaltung_router)
 api_router.include_router(mitarbeiter_router)
 api_router.include_router(diverses_router)
 api_router.include_router(backup_router)
+api_router.include_router(auto_backup_router)
 
 
 @api_router.get("/")
@@ -81,6 +83,8 @@ async def startup_event():
     # Start IMAP polling background task
     import asyncio
     asyncio.create_task(imap_polling_loop())
+    # Start automatic daily backup task
+    asyncio.create_task(daily_backup_loop())
 
 
 async def imap_polling_loop():
@@ -100,6 +104,13 @@ async def imap_polling_loop():
         except Exception as e:
             logger.warning(f"IMAP polling error: {e}")
             await asyncio.sleep(60)
+
+
+async def daily_backup_loop():
+    """Background task: daily backup at 2 AM"""
+    from routes.auto_backup import daily_backup_task
+    await daily_backup_task()
+
 
 app.add_middleware(
     CORSMiddleware,
