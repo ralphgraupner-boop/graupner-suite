@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Plus, Mail, Trash2, Edit, ChevronRight, Search, Globe, Inbox, ChevronDown, FileText } from "lucide-react";
+import { Users, Plus, Mail, Trash2, Edit, ChevronRight, Search, Globe, Inbox, ChevronDown, FileText, Upload, X, File, Image as ImageIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { PortalButtons } from "@/components/PortalButtons";
@@ -200,6 +200,12 @@ const CustomersPage = ({ readOnly = false }) => {
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     {customer.phone && <span>{customer.phone}</span>}
                     {customer.email && <span className="truncate hidden sm:inline">{customer.email}</span>}
+                    {customer.photos && customer.photos.length > 0 && (
+                      <span className="text-primary flex items-center gap-1">
+                        <File className="w-3 h-3" />
+                        {customer.photos.length}
+                      </span>
+                    )}
                   </div>
                 </div>
                 {(customer.categories || []).length > 0 && (
@@ -286,6 +292,52 @@ const CustomersPage = ({ readOnly = false }) => {
                     </div>
                   </div>
 
+                  {/* Dateien/Anhänge */}
+                  {customer.photos && customer.photos.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2">
+                        <File className="w-4 h-4" /> Dateien ({customer.photos.length})
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {customer.photos.map((file, idx) => {
+                          const fileName = typeof file === 'string' ? file.split('/').pop() : file.filename || `Datei ${idx + 1}`;
+                          const fileUrl = typeof file === 'string' ? file : file.url;
+                          const isImage = typeof file === 'string' 
+                            ? /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file)
+                            : file.content_type?.startsWith('image/');
+                          
+                          return (
+                            <a
+                              key={idx}
+                              href={fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group relative border rounded-sm overflow-hidden hover:shadow-lg transition-all hover:border-primary/50 bg-white"
+                            >
+                              {isImage ? (
+                                <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                                  <img 
+                                    src={fileUrl} 
+                                    alt={fileName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="aspect-square bg-muted/30 flex flex-col items-center justify-center p-3">
+                                  <File className="w-8 h-8 text-muted-foreground mb-2" />
+                                  <p className="text-xs text-center text-muted-foreground line-clamp-2">{fileName}</p>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Download className="w-6 h-6 text-white" />
+                              </div>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Aktionen */}
                   <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                     <PortalButtons email={customer.email} customerId={customer.id} />
@@ -354,6 +406,9 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
     status: "Neu"
   });
   const [loading, setLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   useEffect(() => {
     if (customer) {
@@ -388,13 +443,16 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
         categories: customer.categories || [],
         status: customer.status || "Neu"
       });
+      setUploadedFiles(customer.photos || []);
     } else {
       setForm({ 
         name: "", email: "", phone: "", 
         strasse: "", hausnummer: "", plz: "", ort: "",
         address: "", notes: "", customer_type: "Privat", categories: [], status: "Neu" 
       });
+      setUploadedFiles([]);
     }
+    setSelectedFiles([]);
   }, [customer]);
 
   const handleSubmit = async (e) => {
@@ -409,19 +467,120 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
         address: addressCombined || form.address // Fallback auf altes Feld
       };
       
+      let customerId = customer?.id;
+      
       if (customer) {
         await api.put(`/customers/${customer.id}`, payload);
         toast.success("Kunde aktualisiert");
       } else {
-        await api.post("/customers", payload);
+        const res = await api.post("/customers", payload);
+        customerId = res.data.id;
         toast.success("Kunde erstellt");
       }
+      
+      // Upload files if any
+      if (selectedFiles.length > 0 && customerId) {
+        await handleFileUpload(customerId);
+      }
+      
       onSave();
     } catch (err) {
       toast.error("Fehler beim Speichern");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFileUpload = async (customerId) => {
+    if (selectedFiles.length === 0) return;
+    
+    setUploadingFiles(true);
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach(file => {
+        formData.append('files', file);
+      });
+      
+      const res = await api.post(`/customers/${customerId}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success(res.data.message);
+      setSelectedFiles([]);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Upload");
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    const MAX_FILES = 10;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+    
+    const totalFiles = uploadedFiles.length + selectedFiles.length + files.length;
+    if (totalFiles > MAX_FILES) {
+      toast.error(`Maximale Anzahl Dateien überschritten (max ${MAX_FILES})`);
+      return;
+    }
+    
+    for (const file of files) {
+      if (file.size > MAX_SIZE) {
+        toast.error(`Datei ${file.name} ist zu groß (max 10 MB)`);
+        return;
+      }
+    }
+    
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = Array.from(e.dataTransfer.files || []);
+    handleFileSelect({ target: { files } });
+  };
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const deleteUploadedFile = async (index) => {
+    if (!customer) return;
+    try {
+      await api.delete(`/customers/${customer.id}/files/${index}`);
+      toast.success("Datei gelöscht");
+      setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
+  const getFileIcon = (file) => {
+    const name = typeof file === 'string' ? file : file.filename || file.name || '';
+    const contentType = typeof file === 'string' ? '' : file.content_type || file.type || '';
+    
+    if (contentType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(name)) {
+      return <ImageIcon className="w-4 h-4" />;
+    }
+    return <File className="w-4 h-4" />;
+  };
+
+  const getFileName = (file) => {
+    if (typeof file === 'string') {
+      return file.split('/').pop();
+    }
+    return file.filename || file.name || 'Datei';
+  };
+
+  const getFileSize = (file) => {
+    if (file.size) {
+      const kb = file.size / 1024;
+      if (kb < 1024) return `${kb.toFixed(1)} KB`;
+      return `${(kb / 1024).toFixed(1)} MB`;
+    }
+    return '';
   };
 
   return (
@@ -573,12 +732,106 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
             rows={3}
           />
         </div>
+
+        {/* File Upload Section */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Dateien <span className="text-xs text-muted-foreground">(max 10 Dateien, je 10 MB)</span>
+          </label>
+          
+          {/* Uploaded Files */}
+          {uploadedFiles.length > 0 && (
+            <div className="mb-3 space-y-2">
+              <p className="text-xs text-muted-foreground">Hochgeladene Dateien:</p>
+              {uploadedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-muted/30 rounded-sm border">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {getFileIcon(file)}
+                    <span className="text-sm truncate">{getFileName(file)}</span>
+                    {file.size && <span className="text-xs text-muted-foreground">{getFileSize(file)}</span>}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {typeof file === 'object' && file.url && (
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 hover:bg-muted rounded-sm"
+                        title="Herunterladen"
+                      >
+                        <Download className="w-4 h-4 text-muted-foreground" />
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => deleteUploadedFile(idx)}
+                      className="p-1 hover:bg-destructive/10 rounded-sm"
+                      title="Löschen"
+                    >
+                      <X className="w-4 h-4 text-destructive" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Selected Files (to upload) */}
+          {selectedFiles.length > 0 && (
+            <div className="mb-3 space-y-2">
+              <p className="text-xs text-green-600 font-medium">Ausgewählte Dateien (werden beim Speichern hochgeladen):</p>
+              {selectedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-green-50 rounded-sm border border-green-200">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {getFileIcon(file)}
+                    <span className="text-sm truncate">{file.name}</span>
+                    <span className="text-xs text-muted-foreground">{getFileSize(file)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeSelectedFile(idx)}
+                    className="p-1 hover:bg-destructive/10 rounded-sm"
+                  >
+                    <X className="w-4 h-4 text-destructive" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Drop Zone */}
+          {(uploadedFiles.length + selectedFiles.length) < 10 && (
+            <div
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              className="border-2 border-dashed border-muted-foreground/25 rounded-sm p-6 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
+              onClick={() => document.getElementById('file-upload-input').click()}
+            >
+              <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground mb-1">
+                Dateien hier ablegen oder klicken zum Auswählen
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Bilder, PDFs, Dokumente (max 10 MB pro Datei)
+              </p>
+              <input
+                id="file-upload-input"
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end gap-4 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>
             Abbrechen
           </Button>
-          <Button type="submit" data-testid="btn-save-customer" disabled={loading}>
-            {loading ? "Speichern..." : "Speichern"}
+          <Button type="submit" data-testid="btn-save-customer" disabled={loading || uploadingFiles}>
+            {loading ? "Speichern..." : uploadingFiles ? "Uploading..." : "Speichern"}
           </Button>
         </div>
       </form>

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
+from typing import List, Optional
 from models import Customer, CustomerCreate, Anfrage
-from database import db
+from database import db, logger
 from auth import get_current_user
 
 router = APIRouter()
@@ -68,3 +68,109 @@ async def customer_to_anfrage(customer_id: str, user=Depends(get_current_user)):
     await db.customers.delete_one({"id": customer_id})
 
     return {"message": "Kunde zurück in Anfrage umgewandelt", "anfrage_id": anfrage.id}
+
+
+@router.post("/customers/{customer_id}/upload")
+async def upload_customer_files(
+    customer_id: str,
+    files: List[UploadFile] = File(...),
+    user=Depends(get_current_user)
+):
+    """Upload files for a customer (max 10 files, 10MB each)"""
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+    
+    MAX_FILES = 10
+    MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+    
+    current_files = customer.get("photos", [])
+    if len(current_files) + len(files) > MAX_FILES:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Maximale Anzahl Dateien überschritten (max {MAX_FILES})"
+        )
+    
+    uploaded_urls = []
+    
+    try:
+        from utils.storage import put_object
+        import uuid as _uuid
+        
+        for file in files:
+            # Read file content
+            content = await file.read()
+            
+            # Check file size
+            if len(content) > MAX_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Datei {file.filename} ist zu groß (max 10 MB)"
+                )
+            
+            # Generate safe filename
+            safe_name = file.filename.replace(" ", "_") if file.filename else "datei"
+            storage_path = f"customers/{customer_id}/{_uuid.uuid4().hex[:8]}_{safe_name}"
+            
+            # Upload to object storage
+            result = put_object(storage_path, content, file.content_type or "application/octet-stream")
+            
+            if result and result.get("url"):
+                uploaded_urls.append({
+                    "url": result["url"],
+                    "filename": file.filename,
+                    "content_type": file.content_type,
+                    "size": len(content)
+                })
+                logger.info(f"Datei für Kunde {customer_id} gespeichert: {storage_path}")
+            elif result and result.get("path"):
+                uploaded_urls.append({
+                    "url": result["path"],
+                    "filename": file.filename,
+                    "content_type": file.content_type,
+                    "size": len(content)
+                })
+                logger.info(f"Datei für Kunde {customer_id} gespeichert: {storage_path}")
+    
+    except Exception as e:
+        logger.error(f"Fehler beim Upload für Kunde {customer_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload-Fehler: {str(e)}")
+    
+    # Update customer with new files
+    all_files = current_files + uploaded_urls
+    await db.customers.update_one(
+        {"id": customer_id},
+        {"$set": {"photos": all_files}}
+    )
+    
+    return {
+        "message": f"{len(uploaded_urls)} Datei(en) hochgeladen",
+        "uploaded": uploaded_urls,
+        "total_files": len(all_files)
+    }
+
+
+@router.delete("/customers/{customer_id}/files/{file_index}")
+async def delete_customer_file(
+    customer_id: str,
+    file_index: int,
+    user=Depends(get_current_user)
+):
+    """Delete a file from customer"""
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+    
+    files = customer.get("photos", [])
+    if file_index < 0 or file_index >= len(files):
+        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+    
+    # Remove file from list
+    files.pop(file_index)
+    
+    await db.customers.update_one(
+        {"id": customer_id},
+        {"$set": {"photos": files}}
+    )
+    
+    return {"message": "Datei gelöscht", "remaining_files": len(files)}
