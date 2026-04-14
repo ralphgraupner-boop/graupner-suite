@@ -343,7 +343,11 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
     name: "",
     email: "",
     phone: "",
-    address: "",
+    strasse: "",
+    hausnummer: "",
+    plz: "",
+    ort: "",
+    address: "", // Legacy - wird aus Einzelfeldern zusammengesetzt
     notes: "",
     customer_type: "Privat",
     categories: [],
@@ -353,10 +357,31 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
 
   useEffect(() => {
     if (customer) {
+      // Parse alte Adresse wenn vorhanden
+      let strasse = "", hausnummer = "", plz = "", ort = "";
+      if (customer.address && !customer.strasse) {
+        // Alte Adresse parsen (Best-Effort)
+        const parts = customer.address.split(",").map(p => p.trim());
+        if (parts[0]) {
+          const streetParts = parts[0].split(" ");
+          hausnummer = streetParts.pop() || "";
+          strasse = streetParts.join(" ");
+        }
+        if (parts[1]) {
+          const cityParts = parts[1].split(" ");
+          plz = cityParts[0] || "";
+          ort = cityParts.slice(1).join(" ");
+        }
+      }
+      
       setForm({
         name: customer.name || "",
         email: customer.email || "",
         phone: customer.phone || "",
+        strasse: customer.strasse || strasse,
+        hausnummer: customer.hausnummer || hausnummer,
+        plz: customer.plz || plz,
+        ort: customer.ort || ort,
         address: customer.address || "",
         notes: customer.notes || "",
         customer_type: customer.customer_type || "Privat",
@@ -364,7 +389,11 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
         status: customer.status || "Neu"
       });
     } else {
-      setForm({ name: "", email: "", phone: "", address: "", notes: "", customer_type: "Privat", categories: [], status: "Neu" });
+      setForm({ 
+        name: "", email: "", phone: "", 
+        strasse: "", hausnummer: "", plz: "", ort: "",
+        address: "", notes: "", customer_type: "Privat", categories: [], status: "Neu" 
+      });
     }
   }, [customer]);
 
@@ -372,11 +401,19 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
     e.preventDefault();
     setLoading(true);
     try {
+      // Kombiniere Adresse aus Einzelfeldern
+      const addressCombined = `${form.strasse} ${form.hausnummer}, ${form.plz} ${form.ort}`.trim();
+      
+      const payload = {
+        ...form,
+        address: addressCombined || form.address // Fallback auf altes Feld
+      };
+      
       if (customer) {
-        await api.put(`/customers/${customer.id}`, form);
+        await api.put(`/customers/${customer.id}`, payload);
         toast.success("Kunde aktualisiert");
       } else {
-        await api.post("/customers", form);
+        await api.post("/customers", payload);
         toast.success("Kunde erstellt");
       }
       onSave();
@@ -475,20 +512,51 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">Adresse</label>
-          <Textarea
-            data-testid="input-customer-address"
-            value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
-            rows={3}
-          />
-          {form.address && (
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-8">
+              <Input
+                data-testid="input-customer-strasse"
+                placeholder="Straße"
+                value={form.strasse}
+                onChange={(e) => setForm({ ...form, strasse: e.target.value })}
+              />
+            </div>
+            <div className="col-span-4">
+              <Input
+                data-testid="input-customer-hausnummer"
+                placeholder="Nr."
+                value={form.hausnummer}
+                onChange={(e) => setForm({ ...form, hausnummer: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            <div>
+              <Input
+                data-testid="input-customer-plz"
+                placeholder="PLZ"
+                value={form.plz}
+                onChange={(e) => setForm({ ...form, plz: e.target.value })}
+              />
+            </div>
+            <div className="col-span-3">
+              <Input
+                data-testid="input-customer-ort"
+                placeholder="Ort"
+                value={form.ort}
+                onChange={(e) => setForm({ ...form, ort: e.target.value })}
+              />
+            </div>
+          </div>
+          {(form.strasse || form.address) && (
             <button
               onClick={() => {
-                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.address)}`;
+                const addr = form.address || `${form.strasse} ${form.hausnummer}, ${form.plz} ${form.ort}`.trim();
+                const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
                 navigator.clipboard.writeText(url);
                 toast.success("Maps-Link kopiert! In neuem Tab einfügen.");
               }}
-              className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
               data-testid="btn-map-link"
             >
               <Globe className="w-3 h-3" />

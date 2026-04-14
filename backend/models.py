@@ -29,7 +29,11 @@ class Customer(BaseModel):
     name: str
     email: str = ""
     phone: str = ""
-    address: str = ""
+    address: str = ""  # Legacy - kombiniert aus Einzelfeldern
+    strasse: str = ""
+    hausnummer: str = ""
+    plz: str = ""
+    ort: str = ""
     notes: str = ""
     photos: List[str] = []
     customer_type: str = "Privat"
@@ -44,6 +48,10 @@ class CustomerCreate(BaseModel):
     email: str = ""
     phone: str = ""
     address: str = ""
+    strasse: str = ""
+    hausnummer: str = ""
+    plz: str = ""
+    ort: str = ""
     notes: str = ""
     photos: List[str] = []
     customer_type: str = "Privat"
