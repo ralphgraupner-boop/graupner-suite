@@ -31,6 +31,19 @@ const AnfragenPage = () => {
   const [catDragOverIdx, setCatDragOverIdx] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [lightboxImg, setLightboxImg] = useState(null);
+  const [createAnfrageModal, setCreateAnfrageModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    objektadresse: "",
+    categories: [],
+    nachricht: "",
+    notes: "",
+    customer_type: "Privat",
+    firma: ""
+  });
 
   useEffect(() => {
     loadAnfragen();
@@ -205,6 +218,37 @@ const AnfragenPage = () => {
     }
   };
 
+  const handleCreateAnfrage = async () => {
+    if (!createForm.name) {
+      toast.error("Name ist erforderlich");
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      await api.post("/anfragen", createForm);
+      toast.success("Anfrage erfolgreich angelegt");
+      setCreateAnfrageModal(false);
+      setCreateForm({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        objektadresse: "",
+        categories: [],
+        nachricht: "",
+        notes: "",
+        customer_type: "Privat",
+        firma: ""
+      });
+      loadAnfragen();
+    } catch (err) {
+      toast.error("Fehler beim Anlegen der Anfrage");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const parseNotes = (notes) => {
     if (!notes) return {};
     const result = {};
@@ -242,11 +286,16 @@ const AnfragenPage = () => {
           <h1 className="text-2xl lg:text-4xl font-bold">Anfragen</h1>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{anfragen.length} Anfragen gesamt</p>
         </div>
-        <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import">
-          <Upload className="w-4 h-4" />
-          {vcfUploading ? "Importiere..." : "VCF importieren"}
-          <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" disabled={vcfUploading} />
-        </label>
+        <div className="flex gap-2">
+          <Button onClick={() => setCreateAnfrageModal(true)} data-testid="btn-neue-anfrage">
+            <Plus className="w-4 h-4" /> Neue Anfrage
+          </Button>
+          <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import">
+            <Upload className="w-4 h-4" />
+            {vcfUploading ? "Importiere..." : "VCF importieren"}
+            <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" disabled={vcfUploading} />
+          </label>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-2" data-testid="anfragen-status-filter">
@@ -730,6 +779,134 @@ const AnfragenPage = () => {
           </div>
         );
       })()}
+
+      {/* Neue Anfrage Modal */}
+      <Modal isOpen={createAnfrageModal} onClose={() => setCreateAnfrageModal(false)} title="Neue Anfrage anlegen" size="lg">
+        <div className="space-y-4" data-testid="create-anfrage-modal">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Name *</label>
+              <Input
+                data-testid="create-anfrage-name"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                placeholder="Name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">E-Mail</label>
+              <Input
+                data-testid="create-anfrage-email"
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                placeholder="E-Mail"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Telefon</label>
+              <Input
+                data-testid="create-anfrage-phone"
+                value={createForm.phone}
+                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                placeholder="Telefon"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Firma</label>
+              <Input
+                data-testid="create-anfrage-firma"
+                value={createForm.firma}
+                onChange={(e) => setCreateForm({ ...createForm, firma: e.target.value })}
+                placeholder="Firma (optional)"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Adresse</label>
+            <Input
+              data-testid="create-anfrage-address"
+              value={createForm.address}
+              onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+              placeholder="Straße, PLZ Ort"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Objektadresse (falls abweichend)</label>
+            <Input
+              data-testid="create-anfrage-objektadresse"
+              value={createForm.objektadresse}
+              onChange={(e) => setCreateForm({ ...createForm, objektadresse: e.target.value })}
+              placeholder="Objektadresse"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Kategorien</label>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    const current = createForm.categories || [];
+                    setCreateForm({
+                      ...createForm,
+                      categories: current.includes(cat)
+                        ? current.filter(c => c !== cat)
+                        : [...current, cat]
+                    });
+                  }}
+                  className={`px-3 py-1 rounded-full text-sm transition-all ${
+                    (createForm.categories || []).includes(cat)
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                  data-testid={`create-category-${cat}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Nachricht</label>
+            <Textarea
+              data-testid="create-anfrage-nachricht"
+              value={createForm.nachricht}
+              onChange={(e) => setCreateForm({ ...createForm, nachricht: e.target.value })}
+              placeholder="Nachricht des Kunden"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Interne Notizen</label>
+            <Textarea
+              data-testid="create-anfrage-notes"
+              value={createForm.notes}
+              onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+              placeholder="Interne Notizen"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setCreateAnfrageModal(false)} data-testid="create-anfrage-cancel">
+              Abbrechen
+            </Button>
+            <Button onClick={handleCreateAnfrage} disabled={saving || !createForm.name} data-testid="create-anfrage-save">
+              {saving ? "Speichern..." : "Anfrage anlegen"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal isOpen={!!editAnfrage} onClose={() => setEditAnfrage(null)} title="Anfrage bearbeiten" size="lg">
