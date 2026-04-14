@@ -30,6 +30,8 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") mit folgenden Kernfunktionen:
 - [x] IMAP VCF-Parser: Vorname/Nachname/Anrede Extraktion hinzugefuegt (14.04.2026)
 - [x] VCF-Import auf Kunden-Seite hinzugefuegt (14.04.2026)
 - [x] Photos-Modell: List[Any] statt List[str] fuer Datei-Metadaten (14.04.2026)
+- [x] Anfragen Bearbeiten-Modal komplett umgebaut wie Kunden-Formular (14.04.2026)
+  - Adresse in Einzelfelder (Strasse/Nr/PLZ/Ort), Kundentyp-Dropdown, Datei-Upload
 - [x] Einstellungen/Diverses Tab Crash behoben
 
 ## P1 - Next Tasks

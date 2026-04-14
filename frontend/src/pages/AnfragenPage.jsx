@@ -127,8 +127,27 @@ const AnfragenPage = () => {
     }
   };
 
+  const [editUploadedFiles, setEditUploadedFiles] = useState([]);
+  const [editSelectedFiles, setEditSelectedFiles] = useState([]);
+  const [editUploadingFiles, setEditUploadingFiles] = useState(false);
+
   const openEdit = (anfrage) => {
     setEditAnfrage(anfrage);
+    // Parse alte Adresse wenn vorhanden
+    let strasse = "", hausnummer = "", plz = "", ort = "";
+    if (anfrage.address && !anfrage.strasse) {
+      const parts = anfrage.address.split(",").map(p => p.trim());
+      if (parts[0]) {
+        const streetParts = parts[0].split(" ");
+        hausnummer = streetParts.pop() || "";
+        strasse = streetParts.join(" ");
+      }
+      if (parts[1]) {
+        const cityParts = parts[1].split(" ");
+        plz = cityParts[0] || "";
+        ort = cityParts.slice(1).join(" ");
+      }
+    }
     setEditForm({
       anrede: anfrage.anrede || "",
       vorname: anfrage.vorname || "",
@@ -136,8 +155,16 @@ const AnfragenPage = () => {
       name: anfrage.name || "",
       email: anfrage.email || "",
       phone: anfrage.phone || "",
+      strasse: anfrage.strasse || strasse,
+      hausnummer: anfrage.hausnummer || hausnummer,
+      plz: anfrage.plz || plz,
+      ort: anfrage.ort || ort,
       address: anfrage.address || "",
       obj_address: anfrage.obj_address || "",
+      objekt_strasse: anfrage.objekt_strasse || "",
+      objekt_hausnummer: anfrage.objekt_hausnummer || "",
+      objekt_plz: anfrage.objekt_plz || "",
+      objekt_ort: anfrage.objekt_ort || "",
       firma: anfrage.firma || "",
       customer_type: anfrage.customer_type || "Privat",
       nachricht: anfrage.nachricht || "",
@@ -145,13 +172,26 @@ const AnfragenPage = () => {
       categories: anfrage.categories || [],
       reparaturgruppen: anfrage.reparaturgruppen || (anfrage.reparaturgruppe ? [anfrage.reparaturgruppe] : []),
     });
+    setEditUploadedFiles(anfrage.photos || []);
+    setEditSelectedFiles([]);
   };
 
   const handleSaveEdit = async () => {
     if (!editAnfrage) return;
     setSaving(true);
     try {
-      await api.put(`/anfragen/${editAnfrage.id}`, editForm);
+      const addressCombined = `${editForm.strasse} ${editForm.hausnummer}, ${editForm.plz} ${editForm.ort}`.trim();
+      const payload = {
+        ...editForm,
+        address: addressCombined || editForm.address,
+      };
+      await api.put(`/anfragen/${editAnfrage.id}`, payload);
+      
+      // Upload files if any
+      if (editSelectedFiles.length > 0) {
+        await handleEditFileUpload(editAnfrage.id);
+      }
+      
       toast.success("Anfrage aktualisiert");
       setEditAnfrage(null);
       loadAnfragen();
@@ -159,6 +199,58 @@ const AnfragenPage = () => {
       toast.error("Fehler beim Speichern");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEditFileUpload = async (anfrageId) => {
+    if (editSelectedFiles.length === 0) return;
+    setEditUploadingFiles(true);
+    try {
+      const formData = new FormData();
+      editSelectedFiles.forEach(file => formData.append('files', file));
+      await api.post(`/anfragen/${anfrageId}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setEditSelectedFiles([]);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Upload");
+    } finally {
+      setEditUploadingFiles(false);
+    }
+  };
+
+  const handleEditFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    const MAX_FILES = 10;
+    const MAX_SIZE = 10 * 1024 * 1024;
+    const totalFiles = editUploadedFiles.length + editSelectedFiles.length + files.length;
+    if (totalFiles > MAX_FILES) {
+      toast.error(`Maximale Anzahl Dateien überschritten (max ${MAX_FILES})`);
+      return;
+    }
+    for (const file of files) {
+      if (file.size > MAX_SIZE) {
+        toast.error(`Datei ${file.name} ist zu groß (max 10 MB)`);
+        return;
+      }
+    }
+    setEditSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const handleEditDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleEditFileSelect({ target: { files: e.dataTransfer.files } });
+  };
+
+  const deleteEditUploadedFile = async (index) => {
+    if (!editAnfrage) return;
+    try {
+      await api.delete(`/anfragen/${editAnfrage.id}/files/${index}`);
+      toast.success("Datei gelöscht");
+      setEditUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
     }
   };
 
@@ -1223,114 +1315,91 @@ const AnfragenPage = () => {
       {/* Edit Modal */}
       <Modal isOpen={!!editAnfrage} onClose={() => setEditAnfrage(null)} title="Anfrage bearbeiten" size="lg">
         <div className="space-y-4" data-testid="edit-anfrage-modal">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Anrede & Kundentyp */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Anrede</label>
+              <label className="block text-sm font-medium mb-2">Anrede</label>
               <select
                 data-testid="edit-anfrage-anrede"
                 value={editForm.anrede || ""}
                 onChange={(e) => setEditForm({ ...editForm, anrede: e.target.value })}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="w-full h-10 rounded-sm border border-input bg-background px-3"
               >
-                <option value="">-- Bitte wählen --</option>
+                <option value="">Bitte wählen</option>
                 <option value="Herr">Herr</option>
                 <option value="Frau">Frau</option>
-                <option value="Firma">Firma</option>
+                <option value="Divers">Divers</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Vorname *</label>
+              <label className="block text-sm font-medium mb-2">Kundentyp</label>
+              <select
+                data-testid="edit-anfrage-customer-type"
+                value={editForm.customer_type || "Privat"}
+                onChange={(e) => setEditForm({ ...editForm, customer_type: e.target.value })}
+                className="w-full h-10 rounded-sm border border-input bg-background px-3"
+              >
+                <option value="Privat">Privat</option>
+                <option value="Firma">Firma</option>
+                <option value="Vermieter">Vermieter</option>
+                <option value="Mieter">Mieter</option>
+                <option value="Gewerblich">Gewerblich</option>
+                <option value="Hausverwaltung">Hausverwaltung</option>
+                <option value="Wohnungsbaugesellschaft">Wohnungsbaugesellschaft</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Firmenname */}
+          {(editForm.customer_type === "Firma" || editForm.customer_type === "Gewerblich" || editForm.firma) && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Firmenname *</label>
+              <Input
+                data-testid="edit-anfrage-firma"
+                value={editForm.firma || ""}
+                onChange={(e) => setEditForm({ ...editForm, firma: e.target.value })}
+                placeholder="Firma GmbH"
+              />
+            </div>
+          )}
+
+          {/* Vor- und Nachname */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Vorname *</label>
               <Input
                 data-testid="edit-anfrage-vorname"
                 value={editForm.vorname || ""}
                 onChange={(e) => setEditForm({ ...editForm, vorname: e.target.value })}
-                placeholder="Vorname"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Nachname *</label>
+              <label className="block text-sm font-medium mb-2">Nachname *</label>
               <Input
                 data-testid="edit-anfrage-nachname"
                 value={editForm.nachname || ""}
                 onChange={(e) => setEditForm({ ...editForm, nachname: e.target.value })}
-                placeholder="Nachname"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">E-Mail</label>
+              <label className="block text-sm font-medium mb-2">E-Mail</label>
               <Input
                 data-testid="edit-anfrage-email"
                 type="email"
                 value={editForm.email || ""}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                placeholder="E-Mail"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Telefon</label>
+              <label className="block text-sm font-medium mb-2">Telefon</label>
               <Input
                 data-testid="edit-anfrage-phone"
                 value={editForm.phone || ""}
                 onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                placeholder="Telefon"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Firma</label>
-              <Input
-                data-testid="edit-anfrage-firma"
-                value={editForm.firma || ""}
-                onChange={(e) => setEditForm({ ...editForm, firma: e.target.value })}
-                placeholder="Firma"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Adresse</label>
-            <Input
-              data-testid="edit-anfrage-address"
-              value={editForm.address || ""}
-              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-              placeholder="Straße, PLZ Ort"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Objektadresse</label>
-            <Input
-              data-testid="edit-anfrage-obj-address"
-              value={editForm.obj_address || ""}
-              onChange={(e) => setEditForm({ ...editForm, obj_address: e.target.value })}
-              placeholder="Objektadresse (falls abweichend)"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Typ</label>
-            <div className="flex gap-2" data-testid="edit-anfrage-type">
-              <button
-                type="button"
-                onClick={() => setEditForm({ ...editForm, customer_type: "Privat" })}
-                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all ${
-                  editForm.customer_type === "Privat"
-                    ? "bg-green-600 text-white shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                Privat
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditForm({ ...editForm, customer_type: "Firma" })}
-                className={`px-4 py-2 rounded-sm text-sm font-medium transition-all ${
-                  editForm.customer_type === "Firma"
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                Firma
-              </button>
             </div>
           </div>
 
@@ -1342,10 +1411,10 @@ const AnfragenPage = () => {
                   key={cat}
                   type="button"
                   onClick={() => toggleCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                     (editForm.categories || []).includes(cat)
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-input hover:border-primary/50"
                   }`}
                 >
                   {cat}
@@ -1354,8 +1423,100 @@ const AnfragenPage = () => {
             </div>
           </div>
 
+          {/* Adresse */}
           <div>
-            <label className="block text-sm font-medium mb-1">Nachricht</label>
+            <label className="block text-sm font-medium mb-2">Adresse</label>
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-8">
+                <Input
+                  data-testid="edit-anfrage-strasse"
+                  placeholder="Straße"
+                  value={editForm.strasse || ""}
+                  onChange={(e) => setEditForm({ ...editForm, strasse: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4">
+                <Input
+                  data-testid="edit-anfrage-hausnummer"
+                  placeholder="Nr."
+                  value={editForm.hausnummer || ""}
+                  onChange={(e) => setEditForm({ ...editForm, hausnummer: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              <div>
+                <Input
+                  data-testid="edit-anfrage-plz"
+                  placeholder="PLZ"
+                  value={editForm.plz || ""}
+                  onChange={(e) => setEditForm({ ...editForm, plz: e.target.value })}
+                />
+              </div>
+              <div className="col-span-3">
+                <Input
+                  data-testid="edit-anfrage-ort"
+                  placeholder="Ort"
+                  value={editForm.ort || ""}
+                  onChange={(e) => setEditForm({ ...editForm, ort: e.target.value })}
+                />
+              </div>
+            </div>
+            {(editForm.strasse || editForm.address) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const addr = editForm.address || `${editForm.strasse} ${editForm.hausnummer}, ${editForm.plz} ${editForm.ort}`.trim();
+                  navigator.clipboard.writeText(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`);
+                  toast.success("Maps-Link kopiert!");
+                }}
+                className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
+              >
+                <Globe className="w-3 h-3" /> Karten-Link kopieren
+              </button>
+            )}
+          </div>
+
+          {/* Objektadresse */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Objektadresse (falls abweichend)</label>
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-8">
+                <Input
+                  data-testid="edit-anfrage-obj-strasse"
+                  placeholder="Straße"
+                  value={editForm.objekt_strasse || ""}
+                  onChange={(e) => setEditForm({ ...editForm, objekt_strasse: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4">
+                <Input
+                  placeholder="Nr."
+                  value={editForm.objekt_hausnummer || ""}
+                  onChange={(e) => setEditForm({ ...editForm, objekt_hausnummer: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              <div>
+                <Input
+                  placeholder="PLZ"
+                  value={editForm.objekt_plz || ""}
+                  onChange={(e) => setEditForm({ ...editForm, objekt_plz: e.target.value })}
+                />
+              </div>
+              <div className="col-span-3">
+                <Input
+                  placeholder="Ort"
+                  value={editForm.objekt_ort || ""}
+                  onChange={(e) => setEditForm({ ...editForm, objekt_ort: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Nachricht</label>
             <Textarea
               data-testid="edit-anfrage-nachricht"
               value={editForm.nachricht || ""}
@@ -1366,7 +1527,7 @@ const AnfragenPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Notizen</label>
+            <label className="block text-sm font-medium mb-2">Notizen</label>
             <Textarea
               data-testid="edit-anfrage-notes"
               value={editForm.notes || ""}
@@ -1376,12 +1537,85 @@ const AnfragenPage = () => {
             />
           </div>
 
+          {/* File Upload Section */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Dateien <span className="text-xs text-muted-foreground">(max 10 Dateien, je 10 MB)</span>
+            </label>
+            
+            {/* Uploaded Files */}
+            {editUploadedFiles.length > 0 && (
+              <div className="mb-3 space-y-2">
+                <p className="text-xs text-muted-foreground">Hochgeladene Dateien:</p>
+                {editUploadedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-muted/30 rounded-sm border">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {typeof file === 'object' && (file.content_type || '').startsWith('image/') 
+                        ? <ImageIcon className="w-4 h-4" /> : <File className="w-4 h-4" />}
+                      <span className="text-sm truncate">{typeof file === 'string' ? file.split('/').pop() : file.filename || file.name || 'Datei'}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {typeof file === 'object' && file.url && (
+                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded-sm" title="Herunterladen">
+                          <Download className="w-4 h-4 text-muted-foreground" />
+                        </a>
+                      )}
+                      <button type="button" onClick={() => deleteEditUploadedFile(idx)} className="p-1 hover:bg-destructive/10 rounded-sm" title="Löschen">
+                        <X className="w-4 h-4 text-destructive" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Selected Files */}
+            {editSelectedFiles.length > 0 && (
+              <div className="mb-3 space-y-2">
+                <p className="text-xs text-green-600 font-medium">Ausgewählte Dateien (werden beim Speichern hochgeladen):</p>
+                {editSelectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-green-50 rounded-sm border border-green-200">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <File className="w-4 h-4" />
+                      <span className="text-sm truncate">{file.name}</span>
+                    </div>
+                    <button type="button" onClick={() => setEditSelectedFiles(prev => prev.filter((_, i) => i !== idx))} className="p-1 hover:bg-destructive/10 rounded-sm">
+                      <X className="w-4 h-4 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Drop Zone */}
+            {(editUploadedFiles.length + editSelectedFiles.length) < 10 && (
+              <div
+                onDrop={handleEditDrop}
+                onDragOver={(e) => e.preventDefault()}
+                className="border-2 border-dashed border-muted-foreground/25 rounded-sm p-6 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
+                onClick={() => document.getElementById('edit-anfrage-file-upload').click()}
+              >
+                <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground mb-1">Dateien hier ablegen oder klicken zum Auswählen</p>
+                <p className="text-xs text-muted-foreground">Bilder, PDFs, Dokumente (max 10 MB pro Datei)</p>
+                <input
+                  id="edit-anfrage-file-upload"
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
+                  onChange={handleEditFileSelect}
+                  className="hidden"
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => setEditAnfrage(null)} data-testid="edit-anfrage-cancel">
               Abbrechen
             </Button>
-            <Button onClick={handleSaveEdit} disabled={saving || (!editForm.vorname && !editForm.nachname && !editForm.firma)} data-testid="edit-anfrage-save">
-              {saving ? "Speichern..." : "Speichern"}
+            <Button onClick={handleSaveEdit} disabled={saving || editUploadingFiles || (!editForm.vorname && !editForm.nachname && !editForm.firma)} data-testid="edit-anfrage-save">
+              {saving ? "Speichern..." : editUploadingFiles ? "Uploading..." : "Speichern"}
             </Button>
           </div>
         </div>
