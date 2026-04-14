@@ -955,7 +955,7 @@ const AnfragenPage = () => {
                         return (f.content_type || '').startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.filename || '');
                       }).map((photo, idx) => {
                         const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-                        const imgUrl = typeof photo === 'string' ? `${backendUrl}/api/storage/${photo}` : photo.url;
+                        const imgUrl = typeof photo === 'string' ? `${backendUrl}/api/storage/${photo}` : (photo.url?.startsWith('http') ? photo.url : `${backendUrl}/api/storage/${photo.url}`);
                         return (
                           <div key={idx}
                             className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary hover:shadow-lg transition-all cursor-pointer group"
@@ -988,7 +988,7 @@ const AnfragenPage = () => {
                       }).map((file, idx) => {
                         const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
                         const fileName = typeof file === 'string' ? file.split('/').pop() : file.filename || `Datei ${idx + 1}`;
-                        const fileUrl = typeof file === 'string' ? `${backendUrl}/api/storage/${file}` : file.url;
+                        const fileUrl = typeof file === 'string' ? `${backendUrl}/api/storage/${file}` : (file.url?.startsWith('http') ? file.url : `${backendUrl}/api/storage/${file.url}`);
                         return (
                           <a
                             key={idx}
