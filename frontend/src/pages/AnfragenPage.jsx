@@ -130,6 +130,9 @@ const AnfragenPage = () => {
   const openEdit = (anfrage) => {
     setEditAnfrage(anfrage);
     setEditForm({
+      anrede: anfrage.anrede || "",
+      vorname: anfrage.vorname || "",
+      nachname: anfrage.nachname || "",
       name: anfrage.name || "",
       email: anfrage.email || "",
       phone: anfrage.phone || "",
@@ -388,7 +391,7 @@ const AnfragenPage = () => {
     const s = search.toLowerCase();
     const repGruppen = a.reparaturgruppen || (a.reparaturgruppe ? [a.reparaturgruppe] : []);
     return (
-      a.name.toLowerCase().includes(s) ||
+      ((a.vorname || a.nachname) ? `${a.vorname || ''} ${a.nachname || ''}`.trim() : (a.name || '')).toLowerCase().includes(s) ||
       (a.email || "").toLowerCase().includes(s) ||
       (a.nachricht || "").toLowerCase().includes(s) ||
       (a.phone || "").toLowerCase().includes(s) ||
@@ -608,7 +611,7 @@ const AnfragenPage = () => {
                     data-testid={`btn-status-${anfrage.id}`}
                   />
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
-                    {anfrage.name?.charAt(0)?.toUpperCase() || "?"}
+                    {anfrage.vorname?.charAt(0)?.toUpperCase() || anfrage.nachname?.charAt(0)?.toUpperCase() || anfrage.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -733,7 +736,7 @@ const AnfragenPage = () => {
               <div className="sticky top-0 z-10 bg-background border-b px-5 py-3 flex items-center justify-between rounded-t-lg">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
-                    {anfrage.name?.charAt(0)?.toUpperCase() || "?"}
+                    {anfrage.vorname?.charAt(0)?.toUpperCase() || anfrage.nachname?.charAt(0)?.toUpperCase() || anfrage.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold truncate">
@@ -1222,12 +1225,35 @@ const AnfragenPage = () => {
         <div className="space-y-4" data-testid="edit-anfrage-modal">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name *</label>
+              <label className="block text-sm font-medium mb-1">Anrede</label>
+              <select
+                data-testid="edit-anfrage-anrede"
+                value={editForm.anrede || ""}
+                onChange={(e) => setEditForm({ ...editForm, anrede: e.target.value })}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">-- Bitte wählen --</option>
+                <option value="Herr">Herr</option>
+                <option value="Frau">Frau</option>
+                <option value="Firma">Firma</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Vorname *</label>
               <Input
-                data-testid="edit-anfrage-name"
-                value={editForm.name || ""}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                placeholder="Name"
+                data-testid="edit-anfrage-vorname"
+                value={editForm.vorname || ""}
+                onChange={(e) => setEditForm({ ...editForm, vorname: e.target.value })}
+                placeholder="Vorname"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Nachname *</label>
+              <Input
+                data-testid="edit-anfrage-nachname"
+                value={editForm.nachname || ""}
+                onChange={(e) => setEditForm({ ...editForm, nachname: e.target.value })}
+                placeholder="Nachname"
               />
             </div>
             <div>
@@ -1354,7 +1380,7 @@ const AnfragenPage = () => {
             <Button variant="outline" onClick={() => setEditAnfrage(null)} data-testid="edit-anfrage-cancel">
               Abbrechen
             </Button>
-            <Button onClick={handleSaveEdit} disabled={saving || !editForm.name} data-testid="edit-anfrage-save">
+            <Button onClick={handleSaveEdit} disabled={saving || (!editForm.vorname && !editForm.nachname && !editForm.firma)} data-testid="edit-anfrage-save">
               {saving ? "Speichern..." : "Speichern"}
             </Button>
           </div>
@@ -1406,7 +1432,7 @@ const AnfrageEmailDialog = ({ anfrage, onClose }) => {
 
   const replacePlaceholders = (text) => {
     return text
-      .replace(/\{kunde_name\}/g, anfrage.name || "")
+      .replace(/\{kunde_name\}/g, (anfrage.vorname || anfrage.nachname) ? `${anfrage.vorname || ''} ${anfrage.nachname || ''}`.trim() : (anfrage.name || ""))
       .replace(/\{email\}/g, anfrage.email || "")
       .replace(/\{firma_name\}/g, "Tischlerei Graupner");
   };
@@ -1435,7 +1461,7 @@ const AnfrageEmailDialog = ({ anfrage, onClose }) => {
       <div className="bg-background rounded-lg shadow-xl w-full max-w-3xl my-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Mail className="w-5 h-5" /> E-Mail an {anfrage.name}
+            <Mail className="w-5 h-5" /> E-Mail an {(anfrage.vorname || anfrage.nachname) ? `${anfrage.vorname || ''} ${anfrage.nachname || ''}`.trim() : anfrage.name}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>

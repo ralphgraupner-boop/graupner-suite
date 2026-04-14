@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 
 # Get backend URL from frontend .env
-BACKEND_URL = "https://code-import-flow-1.preview.emergentagent.com/api"
+BACKEND_URL = "https://handwerk-deploy.preview.emergentagent.com/api"
 
 # Test credentials
 ADMIN_USERNAME = "admin"

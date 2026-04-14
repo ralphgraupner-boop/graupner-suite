@@ -64,7 +64,7 @@ const CustomersPage = ({ readOnly = false }) => {
 
   const filtered = customers.filter(
     (c) =>
-      (c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (((c.vorname || c.nachname) ? `${c.vorname || ''} ${c.nachname || ''}`.trim() : (c.name || '')).toLowerCase().includes(search.toLowerCase()) ||
       c.email?.toLowerCase().includes(search.toLowerCase())) &&
       (!categoryFilter || (c.categories || []).includes(categoryFilter)) &&
       (!statusFilter || (c.status || "Neu") === statusFilter)
@@ -183,11 +183,11 @@ const CustomersPage = ({ readOnly = false }) => {
                 onClick={() => setExpandedId(isExpanded ? null : customer.id)}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
-                  {customer.name?.charAt(0)?.toUpperCase() || "?"}
+                  {customer.vorname?.charAt(0)?.toUpperCase() || customer.nachname?.charAt(0)?.toUpperCase() || customer.name?.charAt(0)?.toUpperCase() || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold truncate">{customer.name}</span>
+                    <span className="font-semibold truncate">{(customer.vorname || customer.nachname) ? `${customer.vorname || ''} ${customer.nachname || ''}`.trim() : customer.name}</span>
                     {customer.customer_type && customer.customer_type !== "Privat" && (
                       <Badge variant="default" className="text-xs">{customer.customer_type}</Badge>
                     )}

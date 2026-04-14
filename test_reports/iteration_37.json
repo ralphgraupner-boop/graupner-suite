@@ -1,0 +1,80 @@
+{
+  "summary": "Tested Graupner Suite v37 - Vorname/Nachname display in Kunden and Anfragen pages. Found and fixed 2 bugs: (1) Anfragen list avatar used legacy name instead of vorname, (2) Edit modal save button was disabled based on legacy name field instead of vorname/nachname.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_37.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FIXED: AnfragenPage.jsx line 614 - Avatar in list view was using anfrage.name instead of vorname/nachname with fallback",
+    "FIXED: AnfragenPage.jsx line 1383 - Edit modal save button was disabled based on !editForm.name instead of checking vorname/nachname/firma"
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/AnfragenPage.jsx"
+  ],
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "100% (all features working correctly)"
+  },
+  "test_credentials": "admin/Graupner!Suite2026",
+  "seed_data_creation": "Used existing test data (TestVorname TestNachname, Max Mustermann)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "v37 Vorname/Nachname display features fully tested and working. Two bugs were fixed: (1) Anfragen list avatar now correctly uses vorname?.charAt(0) with fallback to nachname then name, (2) Edit modal save button now checks vorname/nachname/firma instead of legacy name field. All features verified: Kunden list/detail shows Vorname/Nachname separately, Anfragen list/detail shows Vorname/Nachname separately, Edit/Create modals have Anrede/Vorname/Nachname fields, Search works with Vorname/Nachname, Legacy data with only 'name' field displays correctly as fallback.",
+  "features_tested": {
+    "kunden_list_view": {
+      "status": "PASS",
+      "details": "Shows 'Max Mustermann' with avatar 'M' from Vorname. Search by Vorname/Nachname works."
+    },
+    "kunden_detail_view": {
+      "status": "PASS",
+      "details": "Shows separate fields: Anrede: Herr, Vorname: Max, Nachname: Mustermann"
+    },
+    "anfragen_list_view": {
+      "status": "PASS",
+      "details": "Shows 'TestVorname TestNachname' with avatar 'T' from Vorname. Legacy data shows combined name with fallback."
+    },
+    "anfragen_detail_modal": {
+      "status": "PASS",
+      "details": "Shows separate fields: Anrede: Herr, Vorname: TestVorname, Nachname: TestNachname. Legacy data shows Name field as fallback."
+    },
+    "anfragen_edit_modal": {
+      "status": "PASS",
+      "details": "Has Anrede dropdown, Vorname field, Nachname field. Save button enabled when vorname/nachname/firma provided."
+    },
+    "anfragen_create_modal": {
+      "status": "PASS",
+      "details": "Has Anrede dropdown, Vorname field, Nachname field, Kundentyp dropdown."
+    },
+    "search_functionality": {
+      "status": "PASS",
+      "details": "Both Kunden and Anfragen search correctly filter by Vorname and Nachname."
+    },
+    "legacy_data_fallback": {
+      "status": "PASS",
+      "details": "Old data with only 'name' field displays correctly using fallback logic."
+    }
+  },
+  "bugs_fixed": [
+    {
+      "issue": "Anfragen list avatar used legacy name instead of vorname",
+      "file": "/app/frontend/src/pages/AnfragenPage.jsx",
+      "line": 614,
+      "fix": "Changed from anfrage.name?.charAt(0) to anfrage.vorname?.charAt(0) || anfrage.nachname?.charAt(0) || anfrage.name?.charAt(0)"
+    },
+    {
+      "issue": "Edit modal save button disabled based on legacy name field",
+      "file": "/app/frontend/src/pages/AnfragenPage.jsx",
+      "line": 1383,
+      "fix": "Changed from !editForm.name to (!editForm.vorname && !editForm.nachname && !editForm.firma)"
+    }
+  ]
+}

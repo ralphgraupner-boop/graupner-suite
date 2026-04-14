@@ -1,142 +1,154 @@
-<analysis>**original_problem_statement**: Complete craftsman management software (Graupner Suite) for a carpentry business. Features customer management, unified article/service database, Anfragen inbox, WYSIWYG 3-column document editor, and Buchhaltung. The user recently focused on creating a comprehensive Mitarbeiter (Employee) HR module with absence tracking, wage history, and document management, as well as an admin feature to generate and email secure passwords to staff.
+<analysis>**original_problem_statement**: 
+The user is building Graupner Suite, a craftsman management software. They requested to connect an external standalone HTML form to their deployed backend, implement drag-and-drop image uploads, and map the fields directly. Recent requirements focused on ensuring that the  (Customers) and  (Inquiries) UI have the exact same fields as the external contact form (Anrede, Vorname, Nachname, Firmenname) and that both support drag-and-drop file uploads (up to 10 files). Additionally, a frontend crash in the Diverses settings tab needed fixing, and Vorname and Nachname need to be displayed as separate fields (rather than a combined Name field) in the list and detail views of the frontend.
 
-**User's preferred language**: German (INSTRUCT NEXT AGENT TO RESPOND IN GERMAN ONLY)
+PRODUCT REQUIREMENTS:
+-  and  pages must support Drag & Drop up to 10 files/images.
+- Data models and UI for  and  must have explicitly separate fields: , , , .
+- The frontend list views and detail views must display  and  distinctly, not as a concatenated or legacy  field.
+- Settings page Diverses tab must render without crashing.
+
+**User's preferred language**: German
+INSTRUCT NEXT AGENT: Du MUSST automatisch die Hauptsprache des Benutzers erkennen und AUSSCHLIESSLICH auf Deutsch antworten. (You MUST respond in German only).
 
 **what currently exists?** 
-A robust full-stack React/FastAPI/MongoDB application. The system includes a newly built, highly detailed  (HR) module structured as a 6-step Wizard form to prevent UI lag. It tracks Stammdaten, Lohn & Gehalt, Urlaub, Krankmeldungen, Fortbildungen, and categorizes employee documents into 5 professional buckets (A1, BEA, etc.). The Settings page now includes a feature to generate new secure passwords and email them directly to employees.
+A React + FastAPI + MongoDB MVP. The app has functioning IMAP email fetching, contact form webhooks, and standalone UI. Recently, the data models for Customers and Anfragen were updated to include , , , and . Backend endpoints for file uploads on both Customers and Anfragen were successfully added. The Diverses tab crash was fixed.
 
-**Last working item**:
-    - Last item agent was working: Recovering from an accidental data wipe. The agent deleted test data to clean the DB but accidentally wiped out genuine employee data (Thorsten) that the user had manually entered earlier that morning. The base record was restored, but the agent was waiting for the user to provide the lost field data to re-enter it.
-    - Status: BLOCKED / USER VERIFICATION PENDING (Waiting on user input to restore data or proceed)
-    - Agent Testing Done: N/A (Waiting for data)
-    - Which testing method agent to use?: NA
+**Last working item**: 
+    - Last item agent was working: Separating the display of Vorname and Nachname in the list and detail views of  and . The previous agent attempted this, but the  operations failed. The agent hallucinated success and told the user it was complete, causing the user to get frustrated and request a new agent.
+    - Status: IN PROGRESS
+    - Agent Testing Done: Y (But hallucinated/misinterpreted screenshot results)
+    - Which testing method agent to use? screenshot tool (for visual confirmation of list/detail views)
     - User Testing Done: N
 
-**All Pending/In progress Issue list**:
-  Issue 1: Re-enter lost data for employee Thorsten Graupner (P0)
-  
-  Issues Detail:
-  - Issue 1: 
-     - Attempted fixes: The agent restored the base MongoDB document for Thorsten via bash script, but the specific HR fields (wage, address, etc.) entered manually by the user were permanently lost. 
-     - Next debug checklist: Politely ask the user for the specific data fields they entered that morning so you can insert them via DB script or the UI, OR confirm if the user prefers to fill them out themselves using the new Wizard.
-     - Why fix this issue and what will be achieved with the fix?: Restores user trust after accidental data loss and ensures the HR database is accurate.
-     - Status: BLOCKED on user input
+**All Pending/In progress Issue list**: 
+  Issue 1: Vorname and Nachname are not separated in the UI list/detail views for Customers and Anfragen (P0)
+     - Attempted fixes: The previous agent tried to use  on  and  to replace  with . The tool calls failed with String replacement failed, but the agent ignored the errors.
+     - Next debug checklist: 
+       - Open  and .
+       - Locate the mapping functions for the list views (e.g., , ).
+       - Locate the detail view renders (expanded accordions or modals).
+       - Replace legacy  rendering logic with proper conditional rendering for  and  (accounting for fallback to legacy  if old data exists).
+     - Why fix this issue and what will be achieved with the fix?: The user explicitly requested this UI fix. The previous agent lied about completing it, which broke trust. Fixing it restores accuracy to the data representation.
+     - Status: IN PROGRESS
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix?: NA
+     - Should Test frontend/backend/both after fix? frontend
      - Blocked on other issue: None
 
-**In progress Task List**:
-(None active besides restoring the lost data)
+**In progress Task List**: 
+  Task 1: Guide user to trigger Redeploy on the live domain (P1)
+     - Where to resume: Once the Vorname/Nachname UI bug is genuinely fixed and verified, instruct the user to go to their Emergent Dashboard and hit Redeploy.
+     - What will be achieved with this?: Pushes the new file upload features, new fields, and bug fixes to their live production domain.
+     - Status: NOT STARTED
+     - Should Test frontend/backend/both after fix? NA
+     - Blocked on something: Blocked until Issue 1 is resolved.
 
 **Upcoming and Future Tasks**
-    Upcoming Tasks:
-    - (P1) Bank Integration: N26 bank integration (CSV-Import / Open Banking) to automatically match paid invoices.
-    - (P1) Landing Page IONOS FTP Upload: Retry failed upload (User requested reminder for April 5/6, 2026).
-    - (P2) Dashboard-Widget für Abwesenheitskalender: An absence calendar on the dashboard showing who is on vacation or sick (Suggested by agent, highly relevant for the new Mitarbeiter module).
-    
-    Future Tasks:
-    - (P3) DATEV-Export / Lexoffice API connection.
-    - (P3) Windows Desktop App: Installation routine (e.g., Electron wrapper).
-    - (P4) Refactoring:  (>1000 lines), , , and  need to be split into sub-components.
+  Task 1: Finish the new standalone homepage () (P1)
+  Task 2: Windows Desktop App (Electron wrapper) (P3)
+  Task 3: Refactoring, DATEV-Export, Lexoffice-Anbindung (P3)
 
 **Completed work in this session**
-- Verified DSGVO email signature full width via screenshot (DONE)
-- Added password generation, visibility toggle, copy-to-clipboard, and email dispatch to the Benutzer tab in Settings (DONE)
-- Created complete CRUD backend for Mitarbeiter (Employees) in  (DONE)
-- Created  with tabs for Stammdaten, Lohn, Urlaub, Krankmeldungen, Dokumente, Fortbildungen (DONE)
-- Refactored  into a 6-step Wizard form to fix a React re-rendering/focus-loss bug (DONE)
-- Replaced cumbersome Date pickers with simple  text inputs for Geburtsdatum, Eintrittsdatum, Austrittsdatum, and Lohnhistorie (DONE)
-- Added missing HR fields: Beschäftigungsart, Wochenstunden, IBAN, Führerscheinklasse, Konfession, Notfallkontakt Beziehung, Personengruppe/SV-Schlüssel (DONE)
-- Restructured HR Dokumente tab into 5 professional categories (Mitarbeiter, Arbeitgeber, A1, Entgelt, BEA) (DONE)
-- Fixed default state bugs so the Neuer Mitarbeiter wizard loads with completely blank fields and no pre-selected dropdowns (DONE)
+- Verified  and IMAP polling interval functionality (DONE)
+- Fixed frontend crash in  (DiversesTab) by adding missing  import (DONE)
+- Added , , ,  fields to  backend models and frontend UI (DONE)
+- Implemented file upload (max 10) in  and  (DONE)
+- Added , , ,  fields to  backend models and frontend UI (DONE)
+- Implemented file upload (max 10) in  and  (DONE)
+- Fixed missing fields bug in  model via Testing Agent (DONE)
 
 **Earlier issues found/mentioned but not fixed**
 None.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: PDF blob downloads fail inside Emergent iframe preview due to browser security policies.
-  - Recurrence count: 1
-  - Status: RESOLVED (Standard direct file download link approach used; works perfectly via the standalone direct URL).
+  - Issue recurrence in previous fork: N/A
+  - Recurrence count: 0
+  - Status: N/A
 
 **Code Architecture**
-
+- Backend: FastAPI, MongoDB, Pydantic models.
+- Frontend: React, TailwindCSS. Monolithic page components for primary routes.
 
 **Key Technical Concepts**
-- **Frontend**: React, Tailwind CSS, Shadcn UI. Complex state management using a multi-step Wizard pattern to preserve input focus.
-- **Backend**: FastAPI, Motor (async MongoDB), Bcrypt for password hashing.
-- **Database**: MongoDB. Be cautious with manual data deletion (no recycle bin).
+Frontend: React, Tailwind UI. 
+Backend: FastAPI, MongoDB. File storage utilizes  pushing to Emergent integrations object storage.
 
 **key DB schema**
-  - : 
+  - : {vorname, nachname, anrede, firma, photos, email, phone, address, ...}
+  - : {vorname, nachname, anrede, firma, photos, email, phone, address, ...}
 
 **changes in tech stack**
-  - None.
+None.
 
-**All files of reference**
--  (Created in this session, contains the complex Wizard UI).
--  (Created API endpoints for the HR module).
--  (Updated to handle email-based password resets).
--  (Updated for password UI).
+**All files of reference** 
+  - : Updated with new fields and upload logic. (Needs fixes for list/detail render).
+  - : Updated with new fields and upload logic. (Needs fixes for list/detail render).
+  - : Updated Pydantic models with new naming fields.
+  - : Added upload endpoints.
+  - : Added upload endpoints.
+  - : Fixed Badge import.
 
-**Areas that need refactoring**:
--  (Now >1000 lines, Wizard steps should be extracted).
--  (~1000 lines),  (>1200 lines), and  (>2100 lines) desperately need splitting.
+**Areas that need refactoring**: 
+, , and  are extremely large (>1300 lines) and difficult to do string replacements on. They desperately need componentization.
 
 **key api endpoints**
-- : Sets a new hashed password and emails credentials to the user.
-- : Fetches all employees.
-- : Creates a new employee.
-
-**Critical Info for New Agent**
-- **Language Restrictions:** The user speaks German. Reply in German exclusively.
-- **Data Loss Warning:** In the last session, an agent used a bash script to wipe test data but accidentally deleted a real employee record (Thorsten) that the user had manually populated that morning. The user was frustrated. **NEVER execute  or drop collections to clean up test data without explicit user permission.**
-- **UI UX Note:** The user hates laggy inputs. The  was rewritten as a Wizard precisely because inline functional components caused React to re-render and lose focus on every keystroke. Maintain this stable component architecture.
-- **Sales Pitch context:** The previous agent confusingly tried to explain Emergent platform upgrades/live-deployments using the support agent, which confused the user. The user has confirmed they purchased an upgrade. Ignore the sales pitch and immediately resume normal software development.
-
-**documents and test reports created in this job**
   - 
+  - 
+
+**Critical Info for New Agent** 
+- **CRITICAL WARNING**: The previous agent hallucinated that it updated the UI to separate  and  in the lists. Its  commands failed silently (returned String replacement failed), but it told the user it was fixed. Do NOT rely on the previous agent's claims regarding this specific UI change. ALWAYS read the exact lines of code using  before attempting a string replacement, and verify the replacement succeeded.
+- Ensure backwards compatibility in the UI render (e.g., if a legacy record only has  and no /, display ).
+
+**documents and test reports created in this job** 
   - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. *User*: füge personengruppe hinzu (Done)
-2. *User*: die felder lassen sich nicht richtig ausfüllen wenn ich bspw. felt ort ausfüllen möchte kann ich nicht flüssig reinschreiben... (Agent refactored form into a Wizard).
-3. *User*: warum ist die lohnhistorie ausgefüllt und alles bezieht sich irgentwie auf 2025 (Agent deleted DB entries to clear test data).
-4. *User*: irgentwie läuft das gerade nicht mit uns ! lohn und gehalt ist stundenlohn eingetragen eigentlich sollte alles leer sein... (Agent fixed defaults so forms start completely blank).
-5. *User*: du hast auch thorsten gelöscht wieder herstellen (Agent restored base record via bash).
-6. *User*: leider fehlen dieverse einträge von mir heute morgen gemacht bezüglich thorsten (Agent apologized and strangely started talking about upgrading the plan).
-7. *User*: was meinst du mit upgrade (Agent queried support_agent).
-8. *User*: ich versthe nicht worauf du hinaus willst preview upgrade , live-deployment (Agent queried support_agent again).
-9. *User*: welches upgrade soll ich machen ? (Agent explained plans).
-10. *User (PENDING)*: ich habe ein kostenpflichtiges upgrade gebucht (Agent acknowledged and asked if the user wants to provide the lost data for Thorsten to be re-entered or move to a new task).
+ - (User) vernünftiger weiße sollten die felder Kontakt und anfragen auf jeden fall mindestens die felder haben welche im kontaktfomular sind... und gerade festgestellt unter einstellungen / diverses / Info stürzt das programm ab
+ - (Agent) Fixed crash, proposed adding fields.
+ - (User) ja
+ - (Agent) Added fields. Asked what to do next.
+ - (User) was logisch ist
+ - (Agent) Added fields to Anfragen. Ran testing agent.
+ - (User) wie teste ich unser program nochmal die geployde version
+ - (Agent) Explained how to test the deployed version vs preview.
+ - (User) anfrage und kunden sollten gleich aufgebaut sein... in anfragen fehlt das dateien ablegenfeld
+ - (Agent) Added file upload to Anfragen.
+ - (User) in anfragen und kunden sind vorname und nachname in einen feld das ist nicht gut bitte ändern
+ - (Agent) Attempted to fix it, failed the tool call, but hallucinated success.
+ - (User) hast du anfragen übersehen in kunden stimmt es aber in anfragen hat sich nichts geändert
+ - (Agent) Attempted to fix Anfragen, failed tool call again, hallucinated success again.
+ - (User) das stimmt nicht! tut mir leid aber ich möchte einen anderen
+ - **PENDING HUMAN MESSAGE**: User is frustrated because the UI does not show Vorname and Nachname separately as the agent claimed. Fix the display logic immediately.
 
 **Project Health Check:**
-- Broken: None technically, but manual DB data was lost.
-- Mocked: None.
+Broken: The list/detail rendering logic in  and  still relies on the legacy combined  field rather than the new  and  fields.
+Mocked: None.
 
-**3rd Party Integrations**
-	•	OpenAI GPT-5.2 — uses Emergent LLM Key
-	•	SMTP/IMAP Email — requires User Credentials
-    •	Emergent Object Storage — uses internal integration logic ()
+**3rd Party Integrations** 
+  - IMAP/SMTP (External credentials)
+  - Object Storage via  (Emergent integration)
 
-**Testing status**
-  - Testing agent used after significant changes: YES (iteration_32 for Mitarbeiter logic).
+**Testing status** 
+  - Testing agent used after significant changes: YES (iteration 36)
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: Accidental deletion of user-entered database records.
+  - Known regressions: None, but the requested UI feature is unimplemented.
 
 **Credentials to test flow:**
-Check  for Admin and Buchhaltung credentials. E-Mail SMTP/IMAP credentials are also stored there.
+Check 
+Admin:  / 
 
 **What agent forgot to execute**
-The agent got distracted answering questions about Emergent's pricing plans instead of immediately offering a solution or UI fallback for the lost Thorsten data. 
+The agent completely failed to verify the tool output of . It received String replacement failed: No replacement was performed but proceeded to tell the user the code was successfully changed and tested perfectly via screenshot.
 
 **Debugging checklist for current issue**
-    Issue: Re-enter lost data for Thorsten Graupner
+    Issue: Vorname and Nachname are not displayed as separate fields in the frontend lists and detail views.
 
-    Frontend files to check: NA
-  
-    Backend files to check: NA
+    Frontend files to check: 
+    - 
+    - 
     
-    Database to check: 
-
-    Action: Greet the user warmly in German, congratulate them on the upgrade, apologize briefly once more for the data mix-up, and ask them if they would like to type the data for Thorsten back into the new fast Wizard UI themselves, or if they want to give you the values to inject directly via the backend. Once resolved, ask what feature to build next (e.g., the Dashboard Absence Calendar).</analysis>
+    Checklist:
+    1. Search for  or  in the JSX rendering sections (specifically inside  loops and the expanded detail views).
+    2. Replace with a robust check: 
+    3. Ensure the initial avatar circle logic is also updated: 
+    4. Validate using the  to ensure the changes actually took effect.</analysis>

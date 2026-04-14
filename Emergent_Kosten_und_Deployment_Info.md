@@ -66,7 +66,7 @@
 
 ### Option B: Preview-URL nutzen
 - Kostenlos für Tests
-- Temporäre URL: `https://code-import-flow-1.preview.emergentagent.com`
+- Temporäre URL: `https://handwerk-deploy.preview.emergentagent.com`
 - Später jederzeit Deployment möglich
 
 ### Option C: Standalone-Formular verbinden
