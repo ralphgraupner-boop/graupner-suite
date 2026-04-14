@@ -73,30 +73,33 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       fN++; return String(fN);
     });
 
-    // Split vortext at page breaks
-    const vortextParts = splitAtPageBreaks(doc.vortext);
-    const schlusstextParts = splitAtPageBreaks(doc.schlusstext);
-
-    // bottom area height
-    const lastSchlusstextH = schlusstextParts.length > 0
-      ? Math.ceil(schlusstextParts[schlusstextParts.length - 1].split("\n").length) * SCHLUSS_LINE + 16
-      : 0;
+    // Calculate vortext line height
+    const VORTEXT_LINE_H = 14; // ~0.35cm per line
+    const allVortextLines = (doc.vortext || "").split("\n");
+    const vortextHeight = allVortextLines.length * VORTEXT_LINE_H + 16;
+    
+    // Calculate schlusstext lines for proper pagination
+    const allSchlusstextLines = (doc.schlusstext || "").split("\n");
+    const schlusstextHeight = allSchlusstextLines.length * SCHLUSS_LINE + 16;
+    
+    // bottom area (totals + footer + valid date)
     const bottomH =
-      TOTALS_H + FOOTER_H + lastSchlusstextH +
+      TOTALS_H + FOOTER_H +
       (doc.valid_until || doc.due_date ? VALID_H : 0);
 
     const result = [];
     let i = 0, pgNum = 0;
 
-    // Extra pages for vortext parts beyond the first
-    const extraVortextPages = vortextParts.length > 1 ? vortextParts.length - 1 : 0;
-    // Extra pages for schlusstext parts beyond the last
-    const extraSchlusstextPages = schlusstextParts.length > 1 ? schlusstextParts.length - 1 : 0;
-
     while (i <= pos.length) {
       const isFirst = pgNum === 0;
       let budget = USABLE;
-      if (isFirst) budget -= HEADER_H; else budget -= CONT_HEADER_H;
+      if (isFirst) {
+        budget -= HEADER_H;
+        // Vortext takes space on first page
+        budget -= Math.min(vortextHeight, budget * 0.6); // max 60% of page for vortext
+      } else {
+        budget -= CONT_HEADER_H;
+      }
       budget -= TBL_HEAD_H;
 
       const start = i;
@@ -109,7 +112,10 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
 
       const isLast = i >= pos.length;
       if (isLast) {
-        if (budget < bottomH && i > start) {
+        // Schlusstext + Summen brauchen Platz
+        const schlusstextOnPage = Math.min(schlusstextHeight, 200); // max schlusstext height
+        const neededBottom = bottomH + schlusstextOnPage;
+        if (budget < neededBottom && i > start) {
           result.push({ s: start, e: i, first: isFirst, last: false });
           result.push({ s: i, e: i, first: false, last: true });
         } else {
@@ -124,12 +130,20 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
 
     if (!result.length) result.push({ s: 0, e: 0, first: true, last: true });
     
-    // Build final pages with vortext/schlusstext parts
+    // Split vortext into lines that fit per page
+    const vortextParts = splitAtPageBreaks(doc.vortext);
+    const schlusstextParts = splitAtPageBreaks(doc.schlusstext);
+    
+    // Build final pages - vortext/schlusstext split across pages automatically
     const finalPages = [];
-    // Vortext pages (all but first part get their own page)
-    for (let vi = 0; vi < vortextParts.length - 1; vi++) {
-      finalPages.push({ ...result[0], first: vi === 0, last: false, vortextPart: vortextParts[vi], vortextOnly: true, positionsHidden: true });
+    
+    // If vortext has manual page breaks, create extra pages
+    if (vortextParts.length > 1) {
+      for (let vi = 0; vi < vortextParts.length - 1; vi++) {
+        finalPages.push({ s: 0, e: 0, first: vi === 0, last: false, vortextPart: vortextParts[vi], vortextOnly: true });
+      }
     }
+    
     // Regular position pages
     result.forEach((pg, idx) => {
       finalPages.push({
@@ -138,16 +152,16 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
         vortextPart: idx === 0 ? vortextParts[vortextParts.length - 1] || "" : undefined,
       });
     });
-    // Schlusstext extra pages (all but last part)
+    
+    // Schlusstext on last page(s)
     const lastPage = finalPages[finalPages.length - 1];
     if (schlusstextParts.length > 1) {
       lastPage.schlusstextPart = schlusstextParts[0];
       for (let si = 1; si < schlusstextParts.length; si++) {
-        const isVeryLast = si === schlusstextParts.length - 1;
-        finalPages.push({ s: 0, e: 0, first: false, last: isVeryLast, schlusstextPart: schlusstextParts[si], schlusstextOnly: !isVeryLast });
+        finalPages.push({ s: 0, e: 0, first: false, last: si === schlusstextParts.length - 1, schlusstextPart: schlusstextParts[si] });
       }
     } else {
-      lastPage.schlusstextPart = schlusstextParts[0] || "";
+      lastPage.schlusstextPart = schlusstextParts[0] || doc.schlusstext || "";
     }
     
     return { pages: finalPages, numbering: nums, totalPages: finalPages.length };
