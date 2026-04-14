@@ -1635,6 +1635,42 @@ const DiversesTab = () => {
   const [filterKat, setFilterKat] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [form, setForm] = useState({ titel: "", kategorie: "Allgemein", inhalt: "", typ: "notiz", wichtig: false });
+  const [kundenStatus, setKundenStatus] = useState([]);
+  const [editingKundenStatus, setEditingKundenStatus] = useState(false);
+  const [kundenStatusInput, setKundenStatusInput] = useState("");
+
+  const loadKundenStatus = async () => {
+    try {
+      const res = await api.get("/kunden-status");
+      setKundenStatus(res.data);
+    } catch (err) {
+      console.error("Fehler beim Laden der Kunden-Status:", err);
+    }
+  };
+
+  const saveKundenStatus = async () => {
+    try {
+      await api.put("/kunden-status", { status: kundenStatus });
+      toast.success("Kunden-Status gespeichert");
+      setEditingKundenStatus(false);
+    } catch (err) {
+      toast.error("Fehler beim Speichern");
+    }
+  };
+
+  const addKundenStatus = () => {
+    if (!kundenStatusInput.trim()) return;
+    if (kundenStatus.includes(kundenStatusInput.trim())) {
+      toast.error("Status existiert bereits");
+      return;
+    }
+    setKundenStatus([...kundenStatus, kundenStatusInput.trim()]);
+    setKundenStatusInput("");
+  };
+
+  const removeKundenStatus = (status) => {
+    setKundenStatus(kundenStatus.filter(s => s !== status));
+  };
 
   const loadItems = async () => {
     try {
@@ -1643,7 +1679,10 @@ const DiversesTab = () => {
     } catch { toast.error("Fehler beim Laden"); } finally { setLoading(false); }
   };
 
-  useEffect(() => { loadItems(); }, []);
+  useEffect(() => { 
+    loadItems();
+    loadKundenStatus();
+  }, []);
 
   const kategorien = [...new Set([...DEFAULT_KATEGORIEN, ...items.map(i => i.kategorie)])].sort();
   const filteredItems = filterKat ? items.filter(i => i.kategorie === filterKat) : items;
@@ -1690,6 +1729,81 @@ const DiversesTab = () => {
 
   return (
     <div className="space-y-4">
+      {/* Kunden-Status Verwaltung */}
+      <Card className="p-4 lg:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" /> Kunden-Status Verwaltung
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Definieren Sie eigene Status-Werte für Kunden (z.B. Aktiv, Inaktiv, Interessent)
+            </p>
+          </div>
+          {!editingKundenStatus && (
+            <Button variant="outline" size="sm" onClick={() => setEditingKundenStatus(true)}>
+              <Pencil className="w-4 h-4" /> Bearbeiten
+            </Button>
+          )}
+        </div>
+
+        {editingKundenStatus ? (
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Neuer Status (z.B. Stammkunde)"
+                value={kundenStatusInput}
+                onChange={(e) => setKundenStatusInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && addKundenStatus()}
+              />
+              <Button onClick={addKundenStatus} variant="outline">
+                <Plus className="w-4 h-4" /> Hinzufügen
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {kundenStatus.map((status) => (
+                <div
+                  key={status}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm"
+                >
+                  <span>{status}</span>
+                  <button
+                    onClick={() => removeKundenStatus(status)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingKundenStatus(false);
+                  loadKundenStatus();
+                }}
+              >
+                Abbrechen
+              </Button>
+              <Button onClick={saveKundenStatus}>
+                <Save className="w-4 h-4" /> Speichern
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {kundenStatus.map((status) => (
+              <Badge key={status} variant="secondary" className="px-3 py-1">
+                {status}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

@@ -17,11 +17,23 @@ const CustomersPage = ({ readOnly = false }) => {
   const [editCustomer, setEditCustomer] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [customerStatuses, setCustomerStatuses] = useState(CUSTOMER_STATUSES);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadCustomers();
+    loadCustomerStatuses();
   }, []);
+
+  const loadCustomerStatuses = async () => {
+    try {
+      const res = await api.get("/kunden-status");
+      setCustomerStatuses(res.data);
+    } catch (err) {
+      // Fallback to default
+      setCustomerStatuses(CUSTOMER_STATUSES);
+    }
+  };
 
   const loadCustomers = async () => {
     try {
@@ -130,7 +142,7 @@ const CustomersPage = ({ readOnly = false }) => {
         >
           Alle Status
         </button>
-        {CUSTOMER_STATUSES.map((st) => (
+        {customerStatuses.map((st) => (
           <button
             key={st}
             onClick={() => setStatusFilter(statusFilter === st ? "" : st)}
@@ -455,7 +467,7 @@ const CustomerModal = ({ isOpen, onClose, customer, onSave }) => {
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
           >
-            {CUSTOMER_STATUSES.map((s) => (
+            {customerStatuses.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>

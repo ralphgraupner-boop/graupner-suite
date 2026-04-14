@@ -91,3 +91,32 @@ async def update_anfragen_kategorien(body: dict):
         upsert=True,
     )
     return kategorien
+
+
+DEFAULT_CUSTOMER_STATUSES = ["Neu", "Aktiv", "Inaktiv", "Interessent", "Stammkunde", "Abgeschlossen"]
+
+
+@router.get("/kunden-status")
+async def get_kunden_status():
+    """Kunden-Status-Werte abrufen"""
+    doc = await db.settings.find_one({"id": "kunden_status"}, {"_id": 0})
+    if doc and "status" in doc:
+        return doc["status"]
+    return DEFAULT_CUSTOMER_STATUSES
+
+
+@router.put("/kunden-status")
+async def update_kunden_status(body: dict):
+    """Kunden-Status-Werte aktualisieren"""
+    status_values = body.get("status", [])
+    status_values = [s for s in status_values if s.strip()]
+    
+    if not status_values:
+        status_values = DEFAULT_CUSTOMER_STATUSES
+    
+    await db.settings.update_one(
+        {"id": "kunden_status"},
+        {"$set": {"id": "kunden_status", "status": status_values}},
+        upsert=True,
+    )
+    return status_values
