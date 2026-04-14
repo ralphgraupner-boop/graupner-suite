@@ -259,7 +259,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
     </div>
   );
 
-  const renderHeader = () => (
+  const renderHeader = (currentPg) => (
     <>
       {/* Briefkopf */}
       <div className="flex justify-between items-start mb-2">
@@ -409,7 +409,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
             >
               {/* ── Page content ── */}
               <div className="flex-1">
-                {pg.first && renderHeader()}
+                {pg.first && renderHeader(pg)}
 
                 {!pg.first && (
                   <div className="mb-3 pb-1.5 border-b border-slate-200 flex justify-between items-center">
