@@ -221,7 +221,7 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={item ? "Bearbeiten" : "Neu erstellen"} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={item ? "Bearbeiten" : "Neu erstellen"} size="xl">
       <form onSubmit={handleSubmit} className="space-y-4" data-testid="artikel-form-modal">
         {/* Typ */}
         <div>
