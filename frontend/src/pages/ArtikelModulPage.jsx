@@ -167,7 +167,7 @@ const ArtikelModulPage = () => {
 
 // ==================== FORM MODAL ====================
 const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
-  const [form, setForm] = useState({ name: "", description: "", typ: "Artikel", unit: "Stueck", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "" });
+  const [form, setForm] = useState({ name: "", description: "", typ: "Artikel", unit: "Stk.", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "" });
   const [loading, setLoading] = useState(false);
   const [kalkEk, setKalkEk] = useState(0);
   const [kalkAufschlag, setKalkAufschlag] = useState(0);
@@ -176,13 +176,13 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
     if (item) {
       setForm({
         name: item.name || "", description: item.description || "", typ: item.typ || "Artikel",
-        unit: item.unit || "Stueck", ek_preis: item.ek_preis || 0, price_net: item.price_net || 0,
+        unit: item.unit || "Stk.", ek_preis: item.ek_preis || 0, price_net: item.price_net || 0,
         subunternehmer: item.subunternehmer || "", artikel_nr: item.artikel_nr || "",
       });
       setKalkEk(item.ek_preis || 0);
       setKalkAufschlag(item.ek_preis > 0 ? Math.round((item.price_net / item.ek_preis - 1) * 100) : 0);
     } else {
-      setForm({ name: "", description: "", typ: "Artikel", unit: "Stueck", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "" });
+      setForm({ name: "", description: "", typ: "Artikel", unit: "Stk.", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "" });
       setKalkEk(0);
       setKalkAufschlag(0);
       // Auto-Nummer laden
@@ -249,7 +249,7 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
             <label className="block text-sm font-medium mb-2">Einheit</label>
             <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}
               className="w-full h-10 rounded-sm border border-input bg-background px-3 text-sm">
-              {["Stueck", "Stunde", "m", "m2", "m3", "kg", "Psch.", "km", "Liter", "Set"].map(u => <option key={u} value={u}>{u}</option>)}
+              {["Stk.", "Stunde", "m", "m2", "m3", "kg", "Psch.", "km", "Liter", "Set"].map(u => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
         </div>

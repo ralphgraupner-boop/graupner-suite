@@ -22,7 +22,7 @@ class ArtikelLeistungCreate(BaseModel):
     vk_preis_1: float = 0
     vk_preis_2: float = 0
     vk_preis_3: float = 0
-    unit: str = "Stueck"
+    unit: str = "Stk."
     subunternehmer: str = ""
 
 
@@ -58,7 +58,7 @@ ARTIKEL_MODUL = {
         {"name": "typ", "type": "select", "label": "Typ", "options": ["Artikel", "Leistung", "Fremdleistung"], "required": True},
         {"name": "ek_preis", "type": "number", "label": "EK-Preis (Netto)", "required": False},
         {"name": "price_net", "type": "number", "label": "VK-Preis (Netto)", "required": True},
-        {"name": "unit", "type": "select", "label": "Einheit", "options": ["Stueck", "Stunde", "m", "m2", "m3", "kg", "Psch.", "km"], "required": True},
+        {"name": "unit", "type": "select", "label": "Einheit", "options": ["Stk.", "Stunde", "m", "m2", "m3", "kg", "Psch.", "km"], "required": True},
         {"name": "subunternehmer", "type": "text", "label": "Subunternehmer", "required": False},
     ],
     "api_endpoints": [
