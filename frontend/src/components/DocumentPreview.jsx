@@ -306,7 +306,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       {doc.betreff && (
         <p className="font-bold text-sm mb-2" style={{ color: "#003399" }}>{doc.betreff}</p>
       )}
-      {doc.vortext && pg.vortextPart && <p className="text-xs mb-3 whitespace-pre-line leading-relaxed">{pg.vortextPart}</p>}
+      {doc.vortext && currentPg?.vortextPart && <p className="text-xs mb-3 whitespace-pre-line leading-relaxed">{currentPg.vortextPart}</p>}
     </>
   );
 
