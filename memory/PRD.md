@@ -32,6 +32,9 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") mit folgenden Kernfunktionen:
 - [x] Photos-Modell: List[Any] statt List[str] fuer Datei-Metadaten (14.04.2026)
 - [x] Anfragen Bearbeiten-Modal komplett umgebaut wie Kunden-Formular (14.04.2026)
   - Adresse in Einzelfelder (Strasse/Nr/PLZ/Ort), Kundentyp-Dropdown, Datei-Upload
+- [x] Bilder/Dokumente getrennte Bereiche in Kunden + Anfragen Detailansicht (14.04.2026)
+  - Bilder: Thumbnail-Grid mit Hover-Zoom (scale 110%)
+  - Dokumente: Dateiliste mit Download-Icon
 - [x] Einstellungen/Diverses Tab Crash behoben
 
 ## P1 - Next Tasks

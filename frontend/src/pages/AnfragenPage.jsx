@@ -720,7 +720,7 @@ const AnfragenPage = () => {
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       {anfrage.phone && <span><Phone className="w-3 h-3 inline mr-1" />{anfrage.phone}</span>}
                       {anfrage.email && <span className="truncate hidden sm:inline"><Mail className="w-3 h-3 inline mr-1" />{anfrage.email}</span>}
-                      {anfrage.photos && anfrage.photos.length > 0 && <span className="text-primary"><ImageIcon className="w-3 h-3 inline mr-1" />{anfrage.photos.length} Bild{anfrage.photos.length > 1 ? 'er' : ''}</span>}
+                      {anfrage.photos && anfrage.photos.length > 0 && <span className="text-primary"><File className="w-3 h-3 inline mr-1" />{anfrage.photos.length}</span>}
                       <span className="text-xs">
                         {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </span>
@@ -937,23 +937,71 @@ const AnfragenPage = () => {
                   </div>
                 )}
 
-                {/* Bilder / Fotos */}
-                {anfrage.photos && anfrage.photos.length > 0 && (
+                {/* Bilder-Galerie */}
+                {anfrage.photos && anfrage.photos.filter(f => {
+                  if (typeof f === 'string') return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f);
+                  return (f.content_type || '').startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.filename || '');
+                }).length > 0 && (
                   <div>
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                      <ImageIcon className="w-3.5 h-3.5" /> Bilder ({anfrage.photos.length})
+                      <ImageIcon className="w-3.5 h-3.5" /> Bilder ({anfrage.photos.filter(f => {
+                        if (typeof f === 'string') return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f);
+                        return (f.content_type || '').startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.filename || '');
+                      }).length})
                     </h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {anfrage.photos.map((photo, idx) => {
+                      {anfrage.photos.filter(f => {
+                        if (typeof f === 'string') return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f);
+                        return (f.content_type || '').startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.filename || '');
+                      }).map((photo, idx) => {
                         const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-                        const imgUrl = `${backendUrl}/api/storage/${photo}`;
+                        const imgUrl = typeof photo === 'string' ? `${backendUrl}/api/storage/${photo}` : photo.url;
                         return (
                           <div key={idx}
-                            className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary hover:shadow-md transition-all cursor-pointer group"
+                            className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary hover:shadow-lg transition-all cursor-pointer group"
                             onClick={(e) => { e.stopPropagation(); setLightboxImg(imgUrl); }}>
-                            <img src={imgUrl} alt={`Bild ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            <img src={imgUrl} alt={`Bild ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                               onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-muted/50 text-muted-foreground text-xs">Bild nicht verfügbar</div>'; }} />
                           </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dokumente (keine Bilder) */}
+                {anfrage.photos && anfrage.photos.filter(f => {
+                  if (typeof f === 'string') return !/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f);
+                  return !((f.content_type || '').startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.filename || ''));
+                }).length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <File className="w-3.5 h-3.5" /> Dokumente ({anfrage.photos.filter(f => {
+                        if (typeof f === 'string') return !/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f);
+                        return !((f.content_type || '').startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.filename || ''));
+                      }).length})
+                    </h4>
+                    <div className="space-y-2">
+                      {anfrage.photos.filter(f => {
+                        if (typeof f === 'string') return !/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f);
+                        return !((f.content_type || '').startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(f.filename || ''));
+                      }).map((file, idx) => {
+                        const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+                        const fileName = typeof file === 'string' ? file.split('/').pop() : file.filename || `Datei ${idx + 1}`;
+                        const fileUrl = typeof file === 'string' ? `${backendUrl}/api/storage/${file}` : file.url;
+                        return (
+                          <a
+                            key={idx}
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-2 rounded-sm border hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <File className="w-5 h-5 text-muted-foreground group-hover:text-primary shrink-0" />
+                            <span className="text-sm truncate flex-1">{fileName}</span>
+                            <Download className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                          </a>
                         );
                       })}
                     </div>

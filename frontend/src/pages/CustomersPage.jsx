@@ -324,45 +324,83 @@ const CustomersPage = ({ readOnly = false }) => {
                     </div>
                   </div>
 
-                  {/* Dateien/Anhänge */}
-                  {customer.photos && customer.photos.length > 0 && (
+                  {/* Bilder-Galerie */}
+                  {customer.photos && customer.photos.filter(f => {
+                    const name = typeof f === 'string' ? f : f.filename || '';
+                    const ct = typeof f === 'string' ? '' : f.content_type || '';
+                    return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name);
+                  }).length > 0 && (
                     <div className="mt-4 pt-4 border-t">
                       <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2">
-                        <File className="w-4 h-4" /> Dateien ({customer.photos.length})
+                        <ImageIcon className="w-4 h-4" /> Bilder ({customer.photos.filter(f => {
+                          const name = typeof f === 'string' ? f : f.filename || '';
+                          const ct = typeof f === 'string' ? '' : f.content_type || '';
+                          return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name);
+                        }).length})
                       </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {customer.photos.map((file, idx) => {
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        {customer.photos.filter(f => {
+                          const name = typeof f === 'string' ? f : f.filename || '';
+                          const ct = typeof f === 'string' ? '' : f.content_type || '';
+                          return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name);
+                        }).map((file, idx) => {
+                          const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+                          const rawUrl = typeof file === 'string' ? file : file.url;
+                          const fileUrl = rawUrl?.startsWith('http') ? rawUrl : `${backendUrl}/api/storage/${rawUrl}`;
+                          return (
+                            <div
+                              key={idx}
+                              className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary hover:shadow-lg transition-all cursor-pointer group"
+                              onClick={() => window.open(fileUrl, '_blank')}
+                            >
+                              <img
+                                src={fileUrl}
+                                alt={`Bild ${idx + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-muted/50 text-muted-foreground text-xs">Bild nicht verfügbar</div>'; }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dateien/Dokumente (keine Bilder) */}
+                  {customer.photos && customer.photos.filter(f => {
+                    const name = typeof f === 'string' ? f : f.filename || '';
+                    const ct = typeof f === 'string' ? '' : f.content_type || '';
+                    return !(ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name));
+                  }).length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2">
+                        <File className="w-4 h-4" /> Dokumente ({customer.photos.filter(f => {
+                          const name = typeof f === 'string' ? f : f.filename || '';
+                          const ct = typeof f === 'string' ? '' : f.content_type || '';
+                          return !(ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name));
+                        }).length})
+                      </h4>
+                      <div className="space-y-2">
+                        {customer.photos.filter(f => {
+                          const name = typeof f === 'string' ? f : f.filename || '';
+                          const ct = typeof f === 'string' ? '' : f.content_type || '';
+                          return !(ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name));
+                        }).map((file, idx) => {
+                          const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
                           const fileName = typeof file === 'string' ? file.split('/').pop() : file.filename || `Datei ${idx + 1}`;
-                          const fileUrl = typeof file === 'string' ? file : file.url;
-                          const isImage = typeof file === 'string' 
-                            ? /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file)
-                            : file.content_type?.startsWith('image/');
-                          
+                          const rawUrl = typeof file === 'string' ? file : file.url;
+                          const fileUrl = rawUrl?.startsWith('http') ? rawUrl : `${backendUrl}/api/storage/${rawUrl}`;
                           return (
                             <a
                               key={idx}
                               href={fileUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="group relative border rounded-sm overflow-hidden hover:shadow-lg transition-all hover:border-primary/50 bg-white"
+                              className="flex items-center gap-3 p-2 rounded-sm border hover:border-primary/50 hover:bg-primary/5 transition-all group"
                             >
-                              {isImage ? (
-                                <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                                  <img 
-                                    src={fileUrl} 
-                                    alt={fileName}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="aspect-square bg-muted/30 flex flex-col items-center justify-center p-3">
-                                  <File className="w-8 h-8 text-muted-foreground mb-2" />
-                                  <p className="text-xs text-center text-muted-foreground line-clamp-2">{fileName}</p>
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Download className="w-6 h-6 text-white" />
-                              </div>
+                              <File className="w-5 h-5 text-muted-foreground group-hover:text-primary shrink-0" />
+                              <span className="text-sm truncate flex-1">{fileName}</span>
+                              <Download className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                             </a>
                           );
                         })}
