@@ -23,6 +23,12 @@ async def get_customer(customer_id: str):
 
 @router.post("/customers", response_model=Customer)
 async def create_customer(customer: CustomerCreate):
+    # Generate combined name from vorname + nachname if not provided
+    if not customer.name and (customer.vorname or customer.nachname):
+        customer.name = f"{customer.vorname} {customer.nachname}".strip()
+    elif not customer.name:
+        customer.name = "Unbekannt"
+    
     customer_obj = Customer(**customer.model_dump())
     await db.customers.insert_one(customer_obj.model_dump())
     return customer_obj
@@ -33,7 +39,13 @@ async def update_customer(customer_id: str, customer: CustomerCreate):
     existing = await db.customers.find_one({"id": customer_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
-    updated = {**existing, **customer.model_dump()}
+    
+    # Generate combined name from vorname + nachname if not provided
+    update_data = customer.model_dump()
+    if not update_data.get("name") and (update_data.get("vorname") or update_data.get("nachname")):
+        update_data["name"] = f"{update_data.get('vorname', '')} {update_data.get('nachname', '')}".strip()
+    
+    updated = {**existing, **update_data}
     await db.customers.update_one({"id": customer_id}, {"$set": updated})
     return updated
 

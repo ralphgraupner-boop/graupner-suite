@@ -392,7 +392,11 @@ const CustomersPage = ({ readOnly = false }) => {
 
 const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_STATUSES, onSave }) => {
   const [form, setForm] = useState({
-    name: "",
+    anrede: "",
+    vorname: "",
+    nachname: "",
+    name: "",  // Legacy
+    firma: "",
     email: "",
     phone: "",
     strasse: "",
@@ -430,7 +434,11 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
       }
       
       setForm({
+        anrede: customer.anrede || "",
+        vorname: customer.vorname || "",
+        nachname: customer.nachname || "",
         name: customer.name || "",
+        firma: customer.firma || "",
         email: customer.email || "",
         phone: customer.phone || "",
         strasse: customer.strasse || strasse,
@@ -446,7 +454,8 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
       setUploadedFiles(customer.photos || []);
     } else {
       setForm({ 
-        name: "", email: "", phone: "", 
+        anrede: "", vorname: "", nachname: "", name: "", firma: "",
+        email: "", phone: "", 
         strasse: "", hausnummer: "", plz: "", ort: "",
         address: "", notes: "", customer_type: "Privat", categories: [], status: "Neu" 
       });
@@ -586,15 +595,21 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={customer ? "Kunde bearbeiten" : "Neuer Kunde"}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Anrede & Kundentyp */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Name *</label>
-            <Input
-              data-testid="input-customer-name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
+            <label className="block text-sm font-medium mb-2">Anrede</label>
+            <select
+              data-testid="select-customer-anrede"
+              value={form.anrede}
+              onChange={(e) => setForm({ ...form, anrede: e.target.value })}
+              className="w-full h-10 rounded-sm border border-input bg-background px-3"
+            >
+              <option value="">Bitte wählen</option>
+              <option value="Herr">Herr</option>
+              <option value="Frau">Frau</option>
+              <option value="Divers">Divers</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Kundentyp</label>
@@ -605,12 +620,48 @@ const CustomerModal = ({ isOpen, onClose, customer, customerStatuses = CUSTOMER_
               className="w-full h-10 rounded-sm border border-input bg-background px-3"
             >
               <option value="Privat">Privat</option>
+              <option value="Firma">Firma</option>
               <option value="Vermieter">Vermieter</option>
               <option value="Mieter">Mieter</option>
               <option value="Gewerblich">Gewerblich</option>
               <option value="Hausverwaltung">Hausverwaltung</option>
               <option value="Wohnungsbaugesellschaft">Wohnungsbaugesellschaft</option>
             </select>
+          </div>
+        </div>
+
+        {/* Firmenname (nur wenn Firma gewählt) */}
+        {(form.customer_type === "Firma" || form.customer_type === "Gewerblich") && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Firmenname *</label>
+            <Input
+              data-testid="input-customer-firma"
+              value={form.firma}
+              onChange={(e) => setForm({ ...form, firma: e.target.value })}
+              placeholder="Firma GmbH"
+            />
+          </div>
+        )}
+
+        {/* Vor- und Nachname */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Vorname *</label>
+            <Input
+              data-testid="input-customer-vorname"
+              value={form.vorname}
+              onChange={(e) => setForm({ ...form, vorname: e.target.value })}
+              required={!form.firma}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Nachname *</label>
+            <Input
+              data-testid="input-customer-nachname"
+              value={form.nachname}
+              onChange={(e) => setForm({ ...form, nachname: e.target.value })}
+              required={!form.firma}
+            />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">

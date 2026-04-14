@@ -26,7 +26,9 @@ class TokenResponse(BaseModel):
 
 class Customer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
+    name: str  # Legacy - kombiniert aus Vorname + Nachname
+    vorname: str = ""
+    nachname: str = ""
     email: str = ""
     phone: str = ""
     address: str = ""  # Legacy - kombiniert aus Einzelfeldern
@@ -44,7 +46,9 @@ class Customer(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CustomerCreate(BaseModel):
-    name: str
+    name: str = ""  # Legacy
+    vorname: str = ""
+    nachname: str = ""
     email: str = ""
     phone: str = ""
     address: str = ""
@@ -63,7 +67,9 @@ class CustomerCreate(BaseModel):
 
 class Anfrage(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
+    name: str  # Legacy - kombiniert aus Vorname + Nachname
+    vorname: str = ""
+    nachname: str = ""
     email: str = ""
     phone: str = ""
     address: str = ""
