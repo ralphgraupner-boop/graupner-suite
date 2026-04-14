@@ -26,6 +26,7 @@ import MitarbeiterPage from "@/pages/MitarbeiterPage";
 import { KontaktModulPage } from "@/pages/KontaktModulPage";
 import { ArtikelModulPage } from "@/pages/ArtikelModulPage";
 import { DokumenteModulPage } from "@/pages/DokumenteModulPage";
+import { TextvorlagenModulPage } from "@/pages/TextvorlagenModulPage";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -91,6 +92,7 @@ function App() {
                   <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />
                   <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
                   <Route path="/module/dokumente" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
+                  <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />
                 </>
               )}
 

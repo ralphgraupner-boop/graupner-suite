@@ -92,9 +92,10 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, settingsRes, kontaktRes] = await Promise.all([
+      const [customersRes, articlesRes, settingsRes, kontaktRes, modulArtikelRes] = await Promise.all([
         api.get("/customers"), api.get("/articles"), api.get("/settings"),
-        api.get("/modules/kontakt/data").catch(() => ({ data: [] }))
+        api.get("/modules/kontakt/data").catch(() => ({ data: [] })),
+        api.get("/modules/artikel/data").catch(() => ({ data: [] }))
       ]);
       // Merge Kunden + Kontakt-Modul Daten (ohne Duplikate per E-Mail)
       const kundenData = customersRes.data || [];
@@ -110,7 +111,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         ...kontaktData.filter(k => !k.email || !existingEmails.has(k.email.toLowerCase()))
       ];
       setCustomers(mergedCustomers);
-      const allArticles = articlesRes.data;
+      // Merge Artikel + Modul-Artikel (ohne Duplikate per Name)
+      const existingArticles = articlesRes.data || [];
+      const modulArtikel = (modulArtikelRes.data || []).map(a => ({ ...a, _source: "artikel-modul" }));
+      const existingNames = new Set(existingArticles.map(a => a.name?.toLowerCase()));
+      const allArticles = [
+        ...existingArticles,
+        ...modulArtikel.filter(a => !existingNames.has(a.name?.toLowerCase()))
+      ];
       setArticles(allArticles.filter(a => a.typ === "Artikel"));
       setServices(allArticles.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setSettings(settingsRes.data);
