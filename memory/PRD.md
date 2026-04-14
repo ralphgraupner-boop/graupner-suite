@@ -35,6 +35,11 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") mit folgenden Kernfunktionen:
 - [x] Bilder/Dokumente getrennte Bereiche in Kunden + Anfragen Detailansicht (14.04.2026)
   - Bilder: Thumbnail-Grid mit Hover-Zoom (scale 110%)
   - Dokumente: Dateiliste mit Download-Icon
+- [x] E-Mail-Parser: Kontaktformular-Weiterleitungen erkennen und Kundendaten extrahieren (14.04.2026)
+  - Erkennt "Neue Kundenanfrage eingegangen" Pattern
+  - Extrahiert Name/Anrede/Vorname/Nachname/Telefon/E-Mail/Adresse/Nachricht
+  - Vermeidet Duplikate (prueft ob Anfrage bereits ueber Kontaktformular existiert)
+  - Fix: "Herr Herr" Duplikat-Anrede wird bereinigt
 - [x] Einstellungen/Diverses Tab Crash behoben
 
 ## P1 - Next Tasks

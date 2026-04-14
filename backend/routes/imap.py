@@ -332,19 +332,108 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
         if classification == "anfrage":
             try:
                 from models import Anfrage
-                anfrage = Anfrage(
-                    name=sender_name or "Unbekannt",
-                    email=sender_email,
-                    phone="",
-                    address="",
-                    notes=f"Betreff: {subject}\n\nNachricht:\n{body[:1000]}",
-                    categories=["E-Mail Anfrage"],
-                    customer_type="Privat",
-                    source="email_auto_import",
-                    nachricht=body[:1000]
-                )
+                import re as _re
+                
+                # Prüfe ob es eine Kontaktformular-Weiterleitung ist
+                # (enthält strukturierte Felder wie "Name:", "Telefon:", "E-Mail:")
+                is_forwarded_form = False
+                extracted = {}
+                
+                form_indicators = ["Neue Kundenanfrage eingegangen", "Kontaktdaten", "Kontaktformular"]
+                if any(ind.lower() in body.lower() for ind in form_indicators):
+                    # Versuche strukturierte Daten zu extrahieren
+                    # Feldnamen-Pattern (ohne 'Nachricht' da das am Ende kommt)
+                    _fields = r'(?:Name|Telefon|E-Mail|Adresse|Firma|Anliegen|Themen|Kategorien)'
+                    
+                    name_match = _re.search(r'Name:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
+                    phone_match = _re.search(r'Telefon:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
+                    email_match = _re.search(r'E-Mail:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
+                    addr_match = _re.search(r'Adresse:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
+                    msg_match = _re.search(r'Nachricht[:\s]+(.+)', body, _re.DOTALL)
+                    firma_match = _re.search(r'Firma:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
+                    
+                    if name_match and (phone_match or email_match):
+                        is_forwarded_form = True
+                        raw_name = name_match.group(1).strip()
+                        # Entferne "Herr Herr" Duplikate
+                        raw_name = _re.sub(r'^(Herr|Frau|Divers)\s+\1\s+', r'\1 ', raw_name)
+                        
+                        # Anrede extrahieren
+                        anrede = ""
+                        for prefix in ["Herr", "Frau", "Divers"]:
+                            if raw_name.startswith(prefix + " "):
+                                anrede = prefix
+                                raw_name = raw_name[len(prefix):].strip()
+                                break
+                        
+                        # Vorname/Nachname splitten
+                        name_parts = raw_name.split()
+                        vorname = name_parts[0] if len(name_parts) >= 1 else ""
+                        nachname = " ".join(name_parts[1:]) if len(name_parts) >= 2 else ""
+                        
+                        extracted = {
+                            "name": f"{vorname} {nachname}".strip() or raw_name,
+                            "vorname": vorname,
+                            "nachname": nachname,
+                            "anrede": anrede,
+                            "phone": phone_match.group(1).strip() if phone_match else "",
+                            "email": email_match.group(1).strip() if email_match else "",
+                            "address": addr_match.group(1).strip() if addr_match else "",
+                            "nachricht": msg_match.group(1).strip() if msg_match else "",
+                            "firma": firma_match.group(1).strip() if firma_match else "",
+                        }
+                        
+                        # Prüfe ob diese Anfrage bereits über das Kontaktformular existiert
+                        existing = None
+                        if extracted["email"]:
+                            existing = await db.anfragen.find_one({
+                                "email": {"$regex": _re.escape(extracted["email"]), "$options": "i"},
+                                "source": {"$in": ["kontaktformular", "webhook", "beacon"]},
+                            }, {"_id": 0, "id": 1})
+                        
+                        if existing:
+                            logger.info(f"⏭️ Kontaktformular-Weiterleitung übersprungen (Anfrage existiert bereits): {extracted['name']} ({extracted['email']})")
+                            # Inbox-Eintrag mit bestehender Anfrage verknüpfen
+                            await db.email_inbox.update_one(
+                                {"id": inbox_entry["id"]},
+                                {"$set": {"assigned_type": "anfrage", "assigned_to": existing["id"], "classification": "bekannt"}}
+                            )
+                            continue
+                
+                if is_forwarded_form and extracted:
+                    # Erstelle Anfrage mit den extrahierten Kundendaten
+                    anfrage = Anfrage(
+                        name=extracted["name"],
+                        vorname=extracted["vorname"],
+                        nachname=extracted["nachname"],
+                        anrede=extracted["anrede"],
+                        email=extracted["email"],
+                        phone=extracted["phone"],
+                        address=extracted["address"],
+                        firma=extracted["firma"],
+                        notes=f"Quelle: Kontaktformular-Weiterleitung\nBetreff: {subject}",
+                        categories=["E-Mail Anfrage"],
+                        customer_type="Privat",
+                        source="email_auto_import",
+                        nachricht=extracted["nachricht"] or body[:1000]
+                    )
+                    logger.info(f"✅ Auto-Import (Kontaktformular erkannt): {extracted['name']} ({extracted['email']})")
+                else:
+                    # Normale E-Mail-Anfrage (kein Kontaktformular)
+                    anfrage = Anfrage(
+                        name=sender_name or "Unbekannt",
+                        email=sender_email,
+                        phone="",
+                        address="",
+                        notes=f"Betreff: {subject}\n\nNachricht:\n{body[:1000]}",
+                        categories=["E-Mail Anfrage"],
+                        customer_type="Privat",
+                        source="email_auto_import",
+                        nachricht=body[:1000]
+                    )
+                    logger.info(f"✅ Auto-Import: E-Mail als Anfrage gespeichert - {sender_name} ({sender_email})")
+                
                 await db.anfragen.insert_one(anfrage.model_dump())
-                logger.info(f"✅ Auto-Import: E-Mail als Anfrage gespeichert - {sender_name} ({sender_email})")
                 
                 # Update inbox entry
                 await db.email_inbox.update_one(
