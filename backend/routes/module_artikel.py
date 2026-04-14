@@ -80,6 +80,83 @@ async def ensure_modul_registered():
         logger.info("Artikel & Leistungen Modul registriert")
 
 
+# ==================== KONFIGURATION ====================
+
+DEFAULT_CONFIG = {
+    "artikel_prefix": "ArtNr",
+    "artikel_start": 26000,
+    "leistung_prefix": "Leist",
+    "leistung_start": 26000,
+    "fremdleistung_prefix": "Fremd",
+    "fremdleistung_start": 26000,
+}
+
+
+async def get_config():
+    config = await db.module_artikel_config.find_one({"id": "config"}, {"_id": 0})
+    if not config:
+        config = {"id": "config", **DEFAULT_CONFIG}
+        await db.module_artikel_config.insert_one(config)
+        config.pop("_id", None)
+    return config
+
+
+async def generate_nummer(typ: str):
+    """Generiert die naechste Nummer basierend auf Konfiguration"""
+    config = await get_config()
+
+    if typ == "Artikel":
+        prefix = config.get("artikel_prefix", "ArtNr")
+        start = config.get("artikel_start", 26000)
+    elif typ == "Leistung":
+        prefix = config.get("leistung_prefix", "Leist")
+        start = config.get("leistung_start", 26000)
+    else:  # Fremdleistung
+        prefix = config.get("fremdleistung_prefix", "Fremd")
+        start = config.get("fremdleistung_start", 26000)
+
+    # Finde die hoechste bestehende Nummer fuer diesen Typ
+    items = await db.module_artikel.find(
+        {"typ": typ, "artikel_nr": {"$regex": f"^{prefix}"}},
+        {"_id": 0, "artikel_nr": 1}
+    ).to_list(10000)
+
+    max_num = start - 1
+    for item in items:
+        try:
+            num = int(item["artikel_nr"].replace(prefix, ""))
+            if num > max_num:
+                max_num = num
+        except (ValueError, AttributeError):
+            pass
+
+    return f"{prefix}{max_num + 1}"
+
+
+@router.get("/modules/artikel/config")
+async def get_artikel_config(user=Depends(get_current_user)):
+    return await get_config()
+
+
+@router.put("/modules/artikel/config")
+async def update_artikel_config(data: dict, user=Depends(get_current_user)):
+    allowed = ["artikel_prefix", "artikel_start", "leistung_prefix", "leistung_start", "fremdleistung_prefix", "fremdleistung_start"]
+    update = {k: v for k, v in data.items() if k in allowed}
+    if not update:
+        raise HTTPException(400, "Keine gueltige Konfiguration")
+    await db.module_artikel_config.update_one({"id": "config"}, {"$set": update}, upsert=True)
+    return await get_config()
+
+
+@router.get("/modules/artikel/next-number/{typ}")
+async def get_next_number(typ: str, user=Depends(get_current_user)):
+    """Gibt die naechste verfuegbare Nummer zurueck"""
+    if typ not in ["Artikel", "Leistung", "Fremdleistung"]:
+        raise HTTPException(400, "Ungueltiger Typ")
+    nummer = await generate_nummer(typ)
+    return {"nummer": nummer}
+
+
 @router.get("/modules/artikel/data")
 async def get_artikel(user=Depends(get_current_user)):
     await ensure_modul_registered()
@@ -98,15 +175,20 @@ async def get_artikel_item(item_id: str, user=Depends(get_current_user)):
 @router.post("/modules/artikel/data")
 async def create_artikel(data: ArtikelLeistungCreate, user=Depends(get_current_user)):
     await ensure_modul_registered()
+    # Auto-Nummer wenn leer
+    artikel_nr = data.artikel_nr
+    if not artikel_nr:
+        artikel_nr = await generate_nummer(data.typ)
     item = {
         "id": str(uuid4()),
         **data.model_dump(),
+        "artikel_nr": artikel_nr,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.module_artikel.insert_one(item)
     item.pop("_id", None)
-    logger.info(f"Artikel erstellt: {data.name} ({data.typ})")
+    logger.info(f"Artikel erstellt: {artikel_nr} - {data.name} ({data.typ})")
     return item
 
 

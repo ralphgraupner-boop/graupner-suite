@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Download, Package, Wrench, Users } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Package, Wrench, Users, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -18,6 +18,7 @@ const ArtikelModulPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => { loadItems(); }, []);
 
@@ -72,6 +73,9 @@ const ArtikelModulPage = () => {
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{items.length} Eintraege gesamt</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={() => setShowConfig(!showConfig)} data-testid="btn-config-artikel">
+            <Settings className="w-4 h-4" /> Konfiguration
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExport} data-testid="btn-export-artikel">
             <Download className="w-4 h-4" /> Export
           </Button>
@@ -80,6 +84,9 @@ const ArtikelModulPage = () => {
           </Button>
         </div>
       </div>
+
+      {/* Konfiguration */}
+      {showConfig && <ArtikelConfig onClose={() => setShowConfig(false)} />}
 
       {/* Typ Filter */}
       <div className="flex flex-wrap gap-2 mb-4" data-testid="artikel-typ-filter">
@@ -178,8 +185,18 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
       setForm({ name: "", description: "", typ: "Artikel", unit: "Stueck", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "" });
       setKalkEk(0);
       setKalkAufschlag(0);
+      // Auto-Nummer laden
+      api.get("/modules/artikel/next-number/Artikel").then(res => setForm(f => ({ ...f, artikel_nr: res.data.nummer }))).catch(() => {});
     }
   }, [item]);
+
+  const handleTypChange = (newTyp) => {
+    setForm(f => ({ ...f, typ: newTyp, unit: newTyp !== "Artikel" ? "Stunde" : f.unit }));
+    // Neue Nummer fuer diesen Typ laden
+    if (!item) {
+      api.get(`/modules/artikel/next-number/${newTyp}`).then(res => setForm(f => ({ ...f, artikel_nr: res.data.nummer }))).catch(() => {});
+    }
+  };
 
   const recalc = (ek, aufschlag) => {
     const vk = ek * (1 + aufschlag / 100);
@@ -214,7 +231,7 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
               const Icon = cfg.icon;
               return (
                 <button key={key} type="button"
-                  onClick={() => setForm({ ...form, typ: key, unit: key !== "Artikel" ? "Stunde" : form.unit })}
+                  onClick={() => handleTypChange(key)}
                   className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-all flex items-center gap-1 ${form.typ === key ? cfg.color + " shadow-sm ring-2 ring-offset-1 ring-primary/30" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
                   <Icon className="w-3.5 h-3.5" /> {cfg.label}
                 </button>
@@ -285,6 +302,84 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
         </div>
       </form>
     </Modal>
+  );
+};
+
+
+// ==================== KONFIGURATION ====================
+const ArtikelConfig = ({ onClose }) => {
+  const [config, setConfig] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get("/modules/artikel/config").then(res => setConfig(res.data)).catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await api.put("/modules/artikel/config", config);
+      setConfig(res.data);
+      toast.success("Konfiguration gespeichert");
+    } catch { toast.error("Fehler"); }
+    finally { setSaving(false); }
+  };
+
+  if (!config) return null;
+
+  return (
+    <Card className="p-4 mb-4 border-primary/20 bg-primary/5" data-testid="artikel-config">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold flex items-center gap-2"><Settings className="w-4 h-4" /> Nummernvergabe konfigurieren</h3>
+        <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">Schliessen</button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Artikel */}
+        <div className="space-y-2 p-3 border rounded-sm bg-background">
+          <h4 className="text-sm font-semibold text-blue-700 flex items-center gap-1"><Package className="w-3.5 h-3.5" /> Artikel</h4>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Prefix</label>
+            <Input value={config.artikel_prefix || ""} onChange={(e) => setConfig({ ...config, artikel_prefix: e.target.value })} placeholder="ArtNr" data-testid="config-artikel-prefix" />
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Startnummer</label>
+            <Input type="number" value={config.artikel_start || 0} onChange={(e) => setConfig({ ...config, artikel_start: parseInt(e.target.value) || 0 })} data-testid="config-artikel-start" />
+          </div>
+          <p className="text-xs text-muted-foreground">Beispiel: <span className="font-mono font-bold">{config.artikel_prefix}{config.artikel_start}</span></p>
+        </div>
+        {/* Leistung */}
+        <div className="space-y-2 p-3 border rounded-sm bg-background">
+          <h4 className="text-sm font-semibold text-green-700 flex items-center gap-1"><Wrench className="w-3.5 h-3.5" /> Leistung</h4>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Prefix</label>
+            <Input value={config.leistung_prefix || ""} onChange={(e) => setConfig({ ...config, leistung_prefix: e.target.value })} placeholder="Leist" data-testid="config-leistung-prefix" />
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Startnummer</label>
+            <Input type="number" value={config.leistung_start || 0} onChange={(e) => setConfig({ ...config, leistung_start: parseInt(e.target.value) || 0 })} data-testid="config-leistung-start" />
+          </div>
+          <p className="text-xs text-muted-foreground">Beispiel: <span className="font-mono font-bold">{config.leistung_prefix}{config.leistung_start}</span></p>
+        </div>
+        {/* Fremdleistung */}
+        <div className="space-y-2 p-3 border rounded-sm bg-background">
+          <h4 className="text-sm font-semibold text-orange-700 flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Fremdleistung</h4>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Prefix</label>
+            <Input value={config.fremdleistung_prefix || ""} onChange={(e) => setConfig({ ...config, fremdleistung_prefix: e.target.value })} placeholder="Fremd" data-testid="config-fremd-prefix" />
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Startnummer</label>
+            <Input type="number" value={config.fremdleistung_start || 0} onChange={(e) => setConfig({ ...config, fremdleistung_start: parseInt(e.target.value) || 0 })} data-testid="config-fremd-start" />
+          </div>
+          <p className="text-xs text-muted-foreground">Beispiel: <span className="font-mono font-bold">{config.fremdleistung_prefix}{config.fremdleistung_start}</span></p>
+        </div>
+      </div>
+      <div className="flex justify-end mt-4">
+        <Button onClick={handleSave} disabled={saving} size="sm" data-testid="btn-save-config">
+          {saving ? "Speichern..." : "Speichern"}
+        </Button>
+      </div>
+    </Card>
   );
 };
 
