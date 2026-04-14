@@ -77,9 +77,19 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
 
   const loadTemplates = async () => {
     try {
-      const res = await api.get("/text-templates", { params: { doc_type: docType, text_type: textType } });
-      setTemplates(res.data);
-    } catch (err) {
+      const [oldRes, modulRes] = await Promise.all([
+        api.get("/text-templates", { params: { doc_type: docType, text_type: textType } }).catch(() => ({ data: [] })),
+        api.get("/modules/textvorlagen/data", { params: { doc_type: docType, text_type: textType } }).catch(() => ({ data: [] }))
+      ]);
+      const oldTemplates = oldRes.data || [];
+      const modulTemplates = (modulRes.data || []).map(t => ({ ...t, _source: "modul" }));
+      const existingTitles = new Set(oldTemplates.map(t => t.title?.toLowerCase()));
+      const merged = [
+        ...oldTemplates,
+        ...modulTemplates.filter(t => !existingTitles.has(t.title?.toLowerCase()))
+      ];
+      setTemplates(merged);
+    } catch {
       // silent
     }
   };
@@ -110,7 +120,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
     try {
       // Use first ~40 chars as title
       const title = value.trim().substring(0, 40) + (value.trim().length > 40 ? "..." : "");
-      await api.post("/text-templates", {
+      await api.post("/modules/textvorlagen/data", {
         doc_type: docType,
         text_type: textType,
         title,
