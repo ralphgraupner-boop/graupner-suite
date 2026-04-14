@@ -227,6 +227,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
           {PLACEHOLDERS.slice(0, 4).map((p) => (
             <span key={p.alias} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title={p.desc}>{p.alias}</span>
           ))}
+          <span className="text-[10px] text-muted-foreground bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded" title="Seitenumbruch einfuegen">--- = Seitenumbruch</span>
         </div>
       )}
     </div>

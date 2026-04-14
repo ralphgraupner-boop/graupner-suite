@@ -23,6 +23,14 @@ const FOOTER_H = 110;
 const VALID_H = 28;
 const CONT_HEADER_H = 32;
 
+const PAGE_BREAK_MARKER = "---";
+
+/* Split text at page break markers */
+const splitAtPageBreaks = (text) => {
+  if (!text) return [""];
+  return text.split(PAGE_BREAK_MARKER).map(t => t.trim()).filter(t => t);
+};
+
 const estPosH = (p) => {
   if (p.type === "titel") return TITEL_H;
   const lines = (p.description || "").split("\n");
@@ -65,14 +73,25 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       fN++; return String(fN);
     });
 
+    // Split vortext at page breaks
+    const vortextParts = splitAtPageBreaks(doc.vortext);
+    const schlusstextParts = splitAtPageBreaks(doc.schlusstext);
+
     // bottom area height
+    const lastSchlusstextH = schlusstextParts.length > 0
+      ? Math.ceil(schlusstextParts[schlusstextParts.length - 1].split("\n").length) * SCHLUSS_LINE + 16
+      : 0;
     const bottomH =
-      TOTALS_H + FOOTER_H +
-      (doc.schlusstext ? Math.ceil(doc.schlusstext.split("\n").length) * SCHLUSS_LINE + 16 : 0) +
+      TOTALS_H + FOOTER_H + lastSchlusstextH +
       (doc.valid_until || doc.due_date ? VALID_H : 0);
 
     const result = [];
     let i = 0, pgNum = 0;
+
+    // Extra pages for vortext parts beyond the first
+    const extraVortextPages = vortextParts.length > 1 ? vortextParts.length - 1 : 0;
+    // Extra pages for schlusstext parts beyond the last
+    const extraSchlusstextPages = schlusstextParts.length > 1 ? schlusstextParts.length - 1 : 0;
 
     while (i <= pos.length) {
       const isFirst = pgNum === 0;
@@ -104,7 +123,34 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
     }
 
     if (!result.length) result.push({ s: 0, e: 0, first: true, last: true });
-    return { pages: result, numbering: nums, totalPages: result.length };
+    
+    // Build final pages with vortext/schlusstext parts
+    const finalPages = [];
+    // Vortext pages (all but first part get their own page)
+    for (let vi = 0; vi < vortextParts.length - 1; vi++) {
+      finalPages.push({ ...result[0], first: vi === 0, last: false, vortextPart: vortextParts[vi], vortextOnly: true, positionsHidden: true });
+    }
+    // Regular position pages
+    result.forEach((pg, idx) => {
+      finalPages.push({
+        ...pg,
+        first: pg.first && vortextParts.length <= 1,
+        vortextPart: idx === 0 ? vortextParts[vortextParts.length - 1] || "" : undefined,
+      });
+    });
+    // Schlusstext extra pages (all but last part)
+    const lastPage = finalPages[finalPages.length - 1];
+    if (schlusstextParts.length > 1) {
+      lastPage.schlusstextPart = schlusstextParts[0];
+      for (let si = 1; si < schlusstextParts.length; si++) {
+        const isVeryLast = si === schlusstextParts.length - 1;
+        finalPages.push({ s: 0, e: 0, first: false, last: isVeryLast, schlusstextPart: schlusstextParts[si], schlusstextOnly: !isVeryLast });
+      }
+    } else {
+      lastPage.schlusstextPart = schlusstextParts[0] || "";
+    }
+    
+    return { pages: finalPages, numbering: nums, totalPages: finalPages.length };
   }, [doc]);
 
   if (!isOpen || !doc) return null;
@@ -260,7 +306,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       {doc.betreff && (
         <p className="font-bold text-sm mb-2" style={{ color: "#003399" }}>{doc.betreff}</p>
       )}
-      {doc.vortext && <p className="text-xs mb-3 whitespace-pre-line leading-relaxed">{doc.vortext}</p>}
+      {doc.vortext && pg.vortextPart && <p className="text-xs mb-3 whitespace-pre-line leading-relaxed">{pg.vortextPart}</p>}
     </>
   );
 
@@ -377,7 +423,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
                 )}
 
                 {/* positions table for this page */}
-                {pg.e > pg.s && (
+                {pg.e > pg.s && !pg.vortextOnly && (
                   <table className="w-full mb-3">
                     {renderTableHead()}
                     <tbody>
@@ -395,7 +441,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
                 {pg.last && (
                   <>
                     {renderTotals()}
-                    {doc.schlusstext && <p className="text-xs whitespace-pre-line mb-3 leading-relaxed">{doc.schlusstext}</p>}
+                    {pg.schlusstextPart && <p className="text-xs whitespace-pre-line mb-3 leading-relaxed">{pg.schlusstextPart}</p>}
                     {doc.valid_until && (
                       <p className="text-xs font-semibold">Gültig bis: {new Date(doc.valid_until).toLocaleDateString("de-DE")}</p>
                     )}

@@ -412,7 +412,14 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     if vortext:
         c.setFont("Helvetica", 9)
         c.setFillColor(text_color)
-        for line in vortext.split("\n")[:6]:
+        for line in vortext.split("\n")[:20]:
+            if line.strip() == "---":
+                _draw_footer(c, width, settings, page_num)
+                c.showPage()
+                page_num += 1
+                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                y_vt = height - 3.5 * cm
+                continue
             c.drawString(2 * cm, y_vt, line[:90])
             y_vt -= 0.35 * cm
         y_vt -= 0.2 * cm
@@ -578,7 +585,14 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     if schlusstext:
         c.setFont("Helvetica", 9)
         c.setFillColor(text_color)
-        for line in schlusstext.split("\n")[:8]:
+        for line in schlusstext.split("\n")[:20]:
+            if line.strip() == "---":
+                _draw_footer(c, width, settings, page_num)
+                c.showPage()
+                page_num += 1
+                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                y_pos = height - 3.5 * cm
+                continue
             if y_pos < footer_y_limit:
                 _draw_footer(c, width, settings, page_num)
                 c.showPage()
