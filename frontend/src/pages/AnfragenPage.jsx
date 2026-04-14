@@ -612,7 +612,11 @@ const AnfragenPage = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold truncate">{anfrage.name}</span>
+                      <span className="font-semibold truncate">
+                        {anfrage.vorname && anfrage.nachname 
+                          ? `${anfrage.vorname} ${anfrage.nachname}`
+                          : anfrage.name}
+                      </span>
                       {anfrage.firma && <Badge variant="info" className="text-xs">{anfrage.firma}</Badge>}
                       {anfrage.source && anfrage.source !== "manual" && (
                         <Badge variant="default" className="text-xs">{anfrage.source}</Badge>

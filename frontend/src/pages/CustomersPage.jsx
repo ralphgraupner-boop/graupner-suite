@@ -244,7 +244,13 @@ const CustomersPage = ({ readOnly = false }) => {
                     <div>
                       <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Kontaktdaten</h4>
                       <div className="space-y-2">
-                        <p className="text-sm"><span className="font-medium">Name:</span> {customer.name}</p>
+                        {customer.anrede && <p className="text-sm"><span className="font-medium">Anrede:</span> {customer.anrede}</p>}
+                        {customer.firma && <p className="text-sm"><span className="font-medium">Firma:</span> {customer.firma}</p>}
+                        {customer.vorname && <p className="text-sm"><span className="font-medium">Vorname:</span> {customer.vorname}</p>}
+                        {customer.nachname && <p className="text-sm"><span className="font-medium">Nachname:</span> {customer.nachname}</p>}
+                        {!customer.vorname && !customer.nachname && customer.name && (
+                          <p className="text-sm"><span className="font-medium">Name:</span> {customer.name}</p>
+                        )}
                         {customer.email && <p className="text-sm"><span className="font-medium">E-Mail:</span> {customer.email}</p>}
                         {customer.phone && <p className="text-sm"><span className="font-medium">Telefon:</span> {customer.phone}</p>}
                         {customer.address && (
