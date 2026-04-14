@@ -495,18 +495,18 @@ const AnfragenPage = () => {
 
   return (
     <div data-testid="anfragen-page">
-      <div className="flex items-center justify-between mb-4 lg:mb-8">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4 lg:mb-8">
         <div>
           <h1 className="text-2xl lg:text-4xl font-bold">Anfragen</h1>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{anfragen.length} Anfragen gesamt</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setCreateAnfrageModal(true)} data-testid="btn-neue-anfrage">
+        <div className="flex gap-2 flex-shrink-0">
+          <Button onClick={() => setCreateAnfrageModal(true)} data-testid="btn-neue-anfrage" size="sm" className="lg:h-10 lg:px-4">
             <Plus className="w-4 h-4" /> Neue Anfrage
           </Button>
-          <label className={`inline-flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import">
+          <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import">
             <Upload className="w-4 h-4" />
-            {vcfUploading ? "Importiere..." : "VCF importieren"}
+            <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF importieren"}</span>
             <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" disabled={vcfUploading} />
           </label>
         </div>
