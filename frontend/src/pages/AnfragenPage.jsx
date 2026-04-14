@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Plus, Check, GripVertical, Settings2, CircleDot, Image as ImageIcon } from "lucide-react";
+import { Search, Inbox, UserCheck, Trash2, ChevronDown, Globe, Mail, Phone, Pencil, MessageSquarePlus, Send, Upload, Wrench, FileText, X, Plus, Check, GripVertical, Settings2, CircleDot, Image as ImageIcon, Download, File } from "lucide-react";
 import { toast } from "sonner";
 import { Input, Card, Badge, Button, Modal, Textarea } from "@/components/common";
 import { PortalButtons } from "@/components/PortalButtons";
@@ -55,6 +55,8 @@ const AnfragenPage = () => {
     notes: "",
     customer_type: "Privat",
   });
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   useEffect(() => {
     loadAnfragen();
@@ -251,7 +253,14 @@ const AnfragenPage = () => {
         objektadresse: objektadresseCombined || addressCombined || createForm.address
       };
       
-      await api.post("/anfragen", payload);
+      const res = await api.post("/anfragen", payload);
+      const anfrageId = res.data.id;
+      
+      // Upload files if any
+      if (selectedFiles.length > 0 && anfrageId) {
+        await handleFileUpload(anfrageId);
+      }
+      
       toast.success("Anfrage erfolgreich angelegt");
       setCreateAnfrageModal(false);
       setCreateForm({
@@ -277,12 +286,86 @@ const AnfragenPage = () => {
         notes: "",
         customer_type: "Privat",
       });
+      setSelectedFiles([]);
       loadAnfragen();
     } catch (err) {
       toast.error("Fehler beim Anlegen der Anfrage");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleFileUpload = async (anfrageId) => {
+    if (selectedFiles.length === 0) return;
+    
+    setUploadingFiles(true);
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach(file => {
+        formData.append('files', file);
+      });
+      
+      const res = await api.post(`/anfragen/${anfrageId}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success(res.data.message);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Upload");
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    const MAX_FILES = 10;
+    const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+    
+    const totalFiles = selectedFiles.length + files.length;
+    if (totalFiles > MAX_FILES) {
+      toast.error(`Maximale Anzahl Dateien überschritten (max ${MAX_FILES})`);
+      return;
+    }
+    
+    for (const file of files) {
+      if (file.size > MAX_SIZE) {
+        toast.error(`Datei ${file.name} ist zu groß (max 10 MB)`);
+        return;
+      }
+    }
+    
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = Array.from(e.dataTransfer.files || []);
+    handleFileSelect({ target: { files } });
+  };
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileIcon = (file) => {
+    const name = file.name || '';
+    const type = file.type || '';
+    
+    if (type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(name)) {
+      return <ImageIcon className="w-4 h-4" />;
+    }
+    return <File className="w-4 h-4" />;
+  };
+
+  const getFileSize = (file) => {
+    if (file.size) {
+      const kb = file.size / 1024;
+      if (kb < 1024) return `${kb.toFixed(1)} KB`;
+      return `${(kb / 1024).toFixed(1)} MB`;
+    }
+    return '';
   };
 
   const parseNotes = (notes) => {
@@ -1042,12 +1125,68 @@ const AnfragenPage = () => {
             />
           </div>
 
+          {/* File Upload Section */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Dateien <span className="text-xs text-muted-foreground">(max 10 Dateien, je 10 MB)</span>
+            </label>
+            
+            {/* Selected Files (to upload) */}
+            {selectedFiles.length > 0 && (
+              <div className="mb-3 space-y-2">
+                <p className="text-xs text-green-600 font-medium">Ausgewählte Dateien (werden beim Speichern hochgeladen):</p>
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-green-50 rounded-sm border border-green-200">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {getFileIcon(file)}
+                      <span className="text-sm truncate">{file.name}</span>
+                      <span className="text-xs text-muted-foreground">{getFileSize(file)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSelectedFile(idx)}
+                      className="p-1 hover:bg-destructive/10 rounded-sm"
+                    >
+                      <X className="w-4 h-4 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Drop Zone */}
+            {selectedFiles.length < 10 && (
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                className="border-2 border-dashed border-muted-foreground/25 rounded-sm p-6 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
+                onClick={() => document.getElementById('anfrage-file-upload-input').click()}
+              >
+                <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground mb-1">
+                  Dateien hier ablegen oder klicken zum Auswählen
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Bilder, PDFs, Dokumente (max 10 MB pro Datei)
+                </p>
+                <input
+                  id="anfrage-file-upload-input"
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => setCreateAnfrageModal(false)} data-testid="create-anfrage-cancel">
               Abbrechen
             </Button>
-            <Button onClick={handleCreateAnfrage} disabled={saving || (!createForm.vorname && !createForm.nachname && !createForm.firma)} data-testid="create-anfrage-save">
-              {saving ? "Speichern..." : "Anfrage anlegen"}
+            <Button onClick={handleCreateAnfrage} disabled={saving || uploadingFiles || (!createForm.vorname && !createForm.nachname && !createForm.firma)} data-testid="create-anfrage-save">
+              {saving ? "Speichern..." : uploadingFiles ? "Uploading..." : "Anfrage anlegen"}
             </Button>
           </div>
         </div>

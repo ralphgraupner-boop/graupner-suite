@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, UploadFile, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timezone
 from database import db, logger
 from uuid import uuid4
+from auth import get_current_user
 
 router = APIRouter()
 
@@ -181,3 +182,109 @@ async def get_anfrage(anfrage_id: str):
     except Exception as e:
         logger.error(f"❌ Fehler beim Abrufen der Anfrage: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/anfragen/{anfrage_id}/upload")
+async def upload_anfrage_files(
+    anfrage_id: str,
+    files: List[UploadFile] = File(...),
+    user=Depends(get_current_user)
+):
+    """Upload files for an anfrage (max 10 files, 10MB each)"""
+    anfrage = await db.anfragen.find_one({"id": anfrage_id}, {"_id": 0})
+    if not anfrage:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    
+    MAX_FILES = 10
+    MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+    
+    current_files = anfrage.get("photos", [])
+    if len(current_files) + len(files) > MAX_FILES:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Maximale Anzahl Dateien überschritten (max {MAX_FILES})"
+        )
+    
+    uploaded_urls = []
+    
+    try:
+        from utils.storage import put_object
+        import uuid as _uuid
+        
+        for file in files:
+            # Read file content
+            content = await file.read()
+            
+            # Check file size
+            if len(content) > MAX_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Datei {file.filename} ist zu groß (max 10 MB)"
+                )
+            
+            # Generate safe filename
+            safe_name = file.filename.replace(" ", "_") if file.filename else "datei"
+            storage_path = f"anfragen/{anfrage_id}/{_uuid.uuid4().hex[:8]}_{safe_name}"
+            
+            # Upload to object storage
+            result = put_object(storage_path, content, file.content_type or "application/octet-stream")
+            
+            if result and result.get("url"):
+                uploaded_urls.append({
+                    "url": result["url"],
+                    "filename": file.filename,
+                    "content_type": file.content_type,
+                    "size": len(content)
+                })
+                logger.info(f"Datei für Anfrage {anfrage_id} gespeichert: {storage_path}")
+            elif result and result.get("path"):
+                uploaded_urls.append({
+                    "url": result["path"],
+                    "filename": file.filename,
+                    "content_type": file.content_type,
+                    "size": len(content)
+                })
+                logger.info(f"Datei für Anfrage {anfrage_id} gespeichert: {storage_path}")
+    
+    except Exception as e:
+        logger.error(f"Fehler beim Upload für Anfrage {anfrage_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload-Fehler: {str(e)}")
+    
+    # Update anfrage with new files
+    all_files = current_files + uploaded_urls
+    await db.anfragen.update_one(
+        {"id": anfrage_id},
+        {"$set": {"photos": all_files}}
+    )
+    
+    return {
+        "message": f"{len(uploaded_urls)} Datei(en) hochgeladen",
+        "uploaded": uploaded_urls,
+        "total_files": len(all_files)
+    }
+
+
+@router.delete("/anfragen/{anfrage_id}/files/{file_index}")
+async def delete_anfrage_file(
+    anfrage_id: str,
+    file_index: int,
+    user=Depends(get_current_user)
+):
+    """Delete a file from anfrage"""
+    anfrage = await db.anfragen.find_one({"id": anfrage_id}, {"_id": 0})
+    if not anfrage:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    
+    files = anfrage.get("photos", [])
+    if file_index < 0 or file_index >= len(files):
+        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+    
+    # Remove file from list
+    files.pop(file_index)
+    
+    await db.anfragen.update_one(
+        {"id": anfrage_id},
+        {"$set": {"photos": files}}
+    )
+    
+    return {"message": "Datei gelöscht", "remaining_files": len(files)}
