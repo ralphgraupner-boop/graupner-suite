@@ -1,10 +1,110 @@
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
 from typing import List, Optional
 from models import Customer, CustomerCreate, Anfrage
-from database import db, logger
+from database import db, logger, CATEGORIES
 from auth import get_current_user
+import re
 
 router = APIRouter()
+
+
+def parse_vcf_customer(content: str) -> dict:
+    """Parse a VCF/vCard file content into a customer dictionary"""
+    data = {"name": "", "vorname": "", "nachname": "", "email": "", "phone": "", "address": "", "anrede": "",
+            "firma": "", "notes": "", "customer_type": "Privat"}
+
+    lines = content.replace("\r\n ", "").replace("\r\n\t", "").split("\r\n")
+    if len(lines) <= 1:
+        lines = content.replace("\n ", "").replace("\n\t", "").split("\n")
+
+    for line in lines:
+        line = line.strip()
+        if not line or line in ("BEGIN:VCARD", "END:VCARD"):
+            continue
+
+        if line.startswith("N:") or line.startswith("N;"):
+            parts = line.split(":", 1)[1].split(";")
+            family = parts[0] if len(parts) > 0 else ""
+            given = parts[1] if len(parts) > 1 else ""
+            prefix = parts[3] if len(parts) > 3 else ""
+            if prefix in ("Herr", "Frau"):
+                data["anrede"] = prefix
+            data["vorname"] = given.strip()
+            data["nachname"] = family.strip()
+            data["name"] = f"{given} {family}".strip()
+
+        elif line.startswith("FN:") or line.startswith("FN;"):
+            fn = line.split(":", 1)[1].strip()
+            if not data["name"]:
+                data["name"] = fn
+
+        elif line.startswith("EMAIL"):
+            data["email"] = line.split(":", 1)[1].strip()
+
+        elif line.startswith("TEL"):
+            tel = line.split(":", 1)[1].strip()
+            if tel:
+                if "mobile" in line.lower():
+                    data["phone"] = tel
+                elif not data["phone"]:
+                    data["phone"] = tel
+
+        elif line.startswith("ADR"):
+            parts = line.split(":", 1)[1].split(";")
+            street = parts[2] if len(parts) > 2 else ""
+            city = parts[3] if len(parts) > 3 else ""
+            plz = parts[5] if len(parts) > 5 else ""
+            country = parts[6] if len(parts) > 6 else ""
+            addr_parts = [p for p in [street, f"{plz} {city}".strip(), country] if p]
+            data["address"] = ", ".join(addr_parts)
+
+        elif line.startswith("ORG:"):
+            org = line.split(":", 1)[1].strip()
+            if org and org not in ("Herr", "Frau", "Divers"):
+                data["firma"] = org
+
+        elif line.startswith("ROLE:"):
+            data["notes"] = line.split(":", 1)[1].strip()
+
+        elif line.startswith("CATEGORIES:"):
+            cat_val = line.split(":", 1)[1].strip()
+            if cat_val.lower() in ("privat", "private"):
+                data["customer_type"] = "Privat"
+            elif cat_val.lower() in ("firma", "business", "work"):
+                data["customer_type"] = "Firma"
+
+    return data
+
+
+@router.post("/customers/import-vcf")
+async def import_vcf_customer(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Import a VCF/vCard file as a new Customer"""
+    if not file.filename.lower().endswith(".vcf"):
+        raise HTTPException(status_code=400, detail="Nur .vcf Dateien erlaubt")
+
+    content = (await file.read()).decode("utf-8", errors="ignore")
+    data = parse_vcf_customer(content)
+
+    if not data.get("vorname") and not data.get("nachname") and not data["name"]:
+        raise HTTPException(status_code=400, detail="Kein Name in der VCF-Datei gefunden")
+
+    customer = Customer(
+        name=data["name"],
+        vorname=data["vorname"],
+        nachname=data["nachname"],
+        email=data["email"],
+        phone=data["phone"],
+        address=data["address"],
+        anrede=data["anrede"],
+        firma=data["firma"],
+        notes=data["notes"],
+        customer_type=data["customer_type"],
+    )
+    await db.customers.insert_one(customer.model_dump())
+    result = customer.model_dump()
+    result.pop("_id", None)
+    logger.info(f"VCF-Import Kunde: {data['vorname']} {data['nachname']}")
+    return result
 
 
 @router.get("/customers", response_model=List[Customer])

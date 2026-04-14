@@ -18,6 +18,7 @@ const CustomersPage = ({ readOnly = false }) => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [customerStatuses, setCustomerStatuses] = useState(CUSTOMER_STATUSES);
+  const [vcfUploading, setVcfUploading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -62,6 +63,24 @@ const CustomersPage = ({ readOnly = false }) => {
     }
   };
 
+  const handleVcfUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVcfUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await api.post("/customers/import-vcf", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success(`VCF importiert: ${file.name}`);
+      loadCustomers();
+    } catch (err) {
+      toast.error("Fehler beim VCF-Import");
+    } finally {
+      setVcfUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const filtered = customers.filter(
     (c) =>
       (((c.vorname || c.nachname) ? `${c.vorname || ''} ${c.nachname || ''}`.trim() : (c.name || '')).toLowerCase().includes(search.toLowerCase()) ||
@@ -77,19 +96,26 @@ const CustomersPage = ({ readOnly = false }) => {
           <h1 className="text-2xl lg:text-4xl font-bold">Kunden</h1>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{customers.length} Kunden gesamt</p>
         </div>
-        {!readOnly && <Button
-          data-testid="btn-new-customer"
-          size="sm"
-          className="lg:h-10 lg:px-4"
-          onClick={() => {
-            setEditCustomer(null);
-            setShowModal(true);
-          }}
-        >
-          <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
-          <span className="hidden sm:inline">Neuer Kunde</span>
-          <span className="sm:hidden">Neu</span>
-        </Button>}
+        {!readOnly && <div className="flex items-center gap-2">
+          <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import-customer">
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF importieren"}</span>
+            <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" disabled={vcfUploading} />
+          </label>
+          <Button
+            data-testid="btn-new-customer"
+            size="sm"
+            className="lg:h-10 lg:px-4"
+            onClick={() => {
+              setEditCustomer(null);
+              setShowModal(true);
+            }}
+          >
+            <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
+            <span className="hidden sm:inline">Neuer Kunde</span>
+            <span className="sm:hidden">Neu</span>
+          </Button>
+        </div>}
       </div>
 
       <Card className="p-3 lg:p-4 mb-4 lg:mb-6">

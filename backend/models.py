@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any, Union
 import uuid
 from datetime import datetime, timezone
 
@@ -37,7 +37,7 @@ class Customer(BaseModel):
     plz: str = ""
     ort: str = ""
     notes: str = ""
-    photos: List[str] = []
+    photos: List[Any] = []
     customer_type: str = "Privat"
     categories: List[str] = []
     firma: str = ""
@@ -57,7 +57,7 @@ class CustomerCreate(BaseModel):
     plz: str = ""
     ort: str = ""
     notes: str = ""
-    photos: List[str] = []
+    photos: List[Any] = []
     customer_type: str = "Privat"
     categories: List[str] = []
     firma: str = ""
@@ -74,7 +74,7 @@ class Anfrage(BaseModel):
     phone: str = ""
     address: str = ""
     notes: str = ""
-    photos: List[str] = []
+    photos: List[Any] = []
     categories: List[str] = []
     reparaturgruppen: List[str] = []
     customer_type: str = "Privat"
