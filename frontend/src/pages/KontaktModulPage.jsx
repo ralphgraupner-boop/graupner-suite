@@ -318,7 +318,7 @@ const KontaktFormModal = ({ isOpen, onClose, contact, onSave }) => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">E-Mail</label>
-            <Input type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Input type="text" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Telefon</label>
