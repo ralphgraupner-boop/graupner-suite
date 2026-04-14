@@ -111,6 +111,12 @@ async def update_anfrage(anfrage_id: str, update: AnfrageUpdate):
         update_data = {k: v for k, v in update.model_dump().items() if v is not None}
         update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         
+        # Auto-generate combined name from vorname + nachname
+        vorname = update_data.get("vorname", "")
+        nachname = update_data.get("nachname", "")
+        if vorname or nachname:
+            update_data["name"] = f"{vorname} {nachname}".strip()
+        
         result = await db.anfragen.update_one(
             {"id": anfrage_id},
             {"$set": update_data}
