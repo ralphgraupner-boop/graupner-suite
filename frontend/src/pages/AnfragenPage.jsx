@@ -36,8 +36,16 @@ const AnfragenPage = () => {
     name: "",
     email: "",
     phone: "",
+    strasse: "",
+    hausnummer: "",
+    plz: "",
+    ort: "",
     address: "",
     objektadresse: "",
+    objekt_strasse: "",
+    objekt_hausnummer: "",
+    objekt_plz: "",
+    objekt_ort: "",
     categories: [],
     nachricht: "",
     notes: "",
@@ -226,15 +234,33 @@ const AnfragenPage = () => {
     
     setSaving(true);
     try {
-      await api.post("/anfragen", createForm);
+      // Kombiniere Adresse aus Einzelfeldern
+      const addressCombined = `${createForm.strasse} ${createForm.hausnummer}, ${createForm.plz} ${createForm.ort}`.trim();
+      const objektadresseCombined = `${createForm.objekt_strasse} ${createForm.objekt_hausnummer}, ${createForm.objekt_plz} ${createForm.objekt_ort}`.trim();
+      
+      const payload = {
+        ...createForm,
+        address: addressCombined || createForm.address,
+        objektadresse: objektadresseCombined || addressCombined || createForm.address
+      };
+      
+      await api.post("/anfragen", payload);
       toast.success("Anfrage erfolgreich angelegt");
       setCreateAnfrageModal(false);
       setCreateForm({
         name: "",
         email: "",
         phone: "",
+        strasse: "",
+        hausnummer: "",
+        plz: "",
+        ort: "",
         address: "",
         objektadresse: "",
+        objekt_strasse: "",
+        objekt_hausnummer: "",
+        objekt_plz: "",
+        objekt_ort: "",
         categories: [],
         nachricht: "",
         notes: "",
@@ -828,22 +854,82 @@ const AnfragenPage = () => {
 
           <div>
             <label className="block text-sm font-medium mb-1">Adresse</label>
-            <Input
-              data-testid="create-anfrage-address"
-              value={createForm.address}
-              onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-              placeholder="Straße, PLZ Ort"
-            />
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-8">
+                <Input
+                  data-testid="create-anfrage-strasse"
+                  placeholder="Straße"
+                  value={createForm.strasse}
+                  onChange={(e) => setCreateForm({ ...createForm, strasse: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4">
+                <Input
+                  data-testid="create-anfrage-hausnummer"
+                  placeholder="Nr."
+                  value={createForm.hausnummer}
+                  onChange={(e) => setCreateForm({ ...createForm, hausnummer: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              <div>
+                <Input
+                  data-testid="create-anfrage-plz"
+                  placeholder="PLZ"
+                  value={createForm.plz}
+                  onChange={(e) => setCreateForm({ ...createForm, plz: e.target.value })}
+                />
+              </div>
+              <div className="col-span-3">
+                <Input
+                  data-testid="create-anfrage-ort"
+                  placeholder="Ort"
+                  value={createForm.ort}
+                  onChange={(e) => setCreateForm({ ...createForm, ort: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">Objektadresse (falls abweichend)</label>
-            <Input
-              data-testid="create-anfrage-objektadresse"
-              value={createForm.objektadresse}
-              onChange={(e) => setCreateForm({ ...createForm, objektadresse: e.target.value })}
-              placeholder="Objektadresse"
-            />
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-8">
+                <Input
+                  data-testid="create-anfrage-objekt-strasse"
+                  placeholder="Straße"
+                  value={createForm.objekt_strasse}
+                  onChange={(e) => setCreateForm({ ...createForm, objekt_strasse: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4">
+                <Input
+                  data-testid="create-anfrage-objekt-hausnummer"
+                  placeholder="Nr."
+                  value={createForm.objekt_hausnummer}
+                  onChange={(e) => setCreateForm({ ...createForm, objekt_hausnummer: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              <div>
+                <Input
+                  data-testid="create-anfrage-objekt-plz"
+                  placeholder="PLZ"
+                  value={createForm.objekt_plz}
+                  onChange={(e) => setCreateForm({ ...createForm, objekt_plz: e.target.value })}
+                />
+              </div>
+              <div className="col-span-3">
+                <Input
+                  data-testid="create-anfrage-objekt-ort"
+                  placeholder="Ort"
+                  value={createForm.objekt_ort}
+                  onChange={(e) => setCreateForm({ ...createForm, objekt_ort: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
 
           <div>
