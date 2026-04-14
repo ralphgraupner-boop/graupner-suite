@@ -92,10 +92,24 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, settingsRes] = await Promise.all([
-        api.get("/customers"), api.get("/articles"), api.get("/settings")
+      const [customersRes, articlesRes, settingsRes, kontaktRes] = await Promise.all([
+        api.get("/customers"), api.get("/articles"), api.get("/settings"),
+        api.get("/modules/kontakt/data").catch(() => ({ data: [] }))
       ]);
-      setCustomers(customersRes.data);
+      // Merge Kunden + Kontakt-Modul Daten (ohne Duplikate per E-Mail)
+      const kundenData = customersRes.data || [];
+      const kontaktData = (kontaktRes.data || []).map(k => ({
+        ...k,
+        name: `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || "Unbekannt",
+        address: `${k.strasse || ""} ${k.hausnummer || ""}, ${k.plz || ""} ${k.ort || ""}`.trim().replace(/^,\s*/, "").replace(/,\s*$/, ""),
+        _source: "kontakt-modul"
+      }));
+      const existingEmails = new Set(kundenData.filter(c => c.email).map(c => c.email.toLowerCase()));
+      const mergedCustomers = [
+        ...kundenData,
+        ...kontaktData.filter(k => !k.email || !existingEmails.has(k.email.toLowerCase()))
+      ];
+      setCustomers(mergedCustomers);
       const allArticles = articlesRes.data;
       setArticles(allArticles.filter(a => a.typ === "Artikel"));
       setServices(allArticles.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
@@ -131,7 +145,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   // ==================== HANDLERS ====================
   const handleCustomerChange = (customerId) => {
     setSelectedCustomerId(customerId);
-    setCustomer(customers.find(c => c.id === customerId) || null);
+    const cust = customers.find(c => c.id === customerId) || null;
+    if (cust) {
+      // Adresse zusammenbauen falls Einzelfelder vorhanden
+      const addr = cust.address || `${cust.strasse || ""} ${cust.hausnummer || ""}, ${cust.plz || ""} ${cust.ort || ""}`.trim().replace(/^,\s*/, "").replace(/,\s*$/, "");
+      const name = (cust.vorname || cust.nachname) ? `${cust.vorname || ""} ${cust.nachname || ""}`.trim() : cust.name;
+      setCustomer({ ...cust, name, address: addr });
+    } else {
+      setCustomer(null);
+    }
   };
 
   const addPosition = () => setPositions([...positions, { type: "position", pos_nr: 0, description: "", quantity: 1, unit: "Stück", price_net: 0 }]);

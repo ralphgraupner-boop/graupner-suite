@@ -32,18 +32,26 @@ const DocumentHeader = ({
                 className="w-full h-10 rounded-sm border border-input bg-white px-3 text-sm"
                 data-testid="wysiwyg-customer-select"
               >
-                <option value="">Kunde auswählen...</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.customer_type !== "Privat" ? `(${c.customer_type})` : ""}
-                  </option>
-                ))}
+                <option value="">Kunde auswaehlen...</option>
+                {customers.map(c => {
+                  const displayName = (c.vorname || c.nachname) 
+                    ? `${c.vorname || ""} ${c.nachname || ""}`.trim()
+                    : c.name;
+                  const source = c._source === "kontakt-modul" ? " [Modul]" : "";
+                  const typeInfo = c.customer_type && c.customer_type !== "Privat" ? ` (${c.customer_type})` : "";
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {displayName}{typeInfo}{source}
+                    </option>
+                  );
+                })}
               </select>
             ) : (
               <div className="min-h-[70px]">
                 <div className="flex items-start justify-between">
                   <div className="text-sm leading-relaxed">
-                    <p className="font-semibold">{customer.name}</p>
+                    <p className="font-semibold">{(customer.vorname || customer.nachname) ? `${customer.vorname || ""} ${customer.nachname || ""}`.trim() : customer.name}</p>
+                    {customer.firma && <p className="text-muted-foreground">{customer.firma}</p>}
                     {customer.address && (
                       <p className="whitespace-pre-line text-foreground">{customer.address.split(/,\s*/).join("\n")}</p>
                     )}
