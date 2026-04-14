@@ -35,7 +35,7 @@ const estPosH = (p) => {
   if (p.type === "titel") return TITEL_H;
   const lines = (p.description || "").split("\n");
   let total = 0;
-  lines.forEach((l) => { total += Math.max(1, Math.ceil((l.length || 1) / 55)); });
+  lines.forEach((l) => { total += Math.max(1, Math.ceil((l.length || 1) / 45)); });
   return ROW_BASE + Math.max(0, total - 1) * ROW_LINE;
 };
 
@@ -106,6 +106,8 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       while (i < pos.length) {
         const h = estPosH(pos[i]);
         if (budget < h && i > start) break;
+        // Wenn Position zu groß für leere Seite - trotzdem nehmen
+        if (budget < h && i === start) { i++; break; }
         budget -= h;
         i++;
       }
