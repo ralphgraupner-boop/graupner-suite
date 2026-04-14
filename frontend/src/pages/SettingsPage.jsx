@@ -714,6 +714,21 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
               )}
             </div>
             <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Auto-Abruf Intervall (Minuten)</label>
+                <Input
+                  type="number"
+                  min="5"
+                  max="1440"
+                  data-testid="input-imap-interval"
+                  value={settings.imap_polling_interval || 30}
+                  onChange={(e) => setSettings({ ...settings, imap_polling_interval: parseInt(e.target.value) || 30 })}
+                  placeholder="30"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  E-Mails werden automatisch alle X Minuten abgerufen (5-1440 Min)
+                </p>
+              </div>
               <label className="flex items-center gap-2 cursor-pointer h-10">
                 <input type="checkbox" checked={settings.imap_enabled || false} onChange={(e) => setSettings({ ...settings, imap_enabled: e.target.checked })} className="h-4 w-4 rounded border-input" />
                 <span className="text-sm font-medium">IMAP aktiv</span>
