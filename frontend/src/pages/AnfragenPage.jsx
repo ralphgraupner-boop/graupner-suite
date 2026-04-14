@@ -33,7 +33,11 @@ const AnfragenPage = () => {
   const [lightboxImg, setLightboxImg] = useState(null);
   const [createAnfrageModal, setCreateAnfrageModal] = useState(false);
   const [createForm, setCreateForm] = useState({
-    name: "",
+    anrede: "",
+    vorname: "",
+    nachname: "",
+    name: "",  // Legacy
+    firma: "",
     email: "",
     phone: "",
     strasse: "",
@@ -50,7 +54,6 @@ const AnfragenPage = () => {
     nachricht: "",
     notes: "",
     customer_type: "Privat",
-    firma: ""
   });
 
   useEffect(() => {
@@ -227,8 +230,8 @@ const AnfragenPage = () => {
   };
 
   const handleCreateAnfrage = async () => {
-    if (!createForm.name) {
-      toast.error("Name ist erforderlich");
+    if (!createForm.vorname && !createForm.nachname && !createForm.firma) {
+      toast.error("Vorname, Nachname oder Firmenname ist erforderlich");
       return;
     }
     
@@ -238,8 +241,12 @@ const AnfragenPage = () => {
       const addressCombined = `${createForm.strasse} ${createForm.hausnummer}, ${createForm.plz} ${createForm.ort}`.trim();
       const objektadresseCombined = `${createForm.objekt_strasse} ${createForm.objekt_hausnummer}, ${createForm.objekt_plz} ${createForm.objekt_ort}`.trim();
       
+      // Generate combined name
+      const name = createForm.firma || `${createForm.vorname} ${createForm.nachname}`.trim();
+      
       const payload = {
         ...createForm,
+        name,
         address: addressCombined || createForm.address,
         objektadresse: objektadresseCombined || addressCombined || createForm.address
       };
@@ -248,7 +255,11 @@ const AnfragenPage = () => {
       toast.success("Anfrage erfolgreich angelegt");
       setCreateAnfrageModal(false);
       setCreateForm({
+        anrede: "",
+        vorname: "",
+        nachname: "",
         name: "",
+        firma: "",
         email: "",
         phone: "",
         strasse: "",
@@ -265,7 +276,6 @@ const AnfragenPage = () => {
         nachricht: "",
         notes: "",
         customer_type: "Privat",
-        firma: ""
       });
       loadAnfragen();
     } catch (err) {
@@ -809,16 +819,77 @@ const AnfragenPage = () => {
       {/* Neue Anfrage Modal */}
       <Modal isOpen={createAnfrageModal} onClose={() => setCreateAnfrageModal(false)} title="Neue Anfrage anlegen" size="lg">
         <div className="space-y-4" data-testid="create-anfrage-modal">
+          {/* Anrede & Kundentyp */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name *</label>
+              <label className="block text-sm font-medium mb-1">Anrede</label>
+              <select
+                data-testid="create-anfrage-anrede"
+                value={createForm.anrede}
+                onChange={(e) => setCreateForm({ ...createForm, anrede: e.target.value })}
+                className="w-full h-10 rounded-sm border border-input bg-background px-3"
+              >
+                <option value="">Bitte wählen</option>
+                <option value="Herr">Herr</option>
+                <option value="Frau">Frau</option>
+                <option value="Divers">Divers</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Kundentyp</label>
+              <select
+                data-testid="create-anfrage-customer-type"
+                value={createForm.customer_type}
+                onChange={(e) => setCreateForm({ ...createForm, customer_type: e.target.value })}
+                className="w-full h-10 rounded-sm border border-input bg-background px-3"
+              >
+                <option value="Privat">Privat</option>
+                <option value="Firma">Firma</option>
+                <option value="Vermieter">Vermieter</option>
+                <option value="Mieter">Mieter</option>
+                <option value="Gewerblich">Gewerblich</option>
+                <option value="Hausverwaltung">Hausverwaltung</option>
+                <option value="Wohnungsbaugesellschaft">Wohnungsbaugesellschaft</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Firmenname (nur wenn Firma gewählt) */}
+          {(createForm.customer_type === "Firma" || createForm.customer_type === "Gewerblich") && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Firmenname *</label>
               <Input
-                data-testid="create-anfrage-name"
-                value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                placeholder="Name"
+                data-testid="create-anfrage-firma"
+                value={createForm.firma}
+                onChange={(e) => setCreateForm({ ...createForm, firma: e.target.value })}
+                placeholder="Firma GmbH"
               />
             </div>
+          )}
+
+          {/* Vor- und Nachname */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Vorname *</label>
+              <Input
+                data-testid="create-anfrage-vorname"
+                value={createForm.vorname}
+                onChange={(e) => setCreateForm({ ...createForm, vorname: e.target.value })}
+                placeholder="Vorname"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Nachname *</label>
+              <Input
+                data-testid="create-anfrage-nachname"
+                value={createForm.nachname}
+                onChange={(e) => setCreateForm({ ...createForm, nachname: e.target.value })}
+                placeholder="Nachname"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">E-Mail</label>
               <Input
@@ -829,9 +900,6 @@ const AnfragenPage = () => {
                 placeholder="E-Mail"
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Telefon</label>
               <Input
@@ -839,15 +907,6 @@ const AnfragenPage = () => {
                 value={createForm.phone}
                 onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
                 placeholder="Telefon"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Firma</label>
-              <Input
-                data-testid="create-anfrage-firma"
-                value={createForm.firma}
-                onChange={(e) => setCreateForm({ ...createForm, firma: e.target.value })}
-                placeholder="Firma (optional)"
               />
             </div>
           </div>
@@ -987,7 +1046,7 @@ const AnfragenPage = () => {
             <Button variant="outline" onClick={() => setCreateAnfrageModal(false)} data-testid="create-anfrage-cancel">
               Abbrechen
             </Button>
-            <Button onClick={handleCreateAnfrage} disabled={saving || !createForm.name} data-testid="create-anfrage-save">
+            <Button onClick={handleCreateAnfrage} disabled={saving || (!createForm.vorname && !createForm.nachname && !createForm.firma)} data-testid="create-anfrage-save">
               {saving ? "Speichern..." : "Anfrage anlegen"}
             </Button>
           </div>
