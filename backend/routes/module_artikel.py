@@ -84,9 +84,9 @@ async def ensure_modul_registered():
 
 DEFAULT_CONFIG = {
     "artikel_prefix": "ArtNr",
-    "artikel_start": 26000,
+    "artikel_start": 2640,
     "leistung_prefix": "Leist",
-    "leistung_start": 26000,
+    "leistung_start": 2660,
     "fremdleistung_prefix": "Fremd",
     "fremdleistung_start": 26000,
 }
