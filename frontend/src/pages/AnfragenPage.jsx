@@ -736,7 +736,14 @@ const AnfragenPage = () => {
                     {anfrage.name?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div className="min-w-0">
-                    <h2 className="text-lg font-semibold truncate">{anfrage.name}</h2>
+                    <h2 className="text-lg font-semibold truncate">
+                      {anfrage.vorname && anfrage.nachname 
+                        ? `${anfrage.vorname} ${anfrage.nachname}`
+                        : anfrage.name}
+                    </h2>
+                    {anfrage.firma && (
+                      <p className="text-sm text-muted-foreground">{anfrage.firma}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {anfrage.source !== "manual" && anfrage.source ? `Quelle: ${anfrage.source} · ` : ""}
                       {new Date(anfrage.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
@@ -755,6 +762,21 @@ const AnfragenPage = () => {
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Kontaktdaten</h4>
                     <div className="bg-muted/30 rounded-md p-3 space-y-1.5">
+                      {anfrage.anrede && (
+                        <p className="text-sm"><span className="font-medium">Anrede:</span> {anfrage.anrede}</p>
+                      )}
+                      {anfrage.firma && (
+                        <p className="text-sm"><span className="font-medium">Firma:</span> {anfrage.firma}</p>
+                      )}
+                      {anfrage.vorname && (
+                        <p className="text-sm"><span className="font-medium">Vorname:</span> {anfrage.vorname}</p>
+                      )}
+                      {anfrage.nachname && (
+                        <p className="text-sm"><span className="font-medium">Nachname:</span> {anfrage.nachname}</p>
+                      )}
+                      {!anfrage.vorname && !anfrage.nachname && anfrage.name && (
+                        <p className="text-sm"><span className="font-medium">Name:</span> {anfrage.name}</p>
+                      )}
                       {anfrage.email && (
                         <div className="flex items-center gap-2 text-sm">
                           <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -777,7 +799,6 @@ const AnfragenPage = () => {
                           </div>
                         </div>
                       )}
-                      {anfrage.firma && <p className="text-sm"><span className="font-medium">Firma:</span> {anfrage.firma}</p>}
                       {anfrage.customer_type && <p className="text-sm"><span className="font-medium">Typ:</span> {anfrage.customer_type}</p>}
                     </div>
                   </div>
