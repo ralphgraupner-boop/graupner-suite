@@ -17,7 +17,8 @@ const allNavItems = [
   { path: "/articles", icon: Package, label: "Artikel", roles: ["admin"] },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
   { path: "/webhook", icon: Globe, label: "Website-Integration", roles: ["admin"] },
-  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] }
+  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
+  { path: "/module/kontakt", icon: Download, label: "Kontakt-Modul", roles: ["admin"] }
 ];
 
 const getUserRole = () => {
