@@ -169,17 +169,17 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
                 Textbaustein <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
               </button>
               {open && (
-                <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[240px] max-h-48 overflow-y-auto">
+                <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[400px] max-w-[560px] max-h-72 overflow-y-auto">
                   {templates.map((t) => (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => handleSelect(t)}
                       data-testid={`template-option-${t.id}`}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b last:border-b-0"
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors border-b last:border-b-0"
                     >
-                      <span className="font-medium">{t.title}</span>
-                      <span className="block text-xs text-muted-foreground mt-0.5 truncate">{t.content.substring(0, 60)}...</span>
+                      <span className="font-semibold">{t.title}</span>
+                      <span className="block text-xs text-muted-foreground mt-1 whitespace-pre-line line-clamp-4">{t.content}</span>
                     </button>
                   ))}
                 </div>
