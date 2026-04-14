@@ -12,16 +12,16 @@ const PAD_X = 48;
 const USABLE = PAGE_HEIGHT - PAD_Y * 2; // ~886
 
 /* height estimates (px) */
-const HEADER_H = 340;
-const TBL_HEAD_H = 38;
-const ROW_BASE = 38;
-const ROW_LINE = 17;
-const TITEL_H = 42;
-const TOTALS_H = 180;
-const SCHLUSS_LINE = 22;
-const FOOTER_H = 110;
-const VALID_H = 28;
-const CONT_HEADER_H = 32;
+const HEADER_H = 260;
+const TBL_HEAD_H = 32;
+const ROW_BASE = 34;
+const ROW_LINE = 15;
+const TITEL_H = 36;
+const TOTALS_H = 140;
+const SCHLUSS_LINE = 18;
+const FOOTER_H = 60;
+const VALID_H = 24;
+const CONT_HEADER_H = 28;
 
 const PAGE_BREAK_MARKER = "---";
 
