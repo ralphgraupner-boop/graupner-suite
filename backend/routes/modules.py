@@ -46,6 +46,7 @@ KONTAKT_MODUL = {
         {"name": "plz", "type": "text", "label": "PLZ", "required": False},
         {"name": "ort", "type": "text", "label": "Ort", "required": False},
         {"name": "categories", "type": "multi-select", "label": "Kategorien", "required": False},
+        {"name": "kontakt_status", "type": "select", "label": "Status", "options": ["Anfrage", "Kunde", "Interessent", "Archiv"], "required": True, "default": "Anfrage"},
         {"name": "notes", "type": "textarea", "label": "Notizen", "required": False},
         {"name": "photos", "type": "file-upload", "label": "Dateien", "max": 10, "max_size_mb": 10},
     ],
