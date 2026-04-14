@@ -38,11 +38,13 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
   const [sending, setSending] = useState(false);
   const [emailHistory, setEmailHistory] = useState([]);
   const [settings, setSettings] = useState({});
+  const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     if (isOpen && doc) {
       api.get(`/email/log/${type}/${doc.id}`).then((r) => setEmailHistory(r.data)).catch(() => {});
       api.get("/settings").then((r) => setSettings(r.data)).catch(() => {});
+      setCurrentPage(0);
     }
   }, [isOpen, doc, type]);
 
@@ -276,6 +278,20 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
           </Badge>
           <span className="text-xs text-muted-foreground">{totalPages} {totalPages === 1 ? "Seite" : "Seiten"}</span>
         </div>
+        {/* Page Navigation */}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0}
+              className="px-3 py-1.5 text-sm font-medium rounded-sm border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors" data-testid="btn-prev-page">
+              Zurueck
+            </button>
+            <span className="text-sm font-semibold min-w-[80px] text-center">Seite {currentPage + 1} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))} disabled={currentPage >= totalPages - 1}
+              className="px-3 py-1.5 text-sm font-medium rounded-sm border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors" data-testid="btn-next-page">
+              Weiter
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-1.5">
           {onEdit && (
             <Button variant="outline" size="sm" onClick={() => { onClose(); onEdit(doc); }}>
@@ -329,7 +345,9 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       {/* ── Pages Area ── */}
       <div className="flex-1 overflow-auto" style={{ background: "#4a4a4f" }}>
         <div className="flex flex-col items-center py-6 px-4 gap-5">
-          {pages.map((pg, pgIdx) => (
+          {pages.filter((_, pgIdx) => pgIdx === currentPage).map((pg, _) => {
+            const pgIdx = currentPage;
+            return (
             <div
               key={pgIdx}
               className="bg-white shadow-xl flex flex-col"
@@ -396,7 +414,8 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
                 </p>
               </div>
             </div>
-          ))}
+          );
+          })}
 
           {/* ── Email History (outside pages) ── */}
           {emailHistory.length > 0 && (
