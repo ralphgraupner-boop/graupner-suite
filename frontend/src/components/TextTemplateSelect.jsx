@@ -222,12 +222,13 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
           style={{ minHeight: "56px" }}
         />
       )}
-      {!value && !isBetreff && (
+      {!isBetreff && (
         <div className="flex flex-wrap gap-1 mt-1">
-          {PLACEHOLDERS.slice(0, 4).map((p) => (
+          {!value && PLACEHOLDERS.slice(0, 4).map((p) => (
             <span key={p.alias} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title={p.desc}>{p.alias}</span>
           ))}
-          <span className="text-[10px] text-muted-foreground bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded" title="Seitenumbruch einfuegen">--- = Seitenumbruch</span>
+          <span className="text-[10px] text-muted-foreground bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded cursor-pointer" title="Seitenumbruch einfuegen"
+            onClick={() => onChange(value ? value + "\n---\n" : "---\n")}>--- = Seitenumbruch (klicken zum Einfuegen)</span>
         </div>
       )}
     </div>
