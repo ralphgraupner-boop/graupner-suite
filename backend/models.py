@@ -88,17 +88,28 @@ class Anfrage(BaseModel):
 
 class AnfrageUpdate(BaseModel):
     name: Optional[str] = None
+    vorname: Optional[str] = None
+    nachname: Optional[str] = None
+    anrede: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    strasse: Optional[str] = None
+    hausnummer: Optional[str] = None
+    plz: Optional[str] = None
+    ort: Optional[str] = None
     obj_address: Optional[str] = None
+    objekt_strasse: Optional[str] = None
+    objekt_hausnummer: Optional[str] = None
+    objekt_plz: Optional[str] = None
+    objekt_ort: Optional[str] = None
     notes: Optional[str] = None
     nachricht: Optional[str] = None
     categories: Optional[List[str]] = None
     reparaturgruppen: Optional[List[str]] = None
     customer_type: Optional[str] = None
     firma: Optional[str] = None
-    anrede: Optional[str] = None
+    status: Optional[str] = None
 
 
 class TextTemplate(BaseModel):

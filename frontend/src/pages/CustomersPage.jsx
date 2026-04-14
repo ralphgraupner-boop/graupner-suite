@@ -4,6 +4,7 @@ import { Users, Plus, Mail, Trash2, Edit, ChevronRight, Search, Globe, Inbox, Ch
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { ContactForm } from "@/components/ContactForm";
+import { PortalButtons } from "@/components/PortalButtons";
 import { api, API } from "@/lib/api";
 import { CATEGORIES, CUSTOMER_STATUSES } from "@/lib/constants";
 

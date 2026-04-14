@@ -76,22 +76,6 @@ async def delete_anfrage(anfrage_id: str, user=Depends(get_current_user)):
     return {"message": "Anfrage gelöscht"}
 
 
-@router.put("/anfragen/{anfrage_id}")
-async def update_anfrage(anfrage_id: str, data: AnfrageUpdate, user=Depends(get_current_user)):
-    """Anfrage-Daten bearbeiten/korrigieren"""
-    existing = await db.anfragen.find_one({"id": anfrage_id})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
-    
-    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
-    if not update_data:
-        raise HTTPException(status_code=400, detail="Keine Daten zum Aktualisieren")
-    
-    await db.anfragen.update_one({"id": anfrage_id}, {"$set": update_data})
-    updated = await db.anfragen.find_one({"id": anfrage_id}, {"_id": 0})
-    return updated
-
-
 @router.put("/anfragen/{anfrage_id}/status")
 async def toggle_anfrage_status(anfrage_id: str, body: dict, user=Depends(get_current_user)):
     status = body.get("bearbeitungsstatus", "ungelesen")
