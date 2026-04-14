@@ -129,7 +129,7 @@ async def convert_anfrage(anfrage_id: str, user=Depends(get_current_user)):
 
 def parse_vcf(content: str) -> dict:
     """Parse a VCF/vCard file content into a dictionary"""
-    data = {"name": "", "email": "", "phone": "", "address": "", "anrede": "",
+    data = {"name": "", "vorname": "", "nachname": "", "email": "", "phone": "", "address": "", "anrede": "",
             "firma": "", "nachricht": "", "categories": [], "customer_type": "Privat",
             "notes": "", "source": "vcf-import"}
 
@@ -149,6 +149,8 @@ def parse_vcf(content: str) -> dict:
             prefix = parts[3] if len(parts) > 3 else ""
             if prefix in ("Herr", "Frau"):
                 data["anrede"] = prefix
+            data["vorname"] = given.strip()
+            data["nachname"] = family.strip()
             data["name"] = f"{given} {family}".strip()
 
         elif line.startswith("FN:") or line.startswith("FN;"):
@@ -220,6 +222,8 @@ async def import_vcf(file: UploadFile = File(...), user=Depends(get_current_user
 
     anfrage = Anfrage(
         name=data["name"],
+        vorname=data["vorname"],
+        nachname=data["nachname"],
         email=data["email"],
         phone=data["phone"],
         address=data["address"],

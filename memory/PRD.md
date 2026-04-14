@@ -26,6 +26,8 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") mit folgenden Kernfunktionen:
 - [x] Legacy-Daten Fallback (alte "name"-Eintraege werden korrekt angezeigt)
 - [x] Daten-Migration: Bestehende name-Felder in vorname/nachname aufgeteilt (14.04.2026)
 - [x] Backend: Auto-Generierung von name aus vorname+nachname beim Update (14.04.2026)
+- [x] VCF-Import: Vorname/Nachname/Anrede werden jetzt separat gespeichert (14.04.2026)
+- [x] IMAP VCF-Parser: Vorname/Nachname/Anrede Extraktion hinzugefuegt (14.04.2026)
 - [x] Einstellungen/Diverses Tab Crash behoben
 
 ## P1 - Next Tasks

@@ -40,8 +40,15 @@ def parse_vcf(vcf_text):
             contact["name"] = value.strip()
         elif prop == "N":
             parts = value.split(";")
+            family = parts[0].strip() if len(parts) > 0 else ""
+            given = parts[1].strip() if len(parts) > 1 else ""
+            prefix = parts[3].strip() if len(parts) > 3 else ""
+            if prefix in ("Herr", "Frau"):
+                contact["anrede"] = prefix
+            contact["vorname"] = given
+            contact["nachname"] = family
             if not contact.get("name"):
-                contact["name"] = f"{parts[1].strip()} {parts[0].strip()}".strip() if len(parts) > 1 else parts[0].strip()
+                contact["name"] = f"{given} {family}".strip()
         elif prop == "EMAIL":
             contact["email"] = value.strip().lower()
         elif prop == "TEL":
