@@ -9,7 +9,10 @@ router = APIRouter()
 
 
 class AnfrageCreate(BaseModel):
-    name: str
+    name: str = ""  # Legacy - kombiniert aus Vorname + Nachname
+    vorname: str = ""
+    nachname: str = ""
+    anrede: str = ""
     email: str = ""
     phone: str = ""
     address: str = ""
@@ -32,6 +35,9 @@ class AnfrageCreate(BaseModel):
 
 class AnfrageUpdate(BaseModel):
     name: Optional[str] = None
+    vorname: Optional[str] = None
+    nachname: Optional[str] = None
+    anrede: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
@@ -56,9 +62,19 @@ class AnfrageUpdate(BaseModel):
 async def create_anfrage(anfrage: AnfrageCreate):
     """Neue Anfrage manuell anlegen"""
     try:
+        # Generate combined name from vorname + nachname if not provided
+        name = anfrage.name
+        if not name and (anfrage.vorname or anfrage.nachname):
+            name = f"{anfrage.vorname} {anfrage.nachname}".strip()
+        elif not name:
+            name = anfrage.firma or "Unbekannt"
+        
         new_anfrage = {
             "id": str(uuid4()),
-            "name": anfrage.name,
+            "name": name,
+            "vorname": anfrage.vorname,
+            "nachname": anfrage.nachname,
+            "anrede": anfrage.anrede,
             "email": anfrage.email,
             "phone": anfrage.phone,
             "address": anfrage.address,
@@ -78,7 +94,7 @@ async def create_anfrage(anfrage: AnfrageCreate):
         await db.anfragen.insert_one(new_anfrage)
         new_anfrage.pop("_id", None)
         
-        logger.info(f"✅ Neue Anfrage manuell angelegt: {anfrage.name} ({anfrage.email})")
+        logger.info(f"✅ Neue Anfrage manuell angelegt: {name} ({anfrage.email})")
         
         return {"message": "Anfrage erfolgreich angelegt", "anfrage": new_anfrage}
     

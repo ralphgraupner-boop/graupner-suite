@@ -1,0 +1,68 @@
+{
+  "summary": "Tested Graupner Suite v36 features: Diverses tab bug fix, new fields in Kunden/Anfragen (Anrede, Vorname, Nachname, Firmenname), file upload for customers, Email inbox, IMAP interval settings. Found and fixed bug in backend AnfrageCreate model missing vorname/nachname/anrede fields.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features_v36.py",
+    "/app/test_reports/pytest/pytest_v36.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FIXED: Backend AnfrageCreate model was missing vorname, nachname, anrede fields - frontend sent these but backend ignored them"
+  ],
+  "updated_files": [
+    "/app/backend/routes/anfragen.py",
+    "/app/backend/tests/test_new_features_v36.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all UI elements working correctly)"
+  },
+  "test_credentials": "admin/Graupner!Suite2026",
+  "seed_data_creation": "Test data created and cleaned up during tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "v36 features fully tested. Bug fixed in /app/backend/routes/anfragen.py - AnfrageCreate and AnfrageUpdate models now include vorname, nachname, anrede fields. create_anfrage function now auto-generates name from vorname+nachname. All features working: Diverses tab loads without crash, Customer modal has new fields (Anrede, Vorname, Nachname, Firmenname for Firma type), file upload section visible (max 10 files, 10MB each), Anfragen modal has new fields, Email inbox shows 2 emails, IMAP interval setting (30 min) visible in Settings > E-Mail tab.",
+  "features_tested": {
+    "diverses_tab": {
+      "status": "PASS",
+      "details": "Tab loads without crash, shows Kunden-Status Verwaltung and Diverses/Info sections"
+    },
+    "customer_new_fields": {
+      "status": "PASS",
+      "details": "Anrede dropdown, Vorname, Nachname fields visible. Firmenname appears when Firma/Gewerblich type selected"
+    },
+    "customer_file_upload": {
+      "status": "PASS",
+      "details": "File upload section visible with 'max 10 Dateien, je 10 MB' label and dropzone"
+    },
+    "anfragen_new_fields": {
+      "status": "PASS",
+      "details": "Anrede dropdown, Vorname, Nachname fields visible. Firmenname appears when Firma type selected"
+    },
+    "email_inbox": {
+      "status": "PASS",
+      "details": "Shows 2 emails in Posteingang"
+    },
+    "imap_interval": {
+      "status": "PASS",
+      "details": "Auto-Abruf Intervall (Minuten) field visible in Settings > E-Mail, set to 30 minutes"
+    },
+    "backward_compatibility": {
+      "status": "PASS",
+      "details": "Existing customers/anfragen with only 'name' field still display correctly"
+    }
+  },
+  "bug_fixed": {
+    "issue": "Backend AnfrageCreate model missing vorname, nachname, anrede fields",
+    "file": "/app/backend/routes/anfragen.py",
+    "fix": "Added vorname, nachname, anrede to AnfrageCreate and AnfrageUpdate models. Updated create_anfrage to store these fields and auto-generate name from vorname+nachname"
+  }
+}
