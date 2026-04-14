@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, Textarea, Card, Modal } from "@/components/common";
+import { Button, Input, Textarea, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
 import { subscribeToPush, unsubscribeFromPush, ensureVapidKey } from "@/lib/push";
 import { PLACEHOLDERS } from "@/components/TextTemplateSelect";
