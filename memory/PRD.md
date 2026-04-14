@@ -1,64 +1,97 @@
 # Graupner Suite - PRD
 
 ## Original Problem Statement
-Handwerker-Verwaltungssoftware ("Graupner Suite") mit folgenden Kernfunktionen:
-- Kundenverwaltung, Anfragenverwaltung, Angebote, Auftraege, Rechnungen
-- IMAP E-Mail-Integration, Kontaktformular-Webhooks
-- Drag-and-Drop Datei-Uploads (max 10 Dateien)
-- Separate Felder: Anrede, Vorname, Nachname, Firma
+Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenstaendigen Bausteinen.
 
 ## Architecture
 - **Frontend**: React + TailwindCSS + Shadcn/UI
 - **Backend**: FastAPI + MongoDB
-- **Storage**: Emergent Object Storage (via utils/storage.py)
+- **Storage**: Emergent Object Storage
 - **Auth**: JWT-based (admin/Graupner!Suite2026)
+- **Prinzip**: Modulare Architektur - jedes Modul ist eigenstaendig mit eigener DB, API und UI
 
-## Completed Features
-- [x] Kundenverwaltung (CRUD, Kategorien, Status)
-- [x] Anfragenverwaltung (CRUD, Kategorien, Bearbeitungsstatus)
-- [x] IMAP E-Mail-Integration
-- [x] Kontaktformular-Webhooks
-- [x] Datei-Upload (max 10) fuer Kunden und Anfragen
-- [x] Felder Anrede, Vorname, Nachname, Firma (Backend + Frontend)
-- [x] Vorname/Nachname getrennt in Listen-/Detailansichten (14.04.2026)
-- [x] Anfragen Bearbeiten-Modal mit Anrede/Vorname/Nachname Feldern (14.04.2026)
-- [x] Suchfilter fuer Vorname/Nachname (14.04.2026)
-- [x] Legacy-Daten Fallback (alte "name"-Eintraege werden korrekt angezeigt)
-- [x] Daten-Migration: Bestehende name-Felder in vorname/nachname aufgeteilt (14.04.2026)
-- [x] Backend: Auto-Generierung von name aus vorname+nachname beim Update (14.04.2026)
-- [x] VCF-Import: Vorname/Nachname/Anrede werden jetzt separat gespeichert (14.04.2026)
-- [x] IMAP VCF-Parser: Vorname/Nachname/Anrede Extraktion hinzugefuegt (14.04.2026)
-- [x] VCF-Import auf Kunden-Seite hinzugefuegt (14.04.2026)
-- [x] Photos-Modell: List[Any] statt List[str] fuer Datei-Metadaten (14.04.2026)
-- [x] Anfragen Bearbeiten-Modal komplett umgebaut wie Kunden-Formular (14.04.2026)
-  - Adresse in Einzelfelder (Strasse/Nr/PLZ/Ort), Kundentyp-Dropdown, Datei-Upload
-- [x] Bilder/Dokumente getrennte Bereiche in Kunden + Anfragen Detailansicht (14.04.2026)
-  - Bilder: Thumbnail-Grid mit Hover-Zoom (scale 110%)
-  - Dokumente: Dateiliste mit Download-Icon
-- [x] E-Mail-Parser: Kontaktformular-Weiterleitungen erkennen und Kundendaten extrahieren (14.04.2026)
-  - Erkennt "Neue Kundenanfrage eingegangen" Pattern
-  - Extrahiert Name/Anrede/Vorname/Nachname/Telefon/E-Mail/Adresse/Nachricht
-  - Vermeidet Duplikate (prueft ob Anfrage bereits ueber Kontaktformular existiert)
-  - Fix: "Herr Herr" Duplikat-Anrede wird bereinigt
-- [x] Einstellungen/Diverses Tab Crash behoben
+## Module (Eigenstaendig)
 
-## P1 - Next Tasks
-- [ ] User informieren ueber Redeploy fuer Live-Domain
-- [ ] Standalone Homepage fertigstellen (/app/landing_page/index.html)
+### 1. Kontakt-Modul (Datensammler)
+- **Seite**: `/module/kontakt`
+- **DB**: `module_kontakt`
+- **API**: `/api/modules/kontakt/data`
+- **Felder**: Anrede, Vorname, Nachname, Firma, E-Mail, Telefon, Adresse, Status (Anfrage/Kunde/Interessent/Archiv), Kundentyp, Kategorien, Notizen
+- **Status**: Fertig
 
-## P2 - Future/Backlog
-- [ ] Windows Desktop App (Electron Wrapper)
-- [ ] DATEV-Export
-- [ ] Lexoffice-Anbindung
-- [ ] Refactoring: Grosse Komponenten aufteilen (SettingsPage, AnfragenPage, CustomersPage >1300 Zeilen)
+### 2. Artikel & Leistungen
+- **Seite**: `/module/artikel`
+- **DB**: `module_artikel`, `module_artikel_config`
+- **API**: `/api/modules/artikel/data`, `/api/modules/artikel/config`, `/api/modules/artikel/next-number/{typ}`
+- **Felder**: Artikel-Nr (auto), Bezeichnung, Beschreibung, Typ (Artikel/Leistung/Fremdleistung), EK-Preis, VK-Preis, Einheit, Subunternehmer
+- **Nummernvergabe**: ArtNr2640, Leist2660, Fremd26000 (konfigurierbar)
+- **Status**: Fertig
+
+### 3. Dokumente (Angebote, Auftraege, Rechnungen)
+- **Seite**: `/module/dokumente`
+- **DB**: `quotes`, `orders`, `invoices` (bestehendes System)
+- **API**: Bestehende `/api/quotes`, `/api/orders`, `/api/invoices` + `/api/modules/dokumente/stats`
+- **Vorschau**: Seitenblaettern, automatische Positionsaufteilung bei langen Texten, manueller Seitenumbruch mit `---`
+- **Verknuepfungen**: Kontakt-Modul (Kundenauswahl), Artikel & Leistungen (Positionen), Textvorlagen
+- **Status**: Fertig
+
+### 4. Textvorlagen
+- **Seite**: `/module/textvorlagen`
+- **DB**: `module_textvorlagen`
+- **API**: `/api/modules/textvorlagen/data`, `/api/modules/textvorlagen/placeholders`
+- **Felder**: Titel, Inhalt, Textart (Vortext/Schlusstext/Betreff/etc.), Dokumenttyp
+- **Platzhalter**: {kunde_name}, {datum}, {dokument_nr}, etc.
+- **Verknuepfung**: Wird im Dokument-Editor als Textbaustein-Dropdown angezeigt
+- **Status**: Fertig
+
+## Modul-Manager
+- **Seite**: Einstellungen -> Module Tab
+- **Zeigt**: Alle registrierten Module mit Feldern, API-Endpoints, Status
+- **Funktionen**: Aktivieren/Deaktivieren, Export
+
+## Bestehendes System (Legacy - wird schrittweise durch Module ersetzt)
+- Anfragen-Seite
+- Kunden-Seite
+- E-Mail (IMAP)
+- Dashboard
+- Einstellungen
+- Mitarbeiter
+- Einsaetze
+
+## Completed Work (14.04.2026)
+- [x] Vorname/Nachname Trennung in Listen/Detail
+- [x] VCF-Import fuer Kunden + Anfragen
+- [x] Bilder/Dokumente getrennte Bereiche
+- [x] E-Mail-Parser: Kontaktformular-Weiterleitungen
+- [x] ContactForm-Modul (gemeinsames Formular)
+- [x] Kontakt-Modul (eigenstaendig)
+- [x] Artikel & Leistungen Modul mit Nummernvergabe
+- [x] Dokumente-Modul (Angebote/Auftraege/Rechnungen)
+- [x] Textvorlagen-Modul
+- [x] Module verknuepft (Kontakte -> Dokumente, Artikel -> Dokumente, Textvorlagen -> Dokumente)
+- [x] Dokument-Vorschau: Seitenblaettern + Positionsaufteilung
+- [x] Seitenumbruch-Steuerung mit --- Marker
+- [x] Bug-Fixes: PortalButtons Import, AnfrageUpdate Modell, doppelter PUT-Endpoint
 
 ## Key Files
-- `/app/frontend/src/pages/CustomersPage.jsx`
-- `/app/frontend/src/pages/AnfragenPage.jsx`
-- `/app/backend/models.py`
-- `/app/backend/routes/customers.py`
-- `/app/backend/routes/anfragen.py`
+- `/app/backend/routes/modules.py` - Modul-Manager API
+- `/app/backend/routes/module_artikel.py` - Artikel & Leistungen Backend
+- `/app/backend/routes/module_dokumente.py` - Dokumente Backend
+- `/app/backend/routes/module_textvorlagen.py` - Textvorlagen Backend
+- `/app/frontend/src/pages/KontaktModulPage.jsx` - Kontakt-Modul UI
+- `/app/frontend/src/pages/ArtikelModulPage.jsx` - Artikel & Leistungen UI
+- `/app/frontend/src/pages/DokumenteModulPage.jsx` - Dokumente UI
+- `/app/frontend/src/pages/TextvorlagenModulPage.jsx` - Textvorlagen UI
+- `/app/frontend/src/components/DocumentPreview.jsx` - Vorschau mit Seitenblaettern
+- `/app/frontend/src/components/ContactForm.jsx` - Gemeinsames Kontaktformular
 
-## DB Schema
-- `customers`: {vorname, nachname, anrede, firma, photos, email, phone, address, ...}
-- `anfragen`: {vorname, nachname, anrede, firma, photos, email, phone, address, ...}
+## P1 - Next Tasks
+- [ ] Weitere Module aus bestehendem System extrahieren
+- [ ] Alte Seiten schrittweise durch Module ersetzen
+- [ ] Redeploy fuer Live-Domain
+
+## P2 - Future/Backlog
+- [ ] Standalone Homepage
+- [ ] Windows Desktop App (Electron)
+- [ ] DATEV-Export
+- [ ] Lexoffice-Anbindung
