@@ -34,6 +34,7 @@ from routes.anfragen import router as anfragen_router
 from routes.documents_manager import router as documents_manager_router
 from routes.modules import router as modules_router
 from routes.module_angebote import router as module_angebote_router
+from routes.module_artikel import router as module_artikel_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -71,6 +72,7 @@ api_router.include_router(anfragen_router)
 api_router.include_router(documents_manager_router)
 api_router.include_router(modules_router)
 api_router.include_router(module_angebote_router)
+api_router.include_router(module_artikel_router)
 
 
 @api_router.get("/")

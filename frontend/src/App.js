@@ -25,6 +25,7 @@ import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
 import MitarbeiterPage from "@/pages/MitarbeiterPage";
 import { KontaktModulPage } from "@/pages/KontaktModulPage";
 import { AngeboteModulPage } from "@/pages/AngeboteModulPage";
+import { ArtikelModulPage } from "@/pages/ArtikelModulPage";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -89,6 +90,7 @@ function App() {
                   <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzePage /></MainLayout>} />
                   <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />
                   <Route path="/module/angebote" element={<MainLayout onLogout={logout}><AngeboteModulPage /></MainLayout>} />
+                  <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
                 </>
               )}
 
