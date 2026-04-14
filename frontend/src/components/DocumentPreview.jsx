@@ -103,10 +103,38 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       budget -= TBL_HEAD_H;
 
       const start = i;
+      const splitPositions = []; // Track positions that were split on this page
       while (i < pos.length) {
         const h = estPosH(pos[i]);
-        if (budget < h && i > start) break;
-        // Wenn Position zu groß für leere Seite - trotzdem nehmen
+        if (budget < h && i > start) {
+          // Position doesn't fit - try to split it
+          const minH = ROW_BASE; // minimum height for a split (at least 1 line)
+          if (budget >= minH && pos[i].type !== "titel") {
+            // Split: calculate how many description lines fit
+            const descLines = (pos[i].description || "").split("\n");
+            const expandedLines = [];
+            descLines.forEach(l => {
+              const wrappedCount = Math.max(1, Math.ceil((l.length || 1) / 45));
+              for (let w = 0; w < wrappedCount; w++) {
+                expandedLines.push(l.substring(w * 45, (w + 1) * 45));
+              }
+            });
+            const availableLines = Math.floor((budget - ROW_BASE) / ROW_LINE) + 1;
+            if (availableLines >= 2 && availableLines < expandedLines.length) {
+              // Split the description
+              const firstPart = expandedLines.slice(0, availableLines).join("\n");
+              const secondPart = expandedLines.slice(availableLines).join("\n");
+              // Replace current position with split version
+              pos.splice(i, 1, 
+                { ...pos[i], description: firstPart, _splitFirst: true },
+                { ...pos[i], description: secondPart, _splitContinue: true }
+              );
+              budget -= ROW_BASE + Math.max(0, availableLines - 1) * ROW_LINE;
+              i++;
+            }
+          }
+          break;
+        }
         if (budget < h && i === start) { i++; break; }
         budget -= h;
         i++;
@@ -213,14 +241,19 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
         </tr>
       );
     }
+    const isContinue = pos._splitContinue;
+    const isFirstPart = pos._splitFirst;
     return (
       <tr key={gIdx} className="border-b border-slate-100">
-        <td className="py-2.5 text-xs align-top">{numbering[gIdx]}</td>
-        <td className="py-2.5 text-xs align-top whitespace-pre-line [&::first-line]:font-bold">{pos.description}</td>
-        <td className="py-2.5 text-xs text-right font-mono align-top pr-1">{pos.quantity}</td>
-        <td className="py-2.5 text-xs align-top pl-1">{pos.unit}</td>
-        <td className="py-2.5 text-xs text-right font-mono align-top">{pos.price_net?.toFixed(2)} €</td>
-        <td className="py-2.5 text-xs text-right font-mono align-top">{((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €</td>
+        <td className="py-2.5 text-xs align-top">{isContinue ? "" : numbering[gIdx]}</td>
+        <td className="py-2.5 text-xs align-top whitespace-pre-line [&::first-line]:font-bold">
+          {isContinue && <span className="text-[10px] text-muted-foreground italic">Fortsetzung: </span>}
+          {pos.description}
+        </td>
+        <td className="py-2.5 text-xs text-right font-mono align-top pr-1">{isContinue ? "" : pos.quantity}</td>
+        <td className="py-2.5 text-xs align-top pl-1">{isContinue ? "" : pos.unit}</td>
+        <td className="py-2.5 text-xs text-right font-mono align-top">{isContinue ? "" : `${pos.price_net?.toFixed(2)} €`}</td>
+        <td className="py-2.5 text-xs text-right font-mono align-top">{isFirstPart ? "" : isContinue ? "" : `${((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €`}</td>
       </tr>
     );
   };
