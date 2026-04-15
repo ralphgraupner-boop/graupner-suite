@@ -59,9 +59,15 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 ## Oberste Regel
 Module erstellen -> dann verknuepfen. Jedes Modul sammelt/speichert zuerst Daten eigenstaendig.
 
+## Modul-Verknuepfungen (Fertig 15.04.2026)
+1. **Kontakt -> Kunden**: Button "Als Kunde uebernehmen" im Kontakt-Detail. Duplikat-Erkennung per E-Mail/Name.
+2. **Kunden -> Kontakt**: Button "Ins Kontakt-Modul" im Kunden-Detail. Duplikat-Erkennung per E-Mail/Name.
+3. **Kunden-Modul -> Dokumente**: Kunden aus Kunden-Modul erscheinen im Dokument-Editor Dropdown mit [Kunden-Modul] Label.
+4. **Artikel -> Dokumente**: Artikel & Leistungen Modul liefert Positionen an den Dokument-Editor.
+5. **Textvorlagen -> Dokumente**: Textvorlagen-Modul liefert Textbausteine (Vortext/Schlusstext/Betreff) an den Dokument-Editor.
+
 ## P1 - Next Tasks
 - [ ] ERR_BLOCKED_BY_CLIENT Bug fixen (Dokumente oeffnen)
-- [ ] Modul-Verknuepfungen erstellen (Kontakt<->Kunden, Artikel<->Dokumente, etc.)
 - [ ] Redeploy fuer Live-Domain
 
 ## P2 - Future/Backlog
