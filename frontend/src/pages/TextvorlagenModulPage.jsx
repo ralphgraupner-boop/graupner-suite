@@ -137,13 +137,13 @@ const TextvorlagenModulPage = () => {
           {filtered.map(item => (
             <Card key={item.id} className="overflow-hidden" data-testid={`vorlage-${item.id}`}>
               <div className="flex items-start gap-3 p-3 lg:p-4">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 group/content">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold">{item.title}</span>
                     <Badge className={`text-xs ${TEXT_TYPE_COLORS[item.text_type] || ""}`}>{TEXT_TYPE_LABELS[item.text_type] || item.text_type}</Badge>
                     <Badge variant="outline" className="text-xs">{DOC_TYPE_LABELS[item.doc_type] || item.doc_type}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{item.content}</p>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2 group-hover/content:line-clamp-none whitespace-pre-line transition-all">{item.content}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button onClick={() => { navigator.clipboard.writeText(item.content); toast.success("Inhalt kopiert"); }} className="p-2 hover:bg-muted rounded-sm" title="Kopieren">

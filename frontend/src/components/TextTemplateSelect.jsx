@@ -167,10 +167,10 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
                       type="button"
                       onClick={() => handleSelect(t)}
                       data-testid={`template-option-${t.id}`}
-                      className="block w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors border-b last:border-b-0"
+                      className="group block w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors border-b last:border-b-0"
                     >
                       <span className="font-semibold">{t.title}</span>
-                      <span className="block text-xs text-muted-foreground mt-1 whitespace-pre-line line-clamp-4">{t.content}</span>
+                      <span className="block text-xs text-muted-foreground mt-1 whitespace-pre-line line-clamp-2 group-hover:line-clamp-none transition-all">{t.content}</span>
                     </button>
                   ))}
                 </div>
