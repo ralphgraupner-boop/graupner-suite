@@ -347,7 +347,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                     phone_match = _re.search(r'Telefon:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
                     email_match = _re.search(r'E-Mail:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
                     addr_match = _re.search(r'Adresse:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
-                    msg_match = _re.search(r'Nachricht[:\s]+(.+)', body, _re.DOTALL)
+                    msg_match = _re.search(r'Nachricht[:\s]+(.+?)(?=\s*[\U0001F4F7\U0001F4CB]|\s*\d+\s*Bild\(er\)|\s*Diese Anfrage finden|\s*Eingegangen am|\s*Quelle:|\s*Tischlerei|\s*Handy:|\s*Hinweis:\s*DSGVO|\Z)', body, _re.DOTALL)
                     firma_match = _re.search(r'Firma:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
                     
                     if name_match and (phone_match or email_match):
@@ -526,7 +526,7 @@ async def create_anfrage_from_email(email_id: str, user=Depends(get_current_user
         phone_match = _re.search(r'Telefon:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
         email_match = _re.search(r'E-Mail:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
         addr_match = _re.search(r'Adresse:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
-        msg_match = _re.search(r'Nachricht[:\s]+(.+)', body, _re.DOTALL)
+        msg_match = _re.search(r'Nachricht[:\s]+(.+?)(?=\s*[\U0001F4F7\U0001F4CB]|\s*\d+\s*Bild\(er\)|\s*Diese Anfrage finden|\s*Eingegangen am|\s*Quelle:|\s*Tischlerei|\s*Handy:|\s*Hinweis:\s*DSGVO|\Z)', body, _re.DOTALL)
         firma_match = _re.search(r'Firma:\s*(.+?)(?=\s+' + _fields + r'[:\s]|\s+Nachricht[\s:]|\Z)', body)
 
         if name_match:
