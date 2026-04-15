@@ -45,8 +45,29 @@ const EmailInboxPage = () => {
 
   const loadCustomers = async () => {
     try {
-      const res = await api.get("/customers");
-      setCustomers(res.data);
+      const [kundenRes, kontaktRes] = await Promise.all([
+        api.get("/modules/kunden/data").catch(() => ({ data: [] })),
+        api.get("/modules/kontakt/data").catch(() => ({ data: [] }))
+      ]);
+      const kunden = (kundenRes.data || []).map(k => ({
+        ...k,
+        name: `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || "Unbekannt",
+        _source: "kunden-modul"
+      }));
+      const kontakte = (kontaktRes.data || []).map(k => ({
+        ...k,
+        name: `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || "Unbekannt",
+        _source: "kontakt-modul"
+      }));
+      const seenEmails = new Set();
+      const all = [...kunden, ...kontakte].filter(c => {
+        if (!c.email) return true;
+        const lower = c.email.toLowerCase();
+        if (seenEmails.has(lower)) return false;
+        seenEmails.add(lower);
+        return true;
+      });
+      setCustomers(all);
     } catch {}
   };
 
@@ -66,7 +87,7 @@ const EmailInboxPage = () => {
   const handleCreateAnfrage = async (emailId) => {
     try {
       await api.post(`/imap/inbox/${emailId}/create-anfrage`);
-      toast.success("Anfrage erstellt");
+      toast.success("Kontakt im Kontakt-Modul angelegt");
       await loadInbox();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Fehler");
@@ -167,15 +188,17 @@ const EmailInboxPage = () => {
     if (!vcfPreview?.contact) return;
     const c = vcfPreview.contact;
     try {
-      await api.post("/customers", {
-        name: c.name || "",
+      await api.post("/modules/kontakt/data", {
+        vorname: (c.name || "").split(" ")[0] || "",
+        nachname: (c.name || "").split(" ").slice(1).join(" ") || "",
         email: c.email || "",
         phone: c.phone || "",
-        address: c.address || "",
-        company: c.firma || "",
+        firma: c.firma || "",
+        kontakt_status: "Anfrage",
+        customer_type: "Privat",
         notes: c.rolle ? `Rolle: ${c.rolle}` : "",
       });
-      toast.success(`Kontakt "${c.name}" angelegt`);
+      toast.success(`Kontakt "${c.name}" im Kontakt-Modul angelegt`);
       setVcfPreview(null);
       loadCustomers();
     } catch (err) {
@@ -528,7 +551,7 @@ const EmailInboxPage = () => {
                           onClick={() => handleCreateAnfrage(mail.id)}
                           data-testid={`btn-create-anfrage-${mail.id}`}
                         >
-                          <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Als Anfrage anlegen
+                          <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Im Kontakt-Modul anlegen
                         </Button>
                         <Button
                           variant="outline"
@@ -573,7 +596,7 @@ const EmailInboxPage = () => {
                       <div className="flex items-center justify-between pt-2 border-t">
                         <p className="text-xs text-green-600 font-medium flex items-center gap-1">
                           <ArrowRight className="w-3.5 h-3.5" />
-                          Zugeordnet: {mail.assigned_type === "anfrage" ? "Neue Anfrage erstellt" : "Kunde zugewiesen"}
+                          Zugeordnet: {mail.assigned_type === "kontakt" ? "Kontakt-Modul" : mail.assigned_type === "anfrage" ? "Kontakt-Modul" : "Kunde zugewiesen"}
                         </p>
                         <div className="flex gap-1.5">
                           <Button variant="outline" size="sm" className="text-primary hover:bg-primary/10" onClick={() => openReply(mail)} data-testid={`btn-reply-assigned-${mail.id}`}>

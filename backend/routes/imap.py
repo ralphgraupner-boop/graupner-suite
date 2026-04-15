@@ -484,44 +484,52 @@ async def mark_read(email_id: str, user=Depends(get_current_user)):
 
 @router.post("/imap/inbox/{email_id}/create-anfrage")
 async def create_anfrage_from_email(email_id: str, user=Depends(get_current_user)):
-    """Create a new Anfrage from an inbox email"""
+    """E-Mail als Kontakt im Kontakt-Modul anlegen (Status: Anfrage)"""
     mail_doc = await db.email_inbox.find_one({"id": email_id}, {"_id": 0})
     if not mail_doc:
         raise HTTPException(404, "E-Mail nicht gefunden")
 
-    anfrage = {
+    # Vorname/Nachname aus from_name extrahieren
+    from_name = mail_doc.get("from_name", "")
+    name_parts = from_name.strip().split(" ", 1)
+    vorname = name_parts[0] if name_parts else ""
+    nachname = name_parts[1] if len(name_parts) > 1 else ""
+
+    kontakt = {
         "id": str(uuid.uuid4()),
-        "name": mail_doc["from_name"],
+        "vorname": vorname,
+        "nachname": nachname,
         "email": mail_doc["from_email"],
         "phone": "",
-        "address": "",
-        "notes": f"Betreff: {mail_doc['subject']}",
-        "photos": [],
-        "categories": [],
-        "reparaturgruppen": [],
-        "customer_type": "Privat",
-        "firma": "",
         "anrede": "",
+        "firma": "",
+        "strasse": "",
+        "hausnummer": "",
+        "plz": "",
+        "ort": "",
+        "customer_type": "Privat",
+        "kontakt_status": "Anfrage",
+        "categories": [],
+        "notes": f"Betreff: {mail_doc['subject']}\n\n{mail_doc['body'][:2000]}",
         "source": "e-mail",
-        "obj_address": "",
-        "nachricht": mail_doc["body"][:2000],
         "email_message_id": mail_doc.get("message_id", ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    await db.anfragen.insert_one(anfrage)
-    anfrage.pop("_id", None)
+    await db.module_kontakt.insert_one(kontakt)
+    kontakt.pop("_id", None)
 
     # Mark email as assigned
     await db.email_inbox.update_one(
         {"id": email_id},
-        {"$set": {"status": "zugeordnet", "assigned_to": anfrage["id"], "assigned_type": "anfrage"}}
+        {"$set": {"status": "zugeordnet", "assigned_to": kontakt["id"], "assigned_type": "kontakt"}}
     )
-    return {"ok": True, "anfrage_id": anfrage["id"], "message": "Anfrage erstellt"}
+    return {"ok": True, "kontakt_id": kontakt["id"], "message": "Kontakt im Kontakt-Modul angelegt"}
 
 
 @router.post("/imap/inbox/{email_id}/assign-customer")
 async def assign_to_customer(email_id: str, body: dict, user=Depends(get_current_user)):
-    """Assign email to existing customer"""
+    """E-Mail einem Kunden aus dem Kunden-Modul oder Kontakt-Modul zuordnen"""
     customer_id = body.get("customer_id")
     if not customer_id:
         raise HTTPException(400, "customer_id erforderlich")
@@ -530,13 +538,21 @@ async def assign_to_customer(email_id: str, body: dict, user=Depends(get_current
     if not mail_doc:
         raise HTTPException(404, "E-Mail nicht gefunden")
 
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    # Suche in Kunden-Modul
+    customer = await db.module_kunden.find_one({"id": customer_id}, {"_id": 0})
+    target_collection = "module_kunden"
     if not customer:
-        raise HTTPException(404, "Kunde nicht gefunden")
+        # Suche in Kontakt-Modul
+        customer = await db.module_kontakt.find_one({"id": customer_id}, {"_id": 0})
+        target_collection = "module_kontakt"
+    if not customer:
+        raise HTTPException(404, "Kunde/Kontakt nicht gefunden")
 
-    # Add note to customer
-    note = f"[E-Mail {mail_doc['date']}] {mail_doc['subject']}: {mail_doc['body'][:500]}"
-    await db.customers.update_one(
+    customer_name = f"{customer.get('vorname', '')} {customer.get('nachname', '')}".strip() or customer.get('firma', 'Unbekannt')
+
+    # E-Mail-Verlauf zum Kunden/Kontakt hinzufuegen
+    db_col = db.module_kunden if target_collection == "module_kunden" else db.module_kontakt
+    await db_col.update_one(
         {"id": customer_id},
         {"$push": {"email_history": {
             "id": str(uuid.uuid4()),
@@ -553,7 +569,7 @@ async def assign_to_customer(email_id: str, body: dict, user=Depends(get_current
         {"id": email_id},
         {"$set": {"status": "zugeordnet", "assigned_to": customer_id, "assigned_type": "kunde"}}
     )
-    return {"ok": True, "message": f"E-Mail dem Kunden {customer.get('name', '')} zugeordnet"}
+    return {"ok": True, "message": f"E-Mail dem Kunden {customer_name} zugeordnet"}
 
 
 @router.delete("/imap/inbox/{email_id}")
