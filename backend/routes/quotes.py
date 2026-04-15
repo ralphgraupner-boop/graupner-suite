@@ -8,6 +8,27 @@ from auth import get_current_user
 router = APIRouter()
 
 
+async def find_customer_in_modules(customer_id: str):
+    """Sucht Kunden in allen Modulen (Kunden-Modul, Kontakt-Modul, Legacy)"""
+    # 1. Kunden-Modul
+    customer = await db.module_kunden.find_one({"id": customer_id}, {"_id": 0})
+    if customer:
+        name = f"{customer.get('vorname', '')} {customer.get('nachname', '')}".strip() or customer.get('firma', 'Unbekannt')
+        address = customer.get('address') or f"{customer.get('strasse', '')} {customer.get('hausnummer', '')}, {customer.get('plz', '')} {customer.get('ort', '')}".strip().strip(",").strip()
+        return {"name": name, "address": address, "email": customer.get("email", ""), "firma": customer.get("firma", "")}
+    # 2. Kontakt-Modul
+    kontakt = await db.module_kontakt.find_one({"id": customer_id}, {"_id": 0})
+    if kontakt:
+        name = f"{kontakt.get('vorname', '')} {kontakt.get('nachname', '')}".strip() or kontakt.get('firma', 'Unbekannt')
+        address = f"{kontakt.get('strasse', '')} {kontakt.get('hausnummer', '')}, {kontakt.get('plz', '')} {kontakt.get('ort', '')}".strip().strip(",").strip()
+        return {"name": name, "address": address, "email": kontakt.get("email", ""), "firma": kontakt.get("firma", "")}
+    # 3. Fallback: Legacy
+    legacy = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if legacy:
+        return {"name": legacy.get("name", ""), "address": legacy.get("address", ""), "email": legacy.get("email", ""), "firma": legacy.get("firma", "")}
+    return None
+
+
 async def get_next_quote_number():
     counter = await db.counters.find_one_and_update(
         {"_id": "quote_number"},
@@ -96,7 +117,7 @@ async def get_quote(quote_id: str):
 
 @router.post("/quotes", response_model=Quote)
 async def create_quote(quote: QuoteCreate):
-    customer = await db.customers.find_one({"id": quote.customer_id}, {"_id": 0})
+    customer = await find_customer_in_modules(quote.customer_id)
     if not customer:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
 
@@ -172,6 +193,14 @@ async def update_quote(quote_id: str, update: QuoteUpdate):
 
     if update.status:
         update_data["status"] = update.status
+
+    # Kundendaten aktualisieren wenn customer_id mitgeschickt wird
+    if update.customer_id:
+        customer = await find_customer_in_modules(update.customer_id)
+        if customer:
+            update_data["customer_id"] = update.customer_id
+            update_data["customer_name"] = customer["name"]
+            update_data["customer_address"] = customer.get("address", "")
 
     await db.quotes.update_one({"id": quote_id}, {"$set": update_data})
     updated = await db.quotes.find_one({"id": quote_id}, {"_id": 0})

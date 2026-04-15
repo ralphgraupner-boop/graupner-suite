@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from models import Invoice, InvoiceCreate, InvoiceUpdate, Position
 from database import db, logger
 from auth import get_current_user
+from routes.quotes import find_customer_in_modules
 
 router = APIRouter()
 
@@ -124,7 +125,7 @@ async def get_invoice(invoice_id: str):
 
 @router.post("/invoices", response_model=Invoice)
 async def create_invoice(invoice: InvoiceCreate):
-    customer = await db.customers.find_one({"id": invoice.customer_id}, {"_id": 0})
+    customer = await find_customer_in_modules(invoice.customer_id)
     if not customer:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
 
@@ -257,6 +258,14 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
             update_data["paid_at"] = datetime.now(timezone.utc).isoformat()
         elif update.status == "Offen":
             update_data["paid_at"] = None
+
+    # Kundendaten aktualisieren wenn customer_id mitgeschickt wird
+    if update.customer_id:
+        customer = await find_customer_in_modules(update.customer_id)
+        if customer:
+            update_data["customer_id"] = update.customer_id
+            update_data["customer_name"] = customer["name"]
+            update_data["customer_address"] = customer.get("address", "")
 
     await db.invoices.update_one({"id": invoice_id}, {"$set": update_data})
     updated = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})

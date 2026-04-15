@@ -387,6 +387,7 @@ class AIQuoteRequest(BaseModel):
     vat_rate: float = 19
 
 class QuoteUpdate(BaseModel):
+    customer_id: Optional[str] = None
     positions: List[Position] = []
     notes: str = ""
     vortext: str = ""
@@ -399,6 +400,7 @@ class QuoteUpdate(BaseModel):
     custom_total: Optional[float] = None
 
 class OrderUpdate(BaseModel):
+    customer_id: Optional[str] = None
     positions: List[Position] = []
     notes: str = ""
     vortext: str = ""
@@ -411,6 +413,7 @@ class OrderUpdate(BaseModel):
     custom_total: Optional[float] = None
 
 class InvoiceUpdate(BaseModel):
+    customer_id: Optional[str] = None
     positions: List[Position] = []
     notes: str = ""
     vortext: str = ""

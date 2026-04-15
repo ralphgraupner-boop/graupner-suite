@@ -3,6 +3,7 @@ from typing import List
 from datetime import datetime, timezone
 from models import Order, OrderUpdate, Position
 from database import db
+from routes.quotes import find_customer_in_modules
 
 router = APIRouter()
 
@@ -108,6 +109,14 @@ async def update_order(order_id: str, update: OrderUpdate):
 
     if update.status:
         update_data["status"] = update.status
+
+    # Kundendaten aktualisieren wenn customer_id mitgeschickt wird
+    if update.customer_id:
+        customer = await find_customer_in_modules(update.customer_id)
+        if customer:
+            update_data["customer_id"] = update.customer_id
+            update_data["customer_name"] = customer["name"]
+            update_data["customer_address"] = customer.get("address", "")
 
     await db.orders.update_one({"id": order_id}, {"$set": update_data})
     updated = await db.orders.find_one({"id": order_id}, {"_id": 0})

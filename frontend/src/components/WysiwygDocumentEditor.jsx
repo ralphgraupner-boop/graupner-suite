@@ -506,7 +506,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const res = await api.post(`/${endpoint}`, payload); toast.success(`${titles[type]} erstellt!`);
         if (res?.data?.id) navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true });
       } else {
-        const payload = { positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, ...(type === "invoice" && { deposit_amount: depositAmount }) };
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, ...(type === "invoice" && { deposit_amount: depositAmount }) };
         await api.put(`/${endpoint}/${id}`, payload); toast.success(`${titles[type]} gespeichert!`);
       }
     } catch { toast.error("Fehler beim Speichern"); } finally { setSaving(false); }
