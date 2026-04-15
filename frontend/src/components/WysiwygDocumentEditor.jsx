@@ -495,9 +495,17 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   // ==================== SAVE / PDF / EMAIL / PRINT ====================
+  const validateTextFields = () => {
+    if (!betreff?.trim()) { toast.error("Betrefffeld ist leer - bitte ausfuellen"); return false; }
+    if (!vortext?.trim()) { toast.error("Vortext ist leer - bitte ausfuellen"); return false; }
+    if (!schlusstext?.trim()) { toast.error("Schlusstext ist leer - bitte ausfuellen"); return false; }
+    return true;
+  };
+
   const handleSave = async () => {
     if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return; }
     if (positions.length === 0 || !positions[0].description) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return; }
+    if (!validateTextFields()) return;
     setSaving(true);
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
@@ -516,6 +524,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const handleDownloadPDF = async () => {
     if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
+    if (!validateTextFields()) return;
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
@@ -527,6 +536,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const handlePrint = async () => {
     if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
+    if (!validateTextFields()) return;
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
