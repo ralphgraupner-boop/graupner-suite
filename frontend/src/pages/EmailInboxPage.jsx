@@ -423,10 +423,10 @@ const EmailInboxPage = () => {
                           {mail.matched_customer && (
                             <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">Kunde: {mail.matched_customer.name}</Badge>
                           )}
-                          {mail.matched_anfragen?.length > 0 && (
-                            <Badge className="bg-amber-100 text-amber-700 text-[10px]">Anfrage: {mail.matched_anfragen[0].name}</Badge>
+                          {mail.matched_kontakte?.length > 0 && (
+                            <Badge className="bg-amber-100 text-amber-700 text-[10px]">Kontakt: {mail.matched_kontakte[0].name}</Badge>
                           )}
-                          {mail.classification === "anfrage" && !mail.matched_customer && !mail.matched_anfragen?.length && (
+                          {mail.classification === "anfrage" && !mail.matched_customer && !mail.matched_kontakte?.length && (
                             <Badge className="bg-purple-100 text-purple-700 text-[10px]">Anfrage erkannt</Badge>
                           )}
                           {mail.has_vcf && (
@@ -490,16 +490,16 @@ const EmailInboxPage = () => {
                     </div>
 
                     {/* Match info */}
-                    {(mail.matched_customer || mail.matched_anfragen?.length > 0) && (
+                    {(mail.matched_customer || mail.matched_kontakte?.length > 0) && (
                       <div className="flex flex-wrap gap-2 mb-3 p-2.5 bg-blue-50 border border-blue-100 rounded-sm">
                         {mail.matched_customer && (
                           <span className="text-xs font-medium text-blue-800 flex items-center gap-1">
                             <Users className="w-3.5 h-3.5" /> Kunde gefunden: <strong>{mail.matched_customer.name}</strong>
                           </span>
                         )}
-                        {mail.matched_anfragen?.map((a, i) => (
+                        {mail.matched_kontakte?.map((a, i) => (
                           <span key={i} className="text-xs font-medium text-amber-800 flex items-center gap-1">
-                            <Inbox className="w-3.5 h-3.5" /> Anfrage: <strong>{a.name}</strong>
+                            <Inbox className="w-3.5 h-3.5" /> Kontakt: <strong>{a.name}</strong>
                           </span>
                         ))}
                       </div>
