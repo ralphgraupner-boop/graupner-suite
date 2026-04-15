@@ -92,14 +92,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, settingsRes, kontaktRes, modulArtikelRes, kundenModulRes] = await Promise.all([
-        api.get("/customers"), api.get("/articles"), api.get("/settings"),
+      const [settingsRes, kontaktRes, modulArtikelRes, kundenModulRes] = await Promise.all([
+        api.get("/settings"),
         api.get("/modules/kontakt/data").catch(() => ({ data: [] })),
         api.get("/modules/artikel/data").catch(() => ({ data: [] })),
         api.get("/modules/kunden/data").catch(() => ({ data: [] }))
       ]);
-      // Merge Kunden + Kontakt-Modul + Kunden-Modul Daten (ohne Duplikate per E-Mail)
-      const kundenData = customersRes.data || [];
+      // NUR Modul-Daten verwenden (kein Legacy)
       const kontaktData = (kontaktRes.data || []).map(k => ({
         ...k,
         name: `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || "Unbekannt",
@@ -112,35 +111,23 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         address: k.address || `${k.strasse || ""} ${k.hausnummer || ""}, ${k.plz || ""} ${k.ort || ""}`.trim().replace(/^,\s*/, "").replace(/,\s*$/, ""),
         _source: "kunden-modul"
       }));
-      const existingEmails = new Set(kundenData.filter(c => c.email).map(c => c.email.toLowerCase()));
-      const mergedCustomers = [
-        ...kundenData,
-        ...kundenModulData.filter(k => !k.email || !existingEmails.has(k.email.toLowerCase())),
-        ...kontaktData.filter(k => !k.email || !existingEmails.has(k.email.toLowerCase()))
-      ];
-      // Deduplicate by email
+      // Deduplizierung per E-Mail
       const seenEmails = new Set();
-      const uniqueCustomers = mergedCustomers.filter(c => {
+      const allModulCustomers = [...kundenModulData, ...kontaktData].filter(c => {
         if (!c.email) return true;
         const lower = c.email.toLowerCase();
         if (seenEmails.has(lower)) return false;
         seenEmails.add(lower);
         return true;
       });
-      setCustomers(uniqueCustomers);
-      // Merge Artikel + Modul-Artikel (ohne Duplikate per Name)
-      const existingArticles = articlesRes.data || [];
-      const modulArtikel = (modulArtikelRes.data || []).map(a => ({ ...a, _source: "artikel-modul" }));
-      const existingNames = new Set(existingArticles.map(a => a.name?.toLowerCase()));
-      const allArticles = [
-        ...existingArticles,
-        ...modulArtikel.filter(a => !existingNames.has(a.name?.toLowerCase()))
-      ];
-      setArticles(allArticles.filter(a => a.typ === "Artikel"));
-      setServices(allArticles.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+      setCustomers(allModulCustomers);
+      // NUR Modul-Artikel verwenden
+      const modulArtikel = modulArtikelRes.data || [];
+      setArticles(modulArtikel.filter(a => a.typ === "Artikel"));
+      setServices(modulArtikel.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setSettings(settingsRes.data);
 
-      try { const titelRes = await api.get("/text-templates", { params: { text_type: "titel" } }); setTitelTemplates(titelRes.data); } catch {}
+      try { const titelRes = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel" } }); setTitelTemplates(titelRes.data); } catch {}
       try { const blockRes = await api.get("/leistungsbloecke"); setLeistungsBloecke(blockRes.data); } catch {}
 
       if (!isNew) {
@@ -160,7 +147,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const params = new URLSearchParams(location.search);
         const preselectedCustomerId = params.get("customer");
         if (preselectedCustomerId) {
-          const cust = customersRes.data.find(c => c.id === preselectedCustomerId);
+          const cust = allModulCustomers.find(c => c.id === preselectedCustomerId);
           if (cust) { setSelectedCustomerId(preselectedCustomerId); setCustomer(cust); }
         }
       }
@@ -187,8 +174,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const saveTitelTemplate = async (name) => {
     if (!name?.trim() || titelTemplates.some(t => t.content === name.trim())) return;
     try {
-      await api.post("/text-templates", { doc_type: "allgemein", text_type: "titel", title: name.trim(), content: name.trim() });
-      const res = await api.get("/text-templates", { params: { text_type: "titel" } });
+      await api.post("/modules/textvorlagen/data", { doc_type: "allgemein", text_type: "titel", title: name.trim(), content: name.trim() });
+      const res = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel" } });
       setTitelTemplates(res.data); toast.success("Titel-Vorlage gespeichert!");
     } catch { toast.error("Fehler beim Speichern"); }
   };
@@ -233,18 +220,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const saveToStamm = async (idx) => {
     const pos = positions[idx]; if (!pos?.source_article_id) return;
     try {
-      const existing = await api.get(`/articles/${pos.source_article_id}`);
-      const article = existing.data;
       const descParts = pos.description.split(" - ");
-      const updateData = { ...article, name: descParts[0] || pos.description, description: descParts.slice(1).join(" - ") || article.description || "", unit: pos.unit, price_net: pos.price_net };
-      delete updateData.id; delete updateData.created_at;
-      await api.put(`/articles/${pos.source_article_id}`, updateData);
+      const updateData = { name: descParts[0] || pos.description, description: descParts.slice(1).join(" - ") || "", unit: pos.unit, price_net: pos.price_net };
+      await api.put(`/modules/artikel/data/${pos.source_article_id}`, updateData);
       const updated = [...positions];
       updated[idx].original_description = pos.description; updated[idx].original_unit = pos.unit; updated[idx].original_price_net = pos.price_net;
       setPositions(updated); toast.success("Stammdaten aktualisiert!");
-      const artRes = await api.get("/articles");
-      setArticles(artRes.data.filter(a => a.typ === "Artikel"));
-      setServices(artRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+      const artRes = await api.get("/modules/artikel/data");
+      setArticles((artRes.data || []).filter(a => a.typ === "Artikel"));
+      setServices((artRes.data || []).filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
     } catch { toast.error("Fehler beim Aktualisieren der Stammdaten"); }
     setStammChangeIdx(null);
   };
@@ -259,12 +243,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     const pos = positions[idx];
     if (!pos.description?.trim()) { toast.error("Beschreibung erforderlich"); return; }
     try {
-      const res = await api.post("/articles", { name: pos.description.trim(), typ: saveAsType, price_net: pos.price_net || 0, unit: pos.unit || "Stück" });
+      const res = await api.post("/modules/artikel/data", { name: pos.description.trim(), typ: saveAsType, price_net: pos.price_net || 0, unit: pos.unit || "Stück" });
       toast.success(`Als ${saveAsType} gespeichert: ${res.data.artikel_nr}`);
       updatePosition(idx, "artikel_nr", res.data.artikel_nr); setSaveAsArticleIdx(null);
-      const artRes = await api.get("/articles");
-      setArticles(artRes.data.filter(a => a.typ === "Artikel"));
-      setServices(artRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+      const artRes = await api.get("/modules/artikel/data");
+      setArticles((artRes.data || []).filter(a => a.typ === "Artikel"));
+      setServices((artRes.data || []).filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
     } catch { toast.error("Fehler beim Speichern"); }
   };
 
@@ -294,15 +278,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleApplyKalkPrice = async (item, newPrice, newEk) => {
     if (!item?.id) return;
     try {
-      const existing = await api.get(`/articles/${item.id}`);
-      const article = existing.data;
-      const updateData = { ...article, price_net: newPrice, ek_preis: newEk };
-      delete updateData.id; delete updateData.created_at;
-      await api.put(`/articles/${item.id}`, updateData);
+      await api.put(`/modules/artikel/data/${item.id}`, { price_net: newPrice, ek_preis: newEk });
       toast.success(`VK-Preis für "${item.name}" auf ${newPrice.toFixed(2)} € aktualisiert`);
-      const artRes = await api.get("/articles");
-      setArticles(artRes.data.filter(a => a.typ === "Artikel"));
-      setServices(artRes.data.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+      const artRes = await api.get("/modules/artikel/data");
+      setArticles((artRes.data || []).filter(a => a.typ === "Artikel"));
+      setServices((artRes.data || []).filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
     } catch { toast.error("Fehler beim Aktualisieren"); }
   };
   const openPositionKalk = (idx) => {
@@ -342,9 +322,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleSaveKalkToStamm = async (item, kalkData) => {
     if (!item?.id) return;
     try {
-      const existing = await api.get(`/articles/${item.id}`);
-      await api.put(`/articles/${item.id}`, {
-        ...existing.data,
+      await api.put(`/modules/artikel/data/${item.id}`, {
         price_net: kalkData.vkPreis,
         ek_preis: kalkData.ek,
       });
@@ -370,7 +348,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     if (!pos) return;
     const name = (pos.description || "").split("\n")[0].trim();
     try {
-      const res = await api.post("/articles", {
+      const res = await api.post("/modules/artikel/data", {
         name, typ, price_net: kalkData.vkPreis, ek_preis: kalkData.ek,
         unit: pos.unit || (typ === "Leistung" ? "Stunde" : "Stück"),
         description: pos.description || "",
@@ -570,7 +548,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const onOpenEmailDialog = async () => {
     setEmailForm(f => ({ ...f, to_email: customer?.email || "", subject: `${titles[type]} ${docNumber}` }));
-    try { const res = await api.get(`/text-templates?text_type=email`); setEmailTemplates(res.data || []); } catch {}
+    try { const res = await api.get("/modules/textvorlagen/data", { params: { text_type: "email" } }); setEmailTemplates(res.data || []); } catch {}
     setShowEmailDialog(true);
   };
 

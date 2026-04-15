@@ -34,7 +34,7 @@ const EditorSidebar = ({
 
   const deleteItem = async (item) => {
     try {
-      await api.delete(`/articles/${item.id}`);
+      await api.delete(`/modules/artikel/data/${item.id}`);
       toast.success(`"${item.name}" gelöscht`);
       setSelectedItem(null);
       setDeleteConfirm(null);
@@ -45,10 +45,8 @@ const EditorSidebar = ({
   const saveEdit = async (item) => {
     setSaving(true);
     try {
-      const existing = await api.get(`/articles/${item.id}`);
-      const updateData = { ...existing.data, ...editData };
-      delete updateData.id; delete updateData.created_at;
-      await api.put(`/articles/${item.id}`, updateData);
+      const updateData = { ...editData };
+      await api.put(`/modules/artikel/data/${item.id}`, updateData);
       toast.success(`"${editData.name}" gespeichert`);
       setEditItem(null);
       onItemUpdated?.();

@@ -77,18 +77,9 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
 
   const loadTemplates = async () => {
     try {
-      const [oldRes, modulRes] = await Promise.all([
-        api.get("/text-templates", { params: { doc_type: docType, text_type: textType } }).catch(() => ({ data: [] })),
-        api.get("/modules/textvorlagen/data", { params: { doc_type: docType, text_type: textType } }).catch(() => ({ data: [] }))
-      ]);
-      const oldTemplates = oldRes.data || [];
-      const modulTemplates = (modulRes.data || []).map(t => ({ ...t, _source: "modul" }));
-      const existingTitles = new Set(oldTemplates.map(t => t.title?.toLowerCase()));
-      const merged = [
-        ...oldTemplates,
-        ...modulTemplates.filter(t => !existingTitles.has(t.title?.toLowerCase()))
-      ];
-      setTemplates(merged);
+      // NUR Modul-Textvorlagen verwenden
+      const modulRes = await api.get("/modules/textvorlagen/data", { params: { doc_type: docType, text_type: textType } }).catch(() => ({ data: [] }));
+      setTemplates(modulRes.data || []);
     } catch {
       // silent
     }
