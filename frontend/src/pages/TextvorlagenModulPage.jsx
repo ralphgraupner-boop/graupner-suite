@@ -3,6 +3,7 @@ import { Plus, Search, Edit, Trash2, Download, Package, FileText, ClipboardCheck
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", allgemein: "Allgemein" };
 const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung" };
@@ -215,7 +216,7 @@ const VorlageFormModal = ({ isOpen, onClose, item, onSave }) => {
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">Inhalt *</label>
-          <Textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={6} required data-testid="input-vorlage-content" />
+          <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} placeholder="Text eingeben... Formatierung mit der Toolbar" />
           <p className="text-xs text-muted-foreground mt-1">Platzhalter wie {"{kunde_name}"}, {"{datum}"} werden automatisch ersetzt</p>
         </div>
         <div className="flex justify-end gap-4 pt-4">

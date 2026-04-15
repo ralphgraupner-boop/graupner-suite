@@ -4,6 +4,113 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
+import re as _re
+from html import unescape as html_unescape
+
+
+def _strip_html(html_text):
+    """Entfernt HTML-Tags und gibt reinen Text zurueck"""
+    if not html_text:
+        return ""
+    text = _re.sub(r'<br\s*/?>', '\n', html_text)
+    text = _re.sub(r'</p>', '\n', text)
+    text = _re.sub(r'<[^>]+>', '', text)
+    text = html_unescape(text)
+    return text.strip()
+
+
+def _draw_rich_text(c, x, y, html_text, max_width, font_size=9, line_height=0.35, default_color="#0F172A"):
+    """Zeichnet HTML-formatierten Text auf das PDF Canvas.
+    Unterstuetzt: <strong>/<b>, <em>/<i>, <u>, <span style='color:...'> """
+    if not html_text:
+        return y
+
+    # HTML in Zeilen aufteilen
+    text = _re.sub(r'<br\s*/?>', '\n', html_text)
+    text = _re.sub(r'</p>\s*<p[^>]*>', '\n', text)
+    text = _re.sub(r'</?p[^>]*>', '', text)
+    text = html_unescape(text)
+    lines = text.split('\n')
+
+    for line in lines:
+        if not line.strip():
+            y -= line_height * cm * 0.5
+            continue
+
+        # Segmente mit Formatierung extrahieren
+        segments = []
+        pos = 0
+        pattern = _re.compile(r'<(strong|b|em|i|u|span)([^>]*)>(.*?)</\1>', _re.DOTALL)
+
+        remaining = line
+        while remaining:
+            match = pattern.search(remaining)
+            if not match:
+                clean = _re.sub(r'<[^>]+>', '', remaining)
+                if clean:
+                    segments.append({"text": clean, "bold": False, "italic": False, "underline": False, "color": default_color})
+                break
+
+            # Text vor dem Tag
+            before = remaining[:match.start()]
+            clean_before = _re.sub(r'<[^>]+>', '', before)
+            if clean_before:
+                segments.append({"text": clean_before, "bold": False, "italic": False, "underline": False, "color": default_color})
+
+            tag = match.group(1)
+            attrs = match.group(2)
+            inner = _re.sub(r'<[^>]+>', '', match.group(3))
+
+            seg = {"text": inner, "bold": tag in ("strong", "b"), "italic": tag in ("em", "i"), "underline": tag == "u", "color": default_color}
+
+            # Farbe aus style extrahieren
+            color_match = _re.search(r'color:\s*([^;"]+)', attrs)
+            if color_match:
+                seg["color"] = color_match.group(1).strip()
+
+            segments.append(seg)
+            remaining = remaining[match.end():]
+
+        if not segments:
+            y -= line_height * cm
+            continue
+
+        # Segmente zeichnen
+        cur_x = x
+        for seg in segments:
+            text_content = seg["text"][:90]
+            if not text_content:
+                continue
+
+            font_name = "Helvetica"
+            if seg["bold"] and seg["italic"]:
+                font_name = "Helvetica-BoldOblique"
+            elif seg["bold"]:
+                font_name = "Helvetica-Bold"
+            elif seg["italic"]:
+                font_name = "Helvetica-Oblique"
+
+            c.setFont(font_name, font_size)
+            try:
+                c.setFillColor(HexColor(seg["color"]) if seg["color"].startswith("#") else HexColor(default_color))
+            except:
+                c.setFillColor(HexColor(default_color))
+
+            c.drawString(cur_x, y, text_content)
+            text_width = c.stringWidth(text_content, font_name, font_size)
+
+            if seg["underline"]:
+                c.setStrokeColor(HexColor(seg["color"]) if seg["color"].startswith("#") else HexColor(default_color))
+                c.line(cur_x, y - 1, cur_x + text_width, y - 1)
+
+            cur_x += text_width
+
+        y -= line_height * cm
+
+    # Reset
+    c.setFont("Helvetica", font_size)
+    c.setFillColor(HexColor(default_color))
+    return y
 
 
 def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
@@ -410,18 +517,31 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     y_vt = y_betreff - 0.3 * cm
     vortext = data.get("vortext", "")
     if vortext:
-        c.setFont("Helvetica", 9)
-        c.setFillColor(text_color)
-        for line in vortext.split("\n")[:20]:
-            if line.strip() == "---":
-                _draw_footer(c, width, settings, page_num)
-                c.showPage()
-                page_num += 1
-                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                y_vt = height - 3.5 * cm
-                continue
-            c.drawString(2 * cm, y_vt, line[:90])
-            y_vt -= 0.35 * cm
+        # Pruefen ob HTML-Content
+        if "<" in vortext and ">" in vortext:
+            # Seitenumbruch-Logik fuer HTML
+            parts = _re.split(r'<p>---</p>|---', vortext)
+            for i, part in enumerate(parts):
+                if i > 0:
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_vt = height - 3.5 * cm
+                y_vt = _draw_rich_text(c, 2 * cm, y_vt, part, width - 4 * cm, font_size=9, default_color="#0F172A")
+        else:
+            c.setFont("Helvetica", 9)
+            c.setFillColor(text_color)
+            for line in vortext.split("\n")[:20]:
+                if line.strip() == "---":
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_vt = height - 3.5 * cm
+                    continue
+                c.drawString(2 * cm, y_vt, line[:90])
+                y_vt -= 0.35 * cm
         y_vt -= 0.2 * cm
 
     # === Positions Table ===
@@ -583,24 +703,41 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     # === Schlusstext ===
     schlusstext = data.get("schlusstext", "")
     if schlusstext:
-        c.setFont("Helvetica", 9)
-        c.setFillColor(text_color)
-        for line in schlusstext.split("\n")[:20]:
-            if line.strip() == "---":
-                _draw_footer(c, width, settings, page_num)
-                c.showPage()
-                page_num += 1
-                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                y_pos = height - 3.5 * cm
-                continue
-            if y_pos < footer_y_limit:
-                _draw_footer(c, width, settings, page_num)
-                c.showPage()
-                page_num += 1
-                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                y_pos = height - 3.5 * cm
-            c.drawString(2 * cm, y_pos, line[:90])
-            y_pos -= 0.35 * cm
+        if "<" in schlusstext and ">" in schlusstext:
+            parts = _re.split(r'<p>---</p>|---', schlusstext)
+            for i, part in enumerate(parts):
+                if i > 0:
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_pos = height - 3.5 * cm
+                if y_pos < footer_y_limit:
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_pos = height - 3.5 * cm
+                y_pos = _draw_rich_text(c, 2 * cm, y_pos, part, width - 4 * cm, font_size=9, default_color="#0F172A")
+        else:
+            c.setFont("Helvetica", 9)
+            c.setFillColor(text_color)
+            for line in schlusstext.split("\n")[:20]:
+                if line.strip() == "---":
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_pos = height - 3.5 * cm
+                    continue
+                if y_pos < footer_y_limit:
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_pos = height - 3.5 * cm
+                c.drawString(2 * cm, y_pos, line[:90])
+                y_pos -= 0.35 * cm
 
     # Valid until / Due date
     if doc_type == "quote" and data.get("valid_until"):

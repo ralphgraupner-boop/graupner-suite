@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronDown, Bookmark, FileText, Search, X, Copy, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 const PLACEHOLDERS = [
   { alias: "{anrede_brief}", desc: "Sehr geehrter Herr/Frau + Name" },
@@ -177,30 +178,17 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
           style={{ color: "#003399" }}
         />
       ) : (
-        <textarea
-          ref={textareaRef}
-          data-testid={`input-${textType}`}
+        <RichTextEditor
           value={value || ""}
-          onChange={(e) => { handleChange(e.target.value); autoResize(); }}
-          onBlur={() => {
-            if (value?.trim() && !fromTemplate) {
-              const isExisting = templates.some(t => t.content === value || resolvePlaceholders(t.content, customer, settings, docNumber) === value);
-              if (!isExisting) setShowSavePrompt(true);
-            }
-          }}
-          placeholder={`${label} eingeben oder aus Textbausteinen wählen...`}
-          rows={2}
-          className="flex w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none overflow-hidden"
-          style={{ minHeight: "56px" }}
+          onChange={(val) => { handleChange(val); }}
+          placeholder={`${label} eingeben oder aus Textbausteinen waehlen...`}
+          compact
         />
       )}
       {!isBetreff && (
         <div className="flex flex-wrap gap-1 mt-1">
-          {!value && PLACEHOLDERS.slice(0, 4).map((p) => (
-            <span key={p.alias} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title={p.desc}>{p.alias}</span>
-          ))}
           <span className="text-[10px] text-muted-foreground bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded cursor-pointer" title="Seitenumbruch einfuegen"
-            onClick={() => onChange(value ? value + "\n---\n" : "---\n")}>--- = Seitenumbruch (klicken zum Einfuegen)</span>
+            onClick={() => onChange(value ? value + "<p>---</p>" : "<p>---</p>")}>--- = Seitenumbruch (klicken zum Einfuegen)</span>
         </div>
       )}
 
@@ -355,7 +343,7 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1">Inhalt</label>
-                    <textarea className="w-full rounded-sm border border-input bg-background px-3 py-2 text-sm min-h-[150px] resize-none" placeholder="Text eingeben... Platzhalter wie {anrede_brief}, {kunde_name} etc. verfuegbar" value={newForm.content} onChange={e => setNewForm({ ...newForm, content: e.target.value })} data-testid="new-template-content" />
+                    <RichTextEditor value={newForm.content} onChange={(val) => setNewForm({ ...newForm, content: val })} placeholder="Text eingeben... Formatierung mit der Toolbar" compact />
                     <div className="flex flex-wrap gap-1 mt-1">
                       {PLACEHOLDERS.map(p => (
                         <button key={p.alias} type="button" onClick={() => setNewForm({ ...newForm, content: newForm.content + p.alias })}

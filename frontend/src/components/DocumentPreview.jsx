@@ -355,7 +355,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       {doc.betreff && (
         <p className="font-bold text-sm mb-2" style={{ color: "#003399" }}>{doc.betreff}</p>
       )}
-      {doc.vortext && currentPg?.vortextPart && <p className="text-xs mb-3 whitespace-pre-line leading-relaxed">{currentPg.vortextPart}</p>}
+      {doc.vortext && currentPg?.vortextPart && <div className="text-xs mb-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: currentPg.vortextPart }} />}
     </>
   );
 
@@ -490,7 +490,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
                 {pg.last && (
                   <>
                     {renderTotals()}
-                    {pg.schlusstextPart && <p className="text-xs whitespace-pre-line mb-3 leading-relaxed">{pg.schlusstextPart}</p>}
+                    {pg.schlusstextPart && <div className="text-xs whitespace-pre-line mb-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: pg.schlusstextPart }} />}
                     {doc.valid_until && (
                       <p className="text-xs font-semibold">Gültig bis: {new Date(doc.valid_until).toLocaleDateString("de-DE")}</p>
                     )}

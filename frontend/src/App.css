@@ -213,3 +213,39 @@ textarea:focus-visible {
     border: 1px solid #e2e8f0;
   }
 }
+
+
+/* Rich Text Editor Styles */
+.rich-text-editor .ql-container {
+  border: 1px solid hsl(var(--border));
+  border-top: none;
+  border-radius: 0 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px);
+  font-size: 14px;
+  min-height: 100px;
+}
+.rich-text-editor .ql-toolbar {
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
+  background: hsl(var(--muted));
+}
+.rich-text-editor .ql-editor {
+  min-height: 100px;
+  padding: 12px;
+}
+.rich-text-editor .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+}
+.rich-text-editor.compact .ql-container {
+  min-height: 60px;
+}
+.rich-text-editor.compact .ql-editor {
+  min-height: 60px;
+  padding: 8px;
+}
+.rich-text-editor.compact .ql-toolbar {
+  padding: 4px 8px;
+}
+.rich-text-editor.compact .ql-toolbar .ql-formats {
+  margin-right: 8px;
+}
