@@ -138,7 +138,7 @@ const TextvorlagenModulPage = () => {
           {filtered.map(item => (
             <Card key={item.id} className="overflow-hidden" data-testid={`vorlage-${item.id}`}>
               <div className="flex items-start gap-3 p-3 lg:p-4">
-                <div className="flex-1 min-w-0 group/content">
+                <div className="flex-1 min-w-0 group/content" style={{ maxWidth: "680px" }}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold">{item.title}</span>
                     <Badge className={`text-xs ${TEXT_TYPE_COLORS[item.text_type] || ""}`}>{TEXT_TYPE_LABELS[item.text_type] || item.text_type}</Badge>
