@@ -159,7 +159,9 @@ async def create_invoice(invoice: InvoiceCreate):
         total_gross=round(total_gross, 2),
         deposit_amount=round(invoice.deposit_amount, 2),
         final_amount=round(final_amount, 2),
-        due_date=due_date
+        due_date=due_date,
+        show_lohnanteil=invoice.show_lohnanteil,
+        lohnanteil_custom=invoice.lohnanteil_custom
     )
 
     await db.invoices.insert_one(invoice_obj.model_dump())
@@ -249,7 +251,9 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
         "vat_amount": round(vat_amount, 2),
         "total_gross": round(total_gross, 2),
         "deposit_amount": round(update.deposit_amount, 2),
-        "final_amount": round(final_amount, 2)
+        "final_amount": round(final_amount, 2),
+        "show_lohnanteil": update.show_lohnanteil,
+        "lohnanteil_custom": update.lohnanteil_custom
     }
 
     if update.status:

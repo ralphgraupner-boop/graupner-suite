@@ -221,6 +221,8 @@ class Quote(BaseModel):
     is_template: bool = False
     valid_until: str = ""
     followup_sent: bool = False
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class QuoteCreate(BaseModel):
@@ -233,6 +235,8 @@ class QuoteCreate(BaseModel):
     discount: float = 0
     discount_type: str = "percent"
     vat_rate: float = 19
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
 
 class Order(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -254,6 +258,8 @@ class Order(BaseModel):
     total_gross: float = 0
     status: str = "Offen"
     is_template: bool = False
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Invoice(BaseModel):
@@ -283,6 +289,8 @@ class Invoice(BaseModel):
     dunning_level: int = 0
     dunning_date: Optional[str] = None
     is_template: bool = False
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class InvoiceCreate(BaseModel):
@@ -298,6 +306,8 @@ class InvoiceCreate(BaseModel):
     vat_rate: float = 19
     deposit_amount: float = 0
     due_days: int = 14
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
 
 
 class CompanySettings(BaseModel):
@@ -399,6 +409,8 @@ class QuoteUpdate(BaseModel):
     vat_rate: float = 19
     status: str = ""
     custom_total: Optional[float] = None
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
 
 class OrderUpdate(BaseModel):
     customer_id: Optional[str] = None
@@ -412,6 +424,8 @@ class OrderUpdate(BaseModel):
     vat_rate: float = 19
     status: str = ""
     custom_total: Optional[float] = None
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
 
 class InvoiceUpdate(BaseModel):
     customer_id: Optional[str] = None
@@ -426,6 +440,8 @@ class InvoiceUpdate(BaseModel):
     status: str = ""
     deposit_amount: float = 0
     custom_total: Optional[float] = None
+    show_lohnanteil: bool = False
+    lohnanteil_custom: str = ""
 
 class PushSubscription(BaseModel):
     endpoint: str

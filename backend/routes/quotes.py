@@ -147,7 +147,9 @@ async def create_quote(quote: QuoteCreate):
         subtotal_net=round(subtotal_net, 2),
         vat_amount=round(vat_amount, 2),
         total_gross=round(total_gross, 2),
-        valid_until=valid_until
+        valid_until=valid_until,
+        show_lohnanteil=quote.show_lohnanteil,
+        lohnanteil_custom=quote.lohnanteil_custom
     )
 
     await db.quotes.insert_one(quote_obj.model_dump())
@@ -188,7 +190,9 @@ async def update_quote(quote_id: str, update: QuoteUpdate):
         "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),
-        "total_gross": round(total_gross, 2)
+        "total_gross": round(total_gross, 2),
+        "show_lohnanteil": update.show_lohnanteil,
+        "lohnanteil_custom": update.lohnanteil_custom
     }
 
     if update.status:

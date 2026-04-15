@@ -104,7 +104,9 @@ async def update_order(order_id: str, update: OrderUpdate):
         "vat_rate": update.vat_rate,
         "subtotal_net": round(subtotal_net, 2),
         "vat_amount": round(vat_amount, 2),
-        "total_gross": round(total_gross, 2)
+        "total_gross": round(total_gross, 2),
+        "show_lohnanteil": update.show_lohnanteil,
+        "lohnanteil_custom": update.lohnanteil_custom
     }
 
     if update.status:
