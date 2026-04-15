@@ -1,0 +1,85 @@
+{
+  "summary": "Tested Module Linkage Features (v39) - All 4 module linkages working correctly. Backend: 17/17 pytest tests passed. Frontend: All UI elements visible and functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_module_linkage.py",
+    "/app/test_reports/pytest/pytest_module_linkage.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_module_linkage.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (all features working)"
+  },
+  "test_credentials": "admin/Graupner!Suite2026",
+  "seed_data_creation": "Test contacts and customers created during testing (cleaned up)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Module Linkage Features fully tested and working. All 4 linkages verified: 1) Kontakt->Kunden transfer with duplicate detection, 2) Kunden->Kontakt transfer with duplicate detection, 3) Kunden-Modul data in Document Editor customer dropdown (with [Kunden-Modul] label), 4) Textvorlagen-Modul data in TextTemplateSelect dropdowns.",
+  "features_tested": {
+    "backend_apis": {
+      "POST /api/modules/kunden/from-kontakt/{id}": "PASS - Transfers Kontakt to Kunden-Modul with duplicate detection",
+      "POST /api/modules/kontakt/from-kunden/{id}": "PASS - Transfers Kunde to Kontakt-Modul with duplicate detection",
+      "GET /api/modules/kunden/data": "PASS - Returns Kunden-Modul data",
+      "GET /api/modules/kontakt/data": "PASS - Returns Kontakt-Modul data",
+      "GET /api/modules/artikel/data": "PASS - Returns Artikel-Modul data",
+      "GET /api/modules/textvorlagen/data": "PASS - Returns Textvorlagen-Modul data",
+      "GET /api/text-templates": "PASS - Returns text templates",
+      "GET /api/customers": "PASS - Returns legacy customers",
+      "GET /api/articles": "PASS - Returns articles"
+    },
+    "frontend_features": {
+      "kontakt_modul_als_kunde_button": "PASS - 'Als Kunde uebernehmen' button visible in expanded Kontakt detail",
+      "kunden_modul_kontakt_importieren_button": "PASS - 'Kontakt importieren' button visible in Kunden-Modul header",
+      "kunden_modul_kontakt_import_modal": "PASS - Modal opens with contact list and 'Importieren' buttons",
+      "kunden_modul_ins_kontakt_button": "PASS - 'Ins Kontakt-Modul' button visible in expanded Kunden detail",
+      "kunden_modul_angebot_erstellen_button": "PASS - 'Angebot erstellen' button visible in expanded Kunden detail",
+      "document_editor_customer_dropdown": "PASS - Shows customers from Kunden-Modul with [Kunden-Modul] label",
+      "document_editor_kontakt_dropdown": "PASS - Shows contacts from Kontakt-Modul with [Kontakt] label",
+      "document_editor_artikel_sidebar": "PASS - Artikel tab visible with items from Artikel-Modul",
+      "document_editor_leistungen_sidebar": "PASS - Leistungen tab visible with items",
+      "text_template_betreff_dropdown": "PASS - Textbaustein dropdown works for Betreff",
+      "text_template_vortext_dropdown": "PASS - Textbaustein dropdown works for Vortext",
+      "text_template_schlusstext_dropdown": "PASS - Textbaustein dropdown works for Schlusstext"
+    }
+  },
+  "module_linkages_verified": {
+    "1_kontakt_to_kunden": {
+      "description": "Kontakt-Modul -> Kunden-Modul Transfer",
+      "backend_endpoint": "POST /api/modules/kunden/from-kontakt/{id}",
+      "frontend_button": "'Als Kunde uebernehmen' in Kontakt detail view",
+      "duplicate_detection": "By email or Vorname+Nachname",
+      "status": "WORKING"
+    },
+    "2_kunden_to_kontakt": {
+      "description": "Kunden-Modul -> Kontakt-Modul Transfer",
+      "backend_endpoint": "POST /api/modules/kontakt/from-kunden/{id}",
+      "frontend_button": "'Ins Kontakt-Modul' in Kunden detail view",
+      "duplicate_detection": "By email or Vorname+Nachname",
+      "status": "WORKING"
+    },
+    "3_kunden_to_dokumente": {
+      "description": "Kunden-Modul -> Dokumente (Customer selection in Editor)",
+      "frontend_component": "WysiwygDocumentEditor customer dropdown",
+      "label_format": "[Kunden-Modul] suffix on customer names",
+      "status": "WORKING"
+    },
+    "4_textvorlagen_to_dokumente": {
+      "description": "Textvorlagen-Modul -> Dokumente (Template selection)",
+      "frontend_component": "TextTemplateSelect dropdown",
+      "template_types": ["betreff", "vortext", "schlusstext"],
+      "status": "WORKING"
+    }
+  }
+}

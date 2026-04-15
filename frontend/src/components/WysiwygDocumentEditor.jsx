@@ -92,12 +92,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const loadData = async () => {
     try {
-      const [customersRes, articlesRes, settingsRes, kontaktRes, modulArtikelRes] = await Promise.all([
+      const [customersRes, articlesRes, settingsRes, kontaktRes, modulArtikelRes, kundenModulRes] = await Promise.all([
         api.get("/customers"), api.get("/articles"), api.get("/settings"),
         api.get("/modules/kontakt/data").catch(() => ({ data: [] })),
-        api.get("/modules/artikel/data").catch(() => ({ data: [] }))
+        api.get("/modules/artikel/data").catch(() => ({ data: [] })),
+        api.get("/modules/kunden/data").catch(() => ({ data: [] }))
       ]);
-      // Merge Kunden + Kontakt-Modul Daten (ohne Duplikate per E-Mail)
+      // Merge Kunden + Kontakt-Modul + Kunden-Modul Daten (ohne Duplikate per E-Mail)
       const kundenData = customersRes.data || [];
       const kontaktData = (kontaktRes.data || []).map(k => ({
         ...k,
@@ -105,12 +106,28 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         address: `${k.strasse || ""} ${k.hausnummer || ""}, ${k.plz || ""} ${k.ort || ""}`.trim().replace(/^,\s*/, "").replace(/,\s*$/, ""),
         _source: "kontakt-modul"
       }));
+      const kundenModulData = (kundenModulRes.data || []).map(k => ({
+        ...k,
+        name: `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || "Unbekannt",
+        address: k.address || `${k.strasse || ""} ${k.hausnummer || ""}, ${k.plz || ""} ${k.ort || ""}`.trim().replace(/^,\s*/, "").replace(/,\s*$/, ""),
+        _source: "kunden-modul"
+      }));
       const existingEmails = new Set(kundenData.filter(c => c.email).map(c => c.email.toLowerCase()));
       const mergedCustomers = [
         ...kundenData,
+        ...kundenModulData.filter(k => !k.email || !existingEmails.has(k.email.toLowerCase())),
         ...kontaktData.filter(k => !k.email || !existingEmails.has(k.email.toLowerCase()))
       ];
-      setCustomers(mergedCustomers);
+      // Deduplicate by email
+      const seenEmails = new Set();
+      const uniqueCustomers = mergedCustomers.filter(c => {
+        if (!c.email) return true;
+        const lower = c.email.toLowerCase();
+        if (seenEmails.has(lower)) return false;
+        seenEmails.add(lower);
+        return true;
+      });
+      setCustomers(uniqueCustomers);
       // Merge Artikel + Modul-Artikel (ohne Duplikate per Name)
       const existingArticles = articlesRes.data || [];
       const modulArtikel = (modulArtikelRes.data || []).map(a => ({ ...a, _source: "artikel-modul" }));

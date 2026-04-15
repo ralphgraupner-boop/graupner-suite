@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, ChevronDown, Download, Upload, X, File, Image as ImageIcon, Globe, Package } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ChevronDown, Download, Upload, X, File, Image as ImageIcon, Globe, Package, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -205,6 +205,33 @@ const KontaktModulPage = () => {
                           <p className="text-xs text-muted-foreground">Erstellt: {new Date(contact.created_at).toLocaleDateString("de-DE")}</p>
                         </div>
                       </div>
+                    </div>
+                    {/* Modul-Verknuepfungen */}
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await api.post(`/modules/kunden/from-kontakt/${contact.id}`);
+                            if (res.data.already_exists) {
+                              toast.info("Kontakt ist bereits als Kunde vorhanden");
+                            } else {
+                              toast.success(`${contact.vorname || ""} ${contact.nachname || ""} als Kunde uebernommen!`);
+                            }
+                          } catch { toast.error("Fehler beim Uebernehmen"); }
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors"
+                        data-testid={`btn-to-kunde-${contact.id}`}
+                      >
+                        <Users className="w-4 h-4" />
+                        Als Kunde uebernehmen
+                      </button>
+                      <button
+                        onClick={() => { setEditContact(contact); setShowModal(true); }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20 transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Bearbeiten
+                      </button>
                     </div>
                   </div>
                 )}

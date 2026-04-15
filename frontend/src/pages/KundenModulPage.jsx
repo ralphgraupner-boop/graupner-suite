@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -19,6 +19,7 @@ const KundenModulPage = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [vcfUploading, setVcfUploading] = useState(false);
+  const [showKontaktImport, setShowKontaktImport] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => { loadKunden(); }, []);
@@ -90,6 +91,7 @@ const KundenModulPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
+          <Button variant="outline" size="sm" onClick={() => setShowKontaktImport(true)} data-testid="btn-import-kontakt"><ArrowDownToLine className="w-4 h-4" /> Kontakt importieren</Button>
           <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import-kunden-modul">
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF importieren"}</span>
@@ -252,6 +254,23 @@ const KundenModulPage = () => {
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                       <Button size="sm" onClick={() => { setEditKunde(kunde); setShowModal(true); }}><Edit className="w-4 h-4" /> Bearbeiten</Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/quotes/new?customer=${kunde.id}`)}><FileText className="w-4 h-4" /> Angebot erstellen</Button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await api.post(`/modules/kontakt/from-kunden/${kunde.id}`);
+                            if (res.data.already_exists) {
+                              toast.info("Kunde ist bereits als Kontakt vorhanden");
+                            } else {
+                              toast.success(`${kunde.vorname || ""} ${kunde.nachname || ""} ins Kontakt-Modul uebernommen!`);
+                            }
+                          } catch { toast.error("Fehler beim Uebernehmen"); }
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+                        data-testid={`btn-to-kontakt-${kunde.id}`}
+                      >
+                        <ArrowDownToLine className="w-4 h-4" />
+                        Ins Kontakt-Modul
+                      </button>
                     </div>
                   </div>
                 )}
@@ -263,6 +282,9 @@ const KundenModulPage = () => {
 
       {/* Create/Edit Modal */}
       <KundenFormModal isOpen={showModal} onClose={() => setShowModal(false)} kunde={editKunde} onSave={() => { setShowModal(false); setEditKunde(null); loadKunden(); }} />
+
+      {/* Kontakt-Import Modal */}
+      <KontaktImportModal isOpen={showKontaktImport} onClose={() => setShowKontaktImport(false)} onImported={() => { setShowKontaktImport(false); loadKunden(); }} />
     </div>
   );
 };
@@ -389,6 +411,91 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
           <Button type="submit" disabled={loading}>{loading ? "Speichern..." : "Speichern"}</Button>
         </div>
       </form>
+    </Modal>
+  );
+};
+
+
+// ==================== KONTAKT IMPORT MODAL ====================
+const KontaktImportModal = ({ isOpen, onClose, onImported }) => {
+  const [kontakte, setKontakte] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [importing, setImporting] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) loadKontakte();
+  }, [isOpen]);
+
+  const loadKontakte = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/modules/kontakt/data");
+      setKontakte(res.data || []);
+    } catch { toast.error("Fehler beim Laden der Kontakte"); }
+    finally { setLoading(false); }
+  };
+
+  const handleImport = async (kontaktId, name) => {
+    setImporting(kontaktId);
+    try {
+      const res = await api.post(`/modules/kunden/from-kontakt/${kontaktId}`);
+      if (res.data.already_exists) {
+        toast.info(`${name} ist bereits als Kunde vorhanden`);
+      } else {
+        toast.success(`${name} als Kunde uebernommen!`);
+        onImported();
+      }
+    } catch { toast.error("Fehler beim Importieren"); }
+    finally { setImporting(null); }
+  };
+
+  const filtered = kontakte.filter(k => {
+    if (!search) return true;
+    const name = `${k.vorname || ""} ${k.nachname || ""}`.trim().toLowerCase();
+    return name.includes(search.toLowerCase()) || (k.email || "").toLowerCase().includes(search.toLowerCase()) || (k.firma || "").toLowerCase().includes(search.toLowerCase());
+  });
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Kontakt als Kunde importieren" size="lg">
+      <div className="space-y-4" data-testid="kontakt-import-modal">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input className="pl-9" placeholder="Kontakte durchsuchen..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Laden...</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">{search ? "Keine Ergebnisse" : "Keine Kontakte im Kontakt-Modul vorhanden"}</div>
+        ) : (
+          <div className="max-h-[400px] overflow-y-auto space-y-2">
+            {filtered.map(k => {
+              const displayName = `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || "Unbekannt";
+              return (
+                <div key={k.id} className="flex items-center justify-between p-3 rounded-sm border hover:border-primary/40 transition-colors" data-testid={`kontakt-import-${k.id}`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold shrink-0">
+                      {k.vorname?.charAt(0)?.toUpperCase() || k.nachname?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[k.email, k.phone, k.firma].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => handleImport(k.id, displayName)} disabled={importing === k.id} data-testid={`btn-import-${k.id}`}>
+                    {importing === k.id ? "..." : "Importieren"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex justify-end pt-2">
+          <Button variant="outline" onClick={onClose}>Schliessen</Button>
+        </div>
+      </div>
     </Modal>
   );
 };

@@ -149,3 +149,49 @@ async def export_kontakt_data(user=Depends(get_current_user)):
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "count": len(contacts),
     }
+
+
+
+# ==================== MODUL-VERKNUEPFUNGEN ====================
+
+@router.post("/modules/kontakt/from-kunden/{kunden_id}")
+async def import_from_kunden(kunden_id: str, user=Depends(get_current_user)):
+    """Kunde aus dem Kunden-Modul als Kontakt uebernehmen"""
+    kunde = await db.module_kunden.find_one({"id": kunden_id}, {"_id": 0})
+    if not kunde:
+        raise HTTPException(404, "Kunde nicht gefunden")
+    # Pruefen ob bereits als Kontakt vorhanden
+    query_or = []
+    if kunde.get("email"):
+        query_or.append({"email": kunde["email"]})
+    if kunde.get("vorname") and kunde.get("nachname"):
+        query_or.append({"vorname": kunde["vorname"], "nachname": kunde["nachname"]})
+    if query_or:
+        existing = await db.module_kontakt.find_one({"$or": query_or}, {"_id": 0})
+        if existing:
+            return {"message": "Kunde bereits als Kontakt vorhanden", "kontakt": existing, "already_exists": True}
+    kontakt = {
+        "id": str(uuid4()),
+        "vorname": kunde.get("vorname", ""),
+        "nachname": kunde.get("nachname", ""),
+        "anrede": kunde.get("anrede", ""),
+        "firma": kunde.get("firma", ""),
+        "email": kunde.get("email", ""),
+        "phone": kunde.get("phone", ""),
+        "strasse": kunde.get("strasse", ""),
+        "hausnummer": kunde.get("hausnummer", ""),
+        "plz": kunde.get("plz", ""),
+        "ort": kunde.get("ort", ""),
+        "customer_type": kunde.get("customer_type", "Privat"),
+        "kontakt_status": "Kunde",
+        "categories": kunde.get("categories", []),
+        "notes": kunde.get("notes", ""),
+        "source_kunden_id": kunden_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.module_kontakt.insert_one(kontakt)
+    kontakt.pop("_id", None)
+    name = f"{kunde.get('vorname', '')} {kunde.get('nachname', '')}".strip()
+    logger.info(f"Kunde -> Kontakt: {name}")
+    return {"message": f"Kunde '{name}' als Kontakt uebernommen", "kontakt": kontakt, "already_exists": False}

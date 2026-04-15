@@ -37,7 +37,7 @@ const DocumentHeader = ({
                   const displayName = (c.vorname || c.nachname) 
                     ? `${c.vorname || ""} ${c.nachname || ""}`.trim()
                     : c.name;
-                  const source = c._source === "kontakt-modul" ? " [Modul]" : "";
+                  const source = c._source === "kontakt-modul" ? " [Kontakt]" : c._source === "kunden-modul" ? " [Kunden-Modul]" : "";
                   const typeInfo = c.customer_type && c.customer_type !== "Privat" ? ` (${c.customer_type})` : "";
                   return (
                     <option key={c.id} value={c.id}>
