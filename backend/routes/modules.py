@@ -98,7 +98,7 @@ async def toggle_module_status(module_slug: str, body: dict, user=Depends(get_cu
 @router.get("/modules/kontakt/data")
 async def get_kontakt_data(user=Depends(get_current_user)):
     """Alle Kontaktdaten aus dem Modul abrufen"""
-    contacts = await db.module_kontakt.find({}, {"_id": 0}).to_list(10000)
+    contacts = await db.module_kontakt.find({}, {"_id": 0}).sort("created_at", -1).to_list(10000)
     return contacts
 
 
