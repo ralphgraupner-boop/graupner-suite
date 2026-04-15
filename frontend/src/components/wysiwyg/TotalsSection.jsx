@@ -245,6 +245,37 @@ const TotalsSection = ({
                 )}
               </>
             )}
+            {/* Lohnanteil Mobile */}
+            <div className="border-t pt-3 mt-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Lohnanteil</span>
+                <button type="button" onClick={() => setShowLohnanteil(!showLohnanteil)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${showLohnanteil ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+                  {showLohnanteil ? "Wird ausgewiesen" : "Nicht ausweisen"}
+                </button>
+              </div>
+              {(totalLaborCost > 0 || showLohnanteil) && (
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Lohnanteil (netto)</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" step="0.01" value={lohnanteilCustom !== "" ? lohnanteilCustom : totalLaborCost.toFixed(2)}
+                        onChange={(e) => setLohnanteilCustom(e.target.value)}
+                        className="w-24 border rounded px-2 py-0.5 text-right font-mono text-sm" />
+                      <span className="text-muted-foreground">€</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>zzgl. {vatRate}% MwSt</span>
+                    <span className="font-mono">{lohnanteilMwst.toFixed(2)} €</span>
+                  </div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Gesamt-Lohnsumme</span>
+                    <span className="font-mono">{lohnanteilBrutto.toFixed(2)} €</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
