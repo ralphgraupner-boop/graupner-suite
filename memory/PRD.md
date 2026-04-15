@@ -53,8 +53,9 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - **Seite**: Einstellungen -> Module Tab
 - **Zeigt**: Alle registrierten Module mit Feldern, API-Endpoints, Status
 
-## Bestehendes System (Legacy - wird schrittweise durch Module ersetzt)
-- Anfragen-Seite, Kunden-Seite, E-Mail (IMAP), Dashboard, Einstellungen, Mitarbeiter, Einsaetze
+## Bestehendes System (Legacy - ENTFERNT aus Navigation 15.04.2026)
+Alte Seiten existieren noch im Code als Dateien, sind aber nicht mehr erreichbar:
+- Anfragen, alte Kunden, alte Artikel, Einsatzplanung, Buchhaltung, Mahnwesen, Mitarbeiter, Kundenportale, Website-Integration
 
 ## Oberste Regel
 Module erstellen -> dann verknuepfen. Jedes Modul sammelt/speichert zuerst Daten eigenstaendig.

@@ -4,25 +4,13 @@ import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Set
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
-  { path: "/anfragen", icon: Inbox, label: "Anfragen", roles: ["admin"] },
-  { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"] },
-  { path: "/einsaetze", icon: Wrench, label: "Einsatzplanung", roles: ["admin"] },
-  { path: "/customers", icon: Users, label: "Kunden", roles: ["admin", "buchhaltung"] },
-  { path: "/quotes", icon: FileText, label: "Angebote", roles: ["admin"] },
-  { path: "/orders", icon: ClipboardCheck, label: "Aufträge", roles: ["admin", "buchhaltung"] },
-  { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
-  { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
-  { path: "/mahnwesen", icon: AlertTriangle, label: "Mahnwesen", roles: ["admin", "buchhaltung"] },
-  { path: "/mitarbeiter", icon: UserCheck, label: "Mitarbeiter", roles: ["admin", "buchhaltung"] },
-  { path: "/articles", icon: Package, label: "Artikel", roles: ["admin"] },
-  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
-  { path: "/webhook", icon: Globe, label: "Website-Integration", roles: ["admin"] },
-  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
   { path: "/module/kontakt", icon: Download, label: "Kontakt-Modul", roles: ["admin"] },
+  { path: "/module/kunden", icon: Users, label: "Kunden-Modul", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
-  { path: "/module/kunden", icon: Users, label: "Kunden-Modul", roles: ["admin"] }
+  { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"] },
+  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
 ];
 
 const getUserRole = () => {
@@ -247,13 +235,13 @@ const MobileNav = ({ onLogout }) => {
         { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung" },
         { path: "/invoices", icon: Receipt, label: "Rechnungen" },
         { path: "/orders", icon: ClipboardCheck, label: "Aufträge" },
-        { path: "/customers", icon: Users, label: "Kunden" },
+        { path: "/module/kunden", icon: Users, label: "Kunden" },
       ]
     : [
         { path: "/dashboard", icon: LayoutDashboard, label: "Home" },
-        { path: "/anfragen", icon: Inbox, label: "Anfragen" },
-        { path: "/customers", icon: Users, label: "Kunden" },
-        { path: "/quotes", icon: FileText, label: "Angebote" },
+        { path: "/module/kunden", icon: Users, label: "Kunden" },
+        { path: "/module/dokumente", icon: FileText, label: "Dokumente" },
+        { path: "/module/kontakt", icon: Download, label: "Kontakte" },
       ];
 
   const moreItems = navItems.filter(i => !mobileTabItems.find(t => t.path === i.path));

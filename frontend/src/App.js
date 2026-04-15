@@ -8,21 +8,9 @@ import { Sidebar, MobileNav, getUserRole } from "@/components/layout/Navigation"
 import { WysiwygDocumentEditor } from "@/components/WysiwygDocumentEditor";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
-import { AnfragenPage } from "@/pages/AnfragenPage";
-import { CustomersPage } from "@/pages/CustomersPage";
-import { QuotesPage } from "@/pages/QuotesPage";
-import { OrdersPage } from "@/pages/OrdersPage";
-import { InvoicesPage } from "@/pages/InvoicesPage";
-import { ArtikelPage } from "@/pages/ArticlesPage";
-import { EmailLogPage } from "@/pages/EmailLogPage";
 import { SettingsPage } from "@/pages/SettingsPage";
-import { WebhookDocPage } from "@/pages/WebhookDocPage";
-import { PortalsPage } from "@/pages/PortalsPage";
-import CustomerPortalPage from "@/pages/CustomerPortalPage";
-import { EinsaetzePage } from "@/pages/EinsaetzePage";
 import { EmailPage } from "@/pages/EmailPage";
-import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
-import MitarbeiterPage from "@/pages/MitarbeiterPage";
+import CustomerPortalPage from "@/pages/CustomerPortalPage";
 import { KontaktModulPage } from "@/pages/KontaktModulPage";
 import { ArtikelModulPage } from "@/pages/ArtikelModulPage";
 import { DokumenteModulPage } from "@/pages/DokumenteModulPage";
@@ -42,7 +30,7 @@ const MainLayout = ({ children, onLogout }) => {
 function App() {
   const { login, logout, isAuthenticated } = useAuth();
   const role = getUserRole();
-  const defaultPage = role === "buchhaltung" ? "/buchhaltung" : "/dashboard";
+  const defaultPage = "/dashboard";
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -55,49 +43,34 @@ function App() {
       <Toaster position="top-right" richColors />
       <BrowserRouter>
         <Routes>
-          {/* Public portal route */}
+          {/* Kundenportal (oeffentlich) */}
           <Route path="/portal/:token" element={<CustomerPortalPage />} />
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLogin={login} />} />
           ) : (
             <>
-              {/* Shared routes (all roles) */}
-              <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
-              <Route path="/customers" element={<MainLayout onLogout={logout}><CustomersPage readOnly={role === "buchhaltung"} /></MainLayout>} />
-              <Route path="/orders" element={<MainLayout onLogout={logout}><OrdersPage readOnly={role === "buchhaltung"} /></MainLayout>} />
-              <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage readOnly={role === "buchhaltung"} /></MainLayout>} />
-              <Route path="/mahnwesen" element={<MainLayout onLogout={logout}><InvoicesPage readOnly={role === "buchhaltung"} defaultTab="overdue" /></MainLayout>} />
-              <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterPage /></MainLayout>} />
+              {/* Dashboard */}
+              <Route path="/dashboard" element={<MainLayout onLogout={logout}><DashboardPage /></MainLayout>} />
 
-              {/* Admin-only routes */}
-              {role === "admin" && (
-                <>
-                  <Route path="/dashboard" element={<MainLayout onLogout={logout}><DashboardPage /></MainLayout>} />
-                  <Route path="/customers/new" element={<MainLayout onLogout={logout}><CustomersPage /></MainLayout>} />
-                  <Route path="/anfragen" element={<MainLayout onLogout={logout}><AnfragenPage /></MainLayout>} />
-                  <Route path="/quotes" element={<MainLayout onLogout={logout}><QuotesPage /></MainLayout>} />
-                  <Route path="/quotes/new" element={<WysiwygDocumentEditor type="quote" />} />
-                  <Route path="/quotes/edit/:id" element={<WysiwygDocumentEditor type="quote" />} />
-                  <Route path="/orders/edit/:id" element={<WysiwygDocumentEditor type="order" />} />
-                  <Route path="/invoices/new" element={<WysiwygDocumentEditor type="invoice" />} />
-                  <Route path="/invoices/edit/:id" element={<WysiwygDocumentEditor type="invoice" />} />
-                  <Route path="/articles" element={<MainLayout onLogout={logout}><ArtikelPage /></MainLayout>} />
-                  <Route path="/services" element={<Navigate to="/articles" replace />} />
-                  <Route path="/email-log" element={<Navigate to="/email" replace />} />
-                  <Route path="/posteingang" element={<Navigate to="/email" replace />} />
-                  <Route path="/email" element={<MainLayout onLogout={logout}><EmailPage /></MainLayout>} />
-                  <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
-                  <Route path="/webhook" element={<MainLayout onLogout={logout}><WebhookDocPage /></MainLayout>} />
-                  <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
-                  <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzePage /></MainLayout>} />
-                  <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />
-                  <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
-                  <Route path="/module/dokumente" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
-                  <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />
-                  <Route path="/module/kunden" element={<MainLayout onLogout={logout}><KundenModulPage /></MainLayout>} />
-                </>
-              )}
+              {/* Module */}
+              <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />
+              <Route path="/module/kunden" element={<MainLayout onLogout={logout}><KundenModulPage /></MainLayout>} />
+              <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
+              <Route path="/module/dokumente" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
+              <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />
 
+              {/* Dokument-Editor (Angebote/Auftraege/Rechnungen) */}
+              <Route path="/quotes/new" element={<WysiwygDocumentEditor type="quote" />} />
+              <Route path="/quotes/edit/:id" element={<WysiwygDocumentEditor type="quote" />} />
+              <Route path="/orders/edit/:id" element={<WysiwygDocumentEditor type="order" />} />
+              <Route path="/invoices/new" element={<WysiwygDocumentEditor type="invoice" />} />
+              <Route path="/invoices/edit/:id" element={<WysiwygDocumentEditor type="invoice" />} />
+
+              {/* E-Mail & Einstellungen */}
+              <Route path="/email" element={<MainLayout onLogout={logout}><EmailPage /></MainLayout>} />
+              <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
+
+              {/* Fallback */}
               <Route path="/" element={<Navigate to={defaultPage} replace />} />
               <Route path="*" element={<Navigate to={defaultPage} replace />} />
             </>
