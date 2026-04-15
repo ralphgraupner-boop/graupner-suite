@@ -228,10 +228,15 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
   const [allTemplates, setAllTemplates] = useState([]);
   const [activeFilter, setActiveFilter] = useState(textType);
   const [selectedId, setSelectedId] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newForm, setNewForm] = useState({ title: "", content: "", doc_type: docType || "allgemein", text_type: textType || "vortext" });
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const loadAll = () => {
     api.get("/modules/textvorlagen/data").then(res => setAllTemplates(res.data || [])).catch(() => setAllTemplates(templates));
-  }, []);
+  };
+
+  useEffect(() => { loadAll(); }, []);
 
   const filtered = allTemplates.filter(t => {
     if (activeFilter && t.text_type !== activeFilter) return false;
@@ -244,6 +249,17 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
 
   const selectedTemplate = allTemplates.find(t => t.id === selectedId);
   const resolvedPreview = selectedTemplate ? resolvePlaceholders(selectedTemplate.content, customer, settings, docNumber) : "";
+
+  const handleCreate = async () => {
+    if (!newForm.title?.trim() || !newForm.content?.trim()) { toast.error("Titel und Inhalt erforderlich"); return; }
+    setSaving(true);
+    try {
+      const res = await api.post("/modules/textvorlagen/data", newForm);
+      toast.success("Textvorlage gespeichert und uebernommen!");
+      onSelect(res.data);
+    } catch { toast.error("Fehler beim Speichern"); }
+    finally { setSaving(false); }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose} data-testid="textvorlagen-overlay">
@@ -261,7 +277,7 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
         </div>
 
         {/* Filter-Tabs */}
-        <div className="flex flex-wrap gap-1.5 px-4 pt-3 pb-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3 pb-2 shrink-0">
           <button onClick={() => setActiveFilter("")}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!activeFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
             Alle ({allTemplates.length})
@@ -274,23 +290,28 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
           ) : null)}
         </div>
 
-        {/* Split-Layout: Liste links, Vorschau rechts */}
+        {/* Split-Layout: Liste links, Vorschau/Formular rechts */}
         <div className="flex flex-1 min-h-0 border-t">
           {/* Linke Seite: Liste */}
           <div className="w-2/5 border-r flex flex-col">
-            <div className="p-3 shrink-0">
-              <div className="relative">
+            <div className="p-3 shrink-0 flex gap-2">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input className="w-full h-9 pl-9 pr-3 rounded-sm border border-input bg-background text-sm" placeholder="Suchen..." value={search} onChange={e => setSearch(e.target.value)} />
               </div>
+              <button type="button" onClick={() => { setShowCreate(true); setSelectedId(null); }}
+                className="h-9 px-3 rounded-sm bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors shrink-0 flex items-center gap-1"
+                data-testid="btn-create-template-overlay">
+                + Neu
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto">
               {filtered.length === 0 ? (
                 <p className="text-center text-muted-foreground text-sm py-8">Keine Vorlagen</p>
               ) : filtered.map(t => (
                 <button key={t.id} type="button"
-                  onClick={() => setSelectedId(t.id)}
-                  className={`w-full text-left px-4 py-3 border-b last:border-b-0 transition-colors ${selectedId === t.id ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/50"}`}
+                  onClick={() => { setSelectedId(t.id); setShowCreate(false); }}
+                  className={`w-full text-left px-4 py-3 border-b last:border-b-0 transition-colors ${selectedId === t.id && !showCreate ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/50"}`}
                   data-testid={`overlay-template-${t.id}`}
                 >
                   <div className="flex items-center gap-2">
@@ -308,9 +329,51 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
             </div>
           </div>
 
-          {/* Rechte Seite: Vorschau */}
+          {/* Rechte Seite: Vorschau oder Neu-Formular */}
           <div className="w-3/5 flex flex-col">
-            {selectedTemplate ? (
+            {showCreate ? (
+              <>
+                <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                  <h4 className="font-semibold text-sm">Neue Textvorlage erstellen</h4>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Titel</label>
+                    <input className="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm" placeholder="z.B. Standard Vortext Angebot" value={newForm.title} onChange={e => setNewForm({ ...newForm, title: e.target.value })} data-testid="new-template-title" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Textart</label>
+                      <select className="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm" value={newForm.text_type} onChange={e => setNewForm({ ...newForm, text_type: e.target.value })}>
+                        {Object.entries(TEXT_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Dokumenttyp</label>
+                      <select className="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm" value={newForm.doc_type} onChange={e => setNewForm({ ...newForm, doc_type: e.target.value })}>
+                        {Object.entries(DOC_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Inhalt</label>
+                    <textarea className="w-full rounded-sm border border-input bg-background px-3 py-2 text-sm min-h-[150px] resize-none" placeholder="Text eingeben... Platzhalter wie {anrede_brief}, {kunde_name} etc. verfuegbar" value={newForm.content} onChange={e => setNewForm({ ...newForm, content: e.target.value })} data-testid="new-template-content" />
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {PLACEHOLDERS.map(p => (
+                        <button key={p.alias} type="button" onClick={() => setNewForm({ ...newForm, content: newForm.content + p.alias })}
+                          className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded hover:bg-primary/10 hover:text-primary transition-colors" title={p.desc}>{p.alias}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 border-t shrink-0 flex justify-end gap-3">
+                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm font-medium rounded-sm border hover:bg-muted transition-colors">Abbrechen</button>
+                  <button type="button" onClick={handleCreate} disabled={saving}
+                    className="px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    data-testid="btn-save-new-template">
+                    {saving ? "Speichern..." : "Speichern & Uebernehmen"}
+                  </button>
+                </div>
+              </>
+            ) : selectedTemplate ? (
               <>
                 <div className="flex-1 overflow-y-auto p-5">
                   <div className="flex items-center gap-2 mb-3">
@@ -341,6 +404,7 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
                 <div className="text-center">
                   <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p className="text-sm">Vorlage links auswaehlen</p>
+                  <p className="text-xs mt-1">oder <button type="button" onClick={() => setShowCreate(true)} className="text-primary hover:underline font-medium">neue Vorlage erstellen</button></p>
                 </div>
               </div>
             )}
