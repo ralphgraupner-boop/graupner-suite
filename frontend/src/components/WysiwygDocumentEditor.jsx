@@ -267,7 +267,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const addFromStamm = (item, atIndex) => {
     const desc = item.name + (item.description ? ` - ${item.description}` : "");
-    const newPos = { type: "position", pos_nr: 0, description: desc, quantity: 1, unit: item.unit, price_net: item.price_net, source_article_id: item.id, original_description: desc, original_unit: item.unit, original_price_net: item.price_net };
+    const newPos = { type: "position", pos_nr: 0, description: desc, quantity: 1, unit: item.unit, price_net: item.price_net, labor_cost: item.labor_cost || 0, source_article_id: item.id, original_description: desc, original_unit: item.unit, original_price_net: item.price_net };
     const insertIdx = atIndex != null ? atIndex : positions.length;
     const updated = [...positions];
     updated.splice(insertIdx, 0, newPos);

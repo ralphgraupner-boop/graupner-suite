@@ -143,6 +143,7 @@ const ArtikelModulPage = () => {
                     <div className="text-right">
                       <span className="font-mono font-semibold">{(item.price_net || 0).toFixed(2)} EUR</span>
                       {item.ek_preis > 0 && <p className="text-xs text-muted-foreground">EK: {item.ek_preis.toFixed(2)} EUR</p>}
+                      {item.labor_cost > 0 && <p className="text-xs text-blue-600">Lohn: {item.labor_cost.toFixed(2)} EUR</p>}
                     </div>
                     <button onClick={() => { setEditItem(item); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten">
                       <Edit className="w-4 h-4" />
@@ -167,7 +168,7 @@ const ArtikelModulPage = () => {
 
 // ==================== FORM MODAL ====================
 const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
-  const [form, setForm] = useState({ name: "", description: "", typ: "Artikel", unit: "Stk.", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "" });
+  const [form, setForm] = useState({ name: "", description: "", typ: "Artikel", unit: "Stk.", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "", labor_cost: 0 });
   const [loading, setLoading] = useState(false);
   const [kalkEk, setKalkEk] = useState(0);
   const [kalkAufschlag, setKalkAufschlag] = useState(0);
@@ -178,11 +179,12 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
         name: item.name || "", description: item.description || "", typ: item.typ || "Artikel",
         unit: item.unit || "Stk.", ek_preis: item.ek_preis || 0, price_net: item.price_net || 0,
         subunternehmer: item.subunternehmer || "", artikel_nr: item.artikel_nr || "",
+        labor_cost: item.labor_cost || 0,
       });
       setKalkEk(item.ek_preis || 0);
       setKalkAufschlag(item.ek_preis > 0 ? Math.round((item.price_net / item.ek_preis - 1) * 100) : 0);
     } else {
-      setForm({ name: "", description: "", typ: "Artikel", unit: "Stk.", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "" });
+      setForm({ name: "", description: "", typ: "Artikel", unit: "Stk.", ek_preis: 0, price_net: 0, subunternehmer: "", artikel_nr: "", labor_cost: 0 });
       setKalkEk(0);
       setKalkAufschlag(0);
       // Auto-Nummer laden
@@ -291,6 +293,18 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
           <div>
             <label className="block text-sm font-medium mb-2">Subunternehmer</label>
             <Input value={form.subunternehmer} onChange={(e) => setForm({ ...form, subunternehmer: e.target.value })} placeholder="Firmenname" />
+          </div>
+        )}
+
+        {/* Lohnanteil (nur bei Leistung/Fremdleistung) */}
+        {(form.typ === "Leistung" || form.typ === "Fremdleistung") && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Lohnanteil (netto pro Einheit)</label>
+            <div className="flex items-center gap-2">
+              <Input type="number" step="0.01" value={form.labor_cost || ""} onChange={(e) => setForm({ ...form, labor_cost: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="font-mono" data-testid="input-labor-cost" />
+              <span className="text-sm text-muted-foreground">€</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Wird automatisch in Angebot/Rechnung uebernommen</p>
           </div>
         )}
 

@@ -24,6 +24,7 @@ class ArtikelLeistungCreate(BaseModel):
     vk_preis_3: float = 0
     unit: str = "Stk."
     subunternehmer: str = ""
+    labor_cost: float = 0
 
 
 class ArtikelLeistungUpdate(BaseModel):
@@ -41,6 +42,7 @@ class ArtikelLeistungUpdate(BaseModel):
     vk_preis_3: Optional[float] = None
     unit: Optional[str] = None
     subunternehmer: Optional[str] = None
+    labor_cost: Optional[float] = None
 
 
 ARTIKEL_MODUL = {
