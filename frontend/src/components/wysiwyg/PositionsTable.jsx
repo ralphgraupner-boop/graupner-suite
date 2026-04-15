@@ -128,6 +128,12 @@ const PositionsTable = ({
             <div className="text-right mt-2 font-mono text-sm font-semibold">
               = {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
             </div>
+            <div className="mt-2 pt-2 border-t border-dashed">
+              <label className="text-[10px] text-muted-foreground block">Lohnanteil (netto/Einheit)</label>
+              <input type="number" step="0.01" value={pos.labor_cost || 0}
+                onChange={(e) => updatePosition(idx, "labor_cost", parseFloat(e.target.value) || 0)}
+                className="w-full border rounded px-2 py-1.5 text-sm text-right font-mono" placeholder="0.00" />
+            </div>
           </div>
           );
         })}
@@ -144,6 +150,7 @@ const PositionsTable = ({
             <th className="text-left py-3 text-sm font-semibold text-primary pl-2" style={{ width: "70px" }}>Einheit</th>
             <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "100px" }}>Einzelpreis</th>
             <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "100px" }}>Gesamt</th>
+            <th className="text-right py-3 text-sm font-semibold text-muted-foreground" style={{ width: "85px" }}>Lohnanteil</th>
             <th className="w-8"></th>
           </tr>
         </thead>
@@ -311,6 +318,12 @@ const PositionsTable = ({
               </td>
               <td className="py-3 text-right font-mono text-sm align-bottom">
                 {((pos.quantity || 0) * (pos.price_net || 0)).toFixed(2)} €
+              </td>
+              <td className="py-2 align-bottom">
+                <input type="number" step="0.01" value={pos.labor_cost || ""}
+                  onChange={(e) => updatePosition(idx, "labor_cost", parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  className="w-16 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-1 py-1 text-xs text-right font-mono text-muted-foreground" />
               </td>
               <td className="py-3 align-bottom">
                 <div className="flex items-center gap-0.5">

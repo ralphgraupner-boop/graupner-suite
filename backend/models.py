@@ -188,6 +188,7 @@ class Position(BaseModel):
     quantity: float = 0
     unit: str = "Stück"
     price_net: float = 0
+    labor_cost: float = 0
 
 class LeistungsBlock(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

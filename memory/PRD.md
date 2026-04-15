@@ -67,7 +67,15 @@ Module erstellen -> dann verknuepfen. Jedes Modul sammelt/speichert zuerst Daten
 4. **Artikel -> Dokumente**: Artikel & Leistungen Modul liefert Positionen an den Dokument-Editor.
 5. **Textvorlagen -> Dokumente**: Textvorlagen-Modul liefert Textbausteine (Vortext/Schlusstext/Betreff) an den Dokument-Editor.
 
-## P1 - Next Tasks
+## Lohnanteil (Fertig 15.04.2026)
+- Jede Position hat ein "Lohnanteil" Feld (netto pro Einheit)
+- Automatische Summe aller Lohnanteile (Menge x Lohnanteil)
+- Freier Wert moeglich (statt automatische Summe)
+- Steuerung: "Wird ausgewiesen" / "Nicht ausweisen" Button
+- Textvorlagen-Platzhalter: {lohnanteil}, {lohnanteil_mwst}, {lohnanteil_brutto}, {mwst_satz}
+- MwSt-Satz aus Einstellungen (konfigurierbar)
+- Beispiel-Schlusstext: "Enthalten ist ein Lohnanteil von {lohnanteil} zzgl. {mwst_satz} MwSt (= {lohnanteil_mwst}). Dies ergibt eine Gesamt-Lohnsumme von {lohnanteil_brutto}."
+
 - [ ] ERR_BLOCKED_BY_CLIENT Bug fixen (Dokumente oeffnen)
 - [ ] Redeploy fuer Live-Domain
 

@@ -13,6 +13,10 @@ const PLACEHOLDERS = [
   { alias: "{firma}", desc: "Firmenname" },
   { alias: "{datum}", desc: "Heutiges Datum" },
   { alias: "{dokument_nr}", desc: "Dokument-Nr." },
+  { alias: "{lohnanteil}", desc: "Lohnanteil netto" },
+  { alias: "{lohnanteil_mwst}", desc: "MwSt auf Lohnanteil" },
+  { alias: "{lohnanteil_brutto}", desc: "Lohnanteil brutto" },
+  { alias: "{mwst_satz}", desc: "MwSt-Satz (z.B. 19,00%)" },
 ];
 
 const getAnredeBrief = (customer) => {
@@ -32,9 +36,11 @@ const getAnredeBrief = (customer) => {
   }
 };
 
-const resolvePlaceholders = (text, customer, settings, docNumber) => {
+const resolvePlaceholders = (text, customer, settings, docNumber, lohnanteilData) => {
   if (!text) return "";
   const now = new Date();
+  const la = lohnanteilData || {};
+  const vatRate = la.vatRate || 19;
   return text
     .replace(/\{anrede_brief\}/g, getAnredeBrief(customer))
     .replace(/\{kunde_name\}/g, customer?.name || "")
@@ -43,10 +49,14 @@ const resolvePlaceholders = (text, customer, settings, docNumber) => {
     .replace(/\{kunde_telefon\}/g, customer?.phone || "")
     .replace(/\{firma\}/g, settings?.company_name || "")
     .replace(/\{datum\}/g, now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }))
-    .replace(/\{dokument_nr\}/g, docNumber || "");
+    .replace(/\{dokument_nr\}/g, docNumber || "")
+    .replace(/\{lohnanteil\}/g, (la.netto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    .replace(/\{lohnanteil_mwst\}/g, (la.mwst || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    .replace(/\{lohnanteil_brutto\}/g, (la.brutto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    .replace(/\{mwst_satz\}/g, vatRate.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%");
 };
 
-const TextTemplateSelect = ({ docType, textType, value, onChange, customer, settings, docNumber }) => {
+const TextTemplateSelect = ({ docType, textType, value, onChange, customer, settings, docNumber, lohnanteilData }) => {
   const [templates, setTemplates] = useState([]);
   const [open, setOpen] = useState(false);
   const [fromTemplate, setFromTemplate] = useState(false);
@@ -87,7 +97,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
   };
 
   const handleSelect = (template) => {
-    const resolved = resolvePlaceholders(template.content, customer, settings, docNumber);
+    const resolved = resolvePlaceholders(template.content, customer, settings, docNumber, lohnanteilData);
     onChange(resolved);
     setFromTemplate(true);
     setShowSavePrompt(false);
@@ -99,7 +109,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
     setFromTemplate(false);
     // Show save prompt when user types something new and it's not empty
     if (newValue.trim().length > 3) {
-      const isExisting = templates.some(t => t.content === newValue || resolvePlaceholders(t.content, customer, settings, docNumber) === newValue);
+      const isExisting = templates.some(t => t.content === newValue || resolvePlaceholders(t.content, customer, settings, docNumber, lohnanteilData) === newValue);
       setShowSavePrompt(!isExisting);
     } else {
       setShowSavePrompt(false);
@@ -169,7 +179,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
           onChange={(e) => handleChange(e.target.value)}
           onBlur={() => {
             if (value?.trim() && !fromTemplate) {
-              const isExisting = templates.some(t => t.content === value || resolvePlaceholders(t.content, customer, settings, docNumber) === value);
+              const isExisting = templates.some(t => t.content === value || resolvePlaceholders(t.content, customer, settings, docNumber, lohnanteilData) === value);
               if (!isExisting) setShowSavePrompt(true);
             }
           }}
@@ -236,7 +246,7 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
   allTemplates.forEach(t => { textTypeCounts[t.text_type] = (textTypeCounts[t.text_type] || 0) + 1; });
 
   const selectedTemplate = allTemplates.find(t => t.id === selectedId);
-  const resolvedPreview = selectedTemplate ? resolvePlaceholders(selectedTemplate.content, customer, settings, docNumber) : "";
+  const resolvedPreview = selectedTemplate ? resolvePlaceholders(selectedTemplate.content, customer, settings, docNumber, lohnanteilData) : "";
 
   const handleCreate = async () => {
     if (!newForm.title?.trim() || !newForm.content?.trim()) { toast.error("Titel und Inhalt erforderlich"); return; }

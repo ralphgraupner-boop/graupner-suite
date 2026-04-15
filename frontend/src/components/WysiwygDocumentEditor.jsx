@@ -82,6 +82,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailTemplates, setEmailTemplates] = useState([]);
+  const [showLohnanteil, setShowLohnanteil] = useState(false);
+  const [lohnanteilCustom, setLohnanteilCustom] = useState("");
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -126,6 +128,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       setArticles(modulArtikel.filter(a => a.typ === "Artikel"));
       setServices(modulArtikel.filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
       setSettings(settingsRes.data);
+      if (isNew && settingsRes.data?.default_vat_rate) {
+        setVatRate(settingsRes.data.default_vat_rate);
+      }
 
       try { const titelRes = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel" } }); setTitelTemplates(titelRes.data); } catch {}
       try { const blockRes = await api.get("/leistungsbloecke"); setLeistungsBloecke(blockRes.data); } catch {}
@@ -143,6 +148,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         setStatus(doc.status || ""); setDepositAmount(doc.deposit_amount || 0);
         setDocNumber(doc.quote_number || doc.order_number || doc.invoice_number);
         setCreatedAt(doc.created_at);
+        if (doc.show_lohnanteil) setShowLohnanteil(true);
+        if (doc.lohnanteil_custom) setLohnanteilCustom(doc.lohnanteil_custom);
       } else {
         const params = new URLSearchParams(location.search);
         const preselectedCustomerId = params.get("customer");
@@ -153,6 +160,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       }
     } catch { toast.error("Fehler beim Laden der Daten"); } finally { setLoading(false); }
   };
+
+  // ==================== LOHNANTEIL ====================
+  const totalLaborCost = positions.reduce((sum, p) => sum + ((p.labor_cost || 0) * (p.quantity || 1)), 0);
+  const effectiveLohnanteil = lohnanteilCustom !== "" ? parseFloat(lohnanteilCustom) || 0 : totalLaborCost;
+  const lohnanteilMwst = effectiveLohnanteil * (vatRate / 100);
+  const lohnanteilBrutto = effectiveLohnanteil + lohnanteilMwst;
 
   // ==================== HANDLERS ====================
   const handleCustomerChange = (customerId) => {
@@ -168,7 +181,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     }
   };
 
-  const addPosition = () => setPositions([...positions, { type: "position", pos_nr: 0, description: "", quantity: 1, unit: "Stück", price_net: 0 }]);
+  const addPosition = () => setPositions([...positions, { type: "position", pos_nr: 0, description: "", quantity: 1, unit: "Stück", price_net: 0, labor_cost: 0 }]);
   const addTitel = () => setPositions([...positions, { type: "titel", pos_nr: 0, description: "" }]);
 
   const saveTitelTemplate = async (name) => {
@@ -510,11 +523,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       if (isNew) {
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount }) };
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount }) };
         const res = await api.post(`/${endpoint}`, payload); toast.success(`${titles[type]} erstellt!`);
         if (res?.data?.id) navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true });
       } else {
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, ...(type === "invoice" && { deposit_amount: depositAmount }) };
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "invoice" && { deposit_amount: depositAmount }) };
         await api.put(`/${endpoint}/${id}`, payload); toast.success(`${titles[type]} gespeichert!`);
       }
     } catch { toast.error("Fehler beim Speichern"); } finally { setSaving(false); }
@@ -629,12 +642,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
               {/* Betreff */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
-                <TextTemplateSelect docType={docTypeMap[type]} textType="betreff" value={betreff} onChange={setBetreff} customer={customer} settings={settings} docNumber={docNumber} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="betreff" value={betreff} onChange={setBetreff} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
 
               {/* Vortext */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
-                <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={setVortext} customer={customer} settings={settings} docNumber={docNumber} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={setVortext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
 
               <PositionsTable
@@ -658,11 +671,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 discountAmt={discountAmt} netAfterDiscount={netAfterDiscount}
                 vatRate={vatRate} setVatRate={setVatRate} vat={vat} total={total}
                 type={type} depositAmount={depositAmount} setDepositAmount={setDepositAmount} finalAmount={finalAmount}
+                showLohnanteil={showLohnanteil} setShowLohnanteil={setShowLohnanteil}
+                effectiveLohnanteil={effectiveLohnanteil} lohnanteilMwst={lohnanteilMwst} lohnanteilBrutto={lohnanteilBrutto}
+                lohnanteilCustom={lohnanteilCustom} setLohnanteilCustom={setLohnanteilCustom} totalLaborCost={totalLaborCost}
               />
 
               {/* Schlusstext */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-t">
-                <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={setSchlusstext} customer={customer} settings={settings} docNumber={docNumber} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={setSchlusstext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
 
               {/* Footer */}
