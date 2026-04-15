@@ -248,6 +248,10 @@ const EmailInboxPage = () => {
       e.subject?.toLowerCase().includes(s) ||
       e.body?.toLowerCase().includes(s)
     );
+  }).sort((a, b) => {
+    const da = new Date(a.fetched_at || a.date || 0);
+    const db2 = new Date(b.fetched_at || b.date || 0);
+    return db2 - da;
   });
 
   const unreadCount = emails.filter(e => e.status === "ungelesen").length;
