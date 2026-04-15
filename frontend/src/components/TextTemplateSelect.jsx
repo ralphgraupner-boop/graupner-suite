@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronDown, Bookmark } from "lucide-react";
+import { ChevronDown, Bookmark, FileText, Search, X, Copy, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -149,34 +149,15 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
               {savingTemplate ? "..." : "Als Textbaustein speichern?"}
             </button>
           )}
-          {templates.length > 0 && (
-            <div className="relative" ref={dropdownRef}>
-              <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                data-testid={`btn-template-dropdown-${textType}`}
-                className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded-sm hover:bg-primary/5 transition-colors"
-              >
-                Textbaustein <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
-              </button>
-              {open && (
-                <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[400px] max-w-[560px] max-h-72 overflow-y-auto">
-                  {templates.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => handleSelect(t)}
-                      data-testid={`template-option-${t.id}`}
-                      className="group block w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors border-b last:border-b-0"
-                    >
-                      <span className="font-semibold">{t.title}</span>
-                      <span className="block text-xs text-muted-foreground mt-1 whitespace-pre-line line-clamp-2 group-hover:line-clamp-none transition-all">{t.content}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            data-testid={`btn-template-open-${textType}`}
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium px-2.5 py-1.5 rounded-sm hover:bg-primary/5 border border-primary/20 transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Textvorlagen
+          </button>
         </div>
       </div>
       {isBetreff ? (
@@ -222,6 +203,125 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
             onClick={() => onChange(value ? value + "\n---\n" : "---\n")}>--- = Seitenumbruch (klicken zum Einfuegen)</span>
         </div>
       )}
+
+      {/* Textvorlagen Overlay */}
+      {open && <TextvorlagenOverlay
+        textType={textType}
+        docType={docType}
+        label={label}
+        templates={templates}
+        customer={customer}
+        settings={settings}
+        docNumber={docNumber}
+        onSelect={(t) => { handleSelect(t); setOpen(false); }}
+        onClose={() => setOpen(false)}
+      />}
+    </div>
+  );
+};
+
+const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", allgemein: "Allgemein" };
+const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung" };
+
+const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, settings, docNumber, onSelect, onClose }) => {
+  const [search, setSearch] = useState("");
+  const [allTemplates, setAllTemplates] = useState([]);
+  const [activeFilter, setActiveFilter] = useState(textType);
+  const [hoveredId, setHoveredId] = useState(null);
+
+  useEffect(() => {
+    // Alle Textvorlagen laden (nicht nur gefiltert)
+    api.get("/modules/textvorlagen/data").then(res => setAllTemplates(res.data || [])).catch(() => setAllTemplates(templates));
+  }, []);
+
+  const filtered = allTemplates.filter(t => {
+    if (activeFilter && t.text_type !== activeFilter) return false;
+    if (!search) return true;
+    return t.title?.toLowerCase().includes(search.toLowerCase()) || t.content?.toLowerCase().includes(search.toLowerCase());
+  });
+
+  const textTypeCounts = {};
+  allTemplates.forEach(t => { textTypeCounts[t.text_type] = (textTypeCounts[t.text_type] || 0) + 1; });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose} data-testid="textvorlagen-overlay">
+      <div className="bg-card rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Textvorlagen
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Vorlage auswaehlen fuer: <strong>{label}</strong></p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* Filter-Tabs */}
+        <div className="flex flex-wrap gap-1.5 px-4 pt-3 pb-2">
+          <button onClick={() => setActiveFilter("")}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${!activeFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+            Alle ({allTemplates.length})
+          </button>
+          {Object.entries(TEXT_TYPE_LABELS).map(([key, lbl]) => textTypeCounts[key] ? (
+            <button key={key} onClick={() => setActiveFilter(activeFilter === key ? "" : key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activeFilter === key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+              {lbl} ({textTypeCounts[key]})
+            </button>
+          ) : null)}
+        </div>
+
+        {/* Suche */}
+        <div className="px-4 pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input className="w-full h-9 pl-9 pr-3 rounded-sm border border-input bg-background text-sm" placeholder="Vorlagen durchsuchen..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        </div>
+
+        {/* Liste */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {filtered.length === 0 ? (
+            <p className="text-center text-muted-foreground text-sm py-8">Keine Vorlagen gefunden</p>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map(t => {
+                const resolved = resolvePlaceholders(t.content, customer, settings, docNumber);
+                const isHovered = hoveredId === t.id;
+                return (
+                  <div key={t.id}
+                    className="border rounded-sm hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
+                    onMouseEnter={() => setHoveredId(t.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onClick={() => onSelect(t)}
+                    data-testid={`overlay-template-${t.id}`}
+                  >
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">{t.title}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            t.text_type === "vortext" ? "bg-blue-100 text-blue-700" :
+                            t.text_type === "schlusstext" ? "bg-green-100 text-green-700" :
+                            t.text_type === "betreff" ? "bg-purple-100 text-purple-700" :
+                            "bg-gray-100 text-gray-700"
+                          }`}>{TEXT_TYPE_LABELS[t.text_type] || t.text_type}</span>
+                          <span className="text-[10px] text-muted-foreground">{DOC_TYPE_LABELS[t.doc_type] || t.doc_type}</span>
+                        </div>
+                        <Check className={`w-4 h-4 text-primary transition-opacity ${isHovered ? "opacity-100" : "opacity-0"}`} />
+                      </div>
+                      <p className={`text-xs text-muted-foreground whitespace-pre-line transition-all ${isHovered ? "" : "line-clamp-2"}`}>
+                        {resolved}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
