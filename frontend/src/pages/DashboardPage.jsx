@@ -131,21 +131,22 @@ const DashboardPage = () => {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
-        <Link to="/anfragen" className="block" data-testid="stat-link-anfragen">
+        <Link to="/module/kontakt" className="block" data-testid="stat-link-anfragen">
           <StatCard
-            title="Neue Anfragen"
+            title="Anfragen"
             value={stats?.anfragen?.total || 0}
+            subtitle={`Kontakte: ${stats?.kontakte_count || 0}`}
             icon={Inbox}
           />
         </Link>
-        <Link to="/customers" className="block" data-testid="stat-link-kunden">
+        <Link to="/module/kunden" className="block" data-testid="stat-link-kunden">
           <StatCard
             title="Kunden"
             value={stats?.customers_count || 0}
             icon={Users}
           />
         </Link>
-        <Link to="/quotes" className="block" data-testid="stat-link-angebote">
+        <Link to="/module/dokumente" className="block" data-testid="stat-link-angebote">
           <StatCard
             title="Offene Angebote"
             value={stats?.quotes?.open || 0}
@@ -153,7 +154,7 @@ const DashboardPage = () => {
             icon={FileText}
           />
         </Link>
-        <Link to="/orders" className="block" data-testid="stat-link-auftraege">
+        <Link to="/module/dokumente" className="block" data-testid="stat-link-auftraege">
           <StatCard
             title="Offene Aufträge"
             value={stats?.orders?.open || 0}
@@ -161,7 +162,7 @@ const DashboardPage = () => {
             icon={ClipboardCheck}
           />
         </Link>
-        <Link to="/invoices" className="block" data-testid="stat-link-rechnungen">
+        <Link to="/module/dokumente" className="block" data-testid="stat-link-rechnungen">
           <StatCard
             title="Unbezahlte Rechnungen"
             value={stats?.invoices?.unpaid || 0}
@@ -171,20 +172,21 @@ const DashboardPage = () => {
         </Link>
       </div>
 
-      {/* Anfragen nach Kategorie */}
-      {stats?.anfragen?.total > 0 && (
-        <Card className="p-6 mb-6" data-testid="dashboard-anfragen-categories">
+      {/* Letzte Anfragen aus Kontakt-Modul */}
+      {stats?.anfragen?.recent?.length > 0 && (
+        <Card className="p-6 mb-6" data-testid="dashboard-anfragen-recent">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Filter className="w-5 h-5 text-primary" />
-            Anfragen nach Kategorie
+            <Inbox className="w-5 h-5 text-primary" />
+            Letzte Anfragen
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {Object.entries(stats?.anfragen?.by_category || {}).map(([cat, count]) => (
-              <Link to={`/anfragen?category=${encodeURIComponent(cat)}`} key={cat} className="block">
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors cursor-pointer">
-                  <span className="text-sm font-medium truncate mr-2">{cat}</span>
-                  <span className="text-lg font-bold font-mono text-primary">{count}</span>
+          <div className="space-y-2">
+            {stats.anfragen.recent.map((a) => (
+              <Link to="/module/kontakt" key={a.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors">
+                <div className="min-w-0 flex-1">
+                  <span className="font-medium text-sm">{a.name || "Unbekannt"}</span>
+                  {a.email && <span className="text-xs text-muted-foreground ml-2">{a.email}</span>}
                 </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </Link>
             ))}
           </div>
@@ -275,20 +277,16 @@ const DashboardPage = () => {
                 <div key={a.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-sm border">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{a.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {(a.categories || []).map((cat) => (
-                        <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>
-                      ))}
-                    </div>
+                    <p className="text-xs text-muted-foreground">{a.email || a.phone || ""}</p>
                   </div>
                   <span className="text-xs text-muted-foreground ml-2 shrink-0">
-                    {new Date(a.created_at).toLocaleDateString("de-DE")}
+                    {a.created_at ? new Date(a.created_at).toLocaleDateString("de-DE") : ""}
                   </span>
                 </div>
               ))}
-              <Link to="/anfragen">
+              <Link to="/module/kontakt">
                 <Button variant="ghost" size="sm" className="w-full mt-2">
-                  Alle Anfragen anzeigen <ChevronRight className="w-4 h-4" />
+                  Alle Kontakte anzeigen <ChevronRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>

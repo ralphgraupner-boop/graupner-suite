@@ -231,7 +231,7 @@ async def get_dashboard_stats():
     quotes = await db.quotes.find({}, {"_id": 0}).to_list(1000)
     orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
     invoices = await db.invoices.find({}, {"_id": 0}).to_list(1000)
-    customers = await db.customers.count_documents({})
+    customers = await db.module_kunden.count_documents({})
 
     open_quotes = len([q for q in quotes if q.get("status") == "Entwurf"])
     open_orders = len([o for o in orders if o.get("status") == "Offen"])
@@ -241,16 +241,14 @@ async def get_dashboard_stats():
     total_invoices_value = sum(i.get("total_gross", 0) for i in invoices)
     paid_invoices_value = sum(i.get("total_gross", 0) for i in invoices if i.get("status") == "Bezahlt")
 
-    anfragen = await db.anfragen.find({}, {"_id": 0}).to_list(1000)
-    anfragen_by_category = {}
-    for cat in CATEGORIES:
-        anfragen_by_category[cat] = 0
-    for a in anfragen:
-        for cat in a.get("categories", []):
-            if cat in anfragen_by_category:
-                anfragen_by_category[cat] += 1
+    # Kontakt-Modul: Anfragen = Kontakte mit Status "Anfrage"
+    kontakte = await db.module_kontakt.find({}, {"_id": 0}).to_list(10000)
+    anfragen = [k for k in kontakte if k.get("kontakt_status") == "Anfrage"]
 
     recent_anfragen = sorted(anfragen, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
+    # Display-Name fuer recent_anfragen
+    for a in recent_anfragen:
+        a["name"] = f"{a.get('vorname', '')} {a.get('nachname', '')}".strip() or a.get('firma', 'Unbekannt')
 
     monthly_revenue = defaultdict(float)
     monthly_quotes = defaultdict(float)
@@ -301,6 +299,7 @@ async def get_dashboard_stats():
 
     return {
         "customers_count": customers,
+        "kontakte_count": len(kontakte),
         "quotes": {
             "total": len(quotes),
             "open": open_quotes,
@@ -318,7 +317,6 @@ async def get_dashboard_stats():
         },
         "anfragen": {
             "total": len(anfragen),
-            "by_category": anfragen_by_category,
             "recent": recent_anfragen
         },
         "monthly": months_data,
