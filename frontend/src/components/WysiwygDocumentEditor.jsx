@@ -8,6 +8,7 @@ import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 // Sub-components
 import { EditorToolbar } from "@/components/wysiwyg/EditorToolbar";
 import { EditorSidebar } from "@/components/wysiwyg/EditorSidebar";
+import { LohnkostenSidebar } from "@/components/wysiwyg/LohnkostenSidebar";
 import { DocumentHeader } from "@/components/wysiwyg/DocumentHeader";
 import { PositionsTable } from "@/components/wysiwyg/PositionsTable";
 import { TotalsSection } from "@/components/wysiwyg/TotalsSection";
@@ -691,6 +692,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </div>
             </div>
           </div>
+
+          <LohnkostenSidebar
+            positions={positions}
+            vatRate={vatRate}
+            showLohnanteil={showLohnanteil}
+            setShowLohnanteil={setShowLohnanteil}
+            lohnanteilCustom={lohnanteilCustom}
+            setLohnanteilCustom={setLohnanteilCustom}
+          />
 
         </div>
       </div>
