@@ -225,7 +225,7 @@ const KundenModulPage = () => {
                             const rawUrl = typeof file === 'string' ? file : file.url;
                             const fileUrl = rawUrl?.startsWith('http') ? rawUrl : `${backendUrl}/api/storage/${rawUrl}`;
                             return (<div key={idx} className="aspect-square rounded-lg overflow-hidden border hover:border-primary hover:shadow-lg transition-all cursor-pointer group" onClick={() => window.open(fileUrl, '_blank')}>
-                              <img src={fileUrl} alt={`Bild ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" onError={e => { e.target.style.display = 'none'; }} />
+                              <img src={fileUrl} alt={`Bild ${idx + 1}`} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" onError={e => { e.target.style.display = 'none'; }} />
                             </div>);
                           })}
                         </div>
