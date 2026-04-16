@@ -16,12 +16,31 @@ const SendDocumentEmail = ({ isOpen, onClose, type, docId, docNumber, customer, 
 
   useEffect(() => {
     if (!isOpen) return;
-    // Kunden-E-Mails sammeln
-    const allEmails = [];
-    if (customer?.email) allEmails.push(customer.email);
-    if (customer?.email2 && customer.email2 !== customer.email) allEmails.push(customer.email2);
-    setEmails(allEmails);
-    setSelectedEmail(allEmails[0] || "");
+    // Kunden-E-Mails sammeln - direkt aus Modul laden wenn noetig
+    const loadEmails = async () => {
+      let email = customer?.email || "";
+      let email2 = customer?.email2 || "";
+      
+      // Wenn keine E-Mail vorhanden, aus Kunden-Modul/Kontakt-Modul laden
+      if (!email && customer?.id) {
+        try {
+          const kRes = await api.get(`/modules/kunden/data/${customer.id}`).catch(() => null);
+          const data = kRes?.data || (await api.get(`/modules/kontakt/data/${customer.id}`).catch(() => null))?.data;
+          if (data) {
+            email = data.email || "";
+            email2 = data.email2 || "";
+          }
+        } catch {}
+      }
+      
+      const allEmails = [];
+      if (email) allEmails.push(email);
+      if (email2 && email2 !== email) allEmails.push(email2);
+      setEmails(allEmails);
+      setSelectedEmail(allEmails[0] || "");
+    };
+    
+    loadEmails();
     setSubject(`${docTitle} ${docNumber || ""}`);
     setMessage("");
     // E-Mail Vorlagen laden

@@ -141,7 +141,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         // Kunden-Details aus Modul laden (E-Mail etc.)
         if (doc.customer_id) {
           const custData = allModulCustomers.find(c => c.id === doc.customer_id);
-          if (custData) setCustomer({ ...custData, name: doc.customer_name, address: doc.customer_address });
+          if (custData) {
+            setCustomer({ ...custData, name: doc.customer_name, address: doc.customer_address });
+          } else {
+            // Fallback: direkt aus Kunden-Modul oder Kontakt-Modul laden
+            try {
+              const kRes = await api.get(`/modules/kunden/data/${doc.customer_id}`).catch(() => null);
+              const data = kRes?.data || (await api.get(`/modules/kontakt/data/${doc.customer_id}`).catch(() => null))?.data;
+              if (data) setCustomer({ ...data, name: doc.customer_name, address: doc.customer_address, id: doc.customer_id });
+            } catch {}
+          }
         }
         setPositions((doc.positions || []).map(p => ({ ...p, type: p.type || "position" })));
         setNotes(doc.notes || ""); setVortext(doc.vortext || ""); setSchlusstext(doc.schlusstext || "");
