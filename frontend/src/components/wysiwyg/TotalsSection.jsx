@@ -143,30 +143,30 @@ const TotalsSection = ({
                     {showLohnanteil ? "Wird ausgewiesen" : "Nicht ausweisen"}
                   </button>
                 </div>
-                {(totalLaborCost > 0 || showLohnanteil) && (
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Lohnanteil (netto)</span>
-                      <div className="flex items-center gap-1">
-                        <input type="number" step="0.01" value={lohnanteilCustom !== "" ? lohnanteilCustom : totalLaborCost.toFixed(2)}
-                          onChange={(e) => setLohnanteilCustom(e.target.value)}
-                          className="w-24 border rounded px-2 py-0.5 text-right font-mono text-sm" data-testid="input-lohnanteil" />
-                        <span className="text-muted-foreground">€</span>
-                      </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Lohnanteil (netto)</span>
+                    <div className="flex items-center gap-1">
+                      <input type="number" step="0.01" value={lohnanteilCustom}
+                        onChange={(e) => setLohnanteilCustom(e.target.value)}
+                        placeholder="0.00"
+                        className="w-28 border rounded px-2 py-1 text-right font-mono text-sm" data-testid="input-lohnanteil" />
+                      <span className="text-muted-foreground">€</span>
                     </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>zzgl. {vatRate}% MwSt</span>
-                      <span className="font-mono">{lohnanteilMwst.toFixed(2)} €</span>
-                    </div>
-                    <div className="flex justify-between font-semibold">
-                      <span>Gesamt-Lohnsumme</span>
-                      <span className="font-mono">{lohnanteilBrutto.toFixed(2)} €</span>
-                    </div>
-                    {lohnanteilCustom !== "" && parseFloat(lohnanteilCustom) !== totalLaborCost && (
-                      <button type="button" onClick={() => setLohnanteilCustom("")} className="text-xs text-primary hover:underline">Auf berechneten Wert zuruecksetzen ({totalLaborCost.toFixed(2)} €)</button>
-                    )}
                   </div>
-                )}
+                  {effectiveLohnanteil > 0 && (
+                    <>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>zzgl. {vatRate}% MwSt</span>
+                        <span className="font-mono">{lohnanteilMwst.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between font-semibold">
+                        <span>Gesamt-Lohnsumme</span>
+                        <span className="font-mono">{lohnanteilBrutto.toFixed(2)} €</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </td>
             <td></td>
@@ -254,27 +254,30 @@ const TotalsSection = ({
                   {showLohnanteil ? "Wird ausgewiesen" : "Nicht ausweisen"}
                 </button>
               </div>
-              {(totalLaborCost > 0 || showLohnanteil) && (
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Lohnanteil (netto)</span>
-                    <div className="flex items-center gap-1">
-                      <input type="number" step="0.01" value={lohnanteilCustom !== "" ? lohnanteilCustom : totalLaborCost.toFixed(2)}
-                        onChange={(e) => setLohnanteilCustom(e.target.value)}
-                        className="w-24 border rounded px-2 py-0.5 text-right font-mono text-sm" />
-                      <span className="text-muted-foreground">€</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>zzgl. {vatRate}% MwSt</span>
-                    <span className="font-mono">{lohnanteilMwst.toFixed(2)} €</span>
-                  </div>
-                  <div className="flex justify-between font-semibold">
-                    <span>Gesamt-Lohnsumme</span>
-                    <span className="font-mono">{lohnanteilBrutto.toFixed(2)} €</span>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Lohnanteil (netto)</span>
+                  <div className="flex items-center gap-1">
+                    <input type="number" step="0.01" value={lohnanteilCustom}
+                      onChange={(e) => setLohnanteilCustom(e.target.value)}
+                      placeholder="0.00"
+                      className="w-28 border rounded px-2 py-1 text-right font-mono text-sm" />
+                    <span className="text-muted-foreground">€</span>
                   </div>
                 </div>
-              )}
+                {effectiveLohnanteil > 0 && (
+                  <>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>zzgl. {vatRate}% MwSt</span>
+                      <span className="font-mono">{lohnanteilMwst.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Gesamt-Lohnsumme</span>
+                      <span className="font-mono">{lohnanteilBrutto.toFixed(2)} €</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
