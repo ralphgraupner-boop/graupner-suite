@@ -3,6 +3,7 @@ import { Download, Mail, Edit, CheckCircle, X, Send, MailCheck, AlertTriangle } 
 import { toast } from "sonner";
 import { Button, Input, Textarea, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
+import { SendDocumentEmail } from "@/components/SendDocumentEmail";
 
 /* ── A4 page simulation constants ── */
 const PAGE_WIDTH = 700;
@@ -42,8 +43,6 @@ const estPosH = (p) => {
 /* ── Component ── */
 const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onEdit, onCreateDunning }) => {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
-  const [sending, setSending] = useState(false);
   const [emailHistory, setEmailHistory] = useState([]);
   const [settings, setSettings] = useState({});
   const [currentPage, setCurrentPage] = useState(0);
@@ -199,24 +198,6 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
 
   if (!isOpen || !doc) return null;
   const docNumber = doc.quote_number || doc.order_number || doc.invoice_number;
-
-  const handleSendEmail = async () => {
-    if (!emailForm.to_email) { toast.error("Bitte E-Mail-Adresse eingeben"); return; }
-    setSending(true);
-    try {
-      await api.post(`/email/document/${type}/${doc.id}`, {
-        to_email: emailForm.to_email,
-        subject: emailForm.subject || `${titles[type]} ${docNumber}`,
-        message: emailForm.message,
-      });
-      toast.success(`${titles[type]} per E-Mail gesendet`);
-      setShowEmailDialog(false);
-      setEmailForm({ to_email: "", subject: "", message: "" });
-      api.get(`/email/log/${type}/${doc.id}`).then((r) => setEmailHistory(r.data)).catch(() => {});
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || "E-Mail konnte nicht gesendet werden");
-    } finally { setSending(false); }
-  };
 
   /* ── Reusable render helpers ── */
   const renderTableHead = () => (
@@ -415,27 +396,13 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       </div>
 
       {/* ── Email Dialog ── */}
-      {showEmailDialog && (
-        <div className="shrink-0 p-4 border-b bg-blue-50" data-testid="email-dialog">
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <Mail className="w-4 h-4" /> {titles[type]} per E-Mail senden
-          </h3>
-          <div className="space-y-2">
-            <Input data-testid="input-email-to" placeholder="E-Mail-Adresse" value={emailForm.to_email}
-              onChange={(e) => setEmailForm({ ...emailForm, to_email: e.target.value })} type="email" />
-            <Input data-testid="input-email-subject" placeholder="Betreff (optional)" value={emailForm.subject}
-              onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} />
-            <Textarea data-testid="input-email-message" placeholder="Nachricht (optional)" value={emailForm.message}
-              onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })} rows={2} />
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(false)}>Abbrechen</Button>
-              <Button size="sm" onClick={handleSendEmail} disabled={sending} data-testid="btn-send-email">
-                {sending ? "Senden..." : "Senden"} <Send className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SendDocumentEmail
+        isOpen={showEmailDialog}
+        onClose={() => { setShowEmailDialog(false); api.get(`/email/log/${type}/${doc.id}`).then((r) => setEmailHistory(r.data)).catch(() => {}); }}
+        type={type} docId={doc.id} docNumber={docNumber}
+        customer={{ name: doc.customer_name, email: doc.customer_email || "", id: doc.customer_id }}
+        settings={{}}
+      />
 
       {/* ── Pages Area ── */}
       <div className="flex-1 overflow-auto" style={{ background: "#4a4a4f" }}>

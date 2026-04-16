@@ -12,7 +12,7 @@ import { DocumentHeader } from "@/components/wysiwyg/DocumentHeader";
 import { PositionsTable } from "@/components/wysiwyg/PositionsTable";
 import { TotalsSection } from "@/components/wysiwyg/TotalsSection";
 import { RightSidebar } from "@/components/wysiwyg/RightSidebar";
-import { EmailDialog } from "@/components/wysiwyg/EmailDialog";
+import { SendDocumentEmail } from "@/components/SendDocumentEmail";
 import { SettingsSlideOver } from "@/components/wysiwyg/SettingsSlideOver";
 import { DocumentPreview } from "@/components/DocumentPreview";
 
@@ -79,9 +79,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   // E-Mail Dialog
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [emailForm, setEmailForm] = useState({ to_email: "", subject: "", message: "" });
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailTemplates, setEmailTemplates] = useState([]);
   const [showLohnanteil, setShowLohnanteil] = useState(false);
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
 
@@ -140,7 +137,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const res = await api.get(`/${endpoint}/${id}`);
         const doc = res.data;
         setSelectedCustomerId(doc.customer_id);
-        setCustomer({ name: doc.customer_name, address: doc.customer_address });
+        setCustomer({ name: doc.customer_name, address: doc.customer_address, id: doc.customer_id });
+        // Kunden-Details aus Modul laden (E-Mail etc.)
+        if (doc.customer_id) {
+          const custData = allModulCustomers.find(c => c.id === doc.customer_id);
+          if (custData) setCustomer({ ...custData, name: doc.customer_name, address: doc.customer_address });
+        }
         setPositions((doc.positions || []).map(p => ({ ...p, type: p.type || "position" })));
         setNotes(doc.notes || ""); setVortext(doc.vortext || ""); setSchlusstext(doc.schlusstext || "");
         setBetreff(doc.betreff || ""); setVatRate(doc.vat_rate || 19);
@@ -565,20 +567,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     } catch { toast.error("Fehler beim Drucken"); }
   };
 
-  const handleSendEmail = async () => {
-    if (!emailForm.to_email) { toast.error("Bitte E-Mail-Adresse eingeben"); return; }
-    setSendingEmail(true);
-    try {
-      await api.post(`/email/document/${type}/${id}`, { to_email: emailForm.to_email, subject: emailForm.subject || `${titles[type]} ${docNumber}`, message: emailForm.message });
-      toast.success(`${titles[type]} per E-Mail gesendet`); setShowEmailDialog(false); setEmailForm({ to_email: "", subject: "", message: "" });
-    } catch (err) { toast.error(err?.response?.data?.detail || "E-Mail konnte nicht gesendet werden"); } finally { setSendingEmail(false); }
-  };
-
-  const onOpenEmailDialog = async () => {
-    setEmailForm(f => ({ ...f, to_email: customer?.email || "", subject: `${titles[type]} ${docNumber}` }));
-    try { const res = await api.get("/modules/textvorlagen/data", { params: { text_type: "email" } }); setEmailTemplates(res.data || []); } catch {}
-    setShowEmailDialog(true);
-  };
+  const onOpenEmailDialog = () => { setShowEmailDialog(true); };
 
   // ==================== COMPUTED VALUES ====================
   const { subtotal, discountAmt, netAfterDiscount, vat, total, finalAmount } = calculateTotals();
@@ -713,13 +702,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         </div>
       </div>
 
-      {showEmailDialog && (
-        <EmailDialog
-          type={type} titles={titles} docNumber={docNumber} customer={customer} settings={settings}
-          emailForm={emailForm} setEmailForm={setEmailForm} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates}
-          sendingEmail={sendingEmail} onSend={handleSendEmail} onClose={() => setShowEmailDialog(false)}
-        />
-      )}
+      <SendDocumentEmail
+        isOpen={showEmailDialog}
+        onClose={() => setShowEmailDialog(false)}
+        type={type} docId={id} docNumber={docNumber}
+        customer={customer} settings={settings}
+      />
 
       <SettingsSlideOver
         showSettings={showSettings} setShowSettings={setShowSettings}
