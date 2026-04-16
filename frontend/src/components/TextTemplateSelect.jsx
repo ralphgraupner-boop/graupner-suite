@@ -3,6 +3,7 @@ import { ChevronDown, Bookmark, FileText, Search, X, Copy, Check } from "lucide-
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/RichTextEditor";
+// Lazy import for code splitting
 
 const PLACEHOLDERS = [
   { alias: "{anrede_brief}", desc: "Sehr geehrter Herr/Frau + Name" },
