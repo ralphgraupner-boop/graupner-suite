@@ -222,17 +222,22 @@ async def upload_kunde_files(kunde_id: str, files: List[UploadFile] = File(...),
     uploaded = []
     try:
         from utils.storage import put_object
+        from utils.image_compress import compress_image
         import uuid as _uuid
         for file in files:
             content = await file.read()
             if len(content) > MAX_SIZE:
                 raise HTTPException(400, f"Datei {file.filename} zu gross (max 10 MB)")
-            safe_name = (file.filename or "datei").replace(" ", "_")
+            # Bilder komprimieren
+            ct = file.content_type or "application/octet-stream"
+            fname = file.filename or "datei"
+            content, ct, fname = compress_image(content, ct, fname)
+            safe_name = fname.replace(" ", "_")
             path = f"module_kunden/{kunde_id}/{_uuid.uuid4().hex[:8]}_{safe_name}"
-            result = put_object(path, content, file.content_type or "application/octet-stream")
+            result = put_object(path, content, ct)
             url = result.get("url") or result.get("path") if result else None
             if url:
-                uploaded.append({"url": url, "filename": file.filename, "content_type": file.content_type, "size": len(content)})
+                uploaded.append({"url": url, "filename": fname, "content_type": ct, "size": len(content)})
     except Exception as e:
         logger.error(f"Upload-Fehler: {e}")
         raise HTTPException(500, f"Upload-Fehler: {str(e)}")
