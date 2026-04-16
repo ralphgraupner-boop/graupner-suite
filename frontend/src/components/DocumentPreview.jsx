@@ -375,7 +375,6 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => {
-            setEmailForm({ to_email: doc.customer_email || "", subject: `${titles[type]} ${docNumber}`, message: "" });
             setShowEmailDialog(true);
           }} data-testid="btn-email-document">
             <Mail className="w-3.5 h-3.5 mr-1" /> E-Mail
