@@ -692,22 +692,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             </div>
           </div>
 
-          <RightSidebar
-            showVorlagen={showVorlagen}
-            activeKalkItem={getActiveKalkItem()}
-            settings={settings}
-            onApplyKalkPrice={handleKalkApply}
-            onCloseKalk={() => setActiveKalkIdx(null)}
-            onSaveToStamm={handleSaveKalkToStamm}
-            onCreateNewArticle={handleCreateFromKalk}
-            templateDocs={templateDocs} similarDocs={similarDocs} expandedDoc={expandedDoc} setExpandedDoc={setExpandedDoc}
-            copyPositionsFromDoc={copyPositionsFromDoc} toggleDocTemplate={toggleDocTemplate}
-            titles={titles} type={type} positions={positions}
-            subtotal={subtotal} vatRate={vatRate} vat={vat} total={total}
-            costPrices={costPrices} updateCostPrice={updateCostPrice} calculateKalkulation={calculateKalkulation}
-            customer={customer}
-          />
-
         </div>
       </div>
 
