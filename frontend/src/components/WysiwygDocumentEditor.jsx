@@ -535,6 +535,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const handleSaveAndExit = async () => { await handleSave(); navigate(listPaths[type]); };
 
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const handleExit = () => { setShowExitConfirm(true); };
+  const handleExitWithSave = async () => { setShowExitConfirm(false); await handleSave(); navigate(listPaths[type]); };
+  const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(listPaths[type]); };
+
   const handleDownloadPDF = async () => {
     if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
     if (!validateTextFields()) return;
@@ -594,7 +599,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         type={type} isNew={isNew} titles={titles} listPaths={listPaths} docNumber={docNumber} status={status}
         isRecording={isRecording} aiLoading={aiLoading} saving={saving}
         navigate={navigate} setShowSettings={setShowSettings} startRecording={startRecording} stopRecording={stopRecording}
-        handleSave={handleSave} handleSaveAndExit={handleSaveAndExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
+        handleSave={handleSave} handleExit={handleExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
         onOpenEmailDialog={onOpenEmailDialog}
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
@@ -732,6 +737,27 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           onClose={() => setShowPreview(false)}
           onEdit={() => setShowPreview(false)}
         />
+      )}
+
+      {/* Beenden-Dialog */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="exit-confirm-dialog">
+          <div className="bg-card rounded-lg shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-2">Dokument beenden</h3>
+            <p className="text-sm text-muted-foreground mb-6">Moechten Sie vor dem Beenden speichern?</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={handleExitWithSave} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" data-testid="btn-exit-save">
+                Speichern und Beenden
+              </button>
+              <button onClick={handleExitWithoutSave} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm border hover:bg-destructive/10 text-destructive transition-colors" data-testid="btn-exit-no-save">
+                Ohne Speichern beenden
+              </button>
+              <button onClick={() => setShowExitConfirm(false)} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm border hover:bg-muted transition-colors" data-testid="btn-exit-cancel">
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

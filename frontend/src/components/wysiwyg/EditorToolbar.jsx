@@ -5,7 +5,7 @@ const EditorToolbar = ({
   type, isNew, titles, listPaths, docNumber, status,
   isRecording, aiLoading, saving,
   navigate, setShowSettings, startRecording, stopRecording,
-  handleSave, handleSaveAndExit, handleDownloadPDF, handlePrint,
+  handleSave, handleExit, handleDownloadPDF, handlePrint,
   onOpenEmailDialog, onToggleVorlagen, onTogglePreview,
 }) => {
   return (
@@ -78,8 +78,7 @@ const EditorToolbar = ({
             <Save className="w-4 h-4" />
             <span className="hidden sm:inline">{saving ? "..." : "Speichern"}</span>
           </Button>
-          <Button variant="default" size="sm" onClick={handleSaveAndExit} disabled={saving} data-testid="btn-save-and-exit"
-            className="bg-primary/90 hover:bg-primary">
+          <Button variant="destructive" size="sm" onClick={handleExit} disabled={saving} data-testid="btn-exit-document">
             <X className="w-4 h-4" />
             <span className="hidden sm:inline">Beenden</span>
           </Button>
