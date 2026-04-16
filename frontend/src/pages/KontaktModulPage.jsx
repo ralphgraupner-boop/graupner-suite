@@ -75,7 +75,7 @@ const KontaktModulPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <Package className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl lg:text-4xl font-bold">Kontakt-Modul</h1>
+            <h1 className="text-2xl lg:text-4xl font-bold">Kontakte</h1>
             <Badge variant="default" className="text-xs">Solo</Badge>
           </div>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{contacts.length} Kontakte gesamt - Eigenstaendiger Datensammler</p>

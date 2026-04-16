@@ -4,8 +4,8 @@ import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Set
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
-  { path: "/module/kontakt", icon: Download, label: "Kontakt-Modul", roles: ["admin"] },
-  { path: "/module/kunden", icon: Users, label: "Kunden-Modul", roles: ["admin"] },
+  { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
+  { path: "/module/kontakt", icon: Download, label: "Kontakte", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },

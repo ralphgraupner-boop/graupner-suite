@@ -11,14 +11,11 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 const TABS = [
   { id: "firma", label: "Firmendaten", icon: Building2 },
   { id: "kalkulation", label: "Kalkulation", icon: Calculator },
-  { id: "textbausteine", label: "Textbausteine", icon: FileText },
-  { id: "einsatzplanung", label: "Einsatzplanung", icon: Wrench },
   { id: "email", label: "E-Mail", icon: Mail },
   { id: "benutzer", label: "Benutzer", icon: Users },
   { id: "dokumente", label: "Dokument-Vorlagen", icon: Palette },
   { id: "diverses", label: "Diverses / Info", icon: BookOpen },
-  { id: "backup", label: "Backup & Wiederherstellung", icon: Save },
-  { id: "module", label: "Module", icon: Package },
+  { id: "backup", label: "Backup", icon: Save },
 ];
 
 // ==================== FIRMENDATEN TAB ====================
@@ -2341,14 +2338,11 @@ const BackupTab = () => {
       {/* Tab Content */}
       {activeTab === "firma" && <FirmendatenTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
       {activeTab === "kalkulation" && <KalkulationTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
-      {activeTab === "textbausteine" && <TextbausteineTab />}
-      {activeTab === "einsatzplanung" && <EinsatzplanungTab />}
       {activeTab === "email" && <EmailTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
       {activeTab === "benutzer" && <BenutzerTab />}
       {activeTab === "dokumente" && <DokumentVorlagenTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
       {activeTab === "diverses" && <DiversesTab />}
       {activeTab === "backup" && <BackupTab />}
-      {activeTab === "module" && <ModuleTab />}
     </div>
   );
 };

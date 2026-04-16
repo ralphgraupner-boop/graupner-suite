@@ -84,7 +84,7 @@ const KundenModulPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <Package className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl lg:text-4xl font-bold">Kunden-Modul</h1>
+            <h1 className="text-2xl lg:text-4xl font-bold">Kunden</h1>
             <Badge variant="default" className="text-xs">Solo</Badge>
           </div>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{kunden.length} Kunden gesamt</p>
@@ -269,7 +269,7 @@ const KundenModulPage = () => {
                         data-testid={`btn-to-kontakt-${kunde.id}`}
                       >
                         <ArrowDownToLine className="w-4 h-4" />
-                        Ins Kontakt-Modul
+                        Zu Kontakte
                       </button>
                     </div>
                   </div>
@@ -466,7 +466,7 @@ const KontaktImportModal = ({ isOpen, onClose, onImported }) => {
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Laden...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">{search ? "Keine Ergebnisse" : "Keine Kontakte im Kontakt-Modul vorhanden"}</div>
+          <div className="text-center py-8 text-muted-foreground">{search ? "Keine Ergebnisse" : "Keine Kontakte vorhanden"}</div>
         ) : (
           <div className="max-h-[400px] overflow-y-auto space-y-2">
             {filtered.map(k => {
