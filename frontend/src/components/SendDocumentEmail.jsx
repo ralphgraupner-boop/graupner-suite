@@ -191,21 +191,19 @@ const SendDocumentEmail = ({ isOpen, onClose, type, docId, docNumber, customer, 
 
         {/* Actions */}
         <div className="p-5 border-t space-y-2">
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={handleOpenMailClient}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-sm border-2 border-primary text-primary font-medium text-sm hover:bg-primary/5 transition-colors"
-              data-testid="btn-open-mail-client">
-              <ExternalLink className="w-4 h-4" />
-              E-Mail-Programm
-            </button>
-            <button onClick={handleDirectSend} disabled={sending || !docId}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-sm bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
-              data-testid="btn-direct-send">
-              <Mail className="w-4 h-4" />
-              {sending ? "Sende..." : "Direkt senden"}
-            </button>
-          </div>
+          <button onClick={handleDirectSend} disabled={sending || !docId}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-sm bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+            data-testid="btn-direct-send">
+            <Mail className="w-4 h-4" />
+            {sending ? "Wird gesendet..." : "Senden"}
+          </button>
           {!docId && <p className="text-xs text-destructive text-center">Bitte zuerst das Dokument speichern</p>}
+          <div className="flex items-center justify-between">
+            <button onClick={handleOpenMailClient} className="text-xs text-muted-foreground hover:text-primary hover:underline flex items-center gap-1">
+              <ExternalLink className="w-3 h-3" /> In externem E-Mail-Programm oeffnen
+            </button>
+            <button onClick={onClose} className="text-xs text-muted-foreground hover:underline">Abbrechen</button>
+          </div>
         </div>
       </div>
     </div>
