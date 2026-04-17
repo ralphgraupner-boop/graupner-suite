@@ -300,7 +300,13 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
         matched_kontakte = kontakt_by_email.get(sender_email, [])
         has_vcf = any(a["filename"].lower().endswith(".vcf") for a in attachment_meta)
 
-        if matched_customer or matched_kontakte:
+        # Kontaktformular-Weiterleitungen immer als "anfrage" klassifizieren
+        form_indicators = ["Neue Kundenanfrage eingegangen", "Kontaktdaten", "Kontaktformular", "Kontaktanfrage"]
+        is_contact_form = any(ind.lower() in (subject + " " + body).lower() for ind in form_indicators)
+
+        if is_contact_form:
+            classification = "anfrage"
+        elif matched_customer or matched_kontakte:
             classification = "bekannt"
         elif keyword_match(subject + " " + body, keywords):
             classification = "anfrage"
