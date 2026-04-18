@@ -596,15 +596,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     const to = customer?.email || "";
     const docTitle = titles[type] || "Dokument";
     const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
-    const body = encodeURIComponent(
-      `${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`
-    );
-    // Zuerst fragen ob gespeichert werden soll
+    if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
+    const mitText = window.confirm("Vortext und Schlusstext in die E-Mail uebernehmen?");
+    const body = mitText
+      ? encodeURIComponent(`${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
+      : "";
     const doOpen = () => { window.location.href = `mailto:${to}?subject=${subject}&body=${body}`; navigate(listPaths[type]); };
-    if (isNew) {
-      toast.error("Bitte speichern Sie zuerst das Dokument");
-      return;
-    }
     if (window.confirm("Dokument vorher speichern?")) {
       handleSave().then(() => doOpen()).catch(() => doOpen());
     } else {

@@ -381,8 +381,12 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
           </Button>
           <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => {
             const to = doc.customer_email || "";
-            const subject = encodeURIComponent(doc.betreff || `${type === "quote" ? "Angebot" : type === "order" ? "Auftrag" : "Rechnung"} ${docNumber}`);
-            const body = encodeURIComponent(`${doc.vortext || ""}\n\n---\n\n${doc.schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`);
+            const docTitle = type === "quote" ? "Angebot" : type === "order" ? "Auftrag" : "Rechnung";
+            const subject = encodeURIComponent(doc.betreff || `${docTitle} ${docNumber}`);
+            const mitText = window.confirm("Vortext und Schlusstext in die E-Mail uebernehmen?");
+            const body = mitText
+              ? encodeURIComponent(`${doc.vortext || ""}\n\n---\n\n${doc.schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
+              : "";
             window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
           }} data-testid="btn-mailto-preview">
             <ExternalLink className="w-3.5 h-3.5 mr-1" /> Mailprogramm
