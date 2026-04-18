@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -270,6 +270,22 @@ const KundenModulPage = () => {
                       >
                         <ArrowDownToLine className="w-4 h-4" />
                         Zu Kontakte
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.post(`/einsaetze/from-kunde/${kunde.id}`);
+                            toast.success("Einsatz erstellt");
+                            window.location.href = "/einsaetze";
+                          } catch (err) {
+                            toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
+                        data-testid={`btn-to-einsatz-${kunde.id}`}
+                      >
+                        <Wrench className="w-4 h-4" />
+                        Einsatz erstellen
                       </button>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, ChevronDown, Download, Upload, X, File, Image as ImageIcon, Globe, Package, Users } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ChevronDown, Download, Upload, X, File, Image as ImageIcon, Globe, Package, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -224,6 +224,22 @@ const KontaktModulPage = () => {
                       >
                         <Users className="w-4 h-4" />
                         Als Kunde uebernehmen
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await api.post(`/einsaetze/from-kontakt/${contact.id}`);
+                            toast.success("Einsatz erstellt");
+                            window.location.href = "/einsaetze";
+                          } catch (err) {
+                            toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
+                        data-testid={`btn-to-einsatz-${contact.id}`}
+                      >
+                        <Wrench className="w-4 h-4" />
+                        Einsatz erstellen
                       </button>
                       <button
                         onClick={() => { setEditContact(contact); setShowModal(true); }}

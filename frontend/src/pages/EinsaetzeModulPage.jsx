@@ -161,11 +161,86 @@ const EinsaetzeModulPage = () => {
 const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload }) => {
   const [bildKat, setBildKat] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [mailVorlagen, setMailVorlagen] = useState([]);
+  const [terminVorlagen, setTerminVorlagen] = useState([]);
+  const [showMailPanel, setShowMailPanel] = useState(false);
+  const [showTerminPanel, setShowTerminPanel] = useState(false);
+  const [mailText, setMailText] = useState("");
+  const [mailBetreff, setMailBetreff] = useState("");
+  const [terminText, setTerminText] = useState("");
+  const [terminDatum, setTerminDatum] = useState("");
+  const [sendingMail, setSendingMail] = useState(false);
   const e = einsatz;
   const bilder = e.bilder || [];
   const filteredBilder = bildKat ? bilder.filter(b => b.kategorie === bildKat) : bilder;
   const katCounts = {};
   bilder.forEach(b => { katCounts[b.kategorie] = (katCounts[b.kategorie] || 0) + 1; });
+
+  useEffect(() => {
+    api.get("/modules/textvorlagen/data?doc_type=einsatz").then(r => setMailVorlagen(r.data)).catch(() => {});
+    api.get("/modules/textvorlagen/data?doc_type=termin").then(r => setTerminVorlagen(r.data)).catch(() => {});
+  }, []);
+
+  const replacePlaceholders = (text) => {
+    return text
+      .replace(/\{kunde_name\}/g, e.kunde_name || "")
+      .replace(/\{kunde_adresse\}/g, e.kunde_adresse || "")
+      .replace(/\{kunde_telefon\}/g, e.kunde_telefon || "")
+      .replace(/\{kunde_email\}/g, e.kunde_email || "")
+      .replace(/\{betreff\}/g, e.betreff || "")
+      .replace(/\{material\}/g, e.material || "")
+      .replace(/\{reparaturgruppe\}/g, e.reparaturgruppe || "")
+      .replace(/\{termin_datum\}/g, terminDatum ? new Date(terminDatum).toLocaleDateString("de-DE") : (e.termin ? new Date(e.termin).toLocaleDateString("de-DE") : ""));
+  };
+
+  const applyMailVorlage = (v) => {
+    setMailText(replacePlaceholders(v.content || ""));
+    setMailBetreff(e.betreff || v.title || "");
+  };
+
+  const applyTerminVorlage = (v) => {
+    setTerminText(replacePlaceholders(v.content || ""));
+  };
+
+  const sendMail = async () => {
+    if (!e.kunde_email) { toast.error("Keine E-Mail-Adresse"); return; }
+    if (!mailText.trim()) { toast.error("Nachricht leer"); return; }
+    setSendingMail(true);
+    try {
+      await api.post(`/einsaetze/${e.id}/email`, {
+        to_email: e.kunde_email,
+        subject: mailBetreff || e.betreff || "Mitteilung",
+        message: mailText
+      });
+      toast.success(`E-Mail an ${e.kunde_email} gesendet`);
+      setShowMailPanel(false);
+      setMailText("");
+    } catch (err) { toast.error(err?.response?.data?.detail || "Fehler beim Senden"); }
+    finally { setSendingMail(false); }
+  };
+
+  const openMailto = () => {
+    const subject = encodeURIComponent(mailBetreff || e.betreff || "");
+    const body = encodeURIComponent(mailText || e.beschreibung || "");
+    window.location.href = `mailto:${e.kunde_email}?subject=${subject}&body=${body}`;
+  };
+
+  const openGoogleCalendar = () => {
+    const dt = terminDatum || e.termin || "";
+    if (!dt) { toast.error("Bitte Termin-Datum eingeben"); return; }
+    const start = new Date(dt);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const fmt = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const title = encodeURIComponent(`Einsatz: ${e.kunde_name} - ${e.reparaturgruppe || e.betreff || ""}`);
+    const details = encodeURIComponent(terminText || e.beschreibung || "");
+    const location = encodeURIComponent([e.objekt_strasse, e.objekt_plz, e.objekt_ort].filter(Boolean).join(", ") || e.kunde_adresse || "");
+    window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}&location=${location}`, "_blank");
+  };
+
+  const downloadIcs = () => {
+    const token = localStorage.getItem("token");
+    window.open(`${API}/einsaetze/${e.id}/ics?token=${token}`, "_blank");
+  };
 
   const uploadBild = async (ev) => {
     const file = ev.target.files[0];
@@ -189,17 +264,6 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
     } catch { toast.error("Fehler"); }
   };
 
-  const openMailto = () => {
-    const subject = encodeURIComponent(e.betreff || "");
-    const body = encodeURIComponent(e.beschreibung || "");
-    window.location.href = `mailto:${e.kunde_email}?subject=${subject}&body=${body}`;
-  };
-
-  const downloadIcs = () => {
-    const token = localStorage.getItem("token");
-    window.open(`${API}/einsaetze/${e.id}/ics?token=${token}`, "_blank");
-  };
-
   return (
     <div data-testid="einsatz-detail">
       <button onClick={onBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">&larr; Zurueck</button>
@@ -215,12 +279,63 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
             {e.summe_netto > 0 && <span className="font-semibold text-foreground">{Number(e.summe_netto).toLocaleString("de-DE", {minimumFractionDigits: 2})} EUR</span>}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={onEdit} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Pencil className="w-3.5 h-3.5" /> Bearbeiten</button>
-          {e.kunde_email && <button onClick={openMailto} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Send className="w-3.5 h-3.5" /> E-Mail</button>}
-          {e.termin && <button onClick={downloadIcs} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Download className="w-3.5 h-3.5" /> Termin (.ics)</button>}
+          {e.kunde_email && <button onClick={() => setShowMailPanel(!showMailPanel)} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Send className="w-3.5 h-3.5" /> E-Mail</button>}
+          <button onClick={() => setShowTerminPanel(!showTerminPanel)} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Calendar className="w-3.5 h-3.5" /> Termin</button>
         </div>
       </div>
+
+      {/* E-Mail Panel */}
+      {showMailPanel && (
+        <Card className="p-4 mb-4 border-blue-200" data-testid="einsatz-mail-panel">
+          <h3 className="font-semibold mb-3 flex items-center gap-2"><Send className="w-4 h-4 text-blue-600" /> E-Mail an {e.kunde_name}</h3>
+          <div className="mb-3">
+            <label className="block text-xs font-medium mb-1 text-muted-foreground">Textvorlage waehlen</label>
+            <div className="flex gap-1 flex-wrap">
+              {mailVorlagen.map(v => (
+                <button key={v.id} onClick={() => applyMailVorlage(v)} className="px-2 py-1 text-xs border rounded-sm hover:bg-blue-50 hover:border-blue-300">{v.title}</button>
+              ))}
+            </div>
+          </div>
+          <input value={mailBetreff} onChange={(ev) => setMailBetreff(ev.target.value)} placeholder="Betreff..." className="w-full border rounded-sm p-2 text-sm mb-2" data-testid="einsatz-mail-subject" />
+          <textarea value={mailText} onChange={(ev) => setMailText(ev.target.value)} placeholder="Nachricht..." className="w-full border rounded-sm p-2 text-sm min-h-[120px] resize-y mb-3" data-testid="einsatz-mail-text" />
+          <div className="flex gap-2 justify-end">
+            <button onClick={openMailto} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted" title="In Betterbird/Thunderbird oeffnen"><Mail className="w-3.5 h-3.5" /> Mailprogramm</button>
+            <button onClick={sendMail} disabled={sendingMail} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-sm text-sm hover:bg-blue-700 disabled:opacity-50" data-testid="btn-send-einsatz-mail">
+              <Send className="w-3.5 h-3.5" /> {sendingMail ? "Sende..." : "Direkt senden"}
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Termin Panel */}
+      {showTerminPanel && (
+        <Card className="p-4 mb-4 border-green-200" data-testid="einsatz-termin-panel">
+          <h3 className="font-semibold mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-green-600" /> Termin planen</h3>
+          <div className="mb-3">
+            <label className="block text-xs font-medium mb-1 text-muted-foreground">Termintext-Vorlage</label>
+            <div className="flex gap-1 flex-wrap">
+              {terminVorlagen.map(v => (
+                <button key={v.id} onClick={() => applyTerminVorlage(v)} className="px-2 py-1 text-xs border rounded-sm hover:bg-green-50 hover:border-green-300">{v.title}</button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-xs font-medium mb-1 text-muted-foreground">Datum & Uhrzeit</label>
+              <input type="datetime-local" value={terminDatum} onChange={(ev) => setTerminDatum(ev.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="einsatz-termin-datum" />
+            </div>
+          </div>
+          <textarea value={terminText} onChange={(ev) => setTerminText(ev.target.value)} placeholder="Termindetails..." className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-y mb-3" data-testid="einsatz-termin-text" />
+          <div className="flex gap-2 justify-end">
+            <button onClick={downloadIcs} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Download className="w-3.5 h-3.5" /> ICS-Datei</button>
+            <button onClick={openGoogleCalendar} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-sm text-sm hover:bg-green-700" data-testid="btn-google-calendar">
+              <Calendar className="w-3.5 h-3.5" /> An Google Kalender
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* Kontaktdaten */}
       <Card className="p-4 mb-4">
