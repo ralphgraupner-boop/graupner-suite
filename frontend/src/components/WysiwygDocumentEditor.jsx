@@ -592,6 +592,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const onOpenEmailDialog = () => { setShowEmailDialog(true); };
 
+  const onOpenMailClient = () => {
+    const to = customer?.email || "";
+    const docTitle = titles[type] || "Dokument";
+    const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
+    const body = encodeURIComponent(
+      `${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`
+    );
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  };
+
   // ==================== COMPUTED VALUES ====================
   const { subtotal, discountAmt, netAfterDiscount, vat, total, finalAmount } = calculateTotals();
   const titelGroups = hasTitels ? getTitelGroups() : [];
@@ -613,6 +623,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         navigate={navigate} setShowSettings={setShowSettings} startRecording={startRecording} stopRecording={stopRecording}
         handleSave={handleSave} handleExit={handleExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
         onOpenEmailDialog={onOpenEmailDialog}
+        onOpenMailClient={onOpenMailClient}
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
       />

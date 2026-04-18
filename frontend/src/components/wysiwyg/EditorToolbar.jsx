@@ -1,4 +1,4 @@
-import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye } from "lucide-react";
+import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink } from "lucide-react";
 import { Button, Badge } from "@/components/common";
 
 const EditorToolbar = ({
@@ -6,7 +6,7 @@ const EditorToolbar = ({
   isRecording, aiLoading, saving,
   navigate, setShowSettings, startRecording, stopRecording,
   handleSave, handleExit, handleDownloadPDF, handlePrint,
-  onOpenEmailDialog, onToggleVorlagen, onTogglePreview,
+  onOpenEmailDialog, onOpenMailClient, onToggleVorlagen, onTogglePreview,
 }) => {
   return (
     <div className="fixed top-0 left-0 right-0 bg-card border-b z-40 shadow-sm">
@@ -59,6 +59,12 @@ const EditorToolbar = ({
             <Button variant="outline" size="sm" onClick={onOpenEmailDialog} data-testid="btn-email-document">
               <Mail className="w-4 h-4" />
               <span className="hidden sm:inline">E-Mail</span>
+            </Button>
+          )}
+          {!isNew && onOpenMailClient && (
+            <Button variant="outline" size="sm" onClick={onOpenMailClient} data-testid="btn-mailto-document" title="In Betterbird / Thunderbird oeffnen">
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden sm:inline">Mailprogramm</span>
             </Button>
           )}
           {!isNew && (
