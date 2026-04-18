@@ -179,14 +179,30 @@ const DashboardPage = () => {
             <Inbox className="w-5 h-5 text-primary" />
             Letzte Anfragen
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {stats.anfragen.recent.map((a) => (
-              <Link to="/module/kontakt" key={a.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors">
-                <div className="min-w-0 flex-1">
-                  <span className="font-medium text-sm">{a.name || "Unbekannt"}</span>
-                  {a.email && <span className="text-xs text-muted-foreground ml-2">{a.email}</span>}
+              <Link to="/module/kontakt" key={a.id} className="block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-sm">{a.name || "Unbekannt"}</span>
+                    {a.email && <span className="text-xs text-muted-foreground">{a.email}</span>}
+                    {a.phone && <span className="text-xs text-muted-foreground">{a.phone}</span>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {a.created_at && <span className="text-[10px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString("de-DE")}</span>}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                {(a.categories || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    {a.categories.map((cat, i) => (
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded font-medium">{cat}</span>
+                    ))}
+                  </div>
+                )}
+                {(a.nachricht || a.notes) && (
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line">{(a.nachricht || a.notes).slice(0, 250)}</p>
+                )}
               </Link>
             ))}
           </div>

@@ -243,9 +243,9 @@ async def get_dashboard_stats():
 
     # Kontakt-Modul: Anfragen = Kontakte mit Status "Anfrage"
     kontakte = await db.module_kontakt.find({}, {"_id": 0}).to_list(10000)
-    anfragen = [k for k in kontakte if k.get("kontakt_status") == "Anfrage"]
+    anfragen = [k for k in kontakte if k.get("kontakt_status") in ("Anfrage", "Neu")]
 
-    recent_anfragen = sorted(anfragen, key=lambda x: x.get("created_at", ""), reverse=True)[:5]
+    recent_anfragen = sorted(anfragen, key=lambda x: x.get("created_at", ""), reverse=True)[:8]
     # Display-Name fuer recent_anfragen
     for a in recent_anfragen:
         a["name"] = f"{a.get('vorname', '')} {a.get('nachname', '')}".strip() or a.get('firma', 'Unbekannt')
