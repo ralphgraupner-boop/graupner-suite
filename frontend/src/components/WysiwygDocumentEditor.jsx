@@ -572,8 +572,21 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      const w = window.open(url, "_blank");
-      if (!w) { const link = document.createElement("a"); link.href = url; link.setAttribute("download", `${titles[type]}_${docNumber}.pdf`); document.body.appendChild(link); link.click(); link.remove(); toast.info("PDF heruntergeladen — bitte manuell drucken"); }
+      const printWindow = window.open(url, "_blank");
+      if (printWindow) {
+        printWindow.addEventListener("load", () => {
+          setTimeout(() => { printWindow.print(); }, 500);
+        });
+      } else {
+        // Fallback: iframe print
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        iframe.addEventListener("load", () => {
+          setTimeout(() => { iframe.contentWindow.print(); }, 500);
+        });
+      }
     } catch { toast.error("Fehler beim Drucken"); }
   };
 
