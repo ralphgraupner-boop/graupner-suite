@@ -421,7 +421,9 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
   });
   const [saving, setSaving] = useState(false);
   const [kunden, setKunden] = useState([]);
-  const [showKundenSelect, setShowKundenSelect] = useState(false);
+  const [kontakte, setKontakte] = useState([]);
+  const [nameSearch, setNameSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -444,14 +446,51 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
         termin: item.termin || "", termin_text: item.termin_text || "",
       });
     }
-    api.get("/modules/kunden/data").then(r => setKunden(r.data)).catch(() => {});
+    Promise.all([
+      api.get("/modules/kunden/data"),
+      api.get("/modules/kontakt/data")
+    ]).then(([kRes, koRes]) => {
+      setKunden(kRes.data);
+      setKontakte(koRes.data);
+    }).catch(() => {});
   }, [item]);
 
-  const selectKunde = (k) => {
-    const name = k.vorname || k.nachname ? `${k.vorname || ""} ${k.nachname || ""}`.trim() : (k.name || "");
-    const addr = k.address || [k.strasse, k.hausnummer, k.plz, k.ort].filter(Boolean).join(", ");
-    setForm(f => ({ ...f, kunde_name: name, kunde_email: k.email || "", kunde_telefon: k.phone || "", kunde_adresse: addr, objekt_strasse: k.strasse || "", objekt_plz: k.plz || "", objekt_ort: k.ort || "" }));
-    setShowKundenSelect(false);
+  // Live-Suche in Kunden + Kontakte
+  const suggestions = (() => {
+    const term = (nameSearch || form.kunde_name).toLowerCase().trim();
+    if (!term || term.length < 1) return [];
+    const results = [];
+    kunden.forEach(k => {
+      const nm = k.vorname || k.nachname ? `${k.vorname || ""} ${k.nachname || ""}`.trim() : (k.name || "");
+      if (nm.toLowerCase().includes(term) || (k.firma || "").toLowerCase().includes(term) || (k.email || "").toLowerCase().includes(term)) {
+        results.push({ ...k, _displayName: nm, _source: "Kunde", _sourceColor: "text-blue-600 bg-blue-50" });
+      }
+    });
+    kontakte.forEach(k => {
+      const nm = k.vorname || k.nachname ? `${k.vorname || ""} ${k.nachname || ""}`.trim() : (k.name || "");
+      if (nm.toLowerCase().includes(term) || (k.firma || "").toLowerCase().includes(term) || (k.email || "").toLowerCase().includes(term)) {
+        results.push({ ...k, _displayName: nm, _source: "Kontakt", _sourceColor: "text-orange-600 bg-orange-50" });
+      }
+    });
+    return results.slice(0, 8);
+  })();
+
+  const selectPerson = (p) => {
+    const addr = p.address || [p.strasse, p.hausnummer, p.plz, p.ort].filter(Boolean).join(", ");
+    setForm(f => ({
+      ...f,
+      kunde_name: p._displayName,
+      kunde_email: p.email || "",
+      kunde_telefon: p.phone || "",
+      kunde_adresse: addr,
+      objekt_strasse: p.strasse || "",
+      objekt_plz: p.plz || "",
+      objekt_ort: p.ort || "",
+      beschreibung: f.beschreibung || p.notes || p.nachricht || "",
+      betreff: f.betreff || (p._source === "Kontakt" ? `Anfrage von ${p._displayName}` : ""),
+    }));
+    setNameSearch("");
+    setShowSuggestions(false);
   };
 
   const selectMonteur = (m, nr) => {
@@ -513,20 +552,36 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
 
           {/* Kunde */}
           <div className="border rounded-sm p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold">Kunde</h3>
-              <button onClick={() => setShowKundenSelect(!showKundenSelect)} className="text-xs text-primary hover:underline">Aus Kunden-Modul waehlen</button>
-            </div>
-            {showKundenSelect && (
-              <div className="mb-3 border rounded-sm max-h-32 overflow-y-auto">
-                {kunden.map(k => {
-                  const nm = k.vorname || k.nachname ? `${k.vorname || ""} ${k.nachname || ""}`.trim() : (k.name || "");
-                  return <button key={k.id} onClick={() => selectKunde(k)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted border-b last:border-0">{nm} {k.firma ? `(${k.firma})` : ""}</button>;
-                })}
+            <h3 className="text-sm font-semibold mb-2">Kunde</h3>
+            <div className="relative mb-3">
+              <label className="block text-xs font-medium mb-1 text-muted-foreground">Name (Suche in Kunden & Kontakte)</label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                <input
+                  value={showSuggestions ? nameSearch : form.kunde_name}
+                  onChange={e => { setNameSearch(e.target.value); upd("kunde_name", e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => setShowSuggestions(true)}
+                  className="w-full border rounded-sm p-2 pl-9 text-sm"
+                  placeholder="Name eingeben oder suchen..."
+                  data-testid="einsatz-field-kunde_name"
+                />
               </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              {inp("Name", "kunde_name", "Kundenname")}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-background border rounded-sm shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((p, i) => (
+                    <button key={`${p._source}-${p.id}-${i}`} onClick={() => selectPerson(p)} className="w-full text-left px-3 py-2 text-sm hover:bg-muted border-b last:border-0 flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium">{p._displayName}</span>
+                        {p.firma && <span className="text-muted-foreground ml-1">({p.firma})</span>}
+                        {p.email && <span className="text-xs text-muted-foreground block truncate">{p.email}</span>}
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${p._sourceColor}`}>{p._source}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3">
               {inp("E-Mail", "kunde_email", "email@example.de", "email")}
               {inp("Telefon", "kunde_telefon", "040-123456")}
               {inp("Adresse", "kunde_adresse", "Strasse, PLZ Ort")}
