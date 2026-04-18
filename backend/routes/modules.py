@@ -167,9 +167,15 @@ async def update_kontakt_data(contact_id: str, data: dict, user=Depends(get_curr
             await db.module_kunden.insert_one(kunde)
             kunde.pop("_id", None)
             logger.info(f"Kontakt automatisch als Kunde uebernommen: {name}")
+            # Kontakt aus module_kontakt entfernen (ist jetzt im Kunden-Modul)
+            await db.module_kontakt.delete_one({"id": contact_id})
+            logger.info(f"Kontakt {name} aus Kontakte entfernt (jetzt Kunde)")
             updated["_kunde_created"] = True
             updated["_kunde_id"] = kunde["id"]
         else:
+            # Kunde existiert schon - Kontakt trotzdem entfernen
+            await db.module_kontakt.delete_one({"id": contact_id})
+            logger.info(f"Kontakt entfernt (Kunde existiert bereits)")
             updated["_kunde_exists"] = True
             updated["_kunde_id"] = existing.get("id", "")
 

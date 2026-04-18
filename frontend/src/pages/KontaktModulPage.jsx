@@ -48,18 +48,21 @@ const KontaktModulPage = () => {
     } catch { toast.error("Fehler beim Export"); }
   };
 
-  const filtered = contacts.filter((c) => {
+  // Kontakte mit Status "Kunde" aus der Liste ausblenden (die sind im Kunden-Modul)
+  const activeContacts = contacts.filter(c => c.kontakt_status !== "Kunde");
+
+  const filtered = activeContacts.filter((c) => {
     const name = `${c.vorname || ""} ${c.nachname || ""}`.trim().toLowerCase();
-    const matchSearch = !search || name.includes(search.toLowerCase()) || (c.email || "").toLowerCase().includes(search.toLowerCase()) || (c.firma || "").toLowerCase().includes(search.toLowerCase());
+    const cats = (c.categories || []).join(" ").toLowerCase();
+    const matchSearch = !search || name.includes(search.toLowerCase()) || (c.email || "").toLowerCase().includes(search.toLowerCase()) || (c.firma || "").toLowerCase().includes(search.toLowerCase()) || cats.includes(search.toLowerCase());
     const matchStatus = !statusFilter || (c.kontakt_status || "Anfrage") === statusFilter || (statusFilter === "Anfrage" && c.kontakt_status === "Neu");
     return matchSearch && matchStatus;
   });
 
   const statusCounts = {
-    Anfrage: contacts.filter(c => (c.kontakt_status || "Anfrage") === "Anfrage" || c.kontakt_status === "Neu").length,
-    Kunde: contacts.filter(c => c.kontakt_status === "Kunde").length,
-    Interessent: contacts.filter(c => c.kontakt_status === "Interessent").length,
-    Archiv: contacts.filter(c => c.kontakt_status === "Archiv").length,
+    Anfrage: activeContacts.filter(c => (c.kontakt_status || "Anfrage") === "Anfrage" || c.kontakt_status === "Neu").length,
+    Interessent: activeContacts.filter(c => c.kontakt_status === "Interessent").length,
+    Archiv: activeContacts.filter(c => c.kontakt_status === "Archiv").length,
   };
 
   const statusColors = {
@@ -95,7 +98,6 @@ const KontaktModulPage = () => {
         {[
           { key: "", label: "Alle", color: "" },
           { key: "Anfrage", label: `Anfrage (${statusCounts.Anfrage})`, color: "bg-blue-500" },
-          { key: "Kunde", label: `Kunde (${statusCounts.Kunde})`, color: "bg-green-500" },
           { key: "Interessent", label: `Interessent (${statusCounts.Interessent})`, color: "bg-amber-500" },
           { key: "Archiv", label: `Archiv (${statusCounts.Archiv})`, color: "bg-gray-400" },
         ].map(f => (
