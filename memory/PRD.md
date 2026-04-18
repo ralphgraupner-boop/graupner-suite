@@ -33,7 +33,6 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - **Seite**: `/module/textvorlagen`
 - **DB**: `module_textvorlagen`
 - **API**: `/api/modules/textvorlagen/data`
-- **Features**: Rich-Text-Editor (fett, kursiv, unterstrichen, Farbe), Split-Overlay im Dokument-Editor
 - **Status**: Fertig
 
 ### 5. Kunden-Modul
@@ -47,47 +46,52 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - **Kunden-Seite**: `/portal/:token` (oeffentlich, ohne Auth)
 - **DB**: `portals`, `portal_files`
 - **API**: `/api/portals/*`, `/api/portal/*`
-- **Features**: Passwortgeschuetzte Kundenportale, bidirektionaler Datei-Upload, Nachrichten-System, Admin-Textbausteine, E-Mail-Einladungen, Portal-Verwaltung, Passwort-Export
 - **Status**: Fertig (100% getestet)
 
 ### 7. Kontaktformular (Standalone) (18.04.2026)
 - **Inline-Seite**: `/api/kontakt` (ohne Auth, oeffentlich)
-- **Standalone-HTML**: `/app/landing_page/kontaktformular.html` (fuer IONOS-Upload)
-- **API**: `/api/kontakt/submit` (multipart POST), `/api/webhook/contact` (JSON), `/api/webhook/contact-beacon` (GET pixel)
-- **Speichert in**: `module_kontakt` Collection (NICHT mehr legacy `anfragen`)
-- **Features**: 4-Schritt-Wizard, Drag&Drop Bild-Upload, Objektadresse, Kategorien, E-Mail-Benachrichtigung (Admin + Kunde), Bestaetigungsseite
-- **Status**: Fertig (100% getestet - 18/18 Backend-Tests)
+- **Standalone-HTML**: `/app/landing_page/kontaktformular.html`
+- **API**: `/api/kontakt/submit`, `/api/webhook/contact`, `/api/webhook/contact-beacon`
+- **Speichert in**: `module_kontakt`
+- **Status**: Fertig (100% getestet)
+
+### 8. Buchhaltung & Mahnwesen (18.04.2026)
+- **Buchhaltung**: `/buchhaltung`
+- **Rechnungen**: `/invoices`
+- **DB**: `buchungen`, `invoices`, `buchhaltung_config`, `counters`
+- **API**: `/api/buchhaltung/*`, `/api/invoices/*`
+- **Features**: Buchungen (Einnahmen/Ausgaben), Belegnummern, Kategorien, MwSt, CSV/Excel Export, Kassenbuch, Monatsabschluss, USt/MwSt, Rechnungen mit Positionen, Mahnwesen (3 Stufen), Faelligkeitspruefung
+- **Status**: Fertig (100% getestet - 30/30 Backend + Frontend)
 
 ## Modul-Verknuepfungen
 1. Kontakt <-> Kunden: Bidirektionaler Transfer
 2. Kunden-Modul -> Dokumente: Kunden im Editor Dropdown
 3. Artikel -> Dokumente: Positionen im Editor
-4. Textvorlagen -> Dokumente: Textbausteine im Editor (Overlay mit Neu-Erstellen)
+4. Textvorlagen -> Dokumente: Textbausteine im Editor
 5. Kunden-Modul -> Kundenportal: Portal direkt aus Kunde erstellen
 6. Kontakt-Modul -> Kundenportal: Portal aus Kontakt erstellen
-7. Kontaktformular -> Kontakt-Modul: Externe Anfragen landen direkt im Kontakt-Modul
+7. Kontaktformular -> Kontakt-Modul: Externe Anfragen im Kontakt-Modul
+8. Kunden-Modul -> Rechnungen: Kunden-Daten in Rechnungserstellung
 
 ## Lohnanteil
-- Jede Position hat ein "Lohnanteil" Feld (netto pro Einheit)
-- Automatische Summe (Menge x Lohnanteil)
-- Steuerung: "Wird ausgewiesen" / "Nicht ausweisen"
-- Platzhalter: {lohnanteil}, {lohnanteil_mwst}, {lohnanteil_brutto}, {mwst_satz}
+- Jede Position hat ein "Lohnanteil" Feld
+- Automatische Summe, Steuerung, MwSt-Satz konfigurierbar
+- In invoices.py ueber show_lohnanteil und lohnanteil_custom
 
 ## Legacy-System (aus Navigation entfernt)
-- Alte Seiten in _legacy_backup/, nicht mehr erreichbar
-- Navigation: Dashboard, Module, Kundenportale, E-Mail, Einstellungen
-- Alle Webhooks/Formulare speichern jetzt in module_kontakt (nicht mehr anfragen)
+- Alte Seiten in _legacy_backup/
+- Alle Webhooks speichern in module_kontakt
 
-## P1 - Next Tasks
-- [x] Kundenportal-Modul installieren und integrieren (18.04.2026)
-- [x] Kontaktformular-Modul installieren und auf module_kontakt umstellen (18.04.2026)
+## Completed (18.04.2026)
+- [x] Kundenportal-Modul installiert
+- [x] Kontaktformular-Modul installiert (module_kontakt)
+- [x] Buchhaltung & Mahnwesen Modul installiert
 - [ ] Redeploy fuer Live-Domain
 
 ## P2 - Future/Backlog
 - [ ] DATEV-Export
 - [ ] Lexoffice-Anbindung
-- [ ] Handy-App Ueberlegungen
-- [ ] Standalone Homepage fertigstellen
+- [ ] Handy-App
+- [ ] Standalone Homepage
 - [ ] Windows Desktop App (Electron)
-- [ ] IONOS MariaDB Integration (pausiert)
-- [ ] Standalone-Kontaktformular auf IONOS hochladen (via FileZilla)
+- [ ] Standalone-Kontaktformular auf IONOS hochladen
