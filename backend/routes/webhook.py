@@ -609,6 +609,22 @@ async def kontakt_relay(request: Request):
         if isinstance(topics, str):
             topics = [topics]
         topics = [t for t in topics if t and t.strip()]
+        
+        # Also check kategorie_* hidden fields from the standalone form
+        kategorie_fields = ["kategorie_schiebetuer", "kategorie_fenster", "kategorie_innentuer", "kategorie_eingangstuer", "kategorie_sonstige"]
+        for kf in kategorie_fields:
+            val = form_dict.get(kf, "")
+            if val and val.strip() and val.strip() not in topics:
+                topics.append(val.strip())
+        
+        # Also check st_typ_* checkboxes (sub-types)
+        sub_types = []
+        for key, val in form_dict.items():
+            if key.startswith("st_typ_") and val:
+                if isinstance(val, list):
+                    sub_types.extend(val)
+                else:
+                    sub_types.append(val)
 
         anrede = form_dict.get("anrede", "")
         vorname = form_dict.get("vorname", "")
@@ -624,16 +640,26 @@ async def kontakt_relay(request: Request):
         if form_dict.get("firma"):
             notes_parts.append(f"Firma: {form_dict['firma']}")
         if topics:
-            notes_parts.append(f"Themen: {', '.join(t for t in topics if t)}")
+            notes_parts.append(f"Was wird benoetigt: {', '.join(t for t in topics if t)}")
+        if sub_types:
+            notes_parts.append(f"Typen: {', '.join(sub_types)}")
         # Beschreibungen pro Kategorie
         desc_fields = {
-            "Schiebetür": "desc_schiebetuer",
+            "Schiebetuer": "beschreibung_schiebetuer",
+            "Fenster": "beschreibung_fenster",
+            "Innentuer": "beschreibung_innentuer",
+            "Eingangstuer": "beschreibung_eingangstuer",
+            "Sonstige Reparaturen": "beschreibung_sonstige"
+        }
+        # Also check old desc_ field names
+        desc_fields_old = {
+            "Schiebetuer": "desc_schiebetuer",
             "Fenster": "desc_fenster",
-            "Innentür": "desc_innentuer",
-            "Eingangstür": "desc_eingangstuer",
+            "Innentuer": "desc_innentuer",
+            "Eingangstuer": "desc_eingangstuer",
             "Sonstige Reparaturen": "desc_sonstige"
         }
-        for topic_name, field_name in desc_fields.items():
+        for topic_name, field_name in {**desc_fields, **desc_fields_old}.items():
             desc_val = form_dict.get(field_name, "")
             if desc_val and desc_val.strip():
                 notes_parts.append(f"{topic_name}: {desc_val.strip()}")
@@ -699,11 +725,17 @@ async def kontakt_relay(request: Request):
         kontakt_data = anfrage.model_dump()
         kontakt_data["kontakt_status"] = "Neu"
         kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        # Strukturierte Adressfelder hinzufügen
+        # Strukturierte Felder
+        kontakt_data["vorname"] = vorname
+        kontakt_data["nachname"] = nachname
         kontakt_data["strasse"] = form_dict.get("strasse", "")
         kontakt_data["hausnummer"] = ""
         kontakt_data["plz"] = form_dict.get("plz", "")
         kontakt_data["ort"] = form_dict.get("stadt", "")
+        # Objektadresse separat
+        kontakt_data["objekt_strasse"] = form_dict.get("objstrasse", "")
+        kontakt_data["objekt_plz"] = form_dict.get("objplz", "")
+        kontakt_data["objekt_ort"] = form_dict.get("objstadt", "")
         await db.module_kontakt.insert_one(kontakt_data)
         logger.info(f"Neue Anfrage über Kontaktformular-Relay: {name}")
 
