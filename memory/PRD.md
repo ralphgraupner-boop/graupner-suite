@@ -8,90 +8,54 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - **Backend**: FastAPI + MongoDB
 - **Storage**: Emergent Object Storage
 - **Auth**: JWT-based (admin/Graupner!Suite2026)
-- **Prinzip**: Modulare Architektur - jedes Modul ist eigenstaendig mit eigener DB, API und UI
+- **Prinzip**: Modulare Architektur - jedes Modul ist eigenstaendig
 
-## Module (Eigenstaendig)
+## Module
 
-### 1. Kontakt-Modul
-- **Seite**: `/module/kontakt`
-- **DB**: `module_kontakt`
-- **API**: `/api/modules/kontakt/data`
-- **Status**: Fertig
+### 1. Kontakt-Modul `/module/kontakt`
+### 2. Kunden-Modul `/module/kunden`
+### 3. Artikel & Leistungen `/module/artikel`
+### 4. Dokumente `/module/dokumente`
+### 5. Textvorlagen `/module/textvorlagen`
+### 6. Kundenportal `/portals` + `/portal/:token`
+### 7. Kontaktformular `/api/kontakt` + IONOS standalone
+### 8. Buchhaltung `/buchhaltung` + Rechnungen `/invoices`
+### 9. Einsaetze-Modul `/einsaetze` (NEU 18.04.2026)
+- Auftragsbearbeitung wie das "gruene Formular"
+- Kundendaten, Objektadresse, Beschreibung + Bemerkungen
+- Reparaturgruppen + Material Dropdown (konfigurierbar)
+- Monteur-Zuweisung (1. + 2. Monteur aus Mitarbeiter-Modul)
+- Summe Netto/Brutto, Status, Prioritaet, Termine
+- Kategorisierte Bild-Uploads (Kundenanfrage, Besichtigung, Abnahme etc.)
+- E-Mail-Versand + ICS-Kalender-Download
+- Einsatz aus Kontakt oder Kunde erstellbar
+- 100% getestet (21/21 Backend + Frontend)
 
-### 2. Artikel & Leistungen
-- **Seite**: `/module/artikel`
-- **DB**: `module_artikel`, `module_artikel_config`
-- **API**: `/api/modules/artikel/data`
-- **Status**: Fertig
+### 10. Mitarbeiter-Modul `/mitarbeiter` (NEU 18.04.2026)
+- Frontend fuer bestehendes Backend (654 Zeilen)
+- CRUD + Suche + Status aktiv/inaktiv
+- Verknuepft mit Einsaetze (Monteur-Zuweisung)
+- 100% getestet
 
-### 3. Dokumente (Angebote, Auftraege, Rechnungen)
-- **Seite**: `/module/dokumente`
-- **API**: `/api/quotes`, `/api/orders`, `/api/invoices`
-- **Status**: Fertig
+## Completed 18.04.2026
+- [x] Kundenportal-Modul (26/26 Tests)
+- [x] Kontaktformular-Modul (18/18 Tests) + IONOS Upload
+- [x] Buchhaltung & Mahnwesen (30/30 Tests)
+- [x] Einsaetze + Mitarbeiter Module (21/21 Tests)
+- [x] Portal-Textbausteine (doc_type: kundenportal)
+- [x] Links per Mail + in Diverses gespeichert
+- [x] Redeploy auf Live-Domain (code-import-flow-1.emergent.host)
 
-### 4. Textvorlagen
-- **Seite**: `/module/textvorlagen`
-- **DB**: `module_textvorlagen`
-- **API**: `/api/modules/textvorlagen/data`
-- **Status**: Fertig
+## Noch offen / Naechste Schritte
+- [ ] Termintext-Vorlagen + Google Calendar Integration
+- [ ] Mailtexte im Einsatz (Textvorlagen doc_type: einsatz)
+- [ ] Arbeitsblatt-/Formular-Auswahl im Einsatz
+- [ ] Bild-Upload Kategorien erweitern
+- [ ] "Einsatz erstellen" Button im Kontakt- und Kunden-Modul
 
-### 5. Kunden-Modul
-- **Seite**: `/module/kunden`
-- **DB**: `module_kunden`
-- **API**: `/api/modules/kunden/data`
-- **Status**: Fertig
-
-### 6. Kundenportal (18.04.2026)
-- **Admin-Seite**: `/portals`
-- **Kunden-Seite**: `/portal/:token` (oeffentlich, ohne Auth)
-- **DB**: `portals`, `portal_files`
-- **API**: `/api/portals/*`, `/api/portal/*`
-- **Status**: Fertig (100% getestet)
-
-### 7. Kontaktformular (Standalone) (18.04.2026)
-- **Inline-Seite**: `/api/kontakt` (ohne Auth, oeffentlich)
-- **Standalone-HTML**: `/app/landing_page/kontaktformular.html`
-- **API**: `/api/kontakt/submit`, `/api/webhook/contact`, `/api/webhook/contact-beacon`
-- **Speichert in**: `module_kontakt`
-- **Status**: Fertig (100% getestet)
-
-### 8. Buchhaltung & Mahnwesen (18.04.2026)
-- **Buchhaltung**: `/buchhaltung`
-- **Rechnungen**: `/invoices`
-- **DB**: `buchungen`, `invoices`, `buchhaltung_config`, `counters`
-- **API**: `/api/buchhaltung/*`, `/api/invoices/*`
-- **Features**: Buchungen (Einnahmen/Ausgaben), Belegnummern, Kategorien, MwSt, CSV/Excel Export, Kassenbuch, Monatsabschluss, USt/MwSt, Rechnungen mit Positionen, Mahnwesen (3 Stufen), Faelligkeitspruefung
-- **Status**: Fertig (100% getestet - 30/30 Backend + Frontend)
-
-## Modul-Verknuepfungen
-1. Kontakt <-> Kunden: Bidirektionaler Transfer
-2. Kunden-Modul -> Dokumente: Kunden im Editor Dropdown
-3. Artikel -> Dokumente: Positionen im Editor
-4. Textvorlagen -> Dokumente: Textbausteine im Editor
-5. Kunden-Modul -> Kundenportal: Portal direkt aus Kunde erstellen
-6. Kontakt-Modul -> Kundenportal: Portal aus Kontakt erstellen
-7. Kontaktformular -> Kontakt-Modul: Externe Anfragen im Kontakt-Modul
-8. Kunden-Modul -> Rechnungen: Kunden-Daten in Rechnungserstellung
-
-## Lohnanteil
-- Jede Position hat ein "Lohnanteil" Feld
-- Automatische Summe, Steuerung, MwSt-Satz konfigurierbar
-- In invoices.py ueber show_lohnanteil und lohnanteil_custom
-
-## Legacy-System (aus Navigation entfernt)
-- Alte Seiten in _legacy_backup/
-- Alle Webhooks speichern in module_kontakt
-
-## Completed (18.04.2026)
-- [x] Kundenportal-Modul installiert
-- [x] Kontaktformular-Modul installiert (module_kontakt)
-- [x] Buchhaltung & Mahnwesen Modul installiert
-- [ ] Redeploy fuer Live-Domain
-
-## P2 - Future/Backlog
+## P2 - Backlog
 - [ ] DATEV-Export
 - [ ] Lexoffice-Anbindung
-- [ ] Handy-App
+- [ ] Handy-App (Monteur-Zugang)
 - [ ] Standalone Homepage
-- [ ] Windows Desktop App (Electron)
-- [ ] Standalone-Kontaktformular auf IONOS hochladen
+- [ ] Windows Desktop App
