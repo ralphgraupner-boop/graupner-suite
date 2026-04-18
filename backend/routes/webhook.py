@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, Response
 from io import BytesIO
 import os
 import base64
@@ -225,6 +225,22 @@ async def landing_page_preview():
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Landing page not found")
+
+
+@router.get("/kontaktformular/download")
+async def download_kontaktformular():
+    """Download der Standalone-Kontaktformular HTML-Datei fuer IONOS-Upload"""
+    file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "landing_page", "kontaktformular.html")
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return Response(
+            content=content,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": "attachment; filename=kontaktformular.html"}
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Kontaktformular nicht gefunden")
 
 
 
