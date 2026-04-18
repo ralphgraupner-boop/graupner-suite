@@ -5,7 +5,7 @@ import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common
 import { api } from "@/lib/api";
 import { RichTextEditor } from "@/components/RichTextEditor";
 
-const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", allgemein: "Allgemein" };
+const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", kundenportal: "Kundenportal", allgemein: "Allgemein" };
 const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung" };
 const TEXT_TYPE_COLORS = { vortext: "bg-blue-100 text-blue-800", schlusstext: "bg-green-100 text-green-800", betreff: "bg-purple-100 text-purple-800", bemerkung: "bg-gray-100 text-gray-800", titel: "bg-amber-100 text-amber-800", email: "bg-cyan-100 text-cyan-800", mahnung: "bg-red-100 text-red-800" };
 

@@ -446,21 +446,21 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
       if (p?.customer_notes) setNotes(p.customer_notes);
       if (p?.admin_notes) setAdminNotes(p.admin_notes);
     }).catch(() => {});
-    api.get("/email/vorlagen").then(res => setVorlagen(res.data)).catch(() => {});
+    api.get("/modules/textvorlagen/data?doc_type=kundenportal").then(res => setVorlagen(res.data)).catch(() => {});
   }, [portal.id]);
 
   const filtered = vorlagen.filter(v =>
-    v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.betreff.toLowerCase().includes(searchTerm.toLowerCase())
+    (v.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v.content || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const applyVorlage = (vorlage) => {
-    let text = vorlage.text || "";
+    let text = vorlage.content || "";
     text = text
       .replace(/\{kunde_name\}/g, portal.customer_name || "")
       .replace(/\{firma_name\}/g, "Tischlerei Graupner");
     setMsgText(text);
-    setSearchTerm(vorlage.name);
+    setSearchTerm(vorlage.title || "");
     setShowResults(false);
   };
 
@@ -597,8 +597,8 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
                       className="w-full text-left p-3 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
                       data-testid={`portal-vorlage-${v.id}`}
                     >
-                      <p className="text-sm font-medium">{v.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{v.betreff}</p>
+                      <p className="text-sm font-medium">{v.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{(v.content || "").replace(/<[^>]*>/g, "").slice(0, 80)}</p>
                     </button>
                   ))
                 )}
