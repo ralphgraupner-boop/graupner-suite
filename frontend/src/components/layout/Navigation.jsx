@@ -10,6 +10,8 @@ const allNavItems = [
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
+  { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
+  { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
   { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"] },
   { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
 ];

@@ -17,6 +17,8 @@ import { DokumenteModulPage } from "@/pages/DokumenteModulPage";
 import { TextvorlagenModulPage } from "@/pages/TextvorlagenModulPage";
 import { KundenModulPage } from "@/pages/KundenModulPage";
 import { PortalsPage } from "@/pages/PortalsPage";
+import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
+import { InvoicesPage } from "@/pages/InvoicesPage";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -70,6 +72,8 @@ function App() {
               {/* E-Mail & Einstellungen */}
               <Route path="/email" element={<MainLayout onLogout={logout}><EmailPage /></MainLayout>} />
               <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
+              <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
+              <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
 
               {/* Fallback */}

@@ -288,6 +288,9 @@ class Invoice(BaseModel):
     due_days: int = 14
     dunning_level: int = 0
     dunning_date: Optional[str] = None
+    dunning_fee: float = 0
+    dunning_custom_text: str = ""
+    dunning_history: List[dict] = []
     is_template: bool = False
     show_lohnanteil: bool = False
     lohnanteil_custom: str = ""
