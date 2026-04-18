@@ -230,6 +230,28 @@ async def download_vorlage():
     import os
     from fastapi.responses import FileResponse
     path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "vorlage_artikel_import.csv")
+
+@router.get("/modules/artikel/export-material-csv")
+async def export_material_csv():
+    """Export Material CSV aus alter Datenbank"""
+    import os
+    from fastapi.responses import FileResponse
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "export_material.csv")
+    if not os.path.exists(path):
+        raise HTTPException(404, "Datei nicht gefunden")
+    return FileResponse(path, filename="Material_aus_Altdatenbank.csv", media_type="text/csv")
+
+
+@router.get("/modules/artikel/export-leistungen-csv")
+async def export_leistungen_csv():
+    """Export Leistungen CSV aus alter Datenbank"""
+    import os
+    from fastapi.responses import FileResponse
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "export_leistungen.csv")
+    if not os.path.exists(path):
+        raise HTTPException(404, "Datei nicht gefunden")
+    return FileResponse(path, filename="Leistungen_aus_Altdatenbank.csv", media_type="text/csv")
+
     return FileResponse(path, filename="vorlage_artikel_import.csv", media_type="text/csv")
 
 
