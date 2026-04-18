@@ -21,12 +21,19 @@ const DashboardPage = () => {
     checkFollowups();
     loadInboxStats();
 
-    // Auto-Refresh alle 30 Sekunden
+    // Auto-Refresh jede Stunde
     const interval = setInterval(() => {
       loadStats();
       loadInboxStats();
-    }, 30000);
+    }, 3600000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Refresh wenn Benutzer zur Seite zurueckkehrt (z.B. von Kunden-Modul)
+  useEffect(() => {
+    const handleFocus = () => { loadStats(); loadInboxStats(); };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, []);
 
   const loadInboxStats = async () => {
