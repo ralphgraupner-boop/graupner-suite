@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle } from "lucide-react";
+import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle, FileText, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -242,6 +242,11 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
     window.open(`${API}/einsaetze/${e.id}/ics?token=${token}`, "_blank");
   };
 
+  const downloadPdf = (blanko = false) => {
+    const token = localStorage.getItem("token");
+    window.open(`${API}/einsaetze/${e.id}/reparaturauftrag-pdf?blanko=${blanko}&token=${token}`, "_blank");
+  };
+
   const uploadBild = async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
@@ -283,6 +288,8 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
           <button onClick={onEdit} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Pencil className="w-3.5 h-3.5" /> Bearbeiten</button>
           {e.kunde_email && <button onClick={() => setShowMailPanel(!showMailPanel)} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Send className="w-3.5 h-3.5" /> E-Mail</button>}
           <button onClick={() => setShowTerminPanel(!showTerminPanel)} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Calendar className="w-3.5 h-3.5" /> Termin</button>
+          <button onClick={() => downloadPdf(false)} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-sm text-sm hover:bg-primary/90" data-testid="btn-pdf-filled"><Printer className="w-3.5 h-3.5" /> Reparaturauftrag</button>
+          <button onClick={() => downloadPdf(true)} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted" data-testid="btn-pdf-blanko"><FileText className="w-3.5 h-3.5" /> Blanko-Formular</button>
         </div>
       </div>
 

@@ -369,3 +369,239 @@ ORGANIZER:MAILTO:{settings.get('email', '')}
 STATUS:CONFIRMED
 END:VEVENT
 END:VCALENDAR"""
+
+
+
+# ===================== REPARATURAUFTRAG PDF =====================
+
+@router.get("/einsaetze/{einsatz_id}/reparaturauftrag-pdf")
+async def reparaturauftrag_pdf(einsatz_id: str, blanko: bool = False, token: str = ""):
+    """PDF Reparaturauftrag - ausgefuellt oder blanko"""
+    if not token:
+        raise HTTPException(401, "Token erforderlich")
+    import jwt
+    from database import JWT_SECRET
+    try:
+        jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+    except:
+        raise HTTPException(401, "Ungueltiger Token")
+    einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
+    if not einsatz:
+        raise HTTPException(404, "Einsatz nicht gefunden")
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    pdf_bytes = _generate_reparaturauftrag_pdf(einsatz if not blanko else {}, settings)
+    filename = "Reparaturauftrag_Blanko.pdf" if blanko else f"Reparaturauftrag_{einsatz.get('kunde_name', 'Kunde').replace(' ', '_')}.pdf"
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@router.get("/reparaturauftrag-blanko-pdf")
+async def reparaturauftrag_blanko(user=Depends(get_current_user)):
+    """Blanko Reparaturauftrag PDF"""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    pdf_bytes = _generate_reparaturauftrag_pdf({}, settings)
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": 'attachment; filename="Reparaturauftrag_Blanko.pdf"'})
+
+
+def _generate_reparaturauftrag_pdf(einsatz: dict, settings: dict) -> bytes:
+    """Generiert Reparaturauftrag als PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.pdfgen import canvas
+    import io
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4
+    # Margins
+    lm, rm, tm = 20*mm, 20*mm, 15*mm
+    usable_w = w - lm - rm
+
+    # ---- HEADER ----
+    company = settings.get("company_name", "Tischlerei Graupner")
+    owner = settings.get("owner", "")
+    address = settings.get("address", "")
+    phone = settings.get("phone", "")
+    email = settings.get("email", "")
+
+    y = h - tm
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(lm, y, "Reparaturauftrag")
+    c.setFont("Helvetica", 8)
+    c.drawRightString(w - rm, y, company)
+    y -= 4*mm
+    if address:
+        c.drawRightString(w - rm, y, address.replace("\n", ", "))
+        y -= 3.5*mm
+    if phone or email:
+        c.drawRightString(w - rm, y, f"Tel: {phone}  |  {email}")
+    y -= 4*mm
+
+    # Horizontal line
+    y -= 3*mm
+    c.setStrokeColor(colors.Color(0.08, 0.33, 0.11))
+    c.setLineWidth(1.5)
+    c.line(lm, y, w - rm, y)
+    y -= 6*mm
+
+    # ---- AUFTRAGSDATEN ----
+    def label_value(label, value, x, yy, label_w=40*mm, val_w=50*mm):
+        c.setFont("Helvetica", 7)
+        c.setFillColor(colors.Color(0.4, 0.4, 0.4))
+        c.drawString(x, yy, label)
+        c.setFont("Helvetica", 9)
+        c.setFillColor(colors.black)
+        val = str(value) if value else ""
+        c.drawString(x + label_w, yy, val)
+        # Underline for value field
+        c.setStrokeColor(colors.Color(0.85, 0.85, 0.85))
+        c.setLineWidth(0.3)
+        c.line(x + label_w, yy - 1*mm, x + label_w + val_w, yy - 1*mm)
+        return yy - 6*mm
+
+    def section_title(title, yy):
+        c.setFont("Helvetica-Bold", 10)
+        c.setFillColor(colors.Color(0.08, 0.33, 0.11))
+        c.drawString(lm, yy, title)
+        c.setStrokeColor(colors.Color(0.08, 0.33, 0.11))
+        c.setLineWidth(0.5)
+        c.line(lm, yy - 2*mm, w - rm, yy - 2*mm)
+        c.setFillColor(colors.black)
+        return yy - 8*mm
+
+    # Auftragsnr & Datum
+    nr = einsatz.get("id", "")[:8].upper() if einsatz.get("id") else ""
+    datum = ""
+    if einsatz.get("created_at"):
+        try:
+            datum = datetime.fromisoformat(einsatz["created_at"].replace("Z", "+00:00")).strftime("%d.%m.%Y")
+        except: pass
+    col2_x = lm + usable_w / 2
+
+    y = label_value("Auftragsnr.:", nr, lm, y)
+    y += 6*mm
+    label_value("Datum:", datum, col2_x, y)
+    y -= 6*mm
+    y = label_value("Status:", einsatz.get("status", ""), lm, y)
+    y += 6*mm
+    label_value("Prioritaet:", einsatz.get("prioritaet", ""), col2_x, y)
+    y -= 2*mm
+
+    # ---- AUFTRAGGEBER / KUNDE ----
+    y = section_title("Auftraggeber / Kunde", y)
+    y = label_value("Name:", einsatz.get("kunde_name", ""), lm, y, 30*mm, 60*mm)
+    y = label_value("Adresse:", einsatz.get("kunde_adresse", ""), lm, y, 30*mm, 60*mm)
+    row_y = y
+    y = label_value("Telefon:", einsatz.get("kunde_telefon", ""), lm, y, 30*mm, 50*mm)
+    label_value("E-Mail:", einsatz.get("kunde_email", ""), col2_x, row_y, 25*mm, 50*mm)
+    y -= 2*mm
+
+    # ---- REPARATURORT ----
+    y = section_title("Reparaturort / Objekt", y)
+    obj_addr = ", ".join(filter(None, [einsatz.get("objekt_strasse", ""), einsatz.get("objekt_plz", ""), einsatz.get("objekt_ort", "")]))
+    y = label_value("Adresse:", obj_addr, lm, y, 30*mm, 60*mm)
+    row_y = y
+    y = label_value("Reparaturgruppe:", einsatz.get("reparaturgruppe", ""), lm, y, 40*mm, 50*mm)
+    label_value("Material:", einsatz.get("material", ""), col2_x, row_y, 25*mm, 50*mm)
+    y -= 2*mm
+
+    # ---- SCHADENSBESCHREIBUNG ----
+    y = section_title("Schadensbeschreibung / Auftrag", y)
+    c.setFont("Helvetica", 9)
+    beschreibung = einsatz.get("beschreibung", "")
+    if beschreibung:
+        lines = beschreibung.split("\n")
+        for line in lines[:8]:
+            if y < 60*mm:
+                break
+            c.drawString(lm + 2*mm, y, line[:90])
+            y -= 4.5*mm
+    else:
+        for _ in range(5):
+            c.setStrokeColor(colors.Color(0.85, 0.85, 0.85))
+            c.line(lm, y, w - rm, y)
+            y -= 6*mm
+    y -= 2*mm
+
+    # ---- BEMERKUNGEN ----
+    if einsatz.get("bemerkungen") or not einsatz.get("id"):
+        y = section_title("Bemerkungen / Anmerkungen", y)
+        c.setFont("Helvetica", 9)
+        if einsatz.get("bemerkungen"):
+            for line in einsatz["bemerkungen"].split("\n")[:4]:
+                if y < 55*mm:
+                    break
+                c.drawString(lm + 2*mm, y, line[:90])
+                y -= 4.5*mm
+        else:
+            for _ in range(3):
+                c.setStrokeColor(colors.Color(0.85, 0.85, 0.85))
+                c.line(lm, y, w - rm, y)
+                y -= 6*mm
+        y -= 2*mm
+
+    # ---- MONTEURE ----
+    y = section_title("Monteure / Zuweisung", y)
+    row_y = y
+    y = label_value("1. Monteur:", einsatz.get("monteur_name", ""), lm, y, 30*mm, 50*mm)
+    label_value("2. Monteur:", einsatz.get("monteur2_name", ""), col2_x, row_y, 30*mm, 50*mm)
+    y = label_value("Verantwortlich:", einsatz.get("verantwortlich", ""), lm, y, 40*mm, 50*mm)
+    y -= 2*mm
+
+    # ---- KOSTENUEBERSICHT ----
+    y = section_title("Kostenuebersicht", y)
+    netto = einsatz.get("summe_netto", 0) or 0
+    mwst_satz = einsatz.get("mwst_satz", 19) or 19
+    mwst_betrag = round(netto * mwst_satz / 100, 2)
+    brutto = round(netto + mwst_betrag, 2)
+
+    fmt = lambda v: f"{v:,.2f} EUR".replace(",", "X").replace(".", ",").replace("X", ".") if v else ""
+    y = label_value("Summe Netto:", fmt(netto), lm, y, 35*mm, 40*mm)
+    y = label_value(f"MwSt. ({mwst_satz}%):", fmt(mwst_betrag), lm, y, 35*mm, 40*mm)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(lm, y, "Gesamtbetrag:")
+    c.drawString(lm + 35*mm, y, fmt(brutto))
+    y -= 10*mm
+
+    # ---- TERMINE ----
+    if einsatz.get("startdatum") or einsatz.get("termin") or not einsatz.get("id"):
+        row_y = y
+        y = label_value("Startdatum:", einsatz.get("startdatum", ""), lm, y, 30*mm, 35*mm)
+        label_value("Enddatum:", einsatz.get("enddatum", ""), col2_x, row_y, 25*mm, 35*mm)
+        y -= 4*mm
+
+    # ---- UNTERSCHRIFTEN ----
+    if y > 40*mm:
+        sig_y = max(y - 10*mm, 30*mm)
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(0.5)
+        sig_w = 65*mm
+        c.line(lm, sig_y, lm + sig_w, sig_y)
+        c.line(w - rm - sig_w, sig_y, w - rm, sig_y)
+        c.setFont("Helvetica", 7)
+        c.setFillColor(colors.Color(0.4, 0.4, 0.4))
+        c.drawString(lm, sig_y - 4*mm, "Unterschrift Auftraggeber / Datum")
+        c.drawString(w - rm - sig_w, sig_y - 4*mm, "Unterschrift Auftragnehmer / Datum")
+
+    # ---- FOOTER ----
+    c.setFont("Helvetica", 6)
+    c.setFillColor(colors.Color(0.5, 0.5, 0.5))
+    footer_text = f"{company}"
+    if owner:
+        footer_text += f" | Inh. {owner}"
+    if phone:
+        footer_text += f" | Tel: {phone}"
+    if email:
+        footer_text += f" | {email}"
+    c.drawCentredString(w / 2, 12*mm, footer_text)
+
+    bank = settings.get("bank_name", "")
+    iban = settings.get("iban", "")
+    if bank or iban:
+        bank_text = f"{bank}" + (f" | IBAN: {iban}" if iban else "")
+        c.drawCentredString(w / 2, 8*mm, bank_text)
+
+    c.save()
+    return buf.getvalue()
