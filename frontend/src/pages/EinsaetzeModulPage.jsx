@@ -472,7 +472,9 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
     });
     kontakte.forEach(k => {
       const nm = k.vorname || k.nachname ? `${k.vorname || ""} ${k.nachname || ""}`.trim() : (k.name || "");
-      if (nm.toLowerCase().includes(term) || (k.firma || "").toLowerCase().includes(term) || (k.email || "").toLowerCase().includes(term)) {
+      const cats = (k.categories || []).join(" ").toLowerCase();
+      const nachricht = (k.nachricht || k.notes || "").toLowerCase();
+      if (nm.toLowerCase().includes(term) || (k.firma || "").toLowerCase().includes(term) || (k.email || "").toLowerCase().includes(term) || cats.includes(term) || nachricht.includes(term)) {
         results.push({ ...k, _displayName: nm, _source: "Kontakt", _sourceColor: "text-orange-600 bg-orange-50" });
       }
     });
@@ -578,6 +580,9 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
                         <span className="font-medium">{p._displayName}</span>
                         {p.firma && <span className="text-muted-foreground ml-1">({p.firma})</span>}
                         {p.email && <span className="text-xs text-muted-foreground block truncate">{p.email}</span>}
+                        {(p.categories || []).length > 0 && (
+                          <span className="flex gap-1 mt-0.5 flex-wrap">{p.categories.map((c, ci) => <span key={ci} className="text-[10px] px-1 py-0 bg-primary/10 text-primary rounded">{c}</span>)}</span>
+                        )}
                       </div>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${p._sourceColor}`}>{p._source}</span>
                     </button>
