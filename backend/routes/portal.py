@@ -147,7 +147,7 @@ async def create_portal(body: dict, user=Depends(get_current_user)):
 @router.post("/portals/from-anfrage/{anfrage_id}")
 async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(get_current_user)):
     """Erstellt Portal direkt aus einer Anfrage mit automatischem E-Mail-Versand"""
-    anfrage = await db.module_kontakt.find_one({"id": anfrage_id}, {"_id": 0})
+    anfrage = await db.module_kunden.find_one({"id": anfrage_id}, {"_id": 0})
     if not anfrage:
         raise HTTPException(404, "Anfrage nicht gefunden")
 

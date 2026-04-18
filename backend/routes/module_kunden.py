@@ -272,7 +272,7 @@ async def export_kunden(user=Depends(get_current_user)):
 @router.post("/modules/kunden/from-kontakt/{kontakt_id}")
 async def import_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
     """Kontakt aus dem Kontakt-Modul als Kunde uebernehmen"""
-    kontakt = await db.module_kontakt.find_one({"id": kontakt_id}, {"_id": 0})
+    kontakt = await db.module_kunden.find_one({"id": kontakt_id}, {"_id": 0})
     if not kontakt:
         raise HTTPException(404, "Kontakt nicht gefunden")
     # Pruefen ob bereits importiert (per E-Mail oder Vorname+Nachname)

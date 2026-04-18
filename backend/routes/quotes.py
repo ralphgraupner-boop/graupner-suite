@@ -17,7 +17,7 @@ async def find_customer_in_modules(customer_id: str):
         address = customer.get('address') or f"{customer.get('strasse', '')} {customer.get('hausnummer', '')}, {customer.get('plz', '')} {customer.get('ort', '')}".strip().strip(",").strip()
         return {"name": name, "address": address, "email": customer.get("email", ""), "firma": customer.get("firma", "")}
     # 2. Kontakt-Modul
-    kontakt = await db.module_kontakt.find_one({"id": customer_id}, {"_id": 0})
+    kontakt = await db.module_kunden.find_one({"id": customer_id}, {"_id": 0})
     if kontakt:
         name = f"{kontakt.get('vorname', '')} {kontakt.get('nachname', '')}".strip() or kontakt.get('firma', 'Unbekannt')
         address = f"{kontakt.get('strasse', '')} {kontakt.get('hausnummer', '')}, {kontakt.get('plz', '')} {kontakt.get('ort', '')}".strip().strip(",").strip()

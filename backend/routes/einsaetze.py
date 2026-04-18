@@ -184,7 +184,7 @@ async def delete_bild(einsatz_id: str, bild_id: str, user=Depends(get_current_us
 
 @router.post("/einsaetze/from-kontakt/{kontakt_id}")
 async def create_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
-    kontakt = await db.module_kontakt.find_one({"id": kontakt_id}, {"_id": 0})
+    kontakt = await db.module_kunden.find_one({"id": kontakt_id}, {"_id": 0})
     if not kontakt:
         raise HTTPException(404, "Kontakt nicht gefunden")
     name = f"{kontakt.get('vorname', '')} {kontakt.get('nachname', '')}".strip() or kontakt.get("name", "")

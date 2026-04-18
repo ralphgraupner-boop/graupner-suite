@@ -77,6 +77,8 @@ const KundenModulPage = () => {
     } catch { toast.error("Fehler"); }
   };
 
+  const statusOrder = { "Neu": 0, "Anfrage": 1, "Interessent": 2, "Kunde": 3, "In Bearbeitung": 4, "Abgeschlossen": 5, "Archiv": 6 };
+
   const filtered = kunden.filter(c =>
     (((c.vorname || c.nachname) ? `${c.vorname || ''} ${c.nachname || ''}`.trim() : (c.name || '')).toLowerCase().includes(search.toLowerCase()) ||
     (c.email || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -84,7 +86,12 @@ const KundenModulPage = () => {
     (c.nachricht || "").toLowerCase().includes(search.toLowerCase())) &&
     (!categoryFilter || (c.categories || []).includes(categoryFilter)) &&
     (!statusFilter || (c.status || c.kontakt_status || "Anfrage") === statusFilter)
-  );
+  ).sort((a, b) => {
+    const sa = statusOrder[a.status || a.kontakt_status || "Anfrage"] ?? 9;
+    const sb = statusOrder[b.status || b.kontakt_status || "Anfrage"] ?? 9;
+    if (sa !== sb) return sa - sb;
+    return (b.created_at || "").localeCompare(a.created_at || "");
+  });
 
   const statusCounts = {};
   KUNDEN_STATUSES.forEach(s => { statusCounts[s] = kunden.filter(k => (k.status || k.kontakt_status || "Anfrage") === s).length; });

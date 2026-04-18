@@ -241,7 +241,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
             name = f"{c.get('vorname', '')} {c.get('nachname', '')}".strip()
             customer_by_email[c["email"].lower()] = {"id": c["id"], "name": name}
     kontakt_by_email = {}
-    async for k in db.module_kontakt.find({}, {"_id": 0, "id": 1, "vorname": 1, "nachname": 1, "email": 1}):
+    async for k in db.module_kunden.find({}, {"_id": 0, "id": 1, "vorname": 1, "nachname": 1, "email": 1}):
         if k.get("email"):
             name = f"{k.get('vorname', '')} {k.get('nachname', '')}".strip()
             key = k["email"].lower()
@@ -386,7 +386,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                         # Prüfe ob bereits im Kontakt-Modul vorhanden
                         existing = None
                         if extracted["email"]:
-                            existing = await db.module_kontakt.find_one(
+                            existing = await db.module_kunden.find_one(
                                 {"email": {"$regex": _re.escape(extracted["email"]), "$options": "i"}},
                                 {"_id": 0, "id": 1}
                             )
@@ -456,7 +456,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                     }
                     logger.info(f"Auto-Import -> Kontakt-Modul: {sender_name} ({sender_email})")
                 
-                await db.module_kontakt.insert_one(kontakt)
+                await db.module_kunden.insert_one(kontakt)
                 kontakt.pop("_id", None)
                 
                 # Update inbox entry
@@ -594,7 +594,7 @@ async def create_anfrage_from_email(email_id: str, user=Depends(get_current_user
             kontakt["plz"] = rest[0] if rest else ""
             kontakt["ort"] = rest[1] if len(rest) > 1 else ""
 
-    await db.module_kontakt.insert_one(kontakt)
+    await db.module_kunden.insert_one(kontakt)
     kontakt.pop("_id", None)
 
     display_name = f"{vorname} {nachname}".strip() or kontakt_email
@@ -622,15 +622,15 @@ async def assign_to_customer(email_id: str, body: dict, user=Depends(get_current
     target_collection = "module_kunden"
     if not customer:
         # Suche in Kontakt-Modul
-        customer = await db.module_kontakt.find_one({"id": customer_id}, {"_id": 0})
-        target_collection = "module_kontakt"
+        customer = await db.module_kunden.find_one({"id": customer_id}, {"_id": 0})
+        target_collection = "module_kunden"
     if not customer:
         raise HTTPException(404, "Kunde/Kontakt nicht gefunden")
 
     customer_name = f"{customer.get('vorname', '')} {customer.get('nachname', '')}".strip() or customer.get('firma', 'Unbekannt')
 
     # E-Mail-Verlauf zum Kunden/Kontakt hinzufuegen
-    db_col = db.module_kunden if target_collection == "module_kunden" else db.module_kontakt
+    db_col = db.module_kunden if target_collection == "module_kunden" else db.module_kunden
     await db_col.update_one(
         {"id": customer_id},
         {"$push": {"email_history": {

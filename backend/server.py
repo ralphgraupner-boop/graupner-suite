@@ -94,11 +94,36 @@ async def startup_event():
         init_storage()
     except Exception as e:
         logger.warning(f"Storage init: {e}")
+    # Migrate module_kontakt -> module_kunden (einmalig)
+    await migrate_kontakt_to_kunden()
     # Start IMAP polling background task
     import asyncio
     asyncio.create_task(imap_polling_loop())
     # Start automatic daily backup task
     asyncio.create_task(daily_backup_loop())
+
+
+async def migrate_kontakt_to_kunden():
+    """Migriert alte module_kontakt Daten nach module_kunden (einmalig)"""
+    from database import db as _db
+    try:
+        kontakte = await _db.module_kontakt.find({}, {"_id": 0}).to_list(10000)
+        if not kontakte:
+            return
+        migrated = 0
+        for k in kontakte:
+            email = k.get("email", "")
+            existing = None
+            if email:
+                existing = await _db.module_kunden.find_one({"email": email})
+            if not existing:
+                k["status"] = k.get("kontakt_status", "Anfrage")
+                await _db.module_kunden.insert_one(k)
+                migrated += 1
+        if migrated > 0:
+            logger.info(f"Migration: {migrated} Kontakte nach Kunden uebernommen")
+    except Exception as e:
+        logger.warning(f"Migration Kontakt->Kunden: {e}")
 
 
 async def imap_polling_loop():
