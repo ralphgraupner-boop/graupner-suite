@@ -51,12 +51,12 @@ const KontaktModulPage = () => {
   const filtered = contacts.filter((c) => {
     const name = `${c.vorname || ""} ${c.nachname || ""}`.trim().toLowerCase();
     const matchSearch = !search || name.includes(search.toLowerCase()) || (c.email || "").toLowerCase().includes(search.toLowerCase()) || (c.firma || "").toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !statusFilter || (c.kontakt_status || "Anfrage") === statusFilter;
+    const matchStatus = !statusFilter || (c.kontakt_status || "Anfrage") === statusFilter || (statusFilter === "Anfrage" && c.kontakt_status === "Neu");
     return matchSearch && matchStatus;
   });
 
   const statusCounts = {
-    Anfrage: contacts.filter(c => (c.kontakt_status || "Anfrage") === "Anfrage").length,
+    Anfrage: contacts.filter(c => (c.kontakt_status || "Anfrage") === "Anfrage" || c.kontakt_status === "Neu").length,
     Kunde: contacts.filter(c => c.kontakt_status === "Kunde").length,
     Interessent: contacts.filter(c => c.kontakt_status === "Interessent").length,
     Archiv: contacts.filter(c => c.kontakt_status === "Archiv").length,
@@ -291,8 +291,13 @@ const KontaktFormModal = ({ isOpen, onClose, contact, onSave }) => {
     setLoading(true);
     try {
       if (contact) {
-        await api.put(`/modules/kontakt/data/${contact.id}`, form);
+        const res = await api.put(`/modules/kontakt/data/${contact.id}`, form);
         toast.success("Kontakt aktualisiert");
+        if (res.data?._kunde_created) {
+          toast.success("Automatisch als Kunde uebernommen!", { duration: 5000 });
+        } else if (res.data?._kunde_exists) {
+          toast.info("Kunde existiert bereits im Kunden-Modul");
+        }
       } else {
         await api.post("/modules/kontakt/data", form);
         toast.success("Kontakt erstellt");

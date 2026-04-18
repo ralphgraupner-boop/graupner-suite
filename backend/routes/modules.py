@@ -119,13 +119,60 @@ async def create_kontakt_data(data: dict, user=Depends(get_current_user)):
 
 @router.put("/modules/kontakt/data/{contact_id}")
 async def update_kontakt_data(contact_id: str, data: dict, user=Depends(get_current_user)):
-    """Kontakt im Modul bearbeiten"""
+    """Kontakt im Modul bearbeiten - bei Status 'Kunde' automatisch ins Kunden-Modul uebernehmen"""
+    # Alten Status holen
+    old = await db.module_kontakt.find_one({"id": contact_id}, {"_id": 0})
+    if not old:
+        raise HTTPException(404, "Kontakt nicht gefunden")
+    old_status = old.get("kontakt_status", "")
+
     update_data = {k: v for k, v in data.items() if v is not None and k != "id"}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    result = await db.module_kontakt.update_one({"id": contact_id}, {"$set": update_data})
-    if result.matched_count == 0:
-        raise HTTPException(404, "Kontakt nicht gefunden")
+    await db.module_kontakt.update_one({"id": contact_id}, {"$set": update_data})
     updated = await db.module_kontakt.find_one({"id": contact_id}, {"_id": 0})
+
+    # Auto-Transfer: Wenn Status auf "Kunde" geaendert wird
+    new_status = update_data.get("kontakt_status", old_status)
+    if new_status == "Kunde" and old_status != "Kunde":
+        # Pruefen ob Kunde schon existiert (per E-Mail)
+        email = updated.get("email", "")
+        existing = None
+        if email:
+            existing = await db.module_kunden.find_one({"email": email}, {"_id": 0})
+        if not existing:
+            import uuid as _uuid
+            name = f"{updated.get('vorname', '')} {updated.get('nachname', '')}".strip() or updated.get("name", "")
+            kunde = {
+                "id": str(_uuid.uuid4()),
+                "name": name,
+                "vorname": updated.get("vorname", ""),
+                "nachname": updated.get("nachname", ""),
+                "anrede": updated.get("anrede", ""),
+                "firma": updated.get("firma", ""),
+                "email": updated.get("email", ""),
+                "phone": updated.get("phone", ""),
+                "address": updated.get("address", ""),
+                "strasse": updated.get("strasse", ""),
+                "hausnummer": updated.get("hausnummer", ""),
+                "plz": updated.get("plz", ""),
+                "ort": updated.get("ort", ""),
+                "customer_type": updated.get("customer_type", "Privat"),
+                "notes": updated.get("notes", ""),
+                "photos": updated.get("photos", []),
+                "categories": updated.get("categories", []),
+                "kontakt_id": contact_id,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await db.module_kunden.insert_one(kunde)
+            kunde.pop("_id", None)
+            logger.info(f"Kontakt automatisch als Kunde uebernommen: {name}")
+            updated["_kunde_created"] = True
+            updated["_kunde_id"] = kunde["id"]
+        else:
+            updated["_kunde_exists"] = True
+            updated["_kunde_id"] = existing.get("id", "")
+
     return updated
 
 
