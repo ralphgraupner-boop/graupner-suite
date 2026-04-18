@@ -42,7 +42,11 @@ const EinsaetzeModulPage = () => {
       (e.kunde_name || e.customer_name || "").toLowerCase().includes(t) ||
       (e.betreff || "").toLowerCase().includes(t) ||
       (e.reparaturgruppe || "").toLowerCase().includes(t) ||
-      (e.monteur_name || "").toLowerCase().includes(t);
+      (e.material || "").toLowerCase().includes(t) ||
+      (e.monteur_name || "").toLowerCase().includes(t) ||
+      (e.kunde_email || "").toLowerCase().includes(t) ||
+      (e.beschreibung || "").toLowerCase().includes(t) ||
+      (e.kategorien || []).some(k => k.toLowerCase().includes(t));
   });
 
   const deleteEinsatz = async (id) => {
@@ -77,7 +81,7 @@ const EinsaetzeModulPage = () => {
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Suchen nach Kunde, Betreff, Reparaturgruppe..." className="w-full pl-10 pr-4 py-2 border rounded-sm text-sm" data-testid="einsatz-search" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Suchen: Kunde, Betreff, Kategorie, Material, Monteur..." className="w-full pl-10 pr-4 py-2 border rounded-sm text-sm" data-testid="einsatz-search" />
         </div>
         <div className="flex border rounded-sm overflow-hidden text-sm">
           {["aktiv", "inaktiv", ""].map(s => (
