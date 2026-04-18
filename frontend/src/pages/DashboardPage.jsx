@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -20,6 +20,13 @@ const DashboardPage = () => {
     checkDueInvoices();
     checkFollowups();
     loadInboxStats();
+
+    // Auto-Refresh alle 30 Sekunden
+    const interval = setInterval(() => {
+      loadStats();
+      loadInboxStats();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadInboxStats = async () => {
