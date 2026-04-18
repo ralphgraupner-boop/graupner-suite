@@ -15,8 +15,11 @@ const DocumentHeader = ({
     const term = kundeSearch.toLowerCase().trim();
     if (!term) return customers;
     return customers.filter(c => {
-      const name = (c.vorname || c.nachname) ? `${c.vorname || ""} ${c.nachname || ""}`.trim() : (c.name || "");
-      return name.toLowerCase().includes(term) || (c.firma || "").toLowerCase().includes(term) || (c.nachname || "").toLowerCase().includes(term) || (c.email || "").toLowerCase().includes(term);
+      const vorname = (c.vorname || "").toLowerCase();
+      const nachname = (c.nachname || "").toLowerCase();
+      const name = (c.name || "").toLowerCase();
+      const firma = (c.firma || "").toLowerCase();
+      return vorname.includes(term) || nachname.includes(term) || name.includes(term) || firma.includes(term);
     });
   })();
 
