@@ -42,11 +42,21 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - **API**: `/api/modules/kunden/data`
 - **Status**: Fertig
 
+### 6. Kundenportal (NEU 18.04.2026)
+- **Admin-Seite**: `/portals`
+- **Kunden-Seite**: `/portal/:token` (oeffentlich, ohne Auth)
+- **DB**: `portals`, `portal_files`
+- **API**: `/api/portals/*`, `/api/portal/*`
+- **Features**: Passwortgeschuetzte Kundenportale, bidirektionaler Datei-Upload, Nachrichten-System, Admin-Textbausteine, E-Mail-Einladungen, Portal-Verwaltung, Passwort-Export
+- **Status**: Fertig (100% getestet - 26/26 Backend + alle Frontend-Tests bestanden)
+
 ## Modul-Verknuepfungen (Fertig 15.04.2026)
 1. Kontakt <-> Kunden: Bidirektionaler Transfer
 2. Kunden-Modul -> Dokumente: Kunden im Editor Dropdown
 3. Artikel -> Dokumente: Positionen im Editor
 4. Textvorlagen -> Dokumente: Textbausteine im Editor (Overlay mit Neu-Erstellen)
+5. Kunden-Modul -> Kundenportal: Portal direkt aus Kunde erstellen (from-customer)
+6. Kontakt-Modul -> Kundenportal: Portal aus Kontakt/Anfrage erstellen (from-anfrage)
 
 ## Lohnanteil (15.04.2026)
 - Jede Position hat ein "Lohnanteil" Feld (netto pro Einheit)
@@ -58,28 +68,24 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - Gilt fuer Angebot, Auftragsbestaetigung UND Rechnung (ueberall erfassbar und testbar)
 - Im Endtext der Rechnung wird der Lohnanteil-Text eingefuegt
 
-## Rich-Text-Editor
-- react-quill-new fuer Textvorlagen und Dokument-Editor (Vortext/Schlusstext)
-- PDF-Generator unterstuetzt HTML (fett, kursiv, unterstrichen, Farbe)
-- Dokument-Vorschau rendert HTML
-
 ## Legacy-System (aus Navigation entfernt)
-- Alte Seiten existieren noch als Dateien, sind aber nicht mehr erreichbar
-- Navigation zeigt nur: Dashboard, Module, E-Mail, Einstellungen
+- Alte Seiten existieren noch als Dateien in _legacy_backup/, sind aber nicht mehr erreichbar
+- Navigation zeigt nur: Dashboard, Module, Kundenportale, E-Mail, Einstellungen
 
 ## Alle APIs auf Module umgestellt
 - Dokument-Editor: nur Modul-Daten (kein Legacy)
 - E-Mail-Posteingang: Klassifizierung + Auto-Import ins Kontakt-Modul
 - Dashboard: Zeigt Modul-Daten (Kontakt-Modul Anfragen + Kunden-Modul)
+- Portal-System: Nutzt module_kunden + module_kontakt (kein Legacy db.customers/db.anfragen)
 
 ## P1 - Next Tasks
-- [ ] Lohnanteil Feld groesser/sichtbarer (erledigt)
-- [ ] Lohnanteil im PDF testen
-- [ ] ERR_BLOCKED_BY_CLIENT Bug fixen
+- [x] Kundenportal-Modul installieren und integrieren (18.04.2026)
 - [ ] Redeploy fuer Live-Domain
 
 ## P2 - Future/Backlog
-- [ ] Standalone Homepage
 - [ ] DATEV-Export
 - [ ] Lexoffice-Anbindung
+- [ ] Handy-App Ueberlegungen
+- [ ] Standalone Homepage
 - [ ] Windows Desktop App (Electron)
+- [ ] IONOS MariaDB Integration (pausiert - Host-Limitierungen)
