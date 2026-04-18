@@ -329,6 +329,18 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
     setSelectedFiles([]);
   }, [kunde]);
 
+  const lookupPlz = async (plz, ortField) => {
+    if (!plz || plz.length !== 5 || !/^\d{5}$/.test(plz)) return;
+    try {
+      const res = await fetch(`https://api.zippopotam.us/de/${plz}`);
+      if (res.ok) {
+        const data = await res.json();
+        const ort = data.places?.[0]?.["place name"] || "";
+        if (ort) setForm(f => ({ ...f, [ortField]: ort }));
+      }
+    } catch {}
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.vorname && !form.nachname && !form.firma) { toast.error("Vorname, Nachname oder Firma erforderlich"); return; }
@@ -407,7 +419,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
             <div className="col-span-4"><Input placeholder="Nr." value={form.hausnummer || ""} onChange={e => setForm({ ...form, hausnummer: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-4 gap-2 mt-2">
-            <div><Input placeholder="PLZ" value={form.plz || ""} onChange={e => setForm({ ...form, plz: e.target.value })} /></div>
+            <div><Input placeholder="PLZ" value={form.plz || ""} onChange={e => { setForm({ ...form, plz: e.target.value }); lookupPlz(e.target.value, "ort"); }} /></div>
             <div className="col-span-3"><Input placeholder="Ort" value={form.ort || ""} onChange={e => setForm({ ...form, ort: e.target.value })} /></div>
           </div>
         </div>
@@ -415,7 +427,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
           <label className="block text-sm font-medium mb-2">Objektadresse <span className="text-xs text-muted-foreground">(falls abweichend)</span></label>
           <div className="grid grid-cols-12 gap-2">
             <div className="col-span-8"><Input placeholder="Objekt Strasse" value={form.objekt_strasse || ""} onChange={e => setForm({ ...form, objekt_strasse: e.target.value })} /></div>
-            <div className="col-span-2"><Input placeholder="PLZ" value={form.objekt_plz || ""} onChange={e => setForm({ ...form, objekt_plz: e.target.value })} /></div>
+            <div className="col-span-2"><Input placeholder="PLZ" value={form.objekt_plz || ""} onChange={e => { setForm({ ...form, objekt_plz: e.target.value }); lookupPlz(e.target.value, "objekt_ort"); }} /></div>
             <div className="col-span-2"><Input placeholder="Ort" value={form.objekt_ort || ""} onChange={e => setForm({ ...form, objekt_ort: e.target.value })} /></div>
           </div>
         </div>
