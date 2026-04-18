@@ -322,9 +322,9 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
 
   useEffect(() => {
     if (kunde) {
-      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "" });
+      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", objekt_strasse: kunde.objekt_strasse || "", objekt_plz: kunde.objekt_plz || "", objekt_ort: kunde.objekt_ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "" });
     } else {
-      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", strasse: "", hausnummer: "", plz: "", ort: "", customer_type: "Privat", status: "Anfrage", categories: [], notes: "", nachricht: "" });
+      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", strasse: "", hausnummer: "", plz: "", ort: "", objekt_strasse: "", objekt_plz: "", objekt_ort: "", customer_type: "Privat", status: "Anfrage", categories: [], notes: "", nachricht: "" });
     }
     setSelectedFiles([]);
   }, [kunde]);
@@ -411,7 +411,16 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
             <div className="col-span-3"><Input placeholder="Ort" value={form.ort || ""} onChange={e => setForm({ ...form, ort: e.target.value })} /></div>
           </div>
         </div>
-        <div><label className="block text-sm font-medium mb-2">Notizen</label><Textarea value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} /></div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Objektadresse <span className="text-xs text-muted-foreground">(falls abweichend)</span></label>
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-8"><Input placeholder="Objekt Strasse" value={form.objekt_strasse || ""} onChange={e => setForm({ ...form, objekt_strasse: e.target.value })} /></div>
+            <div className="col-span-2"><Input placeholder="PLZ" value={form.objekt_plz || ""} onChange={e => setForm({ ...form, objekt_plz: e.target.value })} /></div>
+            <div className="col-span-2"><Input placeholder="Ort" value={form.objekt_ort || ""} onChange={e => setForm({ ...form, objekt_ort: e.target.value })} /></div>
+          </div>
+        </div>
+        <div><label className="block text-sm font-medium mb-2">Nachricht / Anliegen</label><Textarea value={form.nachricht || ""} onChange={e => setForm({ ...form, nachricht: e.target.value })} rows={3} placeholder="Was wird benoetigt? Beschreibung des Anliegens..." /></div>
+        <div><label className="block text-sm font-medium mb-2">Notizen <span className="text-xs text-muted-foreground">(intern)</span></label><Textarea value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Interne Bemerkungen..." /></div>
         <div>
           <label className="block text-sm font-medium mb-2">Dateien <span className="text-xs text-muted-foreground">(max 10, je 10 MB)</span></label>
           {selectedFiles.length > 0 && (
