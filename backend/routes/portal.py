@@ -47,12 +47,13 @@ async def lookup_portal(email: str = "", customer_id: str = "", anfrage_id: str 
 @router.post("/portals/from-customer/{customer_id}")
 async def create_portal_from_customer(customer_id: str, body: dict, user=Depends(get_current_user)):
     """Erstellt Portal direkt aus einem Kunden mit automatischem E-Mail-Versand"""
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    customer = await db.module_kunden.find_one({"id": customer_id}, {"_id": 0})
     if not customer:
         raise HTTPException(404, "Kunde nicht gefunden")
 
     customer_email = customer.get("email", "")
-    customer_name = customer.get("name", "Kunde")
+    customer_name = customer.get("vorname", "") + " " + customer.get("nachname", "")
+    customer_name = customer_name.strip() or customer.get("name", "Kunde")
     if not customer_email:
         raise HTTPException(400, "Kunde hat keine E-Mail-Adresse. Bitte erst ergänzen.")
 
@@ -146,12 +147,12 @@ async def create_portal(body: dict, user=Depends(get_current_user)):
 @router.post("/portals/from-anfrage/{anfrage_id}")
 async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(get_current_user)):
     """Erstellt Portal direkt aus einer Anfrage mit automatischem E-Mail-Versand"""
-    anfrage = await db.anfragen.find_one({"id": anfrage_id}, {"_id": 0})
+    anfrage = await db.module_kontakt.find_one({"id": anfrage_id}, {"_id": 0})
     if not anfrage:
         raise HTTPException(404, "Anfrage nicht gefunden")
 
     customer_email = anfrage.get("email", "")
-    customer_name = anfrage.get("name", "Kunde")
+    customer_name = (anfrage.get("vorname", "") + " " + anfrage.get("nachname", "")).strip() or anfrage.get("name", "Kunde")
     if not customer_email:
         raise HTTPException(400, "Anfrage hat keine E-Mail-Adresse. Bitte erst ergänzen.")
 
@@ -162,7 +163,7 @@ async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(g
 
     # Find or create customer
     customer_id = ""
-    customer = await db.customers.find_one({"email": customer_email}, {"_id": 0})
+    customer = await db.module_kunden.find_one({"email": customer_email}, {"_id": 0})
     if customer:
         customer_id = customer.get("id", "")
     else:
@@ -171,6 +172,8 @@ async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(g
         new_customer = {
             "id": customer_id,
             "name": customer_name,
+            "vorname": anfrage.get("vorname", ""),
+            "nachname": anfrage.get("nachname", ""),
             "email": customer_email,
             "phone": anfrage.get("phone", ""),
             "address": anfrage.get("address", ""),
@@ -179,10 +182,11 @@ async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(g
             "anrede": anfrage.get("anrede", ""),
             "notes": anfrage.get("notes", ""),
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
-        await db.customers.insert_one(new_customer)
+        await db.module_kunden.insert_one(new_customer)
         new_customer.pop("_id", None)
-        logger.info(f"Customer auto-created from Anfrage: {customer_name}")
+        logger.info(f"Customer auto-created from Kontakt: {customer_name}")
 
     # Generate password
     password = body.get("password", "") or secrets.token_urlsafe(8)
@@ -412,10 +416,11 @@ async def verify_portal(token: str, body: dict):
     # Load customer data if linked
     customer_data = None
     if portal.get("customer_id"):
-        cust = await db.customers.find_one({"id": portal["customer_id"]}, {"_id": 0})
+        cust = await db.module_kunden.find_one({"id": portal["customer_id"]}, {"_id": 0})
         if cust:
+            cust_name = (cust.get("vorname", "") + " " + cust.get("nachname", "")).strip() or cust.get("name", "")
             customer_data = {
-                "name": cust.get("name", ""),
+                "name": cust_name,
                 "email": cust.get("email", ""),
                 "phone": cust.get("phone", ""),
                 "address": cust.get("address", ""),

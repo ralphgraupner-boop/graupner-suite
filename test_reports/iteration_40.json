@@ -1,0 +1,84 @@
+{
+  "summary": "Tested Kundenportal Module (v40) - All backend APIs (26/26 tests passed) and frontend UI working correctly. Portal CRUD, file upload, customer notes, admin notes, public portal access all functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_portal_v40.py",
+    "/app/test_reports/pytest/pytest_portal_v40.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_portal_v40.py"
+  ],
+  "success_rate": {
+    "backend": "100% (26/26 tests passed)",
+    "frontend": "100% (all features working)"
+  },
+  "test_credentials": "admin/Graupner!Suite2026",
+  "seed_data_creation": "Test portals created and cleaned up during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Kundenportal Module fully tested and working. Backend: All CRUD endpoints (/api/portals), file upload/delete, customer notes, admin notes, portal lookup, portal from customer (module_kunden), public portal verification all working. Frontend: Navigation via sidebar 'Kundenportale', portal list with status badges, create portal dialog with customer dropdown from /api/modules/kunden/data, portal detail view with message composer and file sections, toggle activate/deactivate, copy link, delete. Public portal at /portal/{token} shows login page without auth, after password entry shows customer view with notes and upload sections.",
+  "features_tested": {
+    "backend_apis": {
+      "GET /api/portals": "PASS - Returns portal list",
+      "POST /api/portals": "PASS - Creates portal with customer_name, email, password, weeks",
+      "PUT /api/portals/{id}": "PASS - Updates portal (active, description)",
+      "DELETE /api/portals/{id}": "PASS - Deletes portal",
+      "GET /api/portals/lookup": "PASS - Lookup by email/customer_id/anfrage_id",
+      "POST /api/portals/from-customer/{id}": "PASS - Creates portal from Kunden-Modul customer",
+      "GET /api/portals/{id}/files": "PASS - Lists portal files",
+      "POST /api/portals/{id}/upload": "PASS - Admin uploads file",
+      "DELETE /api/portals/files/{id}": "PASS - Deletes file",
+      "POST /api/portals/{id}/admin-notes": "PASS - Admin adds note",
+      "GET /api/portals/{id}/admin-notes": "PASS - Gets admin notes",
+      "POST /api/portal/verify/{token}": "PASS - Public portal verification",
+      "POST /api/portal/{token}/files": "PASS - Public file list",
+      "POST /api/portal/{token}/upload": "PASS - Customer uploads image",
+      "POST /api/portal/{token}/notes": "PASS - Customer adds note",
+      "GET /api/portal/file/{id}": "PASS - Public file download"
+    },
+    "frontend_features": {
+      "navigation": "PASS - 'Kundenportale' link in sidebar, navigates to /portals",
+      "empty_state": "PASS - Shows 'Noch keine Kundenportale erstellt' when empty",
+      "create_portal_button": "PASS - 'Neues Portal' button opens CreatePortalDialog",
+      "create_portal_dialog": "PASS - Customer dropdown loads from /api/modules/kunden/data (6 options)",
+      "create_portal_form": "PASS - All fields work (name, email, description, password, weeks, send email checkbox)",
+      "portal_list": "PASS - Shows portals with status badges (Aktiv/Deaktiviert/Abgelaufen)",
+      "portal_card_actions": "PASS - Copy link, toggle active, delete buttons work",
+      "portal_detail_view": "PASS - Opens on card click, shows all info",
+      "portal_detail_url": "PASS - Portal URL displayed with copy button",
+      "portal_detail_message_composer": "PASS - Textbaustein search and message textarea",
+      "portal_detail_files": "PASS - Kundenbilder and Ihre Dokumente sections",
+      "portal_detail_upload": "PASS - Document upload area present",
+      "password_download": "PASS - 'Passwort-Datei' button present",
+      "public_portal_login": "PASS - /portal/{token} shows login page without auth",
+      "public_portal_authenticated": "PASS - After login shows customer view",
+      "public_portal_notes": "PASS - Note type buttons (Korrektur, Hinweis, Termin, Zusatzinfo)",
+      "public_portal_upload": "PASS - Image upload area with description field"
+    }
+  },
+  "module_installation_verified": {
+    "PortalsPage.jsx": "PASS - 710 lines, Admin-Verwaltung component",
+    "CustomerPortalPage.jsx": "PASS - 505 lines, Kunden-Ansicht component",
+    "PortalButtons.jsx": "PASS - 93 lines, Button-Komponente",
+    "App.js_route": "PASS - /portals route configured",
+    "Navigation.jsx": "PASS - 'Kundenportale' nav item with Share2 icon",
+    "portal.py": "PASS - 639 lines, all Portal-Endpunkte",
+    "server.py": "PASS - portal_router registered"
+  },
+  "backend_collection_usage": {
+    "portals": "Stores portal documents",
+    "portal_files": "Stores uploaded files metadata",
+    "module_kunden": "Used for customer dropdown (not legacy 'customers')",
+    "module_kontakt": "Used for from-anfrage endpoint (not legacy 'anfragen')"
+  }
+}

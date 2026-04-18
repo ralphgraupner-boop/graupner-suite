@@ -9,6 +9,7 @@ const allNavItems = [
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
+  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
   { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"] },
   { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
 ];
