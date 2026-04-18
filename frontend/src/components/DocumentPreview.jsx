@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Download, Mail, Edit, CheckCircle, X, Send, MailCheck, AlertTriangle } from "lucide-react";
+import { Download, Mail, Edit, CheckCircle, X, Send, MailCheck, AlertTriangle, ExternalLink, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -378,6 +378,26 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
             setShowEmailDialog(true);
           }} data-testid="btn-email-document">
             <Mail className="w-3.5 h-3.5 mr-1" /> E-Mail
+          </Button>
+          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => {
+            const to = doc.customer_email || "";
+            const subject = encodeURIComponent(doc.betreff || `${type === "quote" ? "Angebot" : type === "order" ? "Auftrag" : "Rechnung"} ${docNumber}`);
+            const body = encodeURIComponent(`${doc.vortext || ""}\n\n---\n\n${doc.schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`);
+            window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+          }} data-testid="btn-mailto-preview">
+            <ExternalLink className="w-3.5 h-3.5 mr-1" /> Mailprogramm
+          </Button>
+          <Button variant="outline" size="sm" onClick={async () => {
+            try {
+              const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
+              const res = await api.get(`/pdf/${endpoint}/${doc.id}`, { responseType: "blob" });
+              const blob = new Blob([res.data], { type: "application/pdf" });
+              const url = window.URL.createObjectURL(blob);
+              const pw = window.open(url, "_blank");
+              if (pw) { pw.addEventListener("load", () => { setTimeout(() => pw.print(), 500); }); }
+            } catch { toast.error("Fehler beim Drucken"); }
+          }} data-testid="btn-print-preview">
+            <Printer className="w-3.5 h-3.5 mr-1" /> Drucken
           </Button>
           <Button variant="outline" size="sm" onClick={() => onDownload?.(doc.id, docNumber)}>
             <Download className="w-3.5 h-3.5 mr-1" /> PDF
