@@ -227,7 +227,11 @@ textarea{resize:vertical;min-height:80px;font-family:inherit}
 <div class="card">
 <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Nachricht</h2>
 <textarea name="nachricht" placeholder="Beschreiben Sie Ihr Anliegen, z.B. wie dringend ist es, wann sind Sie erreichbar..." rows="4"></textarea>
-<p style="font-size:11px;color:#888;margin-top:8px">Hinweis: Datei-Uploads werden per E-Mail nicht unterstützt. Bitte fügen Sie Fotos in Ihrer Antwort-E-Mail hinzu.</p>
+<div style="margin-top:16px">
+<label style="display:block;font-size:13px;font-weight:600;color:#14532D;margin-bottom:8px">Bilder / Fotos hinzufuegen (optional, max. 5 Dateien)</label>
+<input type="file" name="bilder" multiple accept="image/*" style="font-size:13px;padding:8px;border:2px dashed #ccc;border-radius:8px;width:100%;cursor:pointer;background:#fafafa" onchange="updateFileCount(this)">
+<p id="fileCount" style="font-size:11px;color:#888;margin-top:4px"></p>
+</div>
 </div>
 <div class="nav-btns"><button type="button" class="btn btn-back" onclick="prev(3)">&#8592; Zurück</button><button type="button" class="btn btn-next" onclick="next(3)">Weiter zur Übersicht &#8594;</button></div>
 </div>
@@ -292,7 +296,7 @@ function buildSummary(){
 function toggleFirma(){var f=document.querySelector('input[name="kundentyp"][value="Firma"]').checked;var el=document.getElementById('firmaField');var inp=document.getElementById('firmaInput');if(f){el.classList.add('show');inp.required=true;}else{el.classList.remove('show');inp.required=false;inp.value='';}}
 function toggleTopic(h){var it=h.parentElement;var a=it.classList.contains('active');var hi=it.querySelector('.topic-val');var tp=it.getAttribute('data-topic');if(a){it.classList.remove('active');hi.value='';}else{it.classList.add('active');hi.value=tp;var ta=it.querySelector('textarea');if(ta)setTimeout(function(){ta.focus();},300);}}
 function toggleCopy(){var c=document.getElementById('copyAddr').checked;var p=[['k_vorname','o_vorname'],['k_nachname','o_nachname'],['k_telefon','o_telefon'],['k_strasse','o_strasse'],['k_plz','o_plz'],['k_stadt','o_stadt']];var f=document.getElementById('objFields');if(c){p.forEach(function(x){document.getElementById(x[1]).value=document.getElementById(x[0]).value;});f.style.opacity='0.4';f.querySelectorAll('input').forEach(function(i){i.readOnly=true;});}else{f.style.opacity='1';f.querySelectorAll('input').forEach(function(i){i.readOnly=false;});}}
-
+function updateFileCount(inp){var n=inp.files.length;document.getElementById('fileCount').textContent=n>0?n+' Datei(en) ausgewaehlt':'';}
 // FormSubmit redirect handling
 if(window.location.hash === '#success'){
   document.getElementById('formContainer').style.display='none';

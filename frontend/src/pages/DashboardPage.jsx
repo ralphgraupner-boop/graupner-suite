@@ -180,31 +180,42 @@ const DashboardPage = () => {
             Letzte Anfragen
           </h3>
           <div className="space-y-3">
-            {stats.anfragen.recent.map((a) => (
-              <Link to="/module/kontakt" key={a.id} className="block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors">
+            {stats.anfragen.recent.map((a) => {
+              const status = a.kontakt_status || "";
+              const isNew = status === "Neu";
+              const isInProgress = status === "In Bearbeitung" || status === "in_bearbeitung";
+              const dotColor = isNew ? "bg-red-500 animate-pulse" : isInProgress ? "bg-yellow-500" : "bg-green-500";
+              const borderColor = isNew ? "border-l-4 border-l-red-500" : isInProgress ? "border-l-4 border-l-yellow-500" : "";
+              return (
+              <Link to="/module/kontakt" key={a.id} className={`block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors ${borderColor}`}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} title={status || "Anfrage"} />
                     <span className="font-medium text-sm">{a.name || "Unbekannt"}</span>
                     {a.email && <span className="text-xs text-muted-foreground">{a.email}</span>}
                     {a.phone && <span className="text-xs text-muted-foreground">{a.phone}</span>}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isNew && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold">NEU</span>}
+                    {isInProgress && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-semibold">In Arbeit</span>}
+                    {(a.photos || []).length > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">{a.photos.length} Bild(er)</span>}
                     {a.created_at && <span className="text-[10px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString("de-DE")}</span>}
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
                 {(a.categories || []).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-1.5">
+                  <div className="flex flex-wrap gap-1 mb-1.5 ml-4">
                     {a.categories.map((cat, i) => (
                       <span key={i} className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded font-medium">{cat}</span>
                     ))}
                   </div>
                 )}
                 {(a.nachricht || a.notes) && (
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line">{(a.nachricht || a.notes).slice(0, 250)}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line ml-4">{(a.nachricht || a.notes).slice(0, 250)}</p>
                 )}
               </Link>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}

@@ -243,9 +243,26 @@ async def get_dashboard_stats():
 
     # Kontakt-Modul: Anfragen = Kontakte mit Status "Anfrage"
     kontakte = await db.module_kontakt.find({}, {"_id": 0}).to_list(10000)
-    anfragen = [k for k in kontakte if k.get("kontakt_status") in ("Anfrage", "Neu")]
+    anfragen = [k for k in kontakte if k.get("kontakt_status") in ("Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung")]
 
-    recent_anfragen = sorted(anfragen, key=lambda x: x.get("created_at", ""), reverse=True)[:8]
+    recent_anfragen = sorted(anfragen, key=lambda x: (
+        0 if x.get("kontakt_status") == "Neu" else 1 if x.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung") else 2,
+        x.get("created_at", "") 
+    ), reverse=False)
+    # Sort: Neu first, then In Bearbeitung, then by date newest first
+    recent_anfragen = sorted(anfragen, key=lambda x: (
+        0 if x.get("kontakt_status") == "Neu" else 1,
+        ""  # placeholder
+    ))
+    # Re-sort within same priority by date descending
+    recent_anfragen = sorted(recent_anfragen, key=lambda x: (
+        0 if x.get("kontakt_status") == "Neu" else 1 if x.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung") else 2,
+    ))
+    # Final sort: priority first, then newest
+    neu = sorted([a for a in anfragen if a.get("kontakt_status") == "Neu"], key=lambda x: x.get("created_at", ""), reverse=True)
+    in_arbeit = sorted([a for a in anfragen if a.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung")], key=lambda x: x.get("created_at", ""), reverse=True)
+    rest = sorted([a for a in anfragen if a.get("kontakt_status") not in ("Neu", "In Bearbeitung", "in_bearbeitung")], key=lambda x: x.get("created_at", ""), reverse=True)
+    recent_anfragen = (neu + in_arbeit + rest)[:10]
     # Display-Name fuer recent_anfragen
     for a in recent_anfragen:
         a["name"] = f"{a.get('vorname', '')} {a.get('nachname', '')}".strip() or a.get('firma', 'Unbekannt')
