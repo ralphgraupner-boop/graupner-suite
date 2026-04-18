@@ -1,4 +1,5 @@
-import { X, Calculator } from "lucide-react";
+import { useState } from "react";
+import { X, Calculator, Search } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
@@ -7,6 +8,18 @@ const DocumentHeader = ({
   handleCustomerChange, type, docNumber, createdAt,
   setPositions, positions,
 }) => {
+  const [kundeSearch, setKundeSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const suggestions = (() => {
+    const term = kundeSearch.toLowerCase().trim();
+    if (!term) return customers;
+    return customers.filter(c => {
+      const name = (c.vorname || c.nachname) ? `${c.vorname || ""} ${c.nachname || ""}`.trim() : (c.name || "");
+      return name.toLowerCase().includes(term) || (c.firma || "").toLowerCase().includes(term) || (c.nachname || "").toLowerCase().includes(term) || (c.email || "").toLowerCase().includes(term);
+    });
+  })();
+
   return (
     <div className="p-4 lg:p-10 border-b">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -26,26 +39,40 @@ const DocumentHeader = ({
               Tischlerei Graupner · Erlengrund 129 · 22453 Hamburg
             </p>
             {!customer ? (
-              <select
-                value={selectedCustomerId}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                className="w-full h-10 rounded-sm border border-input bg-white px-3 text-sm"
-                data-testid="wysiwyg-customer-select"
-              >
-                <option value="">Kunde auswaehlen...</option>
-                {customers.map(c => {
-                  const displayName = (c.vorname || c.nachname) 
-                    ? `${c.vorname || ""} ${c.nachname || ""}`.trim()
-                    : c.name;
-                  const source = c._source === "kontakt-modul" ? " [Kontakt]" : c._source === "kunden-modul" ? " [Kunden-Modul]" : "";
-                  const typeInfo = c.customer_type && c.customer_type !== "Privat" ? ` (${c.customer_type})` : "";
-                  return (
-                    <option key={c.id} value={c.id}>
-                      {displayName}{typeInfo}{source}
-                    </option>
-                  );
-                })}
-              </select>
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <input
+                    value={kundeSearch}
+                    onChange={e => { setKundeSearch(e.target.value); setShowDropdown(true); }}
+                    onFocus={() => setShowDropdown(true)}
+                    placeholder="Kunde suchen (Nachname, Firma, E-Mail)..."
+                    className="w-full h-10 rounded-sm border border-input bg-white pl-9 pr-3 text-sm"
+                    data-testid="wysiwyg-customer-search"
+                  />
+                </div>
+                {showDropdown && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border rounded-sm shadow-lg max-h-48 overflow-y-auto">
+                    {suggestions.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">Keine Kunden gefunden</div>
+                    ) : suggestions.map(c => {
+                      const displayName = (c.vorname || c.nachname) ? `${c.nachname || ""}, ${c.vorname || ""}`.trim().replace(/^,\s*/, "") : (c.name || "");
+                      const status = c.status || c.kontakt_status || "";
+                      return (
+                        <button key={c.id} onClick={() => { handleCustomerChange(c.id); setKundeSearch(""); setShowDropdown(false); }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted border-b last:border-0 flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium">{displayName}</span>
+                            {c.firma && <span className="text-muted-foreground ml-1">({c.firma})</span>}
+                            {c.email && <span className="text-xs text-muted-foreground block truncate">{c.email}</span>}
+                          </div>
+                          {status && <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded flex-shrink-0">{status}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="min-h-[70px]">
                 <div className="flex items-start justify-between">
