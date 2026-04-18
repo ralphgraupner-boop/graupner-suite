@@ -42,50 +42,52 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - **API**: `/api/modules/kunden/data`
 - **Status**: Fertig
 
-### 6. Kundenportal (NEU 18.04.2026)
+### 6. Kundenportal (18.04.2026)
 - **Admin-Seite**: `/portals`
 - **Kunden-Seite**: `/portal/:token` (oeffentlich, ohne Auth)
 - **DB**: `portals`, `portal_files`
 - **API**: `/api/portals/*`, `/api/portal/*`
 - **Features**: Passwortgeschuetzte Kundenportale, bidirektionaler Datei-Upload, Nachrichten-System, Admin-Textbausteine, E-Mail-Einladungen, Portal-Verwaltung, Passwort-Export
-- **Status**: Fertig (100% getestet - 26/26 Backend + alle Frontend-Tests bestanden)
+- **Status**: Fertig (100% getestet)
 
-## Modul-Verknuepfungen (Fertig 15.04.2026)
+### 7. Kontaktformular (Standalone) (18.04.2026)
+- **Inline-Seite**: `/api/kontakt` (ohne Auth, oeffentlich)
+- **Standalone-HTML**: `/app/landing_page/kontaktformular.html` (fuer IONOS-Upload)
+- **API**: `/api/kontakt/submit` (multipart POST), `/api/webhook/contact` (JSON), `/api/webhook/contact-beacon` (GET pixel)
+- **Speichert in**: `module_kontakt` Collection (NICHT mehr legacy `anfragen`)
+- **Features**: 4-Schritt-Wizard, Drag&Drop Bild-Upload, Objektadresse, Kategorien, E-Mail-Benachrichtigung (Admin + Kunde), Bestaetigungsseite
+- **Status**: Fertig (100% getestet - 18/18 Backend-Tests)
+
+## Modul-Verknuepfungen
 1. Kontakt <-> Kunden: Bidirektionaler Transfer
 2. Kunden-Modul -> Dokumente: Kunden im Editor Dropdown
 3. Artikel -> Dokumente: Positionen im Editor
 4. Textvorlagen -> Dokumente: Textbausteine im Editor (Overlay mit Neu-Erstellen)
-5. Kunden-Modul -> Kundenportal: Portal direkt aus Kunde erstellen (from-customer)
-6. Kontakt-Modul -> Kundenportal: Portal aus Kontakt/Anfrage erstellen (from-anfrage)
+5. Kunden-Modul -> Kundenportal: Portal direkt aus Kunde erstellen
+6. Kontakt-Modul -> Kundenportal: Portal aus Kontakt erstellen
+7. Kontaktformular -> Kontakt-Modul: Externe Anfragen landen direkt im Kontakt-Modul
 
-## Lohnanteil (15.04.2026)
+## Lohnanteil
 - Jede Position hat ein "Lohnanteil" Feld (netto pro Einheit)
 - Automatische Summe (Menge x Lohnanteil)
-- Freier Wert moeglich
 - Steuerung: "Wird ausgewiesen" / "Nicht ausweisen"
 - Platzhalter: {lohnanteil}, {lohnanteil_mwst}, {lohnanteil_brutto}, {mwst_satz}
-- MwSt-Satz aus Einstellungen konfigurierbar
-- Gilt fuer Angebot, Auftragsbestaetigung UND Rechnung (ueberall erfassbar und testbar)
-- Im Endtext der Rechnung wird der Lohnanteil-Text eingefuegt
 
 ## Legacy-System (aus Navigation entfernt)
-- Alte Seiten existieren noch als Dateien in _legacy_backup/, sind aber nicht mehr erreichbar
-- Navigation zeigt nur: Dashboard, Module, Kundenportale, E-Mail, Einstellungen
-
-## Alle APIs auf Module umgestellt
-- Dokument-Editor: nur Modul-Daten (kein Legacy)
-- E-Mail-Posteingang: Klassifizierung + Auto-Import ins Kontakt-Modul
-- Dashboard: Zeigt Modul-Daten (Kontakt-Modul Anfragen + Kunden-Modul)
-- Portal-System: Nutzt module_kunden + module_kontakt (kein Legacy db.customers/db.anfragen)
+- Alte Seiten in _legacy_backup/, nicht mehr erreichbar
+- Navigation: Dashboard, Module, Kundenportale, E-Mail, Einstellungen
+- Alle Webhooks/Formulare speichern jetzt in module_kontakt (nicht mehr anfragen)
 
 ## P1 - Next Tasks
 - [x] Kundenportal-Modul installieren und integrieren (18.04.2026)
+- [x] Kontaktformular-Modul installieren und auf module_kontakt umstellen (18.04.2026)
 - [ ] Redeploy fuer Live-Domain
 
 ## P2 - Future/Backlog
 - [ ] DATEV-Export
 - [ ] Lexoffice-Anbindung
 - [ ] Handy-App Ueberlegungen
-- [ ] Standalone Homepage
+- [ ] Standalone Homepage fertigstellen
 - [ ] Windows Desktop App (Electron)
-- [ ] IONOS MariaDB Integration (pausiert - Host-Limitierungen)
+- [ ] IONOS MariaDB Integration (pausiert)
+- [ ] Standalone-Kontaktformular auf IONOS hochladen (via FileZilla)
