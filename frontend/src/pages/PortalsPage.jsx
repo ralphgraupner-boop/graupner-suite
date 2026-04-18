@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare, Download } from "lucide-react";
+import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare, Download, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -210,6 +210,12 @@ const PortalsPage = () => {
                     )}
                   </div>
                   {portal.description && <p className="text-sm text-muted-foreground mb-1">{portal.description}</p>}
+                  {portal.customer_email && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                      <Mail className="w-3 h-3" />
+                      <span>{portal.customer_email}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
@@ -493,6 +499,13 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
               <Badge className="bg-red-100 text-red-700">Deaktiviert</Badge>
             )}
           </div>
+          {portal.customer_email && (
+            <div className="flex items-center gap-4 mt-3 text-sm">
+              <a href={`mailto:${portal.customer_email}`} className="flex items-center gap-1.5 text-primary hover:underline">
+                <Mail className="w-3.5 h-3.5" /> {portal.customer_email}
+              </a>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <button onClick={onCopyLink} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted" data-testid="btn-copy-portal-link">
