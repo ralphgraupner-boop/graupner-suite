@@ -164,7 +164,10 @@ async def webhook_contact(contact: WebhookContact):
         obj_address=obj_addr_str,
         nachricht=contact.nachricht or contact.message or ""
     )
-    await db.anfragen.insert_one(anfrage.model_dump())
+    kontakt_data = anfrage.model_dump()
+    kontakt_data["kontakt_status"] = "Neu"
+    kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.module_kontakt.insert_one(kontakt_data)
     logger.info(f"Neue Anfrage über Webhook: {name} ({customer_type})")
 
     push_body = f"{name}"
@@ -173,7 +176,7 @@ async def webhook_contact(contact: WebhookContact):
     elif msg:
         push_body += f": {msg[:80]}"
 
-    await send_push_to_all(title="Neue Anfrage", body=push_body, url="/anfragen")
+    await send_push_to_all(title="Neue Anfrage", body=push_body, url="/module/kontakt")
     return {"message": "Anfrage erfolgreich empfangen", "anfrage_id": anfrage.id}
 
 
@@ -198,13 +201,16 @@ async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str
         source="beacon",
         nachricht=msg or ""
     )
-    await db.anfragen.insert_one(anfrage.model_dump())
+    kontakt_data = anfrage.model_dump()
+    kontakt_data["kontakt_status"] = "Neu"
+    kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.module_kontakt.insert_one(kontakt_data)
     logger.info(f"Neue Anfrage über Beacon-Webhook: {name}")
 
     push_body = f"{name}"
     if msg:
         push_body += f": {msg[:80]}"
-    await send_push_to_all(title="Neue Anfrage", body=push_body, url="/anfragen")
+    await send_push_to_all(title="Neue Anfrage", body=push_body, url="/module/kontakt")
 
     pixel = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
     return StreamingResponse(BytesIO(pixel), media_type="image/gif")
@@ -674,13 +680,21 @@ async def kontakt_relay(request: Request):
         if photo_urls:
             anfrage.photos = photo_urls
 
-        await db.anfragen.insert_one(anfrage.model_dump())
+        kontakt_data = anfrage.model_dump()
+        kontakt_data["kontakt_status"] = "Neu"
+        kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        # Strukturierte Adressfelder hinzufügen
+        kontakt_data["strasse"] = form_dict.get("strasse", "")
+        kontakt_data["hausnummer"] = ""
+        kontakt_data["plz"] = form_dict.get("plz", "")
+        kontakt_data["ort"] = form_dict.get("stadt", "")
+        await db.module_kontakt.insert_one(kontakt_data)
         logger.info(f"Neue Anfrage über Kontaktformular-Relay: {name}")
 
         push_body = f"{name}"
         if topics:
             push_body += f" ({', '.join(topics[:2])})"
-        await send_push_to_all(title="Neue Anfrage", body=push_body, url="/anfragen")
+        await send_push_to_all(title="Neue Anfrage", body=push_body, url="/module/kontakt")
         
         # Send Admin notification email ASYNCHRONOUSLY (non-blocking)
         import asyncio

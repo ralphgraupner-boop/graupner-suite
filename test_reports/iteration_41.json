@@ -1,0 +1,62 @@
+{
+  "summary": "Tested Kontaktformular Module (v41) - All backend APIs (18/18 tests passed). Form submission, webhook, beacon all save to module_kontakt with kontakt_status='Neu' and structured address fields. No data lands in legacy 'anfragen' collection.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_kontakt_v41.py",
+    "/app/test_reports/pytest/pytest_kontakt_v41.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_kontakt_v41.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "test_credentials": "N/A (public endpoints, no auth required)",
+  "seed_data_creation": "Test data with 'TEST_' prefix created and cleaned up during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Kontaktformular Module fully tested and working. All 3 insert points in webhook.py now use db.module_kontakt instead of db.anfragen. Each insert adds kontakt_status='Neu' and updated_at. The /kontakt/submit endpoint also saves structured address fields (strasse, plz, ort). Database verification confirmed: 11 test entries saved to module_kontakt, 0 entries in legacy anfragen collection.",
+  "features_tested": {
+    "backend_apis": {
+      "POST /api/kontakt/submit (basic)": "PASS - Returns HTML success page, saves to module_kontakt",
+      "POST /api/kontakt/submit (with topics)": "PASS - Categories saved correctly",
+      "POST /api/kontakt/submit (Firma)": "PASS - Company data saved correctly",
+      "POST /api/kontakt/submit (with object address)": "PASS - Object address fields saved",
+      "POST /api/kontakt/submit (with image)": "PASS - Image upload works, saved to Object Storage",
+      "POST /api/webhook/contact (basic)": "PASS - Returns JSON with anfrage_id",
+      "POST /api/webhook/contact (with Firma)": "PASS - Company data saved",
+      "POST /api/webhook/contact (with object)": "PASS - Object address saved",
+      "GET /api/kontakt": "PASS - Returns inline contact form HTML",
+      "GET /api/kontakt (form action)": "PASS - Form action points to /api/kontakt/submit",
+      "GET /api/webhook/contact-beacon (no params)": "PASS - Returns 1x1 GIF pixel",
+      "GET /api/webhook/contact-beacon (with params)": "PASS - Saves data and returns pixel"
+    },
+    "data_verification": {
+      "kontakt_status='Neu'": "PASS - All entries have kontakt_status='Neu'",
+      "structured_address_fields": "PASS - strasse, plz, ort fields saved correctly",
+      "updated_at": "PASS - Timestamp added to all entries",
+      "no_legacy_anfragen": "PASS - 0 entries in legacy 'anfragen' collection"
+    },
+    "code_review_verification": {
+      "webhook.py line 170": "db.module_kontakt.insert_one (webhook/contact)",
+      "webhook.py line 207": "db.module_kontakt.insert_one (contact-beacon)",
+      "webhook.py line 691": "db.module_kontakt.insert_one (kontakt/submit)"
+    }
+  },
+  "standalone_html_form": {
+    "file": "/app/landing_page/kontaktformular.html",
+    "form_action": "https://handwerk-deploy.preview.emergentagent.com/api/kontakt/submit",
+    "status": "Correctly configured to submit to API"
+  }
+}
