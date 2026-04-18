@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import Response
 from database import db, logger
 from auth import get_current_user
@@ -16,9 +16,17 @@ async def get_config(user=Depends(get_current_user)):
     if not config:
         config = {
             "id": "main",
-            "monteure": [],
-            "reparaturgruppen": [],
-            "materialien": [],
+            "reparaturgruppen": [
+                "Hebeschiebekipptuer (HSK)", "Schiebetuer", "Fenster",
+                "Eingangstuer", "Innentuer", "Rolllaeden",
+                "Sonstige Reparaturen", "Neubau/Einbau"
+            ],
+            "materialien": ["Holz", "Kunststoff", "Aluminium", "Holz/Alu", "Sonstiges"],
+            "prioritaeten": ["niedrig", "normal", "hoch", "dringend"],
+            "bild_kategorien": [
+                "kundenanfrage", "besichtigung", "waehrend_arbeit",
+                "abnahme", "hinweise", "sonstiges"
+            ],
             "termin_vorlagen": [],
         }
         await db.einsatz_config.insert_one(config)
@@ -28,25 +36,24 @@ async def get_config(user=Depends(get_current_user)):
 
 @router.put("/einsatz-config")
 async def update_config(body: dict, user=Depends(get_current_user)):
-    updates = {}
-    for field in ["monteure", "reparaturgruppen", "materialien", "anfrage_schritte", "termin_vorlagen"]:
-        if field in body:
-            updates[field] = body[field]
+    allowed = ["reparaturgruppen", "materialien", "anfrage_schritte", "termin_vorlagen", "prioritaeten", "bild_kategorien"]
+    updates = {k: v for k, v in body.items() if k in allowed}
     if not updates:
-        raise HTTPException(400, "Keine Änderungen")
-    await db.einsatz_config.update_one(
-        {"id": "main"},
-        {"$set": updates},
-        upsert=True
-    )
+        raise HTTPException(400, "Keine Aenderungen")
+    await db.einsatz_config.update_one({"id": "main"}, {"$set": updates}, upsert=True)
     return {"message": "Konfiguration gespeichert"}
 
 
-# ===================== EINSÄTZE CRUD =====================
+# ===================== EINSAETZE CRUD =====================
 
 @router.get("/einsaetze")
-async def list_einsaetze(user=Depends(get_current_user)):
-    items = await db.einsaetze.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+async def list_einsaetze(status: str = "", user=Depends(get_current_user)):
+    query = {}
+    if status == "aktiv":
+        query["status"] = {"$in": ["aktiv", "in_bearbeitung"]}
+    elif status == "inaktiv":
+        query["status"] = {"$in": ["inaktiv", "abgeschlossen"]}
+    items = await db.einsaetze.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return items
 
 
@@ -55,23 +62,47 @@ async def create_einsatz(body: dict, user=Depends(get_current_user)):
     now = datetime.now(timezone.utc).isoformat()
     einsatz = {
         "id": str(uuid.uuid4()),
-        "customer_id": body.get("customer_id", ""),
-        "customer_name": body.get("customer_name", ""),
-        "anfrage_id": body.get("anfrage_id", ""),
-        "monteur_1": body.get("monteur_1", ""),
-        "monteur_2": body.get("monteur_2", ""),
-        "reparaturgruppen": body.get("reparaturgruppen", []),
-        "material": body.get("material", []),
-        "summe_schaetzung": body.get("summe_schaetzung", 0),
-        "status": body.get("status", "aktiv"),
+        "kunde_id": body.get("kunde_id", body.get("customer_id", "")),
+        "kunde_name": body.get("kunde_name", body.get("customer_name", "")),
+        "kunde_email": body.get("kunde_email", ""),
+        "kunde_telefon": body.get("kunde_telefon", ""),
+        "kunde_adresse": body.get("kunde_adresse", ""),
+        "kontakt_id": body.get("kontakt_id", body.get("anfrage_id", "")),
+        "objekt_strasse": body.get("objekt_strasse", ""),
+        "objekt_plz": body.get("objekt_plz", ""),
+        "objekt_ort": body.get("objekt_ort", ""),
+        "betreff": body.get("betreff", ""),
         "beschreibung": body.get("beschreibung", ""),
+        "bemerkungen": body.get("bemerkungen", ""),
+        "nachricht_kunde": body.get("nachricht_kunde", ""),
+        "reparaturgruppe": body.get("reparaturgruppe", ""),
+        "material": body.get("material", ""),
+        "kategorien": body.get("kategorien", body.get("reparaturgruppen", [])),
+        "monteur_id": body.get("monteur_id", body.get("monteur_1", "")),
+        "monteur_name": body.get("monteur_name", ""),
+        "monteur2_id": body.get("monteur2_id", body.get("monteur_2", "")),
+        "monteur2_name": body.get("monteur2_name", ""),
+        "verantwortlich": body.get("verantwortlich", ""),
+        "summe_netto": body.get("summe_netto", body.get("summe_schaetzung", 0)),
+        "mwst_satz": body.get("mwst_satz", 19),
+        "summe_brutto": body.get("summe_brutto", 0),
+        "status": body.get("status", "aktiv"),
+        "prioritaet": body.get("prioritaet", "normal"),
+        "startdatum": body.get("startdatum", ""),
+        "enddatum": body.get("enddatum", ""),
         "termin": body.get("termin", ""),
+        "termin_datum": body.get("termin_datum", ""),
+        "termin_uhrzeit": body.get("termin_uhrzeit", ""),
         "termin_text": body.get("termin_text", ""),
+        "bilder": body.get("bilder", []),
+        "dateien": body.get("dateien", []),
+        "erstellt_von": user.get("username", ""),
         "created_at": now,
         "updated_at": now,
     }
     await db.einsaetze.insert_one(einsatz)
     einsatz.pop("_id", None)
+    logger.info(f"Neuer Einsatz: {einsatz['betreff']} ({einsatz['kunde_name']})")
     return einsatz
 
 
@@ -88,17 +119,10 @@ async def update_einsatz(einsatz_id: str, body: dict, user=Depends(get_current_u
     existing = await db.einsaetze.find_one({"id": einsatz_id})
     if not existing:
         raise HTTPException(404, "Einsatz nicht gefunden")
-
-    allowed = [
-        "customer_id", "customer_name", "anfrage_id",
-        "monteur_1", "monteur_2", "reparaturgruppen", "material",
-        "summe_schaetzung", "status", "beschreibung",
-        "termin", "termin_text"
-    ]
-    updates = {k: v for k, v in body.items() if k in allowed}
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-    await db.einsaetze.update_one({"id": einsatz_id}, {"$set": updates})
+    body.pop("id", None)
+    body.pop("_id", None)
+    body["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.einsaetze.update_one({"id": einsatz_id}, {"$set": body})
     updated = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
     return updated
 
@@ -108,7 +132,124 @@ async def delete_einsatz(einsatz_id: str, user=Depends(get_current_user)):
     result = await db.einsaetze.delete_one({"id": einsatz_id})
     if result.deleted_count == 0:
         raise HTTPException(404, "Einsatz nicht gefunden")
-    return {"message": "Einsatz gelöscht"}
+    return {"message": "Einsatz geloescht"}
+
+
+# ===================== BILDER (kategorisiert) =====================
+
+@router.post("/einsaetze/{einsatz_id}/bilder")
+async def upload_bild(einsatz_id: str, kategorie: str = "sonstiges", file: UploadFile = File(...), user=Depends(get_current_user)):
+    einsatz = await db.einsaetze.find_one({"id": einsatz_id})
+    if not einsatz:
+        raise HTTPException(404, "Einsatz nicht gefunden")
+    content = await file.read()
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(400, "Datei zu gross (max 15 MB)")
+    try:
+        from utils.storage import put_object
+        safe_name = (file.filename or "bild.jpg").replace(" ", "_")
+        path = f"einsaetze/{einsatz_id}/{uuid.uuid4().hex[:8]}_{safe_name}"
+        result = put_object(path, content, file.content_type or "image/jpeg")
+        url = result.get("url") or result.get("path", "")
+    except Exception as e:
+        logger.error(f"Bild-Upload fehlgeschlagen: {e}")
+        raise HTTPException(500, "Upload fehlgeschlagen")
+    bild = {
+        "id": str(uuid.uuid4()),
+        "url": url, "filename": file.filename,
+        "kategorie": kategorie,
+        "content_type": file.content_type,
+        "uploaded_by": user.get("username", ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.einsaetze.update_one({"id": einsatz_id}, {
+        "$push": {"bilder": bild},
+        "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+    })
+    return bild
+
+
+@router.delete("/einsaetze/{einsatz_id}/bilder/{bild_id}")
+async def delete_bild(einsatz_id: str, bild_id: str, user=Depends(get_current_user)):
+    result = await db.einsaetze.update_one(
+        {"id": einsatz_id},
+        {"$pull": {"bilder": {"id": bild_id}}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Bild nicht gefunden")
+    return {"message": "Bild geloescht"}
+
+
+# ===================== AUS KONTAKT/KUNDE ERSTELLEN =====================
+
+@router.post("/einsaetze/from-kontakt/{kontakt_id}")
+async def create_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
+    kontakt = await db.module_kontakt.find_one({"id": kontakt_id}, {"_id": 0})
+    if not kontakt:
+        raise HTTPException(404, "Kontakt nicht gefunden")
+    name = f"{kontakt.get('vorname', '')} {kontakt.get('nachname', '')}".strip() or kontakt.get("name", "")
+    adresse = kontakt.get("address", "")
+    if not adresse:
+        parts = [kontakt.get("strasse", ""), kontakt.get("plz", ""), kontakt.get("ort", "")]
+        adresse = ", ".join(p for p in parts if p)
+    now = datetime.now(timezone.utc).isoformat()
+    bilder = []
+    for photo_url in kontakt.get("photos", []):
+        bilder.append({"id": str(uuid.uuid4()), "url": photo_url, "filename": "Kundenbild", "kategorie": "kundenanfrage", "created_at": now})
+    einsatz = {
+        "id": str(uuid.uuid4()), "kontakt_id": kontakt_id,
+        "kunde_name": name, "kunde_email": kontakt.get("email", ""),
+        "kunde_telefon": kontakt.get("phone", ""), "kunde_adresse": adresse,
+        "objekt_strasse": kontakt.get("strasse", ""), "objekt_plz": kontakt.get("plz", ""), "objekt_ort": kontakt.get("ort", ""),
+        "betreff": f"Anfrage von {name}",
+        "beschreibung": kontakt.get("notes", "") or kontakt.get("nachricht", ""),
+        "nachricht_kunde": kontakt.get("nachricht", ""),
+        "kategorien": kontakt.get("categories", []),
+        "reparaturgruppe": "", "material": "",
+        "monteur_id": "", "monteur_name": "", "monteur2_id": "", "monteur2_name": "",
+        "verantwortlich": "", "bemerkungen": "",
+        "summe_netto": 0, "mwst_satz": 19, "summe_brutto": 0,
+        "status": "aktiv", "prioritaet": "normal",
+        "startdatum": "", "enddatum": "", "termin": "", "termin_datum": "", "termin_uhrzeit": "", "termin_text": "",
+        "bilder": bilder, "dateien": [],
+        "erstellt_von": user.get("username", ""), "created_at": now, "updated_at": now,
+    }
+    await db.einsaetze.insert_one(einsatz)
+    einsatz.pop("_id", None)
+    logger.info(f"Einsatz aus Kontakt: {name}")
+    return einsatz
+
+
+@router.post("/einsaetze/from-kunde/{kunde_id}")
+async def create_from_kunde(kunde_id: str, data: dict = {}, user=Depends(get_current_user)):
+    kunde = await db.module_kunden.find_one({"id": kunde_id}, {"_id": 0})
+    if not kunde:
+        raise HTTPException(404, "Kunde nicht gefunden")
+    name = f"{kunde.get('vorname', '')} {kunde.get('nachname', '')}".strip() or kunde.get("name", "")
+    adresse = kunde.get("address", "")
+    if not adresse:
+        parts = [kunde.get("strasse", ""), kunde.get("hausnummer", ""), kunde.get("plz", ""), kunde.get("ort", "")]
+        adresse = ", ".join(p for p in parts if p)
+    now = datetime.now(timezone.utc).isoformat()
+    einsatz = {
+        "id": str(uuid.uuid4()), "kunde_id": kunde_id, "kunde_name": name,
+        "kunde_email": kunde.get("email", ""), "kunde_telefon": kunde.get("phone", ""), "kunde_adresse": adresse,
+        "objekt_strasse": kunde.get("strasse", ""), "objekt_plz": kunde.get("plz", ""), "objekt_ort": kunde.get("ort", ""),
+        "betreff": data.get("betreff", f"Einsatz fuer {name}"),
+        "beschreibung": data.get("beschreibung", ""), "reparaturgruppe": data.get("reparaturgruppe", ""),
+        "material": data.get("material", ""),
+        "monteur_id": "", "monteur_name": "", "monteur2_id": "", "monteur2_name": "",
+        "verantwortlich": "", "nachricht_kunde": "", "kategorien": [], "bemerkungen": "",
+        "summe_netto": 0, "mwst_satz": 19, "summe_brutto": 0,
+        "status": "aktiv", "prioritaet": "normal",
+        "startdatum": "", "enddatum": "", "termin": "", "termin_datum": "", "termin_uhrzeit": "", "termin_text": "",
+        "bilder": [], "dateien": [],
+        "erstellt_von": user.get("username", ""), "created_at": now, "updated_at": now,
+    }
+    await db.einsaetze.insert_one(einsatz)
+    einsatz.pop("_id", None)
+    logger.info(f"Einsatz aus Kunde: {name}")
+    return einsatz
 
 
 

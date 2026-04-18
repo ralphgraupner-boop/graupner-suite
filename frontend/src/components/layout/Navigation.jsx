@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat } from "lucide-react";
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
   { path: "/module/kontakt", icon: Download, label: "Kontakte", roles: ["admin"] },
+  { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
+  { path: "/mitarbeiter", icon: HardHat, label: "Mitarbeiter", roles: ["admin"] },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
   { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"] },
