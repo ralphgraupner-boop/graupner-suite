@@ -242,8 +242,8 @@ async def get_dashboard_stats():
     paid_invoices_value = sum(i.get("total_gross", 0) for i in invoices if i.get("status") == "Bezahlt")
 
     # Kontakt-Modul: Anfragen = Kontakte mit Status "Anfrage"
-    kontakte = await db.module_kontakt.find({}, {"_id": 0}).to_list(10000)
-    anfragen = [k for k in kontakte if k.get("kontakt_status") in ("Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung")]
+    kontakte = await db.module_kunden.find({}, {"_id": 0}).to_list(10000)
+    anfragen = [k for k in kontakte if (k.get("status") or k.get("kontakt_status") or "") in ("Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung")]
 
     recent_anfragen = sorted(anfragen, key=lambda x: (
         0 if x.get("kontakt_status") == "Neu" else 1 if x.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung") else 2,
@@ -259,9 +259,9 @@ async def get_dashboard_stats():
         0 if x.get("kontakt_status") == "Neu" else 1 if x.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung") else 2,
     ))
     # Final sort: priority first, then newest
-    neu = sorted([a for a in anfragen if a.get("kontakt_status") == "Neu"], key=lambda x: x.get("created_at", ""), reverse=True)
-    in_arbeit = sorted([a for a in anfragen if a.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung")], key=lambda x: x.get("created_at", ""), reverse=True)
-    rest = sorted([a for a in anfragen if a.get("kontakt_status") not in ("Neu", "In Bearbeitung", "in_bearbeitung")], key=lambda x: x.get("created_at", ""), reverse=True)
+    neu = sorted([a for a in anfragen if (a.get("status") or a.get("kontakt_status")) == "Neu"], key=lambda x: x.get("created_at", ""), reverse=True)
+    in_arbeit = sorted([a for a in anfragen if (a.get("status") or a.get("kontakt_status")) in ("In Bearbeitung", "in_bearbeitung")], key=lambda x: x.get("created_at", ""), reverse=True)
+    rest = sorted([a for a in anfragen if (a.get("status") or a.get("kontakt_status")) not in ("Neu", "In Bearbeitung", "in_bearbeitung")], key=lambda x: x.get("created_at", ""), reverse=True)
     recent_anfragen = (neu + in_arbeit + rest)[:10]
     # Display-Name fuer recent_anfragen
     for a in recent_anfragen:

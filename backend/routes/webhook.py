@@ -167,7 +167,7 @@ async def webhook_contact(contact: WebhookContact):
     kontakt_data = anfrage.model_dump()
     kontakt_data["kontakt_status"] = "Neu"
     kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.module_kontakt.insert_one(kontakt_data)
+    await db.module_kunden.insert_one(kontakt_data)
     logger.info(f"Neue Anfrage über Webhook: {name} ({customer_type})")
 
     push_body = f"{name}"
@@ -204,7 +204,7 @@ async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str
     kontakt_data = anfrage.model_dump()
     kontakt_data["kontakt_status"] = "Neu"
     kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.module_kontakt.insert_one(kontakt_data)
+    await db.module_kunden.insert_one(kontakt_data)
     logger.info(f"Neue Anfrage über Beacon-Webhook: {name}")
 
     push_body = f"{name}"
@@ -736,7 +736,7 @@ async def kontakt_relay(request: Request):
         kontakt_data["objekt_strasse"] = form_dict.get("objstrasse", "")
         kontakt_data["objekt_plz"] = form_dict.get("objplz", "")
         kontakt_data["objekt_ort"] = form_dict.get("objstadt", "")
-        await db.module_kontakt.insert_one(kontakt_data)
+        await db.module_kunden.insert_one(kontakt_data)
         logger.info(f"Neue Anfrage über Kontaktformular-Relay: {name}")
 
         push_body = f"{name}"

@@ -6,7 +6,17 @@ import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common
 import { api } from "@/lib/api";
 import { CATEGORIES } from "@/lib/constants";
 
-const KUNDEN_STATUSES = ["Neu", "Angebot erstellt", "Auftrag erteilt", "In Bearbeitung", "Abgeschlossen"];
+const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
+
+const STATUS_COLORS = {
+  Anfrage: { dot: "bg-blue-500", badge: "bg-blue-100 text-blue-700", border: "border-l-blue-500" },
+  Neu: { dot: "bg-red-500 animate-pulse", badge: "bg-red-100 text-red-700", border: "border-l-red-500" },
+  Interessent: { dot: "bg-amber-500", badge: "bg-amber-100 text-amber-700", border: "border-l-amber-500" },
+  Kunde: { dot: "bg-green-500", badge: "bg-green-100 text-green-700", border: "border-l-green-500" },
+  "In Bearbeitung": { dot: "bg-yellow-500", badge: "bg-yellow-100 text-yellow-700", border: "border-l-yellow-500" },
+  Abgeschlossen: { dot: "bg-gray-400", badge: "bg-gray-100 text-gray-600", border: "" },
+  Archiv: { dot: "bg-gray-300", badge: "bg-gray-100 text-gray-500", border: "" },
+};
 
 const KundenModulPage = () => {
   const [kunden, setKunden] = useState([]);
@@ -70,13 +80,14 @@ const KundenModulPage = () => {
   const filtered = kunden.filter(c =>
     (((c.vorname || c.nachname) ? `${c.vorname || ''} ${c.nachname || ''}`.trim() : (c.name || '')).toLowerCase().includes(search.toLowerCase()) ||
     (c.email || "").toLowerCase().includes(search.toLowerCase()) ||
-    (c.firma || "").toLowerCase().includes(search.toLowerCase())) &&
+    (c.firma || "").toLowerCase().includes(search.toLowerCase()) ||
+    (c.nachricht || "").toLowerCase().includes(search.toLowerCase())) &&
     (!categoryFilter || (c.categories || []).includes(categoryFilter)) &&
-    (!statusFilter || (c.status || "Neu") === statusFilter)
+    (!statusFilter || (c.status || c.kontakt_status || "Anfrage") === statusFilter)
   );
 
   const statusCounts = {};
-  KUNDEN_STATUSES.forEach(s => { statusCounts[s] = kunden.filter(k => (k.status || "Neu") === s).length; });
+  KUNDEN_STATUSES.forEach(s => { statusCounts[s] = kunden.filter(k => (k.status || k.kontakt_status || "Anfrage") === s).length; });
 
   return (
     <div data-testid="kunden-modul-page">
@@ -91,7 +102,6 @@ const KundenModulPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
-          <Button variant="outline" size="sm" onClick={() => setShowKontaktImport(true)} data-testid="btn-import-kontakt"><ArrowDownToLine className="w-4 h-4" /> Kontakt importieren</Button>
           <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import-kunden-modul">
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF importieren"}</span>
@@ -125,7 +135,8 @@ const KundenModulPage = () => {
         <button onClick={() => setStatusFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!statusFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>Alle Status</button>
         {KUNDEN_STATUSES.map(st => (
           <button key={st} onClick={() => setStatusFilter(statusFilter === st ? "" : st)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+            <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[st]?.dot?.replace(" animate-pulse", "") || "bg-gray-400"}`} />
             {st} ({statusCounts[st] || 0})
           </button>
         ))}
@@ -142,8 +153,9 @@ const KundenModulPage = () => {
             const isExpanded = expandedId === kunde.id;
             const displayName = (kunde.vorname || kunde.nachname) ? `${kunde.vorname || ''} ${kunde.nachname || ''}`.trim() : kunde.name;
             return (
-              <Card key={kunde.id} className={`transition-all cursor-pointer overflow-hidden ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md'}`} data-testid={`kunden-modul-${kunde.id}`}>
+              <Card key={kunde.id} className={`transition-all cursor-pointer overflow-hidden border-l-4 ${STATUS_COLORS[kunde.status || kunde.kontakt_status || "Anfrage"]?.border || ""} ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md'}`} data-testid={`kunden-modul-${kunde.id}`}>
                 <div className="flex items-center gap-4 p-3 lg:p-4" onClick={() => setExpandedId(isExpanded ? null : kunde.id)}>
+                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[kunde.status || kunde.kontakt_status || "Anfrage"]?.dot || "bg-gray-400"}`} />
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
                     {kunde.vorname?.charAt(0)?.toUpperCase() || kunde.nachname?.charAt(0)?.toUpperCase() || "?"}
                   </div>
@@ -152,7 +164,7 @@ const KundenModulPage = () => {
                       <span className="font-semibold truncate">{displayName}</span>
                       {kunde.firma && <Badge variant="info" className="text-xs">{kunde.firma}</Badge>}
                       {kunde.customer_type && kunde.customer_type !== "Privat" && <Badge variant="default" className="text-xs">{kunde.customer_type}</Badge>}
-                      {kunde.status && kunde.status !== "Neu" && <Badge variant={kunde.status === "Abgeschlossen" ? "success" : "warning"} className="text-xs">{kunde.status}</Badge>}
+                      {(kunde.status || kunde.kontakt_status) && <Badge className={`text-xs ${STATUS_COLORS[kunde.status || kunde.kontakt_status]?.badge || "bg-gray-100 text-gray-600"}`}>{kunde.status || kunde.kontakt_status}</Badge>}
                     </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       {kunde.phone && <span>{kunde.phone}</span>}
@@ -212,6 +224,12 @@ const KundenModulPage = () => {
                       <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Notizen</h4>
                         <p className="text-sm text-muted-foreground whitespace-pre-line">{kunde.notes || "Keine Notizen"}</p>
+                        {kunde.nachricht && (
+                          <div className="mt-3 pt-3 border-t">
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Nachricht (Anfrage)</h4>
+                            <p className="text-sm text-muted-foreground whitespace-pre-line">{kunde.nachricht}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -257,23 +275,6 @@ const KundenModulPage = () => {
                       <button
                         onClick={async () => {
                           try {
-                            const res = await api.post(`/modules/kontakt/from-kunden/${kunde.id}`);
-                            if (res.data.already_exists) {
-                              toast.info("Kunde ist bereits als Kontakt vorhanden");
-                            } else {
-                              toast.success(`${kunde.vorname || ""} ${kunde.nachname || ""} ins Kontakt-Modul uebernommen!`);
-                            }
-                          } catch { toast.error("Fehler beim Uebernehmen"); }
-                        }}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
-                        data-testid={`btn-to-kontakt-${kunde.id}`}
-                      >
-                        <ArrowDownToLine className="w-4 h-4" />
-                        Zu Kontakte
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
                             await api.post(`/einsaetze/from-kunde/${kunde.id}`);
                             toast.success("Einsatz erstellt");
                             window.location.href = "/einsaetze";
@@ -314,9 +315,9 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
 
   useEffect(() => {
     if (kunde) {
-      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || "Neu", categories: kunde.categories || [], notes: kunde.notes || "" });
+      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "" });
     } else {
-      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", strasse: "", hausnummer: "", plz: "", ort: "", customer_type: "Privat", status: "Neu", categories: [], notes: "" });
+      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", strasse: "", hausnummer: "", plz: "", ort: "", customer_type: "Privat", status: "Anfrage", categories: [], notes: "", nachricht: "" });
     }
     setSelectedFiles([]);
   }, [kunde]);
