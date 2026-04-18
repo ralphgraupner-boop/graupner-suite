@@ -219,3 +219,98 @@ async def export_artikel(user=Depends(get_current_user)):
     items = await db.module_artikel.find({}, {"_id": 0}).to_list(10000)
     modul = await db.modules.find_one({"slug": "artikel-leistungen"}, {"_id": 0})
     return {"module": modul, "data": items, "exported_at": datetime.now(timezone.utc).isoformat(), "count": len(items)}
+
+
+
+# ==================== CSV IMPORT ====================
+
+@router.get("/modules/artikel/import-vorlage")
+async def download_vorlage():
+    """CSV-Vorlage herunterladen"""
+    import os
+    from fastapi.responses import FileResponse
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "vorlage_artikel_import.csv")
+    return FileResponse(path, filename="vorlage_artikel_import.csv", media_type="text/csv")
+
+
+@router.post("/modules/artikel/import-csv")
+async def import_csv(file: bytes = None, user=Depends(get_current_user)):
+    """CSV-Datei importieren"""
+    from fastapi import UploadFile, File
+    raise HTTPException(400, "Bitte /modules/artikel/import-upload verwenden")
+
+
+from fastapi import UploadFile, File as FileParam
+
+@router.post("/modules/artikel/import-upload")
+async def import_upload(file: UploadFile = FileParam(...), user=Depends(get_current_user)):
+    """CSV-Datei mit Artikeln/Leistungen importieren"""
+    import csv, io
+    content = await file.read()
+    # Try different encodings
+    for enc in ["utf-8-sig", "utf-8", "latin-1", "cp1252"]:
+        try:
+            text = content.decode(enc)
+            break
+        except:
+            continue
+    else:
+        raise HTTPException(400, "Datei konnte nicht gelesen werden")
+
+    # Detect delimiter
+    delimiter = ";" if ";" in text.split("\n")[0] else ","
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
+
+    imported = 0
+    skipped = 0
+    errors = []
+    now = datetime.now(timezone.utc).isoformat()
+
+    for i, row in enumerate(reader):
+        try:
+            name = (row.get("Name") or row.get("name") or "").strip()
+            if not name:
+                skipped += 1
+                continue
+
+            typ = (row.get("Typ") or row.get("typ") or "Artikel").strip()
+            if typ.lower() in ("leistung", "service", "dienstleistung"):
+                typ = "Leistung"
+            else:
+                typ = "Artikel"
+
+            def to_float(val):
+                if not val:
+                    return 0.0
+                return float(str(val).replace(",", ".").strip())
+
+            item = {
+                "id": str(uuid4()),
+                "name": name,
+                "artikel_nr": (row.get("Artikel_Nr") or row.get("artikel_nr") or "").strip(),
+                "description": (row.get("Beschreibung") or row.get("description") or "").strip(),
+                "typ": typ,
+                "unit": (row.get("Einheit") or row.get("unit") or "Stueck").strip(),
+                "ek_preis": to_float(row.get("EK_Preis") or row.get("ek_preis")),
+                "aufschlag_1": to_float(row.get("Aufschlag_1") or row.get("aufschlag_1")),
+                "aufschlag_2": to_float(row.get("Aufschlag_2") or row.get("aufschlag_2")),
+                "aufschlag_3": to_float(row.get("Aufschlag_3") or row.get("aufschlag_3")),
+                "vk_preis_1": to_float(row.get("VK_Preis_1") or row.get("vk_preis_1")),
+                "vk_preis_2": to_float(row.get("VK_Preis_2") or row.get("vk_preis_2")),
+                "vk_preis_3": to_float(row.get("VK_Preis_3") or row.get("vk_preis_3")),
+                "price_net": to_float(row.get("VK_Preis_1") or row.get("vk_preis_1") or row.get("EK_Preis") or row.get("ek_preis")),
+                "subunternehmer": (row.get("Subunternehmer") or "").strip().lower() in ("ja", "yes", "true", "1"),
+                "created_at": now,
+                "updated_at": now,
+            }
+            await db.module_artikel.insert_one(item)
+            imported += 1
+        except Exception as e:
+            errors.append(f"Zeile {i+2}: {str(e)}")
+
+    return {
+        "message": f"{imported} Artikel/Leistungen importiert",
+        "imported": imported,
+        "skipped": skipped,
+        "errors": errors
+    }

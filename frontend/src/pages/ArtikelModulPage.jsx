@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Download, Package, Wrench, Users, Settings } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Package, Wrench, Users, Settings, Upload, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -79,6 +79,28 @@ const ArtikelModulPage = () => {
           <Button variant="outline" size="sm" onClick={handleExport} data-testid="btn-export-artikel">
             <Download className="w-4 h-4" /> Export
           </Button>
+          <Button variant="outline" size="sm" className="lg:h-10 lg:px-4" onClick={() => {
+            const token = localStorage.getItem("token");
+            window.open(`${process.env.REACT_APP_BACKEND_URL}/api/modules/artikel/import-vorlage?token=${token}`, "_blank");
+          }} data-testid="btn-vorlage-download">
+            <FileDown className="w-4 h-4" /> Vorlage
+          </Button>
+          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 lg:h-10 lg:px-4 border rounded-sm text-sm font-medium cursor-pointer hover:bg-muted" data-testid="btn-import-csv">
+            <Upload className="w-4 h-4" /> Import
+            <input type="file" className="hidden" accept=".csv,.CSV" onChange={async (ev) => {
+              const file = ev.target.files[0];
+              if (!file) return;
+              const fd = new FormData();
+              fd.append("file", file);
+              try {
+                const res = await api.post("/modules/artikel/import-upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                toast.success(`${res.data.imported} Artikel/Leistungen importiert!`);
+                if (res.data.errors?.length > 0) toast.warning(`${res.data.errors.length} Fehler`);
+                loadData();
+              } catch (err) { toast.error(err?.response?.data?.detail || "Import fehlgeschlagen"); }
+              ev.target.value = "";
+            }} />
+          </label>
           <Button size="sm" className="lg:h-10 lg:px-4" onClick={() => { setEditItem(null); setShowModal(true); }} data-testid="btn-new-artikel">
             <Plus className="w-4 h-4" /> Neu
           </Button>

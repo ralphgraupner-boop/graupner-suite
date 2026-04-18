@@ -1,0 +1,16 @@
+Typ;Name;Artikel_Nr;Beschreibung;Einheit;EK_Preis;Aufschlag_1;Aufschlag_2;Aufschlag_3;VK_Preis_1;VK_Preis_2;VK_Preis_3;Subunternehmer
+Leistung;Schiebetuer-Reparatur Standard;L-001;Reparatur einer Schiebetuer inkl. Laufschiene pruefen;Stunde;45.00;10;15;20;49.50;51.75;54.00;Nein
+Leistung;Fenster-Reparatur Standard;L-002;Fensterreparatur inkl. Beschlaege einstellen;Stunde;45.00;10;15;20;49.50;51.75;54.00;Nein
+Leistung;Tuerschloss wechseln;L-003;Schloss demontieren und neues einbauen;Stueck;35.00;10;15;20;38.50;40.25;42.00;Nein
+Leistung;Einbau Hebeschiebekipptuer;L-004;Kompletteinbau HSK-Element;Stueck;650.00;10;15;20;715.00;747.50;780.00;Nein
+Leistung;Glasscheibe tauschen;L-005;Scheibe ausmessen und einbauen;Stueck;120.00;10;15;20;132.00;138.00;144.00;Nein
+Leistung;Notdienst Anfahrt;L-006;Notdienst-Anfahrtspauschale;Pauschal;89.00;0;0;0;89.00;89.00;89.00;Nein
+Leistung;Besichtigung vor Ort;L-007;Kostenlose Erstbesichtigung;Pauschal;0.00;0;0;0;0.00;0.00;0.00;Nein
+Artikel;Laufschiene Aluminium 2m;M-001;Alu-Laufschiene fuer Schiebetuer;Stueck;28.50;10;15;20;31.35;32.78;34.20;Nein
+Artikel;Laufwagen HSK komplett;M-002;Laufwagen mit Rollen fuer Hebeschiebekipptuer;Stueck;45.00;10;15;20;49.50;51.75;54.00;Nein
+Artikel;Tuerschloss Mehrfachverriegelung;M-003;Sicherheitsschloss 3-fach Verriegelung;Stueck;85.00;10;15;20;93.50;97.75;102.00;Nein
+Artikel;Dichtungsgummi Meter;M-004;Fensterdichtung EPDM schwarz;Meter;3.50;10;15;20;3.85;4.03;4.20;Nein
+Artikel;Isolierglas 4/16/4 pro qm;M-005;2-fach Isolierverglasung Standard;qm;65.00;10;15;20;71.50;74.75;78.00;Nein
+Artikel;Beschlag Dreh-Kipp;M-006;Fensterbeschlag Dreh-Kipp komplett;Stueck;32.00;10;15;20;35.20;36.80;38.40;Nein
+Artikel;Silikon transparent 310ml;M-007;Fenstersilikon fuer Verglasung;Stueck;8.50;10;15;20;9.35;9.78;10.20;Nein
+Artikel;Schrauben Edelstahl Set;M-008;VA Schrauben sortiert fuer Fenstermontage;Set;12.00;10;15;20;13.20;13.80;14.40;Nein
