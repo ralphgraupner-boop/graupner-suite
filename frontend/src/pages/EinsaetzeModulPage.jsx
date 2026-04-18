@@ -479,25 +479,32 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
     finally { setSaving(false); }
   };
 
-  const F = ({ label, name, type = "text", ...props }) => (
-    <div className={props.className || ""}>
+  const upd = (name, value) => setForm(f => ({ ...f, [name]: value }));
+
+  const inp = (label, name, placeholder, type = "text", step) => (
+    <div>
       <label className="block text-xs font-medium mb-1 text-muted-foreground">{label}</label>
-      {type === "select" ? (
-        <select value={form[name]} onChange={(e) => setForm({ ...form, [name]: e.target.value })} className="w-full border rounded-sm p-2 text-sm" data-testid={`einsatz-field-${name}`}>
-          <option value="">-- Bitte waehlen --</option>
-          {(props.options || []).map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-      ) : type === "textarea" ? (
-        <textarea value={form[name]} onChange={(e) => setForm({ ...form, [name]: e.target.value })} className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-y" placeholder={props.placeholder} data-testid={`einsatz-field-${name}`} />
+      {type === "textarea" ? (
+        <textarea value={form[name]} onChange={e => upd(name, e.target.value)} className="w-full border rounded-sm p-2 text-sm min-h-[80px] resize-y" placeholder={placeholder} data-testid={`einsatz-field-${name}`} />
       ) : (
-        <input type={type} value={form[name]} onChange={(e) => setForm({ ...form, [name]: type === "number" ? Number(e.target.value) : e.target.value })} className="w-full border rounded-sm p-2 text-sm" placeholder={props.placeholder} step={props.step} data-testid={`einsatz-field-${name}`} />
+        <input type={type} value={form[name]} onChange={e => upd(name, type === "number" ? Number(e.target.value) : e.target.value)} className="w-full border rounded-sm p-2 text-sm" placeholder={placeholder} step={step} data-testid={`einsatz-field-${name}`} />
       )}
     </div>
   );
 
+  const sel = (label, name, options) => (
+    <div>
+      <label className="block text-xs font-medium mb-1 text-muted-foreground">{label}</label>
+      <select value={form[name]} onChange={e => upd(name, e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid={`einsatz-field-${name}`}>
+        <option value="">-- Bitte waehlen --</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" data-testid="einsatz-form-modal">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-2xl my-8">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="einsatz-form-modal">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">{item ? "Einsatz bearbeiten" : "Neuer Einsatz"}</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
@@ -519,29 +526,29 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <F label="Name" name="kunde_name" placeholder="Kundenname" />
-              <F label="E-Mail" name="kunde_email" type="email" placeholder="email@example.de" />
-              <F label="Telefon" name="kunde_telefon" placeholder="040-123456" />
-              <F label="Adresse" name="kunde_adresse" placeholder="Strasse, PLZ Ort" />
+              {inp("Name", "kunde_name", "Kundenname")}
+              {inp("E-Mail", "kunde_email", "email@example.de", "email")}
+              {inp("Telefon", "kunde_telefon", "040-123456")}
+              {inp("Adresse", "kunde_adresse", "Strasse, PLZ Ort")}
             </div>
           </div>
 
           {/* Objektadresse */}
           <div className="grid grid-cols-3 gap-3">
-            <F label="Objekt Strasse" name="objekt_strasse" placeholder="Musterstr. 1" />
-            <F label="PLZ" name="objekt_plz" placeholder="22453" />
-            <F label="Ort" name="objekt_ort" placeholder="Hamburg" />
+            {inp("Objekt Strasse", "objekt_strasse", "Musterstr. 1")}
+            {inp("PLZ", "objekt_plz", "22453")}
+            {inp("Ort", "objekt_ort", "Hamburg")}
           </div>
 
           {/* Anfrage */}
-          <F label="Betreff" name="betreff" placeholder="z.B. Schiebetuer-Reparatur" />
-          <F label="Beschreibung (Kundentext)" name="beschreibung" type="textarea" placeholder="Anfrage-Text des Kunden..." />
-          <F label="Bemerkungen / Anmerkungen" name="bemerkungen" type="textarea" placeholder="Interne Notizen..." />
+          {inp("Betreff", "betreff", "z.B. Schiebetuer-Reparatur")}
+          {inp("Beschreibung (Kundentext)", "beschreibung", "Anfrage-Text des Kunden...", "textarea")}
+          {inp("Bemerkungen / Anmerkungen", "bemerkungen", "Interne Notizen...", "textarea")}
 
           {/* Kategorisierung */}
           <div className="grid grid-cols-2 gap-3">
-            <F label="Reparaturgruppe" name="reparaturgruppe" type="select" options={config.reparaturgruppen || []} />
-            <F label="Material" name="material" type="select" options={config.materialien || []} />
+            {sel("Reparaturgruppe", "reparaturgruppe", config.reparaturgruppen || [])}
+            {sel("Material", "material", config.materialien || [])}
           </div>
 
           {/* Monteure */}
@@ -563,13 +570,15 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
                 </select>
               </div>
             </div>
-            <F label="Verantwortlich" name="verantwortlich" placeholder="Wer ist zustaendig?" className="mt-3" />
+            <div className="mt-3">
+              {inp("Verantwortlich", "verantwortlich", "Wer ist zustaendig?")}
+            </div>
           </div>
 
           {/* Finanzen */}
           <div className="grid grid-cols-3 gap-3">
-            <F label="Summe Netto (EUR)" name="summe_netto" type="number" step="0.01" />
-            <F label="MwSt. (%)" name="mwst_satz" type="number" />
+            {inp("Summe Netto (EUR)", "summe_netto", "", "number", "0.01")}
+            {inp("MwSt. (%)", "mwst_satz", "", "number")}
             <div>
               <label className="block text-xs font-medium mb-1 text-muted-foreground">Brutto (EUR)</label>
               <div className="w-full border rounded-sm p-2 text-sm bg-muted">{calcBrutto(form.summe_netto, form.mwst_satz).toLocaleString("de-DE", {minimumFractionDigits: 2})}</div>
@@ -578,13 +587,13 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
 
           {/* Status & Termine */}
           <div className="grid grid-cols-3 gap-3">
-            <F label="Status" name="status" type="select" options={["aktiv", "in_bearbeitung", "abgeschlossen", "inaktiv"]} />
-            <F label="Prioritaet" name="prioritaet" type="select" options={config.prioritaeten || ["niedrig", "normal", "hoch", "dringend"]} />
-            <F label="Termin" name="termin" type="datetime-local" />
+            {sel("Status", "status", ["aktiv", "in_bearbeitung", "abgeschlossen", "inaktiv"])}
+            {sel("Prioritaet", "prioritaet", config.prioritaeten || ["niedrig", "normal", "hoch", "dringend"])}
+            {inp("Termin", "termin", "", "datetime-local")}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <F label="Startdatum" name="startdatum" type="date" />
-            <F label="Enddatum" name="enddatum" type="date" />
+            {inp("Startdatum", "startdatum", "", "date")}
+            {inp("Enddatum", "enddatum", "", "date")}
           </div>
         </div>
 
