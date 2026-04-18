@@ -62,7 +62,7 @@ const EditorToolbar = ({
             </Button>
           )}
           {!isNew && onOpenMailClient && (
-            <Button variant="outline" size="sm" onClick={onOpenMailClient} data-testid="btn-mailto-document" title="In Betterbird / Thunderbird oeffnen">
+            <Button size="sm" onClick={onOpenMailClient} data-testid="btn-mailto-document" title="In Betterbird / Thunderbird oeffnen" className="bg-blue-600 text-white hover:bg-blue-700">
               <ExternalLink className="w-4 h-4" />
               <span className="hidden sm:inline">Mailprogramm</span>
             </Button>
