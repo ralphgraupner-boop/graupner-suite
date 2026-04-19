@@ -14,24 +14,31 @@ const DashboardPage = () => {
   const [overviewView, setOverviewView] = useState("anfragen");
   const [overviewData, setOverviewData] = useState(null);
   const [inboxStats, setInboxStats] = useState({ unread: 0, total: 0 });
+  const [portalUnread, setPortalUnread] = useState({ count: 0, items: [] });
 
   useEffect(() => {
     loadStats();
     checkDueInvoices();
     checkFollowups();
     loadInboxStats();
+    loadPortalUnread();
 
     // Auto-Refresh jede Stunde
     const interval = setInterval(() => {
       loadStats();
       loadInboxStats();
+      loadPortalUnread();
     }, 3600000);
-    return () => clearInterval(interval);
+    // Kurz-Refresh fuer Portal-Benachrichtigungen alle 60s
+    const portalInterval = setInterval(() => {
+      loadPortalUnread();
+    }, 60000);
+    return () => { clearInterval(interval); clearInterval(portalInterval); };
   }, []);
 
   // Refresh wenn Benutzer zur Seite zurueckkehrt (z.B. von Kunden-Modul)
   useEffect(() => {
-    const handleFocus = () => { loadStats(); loadInboxStats(); };
+    const handleFocus = () => { loadStats(); loadInboxStats(); loadPortalUnread(); };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, []);
@@ -40,7 +47,14 @@ const DashboardPage = () => {
     try {
       const res = await api.get("/imap/inbox/stats");
       setInboxStats(res.data);
-    } catch {}
+    } catch { /* ignore */ }
+  };
+
+  const loadPortalUnread = async () => {
+    try {
+      const res = await api.get("/portals/unread-count");
+      setPortalUnread(res.data || { count: 0, items: [] });
+    } catch { /* ignore */ }
   };
 
   const loadStats = async () => {
@@ -101,8 +115,20 @@ const DashboardPage = () => {
       </div>
 
       {/* Kompakte Hinweisleiste */}
-      {(dueSoon.length > 0 || (stats?.overdue_count || 0) > 0 || followupQuotes.length > 0 || inboxStats.unread > 0) && (
+      {(dueSoon.length > 0 || (stats?.overdue_count || 0) > 0 || followupQuotes.length > 0 || inboxStats.unread > 0 || portalUnread.count > 0) && (
         <div className="mb-4 lg:mb-6 flex flex-wrap gap-2" data-testid="dashboard-due-warnings">
+          {portalUnread.count > 0 && (
+            <Link to="/portals" className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-full hover:bg-blue-100 transition-colors group" data-testid="dashboard-portal-hint" title={portalUnread.items?.map(p => p.customer_name).filter(Boolean).join(", ")}>
+              <span className="relative flex items-center">
+                <span className="absolute -left-0.5 -top-0.5 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <Users className="w-3.5 h-3.5 text-blue-600 ml-1" />
+              </span>
+              <span className="text-xs font-medium text-blue-800">
+                {portalUnread.count} neue{portalUnread.count !== 1 ? "" : ""} Kundenportal-Mitteilung{portalUnread.count !== 1 ? "en" : ""}
+              </span>
+              <span className="text-[10px] text-blue-600 group-hover:text-blue-700 font-medium">Anzeigen</span>
+            </Link>
+          )}
           {inboxStats.unread > 0 && (
             <Link to="/email" className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full hover:bg-emerald-100 transition-colors group" data-testid="dashboard-inbox-hint">
               <MailOpen className="w-3.5 h-3.5 text-emerald-600" />

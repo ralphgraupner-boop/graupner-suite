@@ -714,6 +714,24 @@ async def public_upload_file(
     except Exception as e:
         logger.warning(f"Push for upload failed: {e}")
 
+    # E-Mail-Benachrichtigung an Admin
+    try:
+        await _notify_admin(
+            subject=f"Portal: {portal.get('customer_name', 'Kunde')} hat ein Bild hochgeladen",
+            body_html=f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h3 style="color: #1a5632;">Neues Bild im Kundenportal</h3>
+              <p><strong>Kunde:</strong> {portal.get('customer_name', 'Kunde')}</p>
+              <p><strong>Projekt:</strong> {portal.get('description', '-')}</p>
+              <p><strong>Dateiname:</strong> {file.filename}</p>
+              {f'<p><strong>Bemerkung:</strong> {description}</p>' if description else ''}
+              <p style="margin-top:20px;">Bitte im Admin-Bereich unter <em>Kundenportale</em> einsehen.</p>
+            </div>
+            """,
+        )
+    except Exception as e:
+        logger.warning(f"Admin email for upload failed: {e}")
+
     # Remaining slots info
     file_doc["remaining_slots"] = MAX_IMAGES_PER_PORTAL - (total_count + 1)
     return file_doc
@@ -856,3 +874,21 @@ async def mark_notes_read(portal_id: str, user=Depends(get_current_user)):
     )
     return {"message": "Als gelesen markiert"}
 
+
+
+# ===================== DASHBOARD BADGE: ANZAHL UNGELESENE PORTAL-AKTIVITÄTEN =====================
+
+@router.get("/portals/unread-count")
+async def portals_unread_count(user=Depends(get_current_user)):
+    """Liefert Anzahl der Portale mit customer_has_new_content=True (fuer Dashboard-Badge)."""
+    count = await db.portals.count_documents({
+        "customer_has_new_content": True,
+        "active": {"$ne": False},
+    })
+    # Liste der betroffenen Portale (max 5) fuer Tooltip/Preview
+    cursor = db.portals.find(
+        {"customer_has_new_content": True, "active": {"$ne": False}},
+        {"_id": 0, "id": 1, "customer_name": 1, "description": 1, "last_customer_activity_at": 1, "last_customer_submit_at": 1}
+    ).limit(5)
+    items = [doc async for doc in cursor]
+    return {"count": count, "items": items}
