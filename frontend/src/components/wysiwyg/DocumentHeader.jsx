@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { X, Calculator, Search } from "lucide-react";
-import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { X, Search } from "lucide-react";
 
 const DocumentHeader = ({
   settings, customer, customers, selectedCustomerId,
@@ -94,40 +92,6 @@ const DocumentHeader = ({
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {customer.address && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const res = await api.post("/calculate-distance", { to_address: customer.address });
-                        const d = res.data;
-                        if (window.confirm(
-                          `Entfernung: ${d.distance_km} km (ca. ${d.duration_minutes} Min.)\n` +
-                          `km-Kosten: ${d.km_cost.toFixed(2)} €\n` +
-                          `Fahrzeit-Kosten: ${d.time_cost.toFixed(2)} €\n` +
-                          `Gesamt: ${d.total_cost.toFixed(2)} € netto\n\n` +
-                          `Als Position "Fahrtkostenanteil" hinzufügen?`
-                        )) {
-                          setPositions(prev => [...prev, {
-                            type: "position",
-                            pos_nr: prev.length + 1,
-                            description: `Fahrtkostenanteil (${d.distance_km} km, ca. ${d.duration_minutes} Min.)`,
-                            quantity: 1,
-                            unit: "pauschal",
-                            price_net: d.total_cost
-                          }]);
-                        }
-                      } catch (err) {
-                        toast.error(err?.response?.data?.detail || "Entfernung konnte nicht berechnet werden.");
-                      }
-                    }}
-                    className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-                    data-testid="btn-calc-travel"
-                  >
-                    <Calculator className="w-3.5 h-3.5" />
-                    Fahrtkosten berechnen
-                  </button>
-                )}
               </div>
             )}
           </div>
