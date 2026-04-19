@@ -40,18 +40,57 @@ const ArtikelModulPage = () => {
     } catch { toast.error("Fehler"); }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format) => {
+    // format: "csv" | "excel" | "json" | "xml"
+    const endpointMap = {
+      csv: { path: "/modules/artikel/export-csv", ext: "csv", mime: "text/csv" },
+      excel: { path: "/modules/artikel/export-excel", ext: "xlsx", mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      json: { path: "/modules/artikel/export-json", ext: "json", mime: "application/json" },
+      xml: { path: "/modules/artikel/export-xml", ext: "xml", mime: "application/xml" },
+    };
+    const cfg = endpointMap[format];
+    if (!cfg) return;
     try {
-      const res = await api.get("/modules/artikel/export");
-      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
+      const res = await api.get(cfg.path, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: cfg.mime }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `artikel_leistungen_${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `Artikel_Export_${new Date().toISOString().split("T")[0]}.${cfg.ext}`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Exportiert");
-    } catch { toast.error("Fehler"); }
+      toast.success(`${format.toUpperCase()} Export erstellt`);
+    } catch { toast.error("Export fehlgeschlagen"); }
+  };
+
+  const handleImport = async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    const loadingToast = toast.loading(`Importiere ${file.name}...`);
+    try {
+      const res = await api.post("/modules/artikel/import-upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.dismiss(loadingToast);
+      toast.success(`${res.data.imported} importiert, ${res.data.skipped} uebersprungen (Duplikate)`);
+      if (res.data.errors?.length > 0) toast.warning(`${res.data.errors.length} Zeilen mit Fehlern`);
+      loadItems();
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error(err?.response?.data?.detail || "Import fehlgeschlagen");
+    }
+    ev.target.value = "";
+  };
+
+  const handleVorlageDownload = async () => {
+    try {
+      const res = await api.get("/modules/artikel/import-vorlage", { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Vorlage_Artikel_Import.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error("Vorlage konnte nicht geladen werden"); }
   };
 
   const filtered = items
@@ -76,31 +115,61 @@ const ArtikelModulPage = () => {
           <Button variant="outline" size="sm" onClick={() => setShowConfig(!showConfig)} data-testid="btn-config-artikel">
             <Settings className="w-4 h-4" /> Konfiguration
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} data-testid="btn-export-artikel">
-            <Download className="w-4 h-4" /> Export
-          </Button>
-          <Button variant="outline" size="sm" className="lg:h-10 lg:px-4" onClick={() => {
-            const token = localStorage.getItem("token");
-            window.open(`${process.env.REACT_APP_BACKEND_URL}/api/modules/artikel/import-vorlage?token=${token}`, "_blank");
-          }} data-testid="btn-vorlage-download">
-            <FileDown className="w-4 h-4" /> Vorlage
-          </Button>
-          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 lg:h-10 lg:px-4 border rounded-sm text-sm font-medium cursor-pointer hover:bg-muted" data-testid="btn-import-csv">
-            <Upload className="w-4 h-4" /> Import
-            <input type="file" className="hidden" accept=".csv,.CSV" onChange={async (ev) => {
-              const file = ev.target.files[0];
-              if (!file) return;
-              const fd = new FormData();
-              fd.append("file", file);
-              try {
-                const res = await api.post("/modules/artikel/import-upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
-                toast.success(`${res.data.imported} Artikel/Leistungen importiert!`);
-                if (res.data.errors?.length > 0) toast.warning(`${res.data.errors.length} Fehler`);
-                loadData();
-              } catch (err) { toast.error(err?.response?.data?.detail || "Import fehlgeschlagen"); }
-              ev.target.value = "";
-            }} />
-          </label>
+
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="btn-export-menu">
+                <Download className="w-4 h-4" /> Export <ChevronDown className="w-3 h-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel>Format waehlen</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleExport("csv")} data-testid="export-csv">
+                <FileText className="w-4 h-4 mr-2 text-blue-600" /> CSV (.csv)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("excel")} data-testid="export-excel">
+                <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" /> Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("json")} data-testid="export-json">
+                <FileJson className="w-4 h-4 mr-2 text-amber-600" /> JSON (.json)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("xml")} data-testid="export-xml">
+                <FileCode className="w-4 h-4 mr-2 text-purple-600" /> XML (.xml)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Import Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="btn-import-menu">
+                <Upload className="w-4 h-4" /> Import <ChevronDown className="w-3 h-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuLabel>Datei importieren</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); document.getElementById("artikel-import-file")?.click(); }} data-testid="import-file">
+                <Upload className="w-4 h-4 mr-2" /> Datei auswaehlen...
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Unterstuetzt</DropdownMenuLabel>
+              <div className="px-2 pb-2 flex flex-wrap gap-1 text-xs">
+                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">.csv</span>
+                <span className="px-1.5 py-0.5 rounded bg-green-50 text-green-700">.xlsx</span>
+                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">.json</span>
+                <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">.xml</span>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleVorlageDownload} data-testid="btn-vorlage-download">
+                <FileDown className="w-4 h-4 mr-2" /> CSV-Vorlage herunterladen
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <input id="artikel-import-file" type="file" className="hidden" accept=".csv,.CSV,.xlsx,.xls,.json,.xml" onChange={handleImport} data-testid="input-import-file" />
+
           <Button size="sm" className="lg:h-10 lg:px-4" onClick={() => { setEditItem(null); setShowModal(true); }} data-testid="btn-new-artikel">
             <Plus className="w-4 h-4" /> Neu
           </Button>

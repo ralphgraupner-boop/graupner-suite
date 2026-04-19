@@ -37,6 +37,14 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - Verknuepft mit Einsaetze (Monteur-Zuweisung)
 - 100% getestet
 
+## Completed 19.04.2026
+- [x] Artikel Multi-Format Import/Export (CSV, Excel, JSON, XML)
+- [x] Professionelles Dropdown-UI fuer Export/Import (shadcn)
+- [x] Auto-Nummerierung (ArtNr, Leist, Fremd) mit Prefix-Config
+- [x] Duplikat-Pruefung per Name beim Import
+- [x] Import-Vorlage (CSV) direkt im Dropdown
+- [x] Backend: Response-Import Fix + XML Export/Import
+
 ## Completed 18.04.2026
 - [x] Kundenportal-Modul (26/26 Tests)
 - [x] Kontaktformular-Modul (18/18 Tests) + IONOS Upload
