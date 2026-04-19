@@ -62,6 +62,33 @@ async def create_order_from_quote(quote_id: str):
     return order_obj
 
 
+@router.post("/orders/blank-for-customer/{customer_id}", response_model=Order)
+async def create_blank_order(customer_id: str):
+    """Erstellt einen leeren Auftrag direkt fuer einen Kunden (ohne Angebot)."""
+    customer = await find_customer_in_modules(customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    order_number = await get_next_order_number()
+    name = f"{customer.get('vorname', '')} {customer.get('nachname', '')}".strip() or customer.get("name", "Kunde")
+    addr_parts = [customer.get("strasse", ""), f"{customer.get('plz', '')} {customer.get('ort', '')}".strip()]
+    addr = "\n".join([p for p in addr_parts if p])
+
+    order_obj = Order(
+        order_number=order_number,
+        customer_id=customer_id,
+        customer_name=name,
+        customer_address=addr,
+        positions=[],
+        vat_rate=19.0,
+        subtotal_net=0.0,
+        vat_amount=0.0,
+        total_gross=0.0,
+    )
+    await db.orders.insert_one(order_obj.model_dump())
+    return order_obj
+
+
 @router.put("/orders/{order_id}/status")
 async def update_order_status(order_id: str, status: str = Body(..., embed=True)):
     result = await db.orders.update_one({"id": order_id}, {"$set": {"status": status}})

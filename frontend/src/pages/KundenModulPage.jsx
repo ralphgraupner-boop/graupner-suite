@@ -646,6 +646,13 @@ const CustomerDocumentsPanel = ({ customerId }) => {
 
   const newQuote = () => navigate(`/quotes/new?customer=${customerId}`);
   const newInvoice = () => navigate(`/invoices/new?customer=${customerId}`);
+  const newOrder = async () => {
+    try {
+      const res = await api.post(`/orders/blank-for-customer/${customerId}`);
+      toast.success("Auftragsbestätigung angelegt");
+      navigate(`/orders/edit/${res.data.id}`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Fehler beim Anlegen"); }
+  };
   const orderFromQuote = async (quoteId) => {
     try {
       const res = await api.post(`/orders/from-quote/${quoteId}`);
@@ -743,6 +750,9 @@ const CustomerDocumentsPanel = ({ customerId }) => {
           <button onClick={newQuote} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-sm bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200" data-testid={`btn-new-quote-${customerId}`}>
             <Plus className="w-3 h-3" /> Angebot
           </button>
+          <button onClick={newOrder} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-sm bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200" data-testid={`btn-new-order-${customerId}`}>
+            <Plus className="w-3 h-3" /> Auftragsbestätigung
+          </button>
           <button onClick={newInvoice} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-sm bg-green-50 text-green-700 hover:bg-green-100 border border-green-200" data-testid={`btn-new-invoice-${customerId}`}>
             <Plus className="w-3 h-3" /> Rechnung
           </button>
@@ -752,11 +762,7 @@ const CustomerDocumentsPanel = ({ customerId }) => {
       {loading ? (
         <div className="text-xs text-muted-foreground py-3">Lade Dokumente...</div>
       ) : total === 0 ? (
-        <div className="text-center py-6 bg-slate-50 rounded-sm text-sm text-muted-foreground">
-          <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
-          Noch keine Dokumente für diesen Kunden.
-          <div className="text-xs mt-1">Klicke oben auf &quot;Angebot&quot; oder &quot;Rechnung&quot; um zu beginnen.</div>
-        </div>
+        <CreateDocPrompt onQuote={newQuote} onOrder={newOrder} onInvoice={newInvoice} />
       ) : (
         <>
           <div className="flex gap-1 mb-3 border-b">
@@ -782,6 +788,73 @@ const CustomerDocumentsPanel = ({ customerId }) => {
           </div>
         </>
       )}
+    </div>
+  );
+};
+
+
+
+// ==================== CREATE DOC PROMPT (Empty State mit Auswahl) ====================
+const CreateDocPrompt = ({ onQuote, onOrder, onInvoice }) => {
+  const [choosing, setChoosing] = useState(false);
+
+  if (!choosing) {
+    return (
+      <div className="text-center py-8 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-lg border-2 border-dashed border-slate-200" data-testid="empty-docs-prompt">
+        <FileText className="w-10 h-10 mx-auto mb-3 text-primary/60" />
+        <div className="text-sm font-medium text-slate-700 mb-1">Noch keine Dokumente für diesen Kunden</div>
+        <div className="text-xs text-muted-foreground mb-4">Möchtest du ein Dokument anlegen?</div>
+        <button
+          onClick={() => setChoosing(true)}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-sm text-sm font-medium hover:bg-primary/90 shadow-sm"
+          data-testid="btn-prompt-create-doc"
+        >
+          <Plus className="w-4 h-4" /> Ja, Dokument anlegen
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-6 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-lg border-2 border-dashed border-primary/30" data-testid="empty-docs-choose">
+      <div className="text-center mb-5">
+        <div className="text-sm font-semibold text-slate-800 mb-1">Was möchtest du anlegen?</div>
+        <div className="text-xs text-muted-foreground">Du kannst jederzeit aus einem Angebot eine Auftragsbestätigung oder Rechnung ableiten.</div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto px-4">
+        <button
+          onClick={onQuote}
+          className="group flex flex-col items-center gap-2 p-5 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:shadow-md hover:bg-blue-50 transition-all"
+          data-testid="choose-quote"
+        >
+          <FileText className="w-8 h-8 text-blue-600 group-hover:scale-110 transition-transform" />
+          <div className="text-sm font-semibold text-blue-900">Angebot</div>
+          <div className="text-xs text-center text-muted-foreground leading-relaxed">Preisvorschlag an den Kunden. Standard-Startpunkt.</div>
+        </button>
+        <button
+          onClick={onOrder}
+          className="group flex flex-col items-center gap-2 p-5 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:shadow-md hover:bg-purple-50 transition-all"
+          data-testid="choose-order"
+        >
+          <ClipboardCheck className="w-8 h-8 text-purple-600 group-hover:scale-110 transition-transform" />
+          <div className="text-sm font-semibold text-purple-900">Auftragsbestätigung</div>
+          <div className="text-xs text-center text-muted-foreground leading-relaxed">Bestätigt dem Kunden den Auftrag schriftlich.</div>
+        </button>
+        <button
+          onClick={onInvoice}
+          className="group flex flex-col items-center gap-2 p-5 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:shadow-md hover:bg-green-50 transition-all"
+          data-testid="choose-invoice"
+        >
+          <Receipt className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" />
+          <div className="text-sm font-semibold text-green-900">Rechnung</div>
+          <div className="text-xs text-center text-muted-foreground leading-relaxed">Direkte Rechnung ohne vorherigen Auftrag.</div>
+        </button>
+      </div>
+      <div className="text-center mt-4">
+        <button onClick={() => setChoosing(false)} className="text-xs text-muted-foreground hover:text-foreground underline">
+          Abbrechen
+        </button>
+      </div>
     </div>
   );
 };
