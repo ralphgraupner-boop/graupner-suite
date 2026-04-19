@@ -52,6 +52,15 @@ const KundenModulPage = () => {
     } catch { toast.error("Fehler"); }
   };
 
+  const handleDeleteFile = async (kundeId, fileIndex, fileName) => {
+    if (!window.confirm(`"${fileName}" wirklich unwiderruflich löschen?`)) return;
+    try {
+      await api.delete(`/modules/kunden/data/${kundeId}/files/${fileIndex}`);
+      toast.success("Datei gelöscht");
+      loadKunden();
+    } catch { toast.error("Fehler beim Löschen"); }
+  };
+
   const handleVcfUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -241,39 +250,76 @@ const KundenModulPage = () => {
                     </div>
 
                     {/* Bilder */}
-                    {kunde.photos?.filter(f => { const ct = typeof f === 'string' ? '' : f.content_type || ''; const nm = typeof f === 'string' ? f : f.filename || ''; return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(nm); }).length > 0 && (
-                      <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Bilder</h4>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                          {kunde.photos.filter(f => { const ct = typeof f === 'string' ? '' : f.content_type || ''; const nm = typeof f === 'string' ? f : f.filename || ''; return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(nm); }).map((file, idx) => {
-                            const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-                            const rawUrl = typeof file === 'string' ? file : file.url;
-                            const fileUrl = rawUrl?.startsWith('http') ? rawUrl : `${backendUrl}/api/storage/${rawUrl}`;
-                            return (<div key={idx} className="aspect-square rounded-lg overflow-hidden border hover:border-primary hover:shadow-lg transition-all cursor-pointer group" onClick={() => window.open(fileUrl, '_blank')}>
-                              <img src={fileUrl} alt={`Bild ${idx + 1}`} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" onError={e => { e.target.style.display = 'none'; }} />
-                            </div>);
-                          })}
+                    {(() => {
+                      const isImage = (f) => { const ct = typeof f === 'string' ? '' : f.content_type || ''; const nm = typeof f === 'string' ? f : f.filename || ''; return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(nm); };
+                      const images = (kunde.photos || []).map((file, origIdx) => ({ file, origIdx })).filter(x => isImage(x.file));
+                      if (images.length === 0) return null;
+                      return (
+                        <div className="mt-4 pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Bilder ({images.length})</h4>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                            {images.map(({ file, origIdx }) => {
+                              const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+                              const rawUrl = typeof file === 'string' ? file : file.url;
+                              const fileUrl = rawUrl?.startsWith('http') ? rawUrl : `${backendUrl}/api/storage/${rawUrl}`;
+                              const fileName = typeof file === 'string' ? file.split('/').pop() : (file.filename || `Bild ${origIdx + 1}`);
+                              return (
+                                <div key={origIdx} className="relative aspect-square rounded-lg overflow-hidden border hover:border-primary hover:shadow-lg transition-all group" data-testid={`kunde-bild-${kunde.id}-${origIdx}`}>
+                                  <img src={fileUrl} alt={fileName} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 cursor-pointer" onClick={() => window.open(fileUrl, '_blank')} onError={e => { e.target.style.display = 'none'; }} />
+                                  <button
+                                    type="button"
+                                    onClick={(ev) => { ev.stopPropagation(); handleDeleteFile(kunde.id, origIdx, fileName); }}
+                                    className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg"
+                                    title="Bild löschen"
+                                    data-testid={`btn-delete-bild-${kunde.id}-${origIdx}`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Dokumente */}
-                    {kunde.photos?.filter(f => { const ct = typeof f === 'string' ? '' : f.content_type || ''; const nm = typeof f === 'string' ? f : f.filename || ''; return !(ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(nm)); }).length > 0 && (
-                      <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2"><File className="w-4 h-4" /> Dokumente</h4>
-                        <div className="space-y-2">
-                          {kunde.photos.filter(f => { const ct = typeof f === 'string' ? '' : f.content_type || ''; const nm = typeof f === 'string' ? f : f.filename || ''; return !(ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(nm)); }).map((file, idx) => {
-                            const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-                            const fileName = typeof file === 'string' ? file.split('/').pop() : file.filename || `Datei ${idx + 1}`;
-                            const rawUrl = typeof file === 'string' ? file : file.url;
-                            const fileUrl = rawUrl?.startsWith('http') ? rawUrl : `${backendUrl}/api/storage/${rawUrl}`;
-                            return (<a key={idx} href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 rounded-sm border hover:border-primary/50 hover:bg-primary/5 transition-all group">
-                              <File className="w-5 h-5 text-muted-foreground group-hover:text-primary shrink-0" /><span className="text-sm truncate flex-1">{fileName}</span><Download className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
-                            </a>);
-                          })}
+                    {(() => {
+                      const isImage = (f) => { const ct = typeof f === 'string' ? '' : f.content_type || ''; const nm = typeof f === 'string' ? f : f.filename || ''; return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(nm); };
+                      const docs = (kunde.photos || []).map((file, origIdx) => ({ file, origIdx })).filter(x => !isImage(x.file));
+                      if (docs.length === 0) return null;
+                      return (
+                        <div className="mt-4 pt-4 border-t">
+                          <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2"><File className="w-4 h-4" /> Dokumente ({docs.length})</h4>
+                          <div className="space-y-2">
+                            {docs.map(({ file, origIdx }) => {
+                              const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+                              const fileName = typeof file === 'string' ? file.split('/').pop() : file.filename || `Datei ${origIdx + 1}`;
+                              const rawUrl = typeof file === 'string' ? file : file.url;
+                              const fileUrl = rawUrl?.startsWith('http') ? rawUrl : `${backendUrl}/api/storage/${rawUrl}`;
+                              return (
+                                <div key={origIdx} className="flex items-center gap-3 p-2 rounded-sm border hover:border-primary/50 hover:bg-primary/5 transition-all group" data-testid={`kunde-doc-${kunde.id}-${origIdx}`}>
+                                  <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 flex-1 min-w-0">
+                                    <File className="w-5 h-5 text-muted-foreground group-hover:text-primary shrink-0" />
+                                    <span className="text-sm truncate flex-1">{fileName}</span>
+                                    <Download className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteFile(kunde.id, origIdx, fileName)}
+                                    className="p-1.5 hover:bg-red-50 text-red-500 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Dokument löschen"
+                                    data-testid={`btn-delete-doc-${kunde.id}-${origIdx}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
