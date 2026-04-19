@@ -347,6 +347,7 @@ class CompanySettings(BaseModel):
     pdf_show_logo: bool = True
     pdf_accent_color: str = "#1a1a2e"
     pdf_font_size: str = "normal"
+    slogan_font_size: int = 9
     pdf_bemerkung_default: str = ""
     # Wiedervorlage Settings
     followup_days: int = 7

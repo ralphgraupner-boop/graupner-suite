@@ -1,0 +1,49 @@
+{
+  "summary": "v45 Dokumenten-Editor Fixes: Backend (8/8 pytest) alle green. Frontend: FIX 1 (Textvorlagen Bearbeiten + btn-save-edit-template + Löschen) WORKING. FIX 2 (große Headline 'Angebot' text-2xl lg:text-3xl, Farbe #003399=rgb(0,51,153), 30px) WORKING. FIX 6 Backend PERSIST OK, aber Frontend: input-slogan-font-size NICHT in Settings UI auffindbar - es gibt KEINEN Tab 'Briefkopf' auf /settings (Tabs: Firmendaten/Kalkulation/E-Mail/Benutzer/Mitarbeiter/Dokument-Vorlagen/Angebot-Rechnung-Vorlagen/Diverses-Info/Backup). FIX 3/4/5 nicht UI-verifiziert, da Angebot-Liste über /quotes keine klickbaren Zeilen liefert und bei neuem Angebot die Kunden-Suche/Positionen nicht ausreichend sichtbar waren um bis zum gespeicherten Zustand (wo PDF/Mail sichtbar sind) zu kommen.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/orders", "issue": "405 - keine direkte Order-Create-Route. Orders werden nur via /orders/from-quote/{id} oder /orders/blank-for-customer/{id} angelegt. Test wurde angepasst."},
+      {"endpoint": "POST /api/text-templates", "issue": "Erfordert doc_type in ['angebot','auftrag','rechnung','allgemein'] + text_type - unerwartet restriktiv, Validierung könnte dokumentiert werden"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SettingsPage", "issue": "FIX 6: input-slogan-font-size im Code vorhanden (Zeilen 1436-1451), aber KEIN Briefkopf-Tab in Settings UI gerendert. Das Feld ist für User NICHT ERREICHBAR. Tabs: Firmendaten/Kalkulation/E-Mail/Benutzer/Mitarbeiter/Dokument-Vorlagen/Angebot-Rechnung-Vorlagen/Diverses/Backup. Main agent muss Briefkopf-Tab aktivieren oder Feld in bestehenden Tab integrieren (z.B. 'Dokument-Vorlagen').", "selector": "[data-testid='input-slogan-font-size']", "priority": "HIGH"},
+      {"component": "WysiwygDocumentEditor Headline - Toolbar-Variante", "issue": "Kleine Header-Anzeige in Toolbar zeigt Farbe rgb(10,76,35) (grün) - große Headline zeigt korrekt rgb(0,51,153) (#003399 blau). Kein Bug, nur Info."}
+    ],
+    "integration_issues": [
+      {"flow": "FIX 3 Plausibilitätsprüfung / FIX 4 PDF-Tab / FIX 5 Mail-Dialog", "issue": "Nicht verifiziert - konnte kein gespeichertes Angebot öffnen (a[href*='/quotes/'] lieferte 0 Links in /quotes) und neues Angebot nicht bis zum Speichern füllen (Position-Description-Input nicht visible in 30s). Code ist laut Referenzzeilen vorhanden, aber UI-Flow blockiert.", "affected_selectors": ["[data-testid='mail-client-dialog']", "[data-testid='btn-mail-with-text']", "[data-testid='btn-mail-without-text']", "[data-testid='btn-download-pdf']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_docs_editor_v45.py",
+    "/app/test_reports/pytest/pytest_docs_editor_v45.xml"
+  ],
+  "action_items": [
+    "HIGH: FIX 6 Frontend: Briefkopf-Tab in SettingsPage.jsx rendern oder input-slogan-font-size in existierenden Tab (z.B. 'Dokument-Vorlagen' oder neuen 'Briefkopf/PDF-Layout') verschieben. Aktuell steht das Feld im Code, ist aber nicht über UI erreichbar.",
+    "HIGH: /quotes Liste zeigt keine klickbaren Quote-Links - prüfen ob QuotesListPage korrekt rendert; blockiert E2E-Testing von FIX 3/4/5.",
+    "MEDIUM: data-testid an Position-Description-Input, Customer-Search-Autocomplete-Options, und Speichern-Button hinzufügen, damit Playwright zuverlässig neuen Angebot-Flow testen kann (actuell nicht visible via Textarea-Selector).",
+    "NOTE: Regression - Backend PDF-Generation funktioniert sauber für quote/order/invoice auch mit slogan_font_size=14 (keine Exception)."
+  ],
+  "critical_code_review_comments": [
+    "SettingsPage.jsx: Feld input-slogan-font-size existiert in Code (Zeile 1436-1451) aber der Tab 'Briefkopf' fehlt in der Tab-Navigation - User kann Wert nicht ändern",
+    "WysiwygDocumentEditor: Große Headline korrekt mit #003399 (rgb(0,51,153)) und text-2xl lg:text-3xl umgesetzt - Visual QA passed",
+    "TextTemplateSelect: Template-Edit-Flow funktioniert komplett (Bearbeiten-Button → btn-save-edit-template mit Titel+Content Editing)",
+    "Backend PDF: slogan_font_size wird via int(settings.get('slogan_font_size', 9) or 9) sicher gelesen - verhindert None-Fehler"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_docs_editor_v45.py"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 pytest - settings.slogan_font_size GET/PUT persist, PDF quote/order/invoice, PDF mit custom slogan_size=14, text-templates list+CRUD)",
+    "frontend": "40% (FIX 1 + FIX 2 verified via UI; FIX 6 Frontend blockiert; FIX 3/4/5 nicht verifiziert wegen UI-Navigation-Blocker)"
+  },
+  "test_credentials": "admin / Graupner!Suite2026",
+  "seed_data_creation": "TEST_v45 Kunde, TEST_v45 Angebot-Entwürfe, TEST_v45 Template wurden in den pytest-Tests angelegt und wieder gelöscht.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "BACKEND komplett green. FRONTEND FIX 1+FIX 2 verifiziert. Kernproblem: FIX 6 Frontend - Briefkopf-Tab fehlt in SettingsPage.jsx; input-slogan-font-size nur im Code aber nicht gerendert. Für FIX 3/4/5 E2E-Test: (a) Main agent muss QuotesListPage prüfen warum keine Quote-Zeilen klickbar sind oder (b) für /quotes/new data-testids zu Positionen/Customer-Search/Save hinzufügen, damit Playwright komplette Erstellung durchlaufen kann. Die Referenzzeilen im WysiwygDocumentEditor.jsx (528-544 validatePositions, 597-616 handleDownloadPDF window.open, 645-677 showMailDialog, 847-895 Mail-Dialog JSX) existieren - Code ist implementiert, nur UI-Access blockiert.",
+  "rca_of_the_issue": "Main agent erwartete einen 'Briefkopf'-Tab in Settings, der laut Code-Zeilen 28+60 in FirmendatenTab existieren sollte. In der tatsächlichen UI ist nur der Firmendaten-Tab sichtbar mit Firmendaten/Bankverbindung/Steuer/Fahrtkosten/Zahlungsziele - keine PDF-Layout-Sektion. Entweder fehlt der Conditional-Render oder der Tab wurde nicht in Tab-Navigation hinzugefügt."
+}

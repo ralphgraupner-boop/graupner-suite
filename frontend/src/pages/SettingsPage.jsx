@@ -57,6 +57,7 @@ const FirmendatenTab = ({ settings, setSettings, onSave, saving }) => (
         </div>
       </Card>
 
+      <Card className="p-4 lg:p-6">
         <h3 className="text-lg font-semibold mb-4">Bankverbindung</h3>
         <div className="space-y-4">
           <div>
@@ -1429,6 +1430,22 @@ const DokumentVorlagenTab = ({ settings, setSettings, onSave, saving }) => {
                 <option value="normal">Normal (10pt)</option>
                 <option value="large">Groß (11pt)</option>
               </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Briefkopf-Slogan Schriftgröße (&quot;seit 1960&quot; & &quot;Mitglied der Handwerkskammer&quot;)</label>
+            <div className="flex gap-3 items-center">
+              <Input
+                data-testid="input-slogan-font-size"
+                type="number"
+                min="7"
+                max="16"
+                step="1"
+                value={settings.slogan_font_size ?? 9}
+                onChange={(e) => setSettings({ ...settings, slogan_font_size: parseInt(e.target.value) || 9 })}
+                className="w-24"
+              />
+              <span className="text-sm text-muted-foreground">pt (Standard: 9pt, Empfehlung: 10–12pt für bessere Lesbarkeit)</span>
             </div>
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
