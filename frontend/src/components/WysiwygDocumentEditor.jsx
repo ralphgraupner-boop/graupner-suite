@@ -563,28 +563,35 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setShowLoadTemplate(false);
   };
 
-  const handleSave = async () => {
-    if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return; }
-    if (positions.length === 0 || !positions[0].description) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return; }
-    if (!validateTextFields()) return;
-    if (!validatePositions()) return;
+  const persistDocument = async () => {
+    // Silent save - gibt savedId oder null zurueck, ohne Template-Dialog
+    if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return null; }
+    if (positions.length === 0 || !positions[0].description) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return null; }
+    if (!validateTextFields()) return null;
+    if (!validatePositions()) return null;
     setSaving(true);
-    let savedId = id;
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       if (isNew) {
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount }) };
-        const res = await api.post(`/${endpoint}`, payload); toast.success(`${titles[type]} erstellt!`);
-        if (res?.data?.id) { savedId = res.data.id; navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); }
+        const res = await api.post(`/${endpoint}`, payload);
+        if (res?.data?.id) { navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); return res.data.id; }
+        return null;
       } else {
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "invoice" && { deposit_amount: depositAmount }) };
-        await api.put(`/${endpoint}/${id}`, payload); toast.success(`${titles[type]} gespeichert!`);
+        await api.put(`/${endpoint}/${id}`, payload);
+        return id;
       }
-      // Nach erfolgreichem Speichern: frage ob als Vorlage
-      if (savedId) {
-        setTimeout(() => setShowTemplateDialog(savedId), 400);
-      }
-    } catch { toast.error("Fehler beim Speichern"); } finally { setSaving(false); }
+    } catch { toast.error("Fehler beim Speichern"); return null; } finally { setSaving(false); }
+  };
+
+  const handleSave = async () => {
+    const savedId = await persistDocument();
+    if (savedId) {
+      toast.success(`${titles[type]} gespeichert!`);
+      setTimeout(() => setShowTemplateDialog(savedId), 400);
+    }
+    return savedId;
   };
 
   const handleSaveAndExit = async () => { await handleSave(); navigate(listPaths[type]); };
@@ -595,15 +602,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(listPaths[type]); };
 
   const handleDownloadPDF = async () => {
-    if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
     if (!validateTextFields()) return;
-    if (!validatePositions()) return;
+    // Immer zuerst speichern → PDF zeigt dann aktuellen Stand, nicht die alte Version
+    const savedId = await persistDocument();
+    if (!savedId) return;
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
-      const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
+      // Cache-Buster, damit Browser nicht versehentlich eine alte PDF-Version zeigt
+      const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      // 1. Öffne Inline-Vorschau in neuem Tab
       const previewWin = window.open(url, "_blank");
       if (!previewWin) {
         // Fallback bei Popup-Blocker → Download
@@ -617,11 +625,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const handlePrint = async () => {
-    if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
     if (!validateTextFields()) return;
+    // Immer zuerst speichern → Druck zeigt aktuellen Stand
+    const savedId = await persistDocument();
+    if (!savedId) return;
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
-      const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
+      const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const printWindow = window.open(url, "_blank");
