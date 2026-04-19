@@ -1,11 +1,13 @@
 """Dokument-Vorlagen (Angebote/Auftragsbestaetigungen/Rechnungen als wiederverwendbare Templates)."""
 from fastapi import APIRouter, HTTPException, Depends, Body
+from fastapi.responses import Response
 from typing import Optional
 from datetime import datetime, timezone
 import uuid
 
 from database import db, logger
 from auth import get_current_user
+from utils.pdf_generator import generate_document_pdf
 
 router = APIRouter()
 

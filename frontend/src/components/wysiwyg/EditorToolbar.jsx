@@ -1,4 +1,4 @@
-import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink, Package } from "lucide-react";
+import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink, Package, Archive } from "lucide-react";
 import { Button, Badge } from "@/components/common";
 
 const EditorToolbar = ({
@@ -7,7 +7,7 @@ const EditorToolbar = ({
   navigate, setShowSettings, startRecording, stopRecording,
   handleSave, handleExit, handleDownloadPDF, handlePrint,
   onOpenEmailDialog, onOpenMailClient, onToggleVorlagen, onTogglePreview,
-  onOpenDocTemplates,
+  onOpenDocTemplates, onOpenArchive,
 }) => {
   return (
     <div className="fixed top-0 left-0 right-0 bg-card border-b z-40 shadow-sm">
@@ -34,7 +34,11 @@ const EditorToolbar = ({
           </Button>
           <Button variant="outline" size="sm" onClick={onOpenDocTemplates} data-testid="btn-doc-templates-topbar" className="bg-primary/5 border-primary/30 hover:bg-primary/10 text-primary">
             <Package className="w-4 h-4" />
-            <span className="hidden sm:inline">Vorlage öffnen</span>
+            <span className="hidden sm:inline">Vorlage</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={onOpenArchive} data-testid="btn-archive-topbar" className="bg-amber-50 border-amber-300 hover:bg-amber-100 text-amber-800">
+            <Archive className="w-4 h-4" />
+            <span className="hidden sm:inline">Aus Archiv</span>
           </Button>
           <Button variant="outline" size="sm" onClick={onToggleVorlagen} data-testid="btn-vorlagen-topbar">
             <Bookmark className="w-4 h-4" />
