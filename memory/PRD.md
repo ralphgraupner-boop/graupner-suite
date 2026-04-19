@@ -92,6 +92,24 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - Beispiel-PDF als Referenz von User erwartet
 - Ziel: Zeiterfassungs-Kontrolle parallel zu Lexware-Abrechnung
 
+## Completed 19.04.2026 (Nachmittag) - Dokument-Editor Feedback-Fixes
+
+### KRITISCHE REPARATUR
+- [x] **SettingsPage.jsx Syntax-Fehler behoben**: Unpaariger `<Card>`-Tag in FirmendatenTab hatte die komplette Frontend-Kompilierung blockiert → deshalb funktionierten PDF-Button, Text-Korrektur etc. bei User NICHT. Nach Reparatur lädt App wieder.
+
+### Feedback-Fixes (10-Punkte-Liste vom User)
+- [x] **FIX 1** - Textvorlagen inline bearbeitbar: Bearbeiten + Löschen Buttons in TextTemplateSelect.jsx (data-testid: btn-edit-template / btn-delete-template / btn-save-edit-template)
+- [x] **FIX 2** - Große Dokument-Headline über Betreff ("Angebot A-2026-0001" text-2xl lg:text-3xl in #003399) für quote/order/invoice
+- [x] **FIX 3** - Plausibilitätsprüfung: validatePositions warnt bei Position mit Beschreibung aber 0€ Preis oder Menge 0
+- [x] **FIX 4** - PDF-Button öffnet in neuem Tab (window.open) mit Fallback-Download bei Popup-Blocker
+- [x] **FIX 5** - Mail-Dialog mit 2 Optionen ("Mit Vortext & Schlusstext" / "Ohne Text") + Abbrechen (data-testid: mail-client-dialog)
+- [x] **FIX 6** - Briefkopf-Slogan Schriftgröße: slogan_font_size in Settings-Model + SettingsPage (Dokument-Vorlagen Tab) + pdf_generator.py nutzt Wert für "seit 1960" & "Mitglied der Handwerkskammer"
+- [x] **Neue Leistung/Artikel Sync**: handleSavePositionAsArticle setzt setSidebarSearch("") + wechselt sidebarTab nach dem Speichern → neue Position sofort sichtbar
+
+### Verifikation
+- Backend: 8/8 pytest green (slogan_font_size GET/PUT/persist, PDF generation mit custom size)
+- Frontend: Mail-Dialog visuell bestätigt, PDF-Button + große Headline sichtbar, Settings-Feld funktioniert
+
 ## P2 - Backlog
 - [ ] DATEV-Export
 - [ ] Lexoffice-Anbindung
