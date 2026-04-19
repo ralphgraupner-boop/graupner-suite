@@ -231,6 +231,18 @@ async def download_vorlage():
     from fastapi.responses import FileResponse
     path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "vorlage_artikel_import.csv")
 
+@router.get("/modules/artikel/download-alle")
+async def download_alle_artikel():
+    """Alle Artikel als CSV herunterladen (ohne Auth)"""
+    import os
+    from fastapi.responses import FileResponse
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "alle_artikel_zum_import.csv")
+    if not os.path.exists(path):
+        raise HTTPException(404, "Datei nicht gefunden")
+    return FileResponse(path, filename="Alle_Artikel_Graupner.csv", media_type="text/csv",
+                        headers={"Content-Disposition": "attachment; filename=Alle_Artikel_Graupner.csv"})
+
+
 @router.get("/modules/artikel/export-material-csv")
 async def export_material_csv():
     """Export Material CSV aus alter Datenbank"""
