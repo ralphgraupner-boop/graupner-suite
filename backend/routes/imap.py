@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from database import db, logger
 from auth import get_current_user
+from pydantic import BaseModel
+from typing import List
 from datetime import datetime, timezone
 import uuid
 import imaplib
@@ -253,6 +255,10 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
     kw_doc = await db.settings.find_one({"id": "email_keywords"}, {"_id": 0})
     keywords = kw_doc["keywords"] if kw_doc and "keywords" in kw_doc else DEFAULT_KEYWORDS
 
+    # Load Ignore-Liste (Absender/Domains die NICHT in die Suite sollen)
+    ignore_doc = await db.settings.find_one({"id": "email_ignore_list"}, {"_id": 0})
+    ignore_patterns = [p.lower().strip() for p in (ignore_doc.get("patterns", []) if ignore_doc else []) if p.strip()]
+
     for eid in email_ids[-50:]:
         status, msg_data = mail.fetch(eid, "(BODY.PEEK[])")
         if status != "OK":
@@ -273,6 +279,13 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
         if message_id:
             existing = await db.email_inbox.find_one({"message_id": message_id})
             if existing:
+                continue
+
+        # Ignore-Liste pruefen (Absender oder Domain soll nicht in Suite)
+        if ignore_patterns:
+            check_text = f"{sender_email.lower()} {sender_name.lower()} {subject.lower()}"
+            if any(pat in check_text for pat in ignore_patterns):
+                logger.info(f"IMAP: Ignoriere Mail von {sender_email} (Ignore-Pattern match)")
                 continue
 
         # Extract attachments metadata (store data separately)
@@ -763,3 +776,77 @@ async def parse_vcf_attachment(att_id: str, user=Depends(get_current_user)):
         "existing_anfrage": existing_anfrage,
         "already_exists": bool(existing_customer or existing_anfrage),
     }
+
+
+
+# ==================== E-MAIL IGNORE-LISTE ====================
+
+DEFAULT_IGNORE_PATTERNS = [
+    "paypal.com",
+    "noreply@paypal",
+    "service@paypal",
+    "@amazon.de",
+    "no-reply@",
+    "noreply@",
+    "newsletter@",
+    "newsletter",
+    "info@facebook",
+    "update@linkedin",
+    "notify@twitter",
+    "notify@xing",
+    "werbung@",
+    "info@ebay",
+    "rewe-newsletter",
+    "dhl.de",
+    "dpd.de",
+    "hermesworld.com",
+]
+
+
+@router.get("/imap/ignore-list")
+async def get_ignore_list(user=Depends(get_current_user)):
+    """Gibt die Liste der Absender/Domains zurueck, die NICHT in die Suite importiert werden."""
+    doc = await db.settings.find_one({"id": "email_ignore_list"}, {"_id": 0})
+    if not doc:
+        # Beim ersten Abruf Standard-Liste anlegen
+        doc = {"id": "email_ignore_list", "patterns": DEFAULT_IGNORE_PATTERNS}
+        await db.settings.insert_one(doc)
+        # _id wieder entfernen fuer JSON-Response
+        doc = {"id": "email_ignore_list", "patterns": DEFAULT_IGNORE_PATTERNS}
+    return {"patterns": doc.get("patterns", [])}
+
+
+class IgnoreListUpdate(BaseModel):
+    patterns: List[str]
+
+
+@router.put("/imap/ignore-list")
+async def update_ignore_list(payload: IgnoreListUpdate, user=Depends(get_current_user)):
+    """Aktualisiert die Ignore-Liste komplett."""
+    cleaned = [p.strip().lower() for p in payload.patterns if p.strip()]
+    await db.settings.update_one(
+        {"id": "email_ignore_list"},
+        {"$set": {"patterns": cleaned}},
+        upsert=True,
+    )
+    logger.info(f"Ignore-Liste aktualisiert ({len(cleaned)} Eintraege)")
+    return {"patterns": cleaned, "count": len(cleaned)}
+
+
+@router.post("/imap/ignore-list/cleanup")
+async def cleanup_by_ignore_list(user=Depends(get_current_user)):
+    """Loescht bereits vorhandene Inbox-Eintraege, die gegen die aktuelle Ignore-Liste matchen."""
+    doc = await db.settings.find_one({"id": "email_ignore_list"}, {"_id": 0})
+    patterns = [p.lower() for p in (doc.get("patterns", []) if doc else []) if p.strip()]
+    if not patterns:
+        return {"deleted": 0}
+
+    deleted = 0
+    cursor = db.email_inbox.find({}, {"_id": 0, "id": 1, "from_email": 1, "from_name": 1, "subject": 1})
+    async for mail_doc in cursor:
+        check = f"{(mail_doc.get('from_email') or '').lower()} {(mail_doc.get('from_name') or '').lower()} {(mail_doc.get('subject') or '').lower()}"
+        if any(pat in check for pat in patterns):
+            await db.email_inbox.delete_one({"id": mail_doc["id"]})
+            deleted += 1
+    logger.info(f"Ignore-Cleanup: {deleted} Mails aus Inbox entfernt")
+    return {"deleted": deleted}

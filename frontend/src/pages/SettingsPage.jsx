@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive, HardHat } from "lucide-react";import { toast } from "sonner";
+import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive, HardHat, X } from "lucide-react";import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
 import { subscribeToPush, unsubscribeFromPush, ensureVapidKey } from "@/lib/push";
@@ -753,8 +753,122 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
         </div>
       </Card>
 
+      <EmailIgnoreListCard />
+
       <PushNotificationSettings />
     </div>
+  );
+};
+
+
+// ==================== E-MAIL IGNORE-LISTE (Filter) ====================
+const EmailIgnoreListCard = () => {
+  const [patterns, setPatterns] = useState([]);
+  const [newPattern, setNewPattern] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/imap/ignore-list");
+        setPatterns(res.data.patterns || []);
+      } catch { /* ignore */ } finally { setLoading(false); }
+    })();
+  }, []);
+
+  const persist = async (next) => {
+    setSaving(true);
+    try {
+      await api.put("/imap/ignore-list", { patterns: next });
+      setPatterns(next);
+      toast.success("Filter-Liste gespeichert");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Speichern fehlgeschlagen");
+    } finally { setSaving(false); }
+  };
+
+  const addPattern = async () => {
+    const v = newPattern.trim().toLowerCase();
+    if (!v) return;
+    if (patterns.includes(v)) { toast.info("Muster existiert bereits"); return; }
+    await persist([...patterns, v]);
+    setNewPattern("");
+  };
+
+  const removePattern = async (p) => {
+    await persist(patterns.filter((x) => x !== p));
+  };
+
+  const cleanupExisting = async () => {
+    setCleaning(true);
+    try {
+      const res = await api.post("/imap/ignore-list/cleanup");
+      toast.success(`${res.data.deleted} bereits vorhandene Mails entfernt`);
+    } catch (err) {
+      toast.error("Cleanup fehlgeschlagen");
+    } finally { setCleaning(false); }
+  };
+
+  return (
+    <Card className="p-4 lg:p-6" data-testid="card-email-ignore-list">
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <Mail className="w-5 h-5 text-primary" /> E-Mail-Filter (Ignore-Liste)
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Absender oder Domains die hier stehen werden <strong>nicht</strong> in die Graupner Suite importiert (bleiben nur in Ihrem Mailprogramm wie Betterbird).
+        <br />Tipp: Als Muster einfach die Domain eintragen (z.B. <code className="bg-muted px-1 rounded-sm">paypal.com</code>) oder ein Teil des Absenders (z.B. <code className="bg-muted px-1 rounded-sm">newsletter</code>).
+      </p>
+
+      <div className="flex gap-2 mb-4">
+        <Input
+          data-testid="input-new-ignore-pattern"
+          value={newPattern}
+          onChange={(e) => setNewPattern(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPattern(); } }}
+          placeholder="z.B. paypal.com oder newsletter@"
+          className="flex-1"
+        />
+        <Button data-testid="btn-add-ignore-pattern" onClick={addPattern} disabled={saving || !newPattern.trim()}>
+          <Plus className="w-4 h-4" /> Hinzufügen
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Lade...</div>
+      ) : patterns.length === 0 ? (
+        <div className="text-sm text-muted-foreground italic">Noch keine Filter definiert.</div>
+      ) : (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {patterns.map((p) => (
+            <span key={p} className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted border border-border rounded-full text-xs font-mono" data-testid={`pattern-chip-${p}`}>
+              {p}
+              <button
+                onClick={() => removePattern(p)}
+                className="hover:text-destructive transition-colors"
+                title="Entfernen"
+                data-testid={`btn-remove-${p}`}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 pt-3 border-t">
+        <Button
+          data-testid="btn-cleanup-inbox"
+          variant="outline"
+          onClick={cleanupExisting}
+          disabled={cleaning || patterns.length === 0}
+        >
+          {cleaning ? "Bereinige..." : "Bereits importierte Mails entfernen"}
+        </Button>
+        <span className="text-xs text-muted-foreground">Entfernt alle Einträge in der Inbox, die zur aktuellen Filter-Liste passen.</span>
+      </div>
+    </Card>
   );
 };
 
