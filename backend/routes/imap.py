@@ -254,7 +254,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
     keywords = kw_doc["keywords"] if kw_doc and "keywords" in kw_doc else DEFAULT_KEYWORDS
 
     for eid in email_ids[-50:]:
-        status, msg_data = mail.fetch(eid, "(RFC822)")
+        status, msg_data = mail.fetch(eid, "(BODY.PEEK[])")
         if status != "OK":
             continue
 
