@@ -14,6 +14,7 @@ const allNavItems = [
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
+  { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2" },
   { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"] },
   { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
 ];
@@ -28,7 +29,13 @@ const getUserRole = () => {
 
 const getFilteredNavItems = () => {
   const role = getUserRole();
-  return allNavItems.filter(item => item.roles.includes(role));
+  let flags = {};
+  try { flags = JSON.parse(localStorage.getItem("feature_flags") || "{}"); } catch { /* ignore */ }
+  return allNavItems.filter(item => {
+    if (!item.roles.includes(role)) return false;
+    if (item.featureFlag && !flags[item.featureFlag]) return false;
+    return true;
+  });
 };
 
 const Sidebar = ({ onLogout }) => {

@@ -38,6 +38,7 @@ from routes.module_artikel import router as module_artikel_router
 from routes.module_dokumente import router as module_dokumente_router
 from routes.module_textvorlagen import router as module_textvorlagen_router
 from routes.module_kunden import router as module_kunden_router
+from routes.rechnungen_v2 import router as rechnungen_v2_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -88,6 +89,7 @@ async def root():
 
 # Include router and middleware
 app.include_router(api_router)
+app.include_router(rechnungen_v2_router)  # v2-Modul mit eigenem prefix /api/v2
 
 @app.on_event("startup")
 async def startup_event():

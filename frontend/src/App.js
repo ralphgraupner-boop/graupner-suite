@@ -21,6 +21,7 @@ import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
 import { MitarbeiterModulPage } from "@/pages/MitarbeiterModulPage";
 import { EinsaetzeModulPage } from "@/pages/EinsaetzeModulPage";
+import { RechnungenV2Page } from "@/pages/RechnungenV2Page";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
 
@@ -80,6 +81,7 @@ function App() {
               <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
               <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
               <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
+              <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
               <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterModulPage /></MainLayout>} />
               <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzeModulPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />

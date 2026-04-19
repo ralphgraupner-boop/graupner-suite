@@ -1777,6 +1777,58 @@ const TYPEN = [
 
 const DEFAULT_KATEGORIEN = ["Allgemein", "Anweisungen", "Hinweise", "Programmbeschreibung", "Links"];
 
+const FeatureFlagsCard = () => {
+  const [flags, setFlags] = useState({});
+
+  useEffect(() => {
+    try { setFlags(JSON.parse(localStorage.getItem("feature_flags") || "{}")); } catch { /* ignore */ }
+  }, []);
+
+  const toggle = (key) => {
+    const next = { ...flags, [key]: !flags[key] };
+    setFlags(next);
+    localStorage.setItem("feature_flags", JSON.stringify(next));
+    toast.success("Feature-Flag gespeichert. Seite neu laden, damit Menüeintrag erscheint/verschwindet.");
+    setTimeout(() => window.location.reload(), 1500);
+  };
+
+  const features = [
+    {
+      key: "rechnungen_v2",
+      title: "Rechnungen (Neu) – BETA",
+      desc: "Neues Rechnungs-Modul mit GoBD-konformem Verweis auf Angebot/Auftragsbestätigung. Komplett getrennt vom alten Rechnungsmodul; kann jederzeit deaktiviert werden, ohne dass Daten im alten Modul verloren gehen. Separater Nummernkreis RV2-2026-…",
+    },
+  ];
+
+  return (
+    <Card className="p-4 lg:p-6" data-testid="feature-flags-card">
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <AlertTriangle className="w-5 h-5 text-amber-500" /> Experimentelle Funktionen
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Diese Funktionen sind optional. Standardmäßig sind sie aus. Schalten Sie sie nur ein wenn Sie sie testen möchten.
+      </p>
+      <div className="space-y-3">
+        {features.map(f => (
+          <label key={f.key} className="flex items-start gap-3 p-3 border rounded-sm cursor-pointer hover:bg-muted/30 transition-colors">
+            <input
+              type="checkbox"
+              checked={!!flags[f.key]}
+              onChange={() => toggle(f.key)}
+              className="mt-1 h-4 w-4 rounded border-input"
+              data-testid={`flag-${f.key}`}
+            />
+            <div className="flex-1">
+              <p className="font-medium">{f.title}</p>
+              <p className="text-xs text-muted-foreground">{f.desc}</p>
+            </div>
+          </label>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
 const DiversesTab = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1879,6 +1931,8 @@ const DiversesTab = () => {
 
   return (
     <div className="space-y-4">
+      <FeatureFlagsCard />
+
       {/* Kunden-Status Verwaltung */}
       <Card className="p-4 lg:p-6">
         <div className="flex items-center justify-between mb-4">
