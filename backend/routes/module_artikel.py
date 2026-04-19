@@ -318,6 +318,12 @@ async def import_upload(file: UploadFile = FileParam(...), user=Depends(get_curr
                     return 0.0
                 return float(str(val).replace(",", ".").strip())
 
+            # Duplikat-Pruefung: Name bereits vorhanden?
+            existing = await db.module_artikel.find_one({"name": name})
+            if existing:
+                skipped += 1
+                continue
+
             item = {
                 "id": str(uuid4()),
                 "name": name,
