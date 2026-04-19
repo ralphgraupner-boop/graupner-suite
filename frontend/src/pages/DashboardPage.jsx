@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
+import { HelpTip } from "@/components/HelpTip";
 import { Button, Card, StatCard } from "@/components/common";
 import { api, API } from "@/lib/api";
 
@@ -171,6 +172,7 @@ const DashboardPage = () => {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
+        <HelpTip id="dashboard.stat-anfragen" block>
         <Link to="/module/kontakt" className="block" data-testid="stat-link-anfragen">
           <StatCard
             title="Anfragen"
@@ -179,6 +181,8 @@ const DashboardPage = () => {
             icon={Inbox}
           />
         </Link>
+        </HelpTip>
+        <HelpTip id="dashboard.stat-kunden" block>
         <Link to="/module/kunden" className="block" data-testid="stat-link-kunden">
           <StatCard
             title="Kunden"
@@ -186,6 +190,8 @@ const DashboardPage = () => {
             icon={Users}
           />
         </Link>
+        </HelpTip>
+        <HelpTip id="dashboard.stat-quotes" block>
         <Link to="/module/dokumente" className="block" data-testid="stat-link-angebote">
           <StatCard
             title="Offene Angebote"
@@ -194,6 +200,8 @@ const DashboardPage = () => {
             icon={FileText}
           />
         </Link>
+        </HelpTip>
+        <HelpTip id="dashboard.stat-orders" block>
         <Link to="/module/dokumente" className="block" data-testid="stat-link-auftraege">
           <StatCard
             title="Offene Aufträge"
@@ -202,6 +210,8 @@ const DashboardPage = () => {
             icon={ClipboardCheck}
           />
         </Link>
+        </HelpTip>
+        <HelpTip id="dashboard.stat-invoices" block>
         <Link to="/module/dokumente" className="block" data-testid="stat-link-rechnungen">
           <StatCard
             title="Unbezahlte Rechnungen"
@@ -210,6 +220,7 @@ const DashboardPage = () => {
             icon={Receipt}
           />
         </Link>
+        </HelpTip>
       </div>
 
       {/* Letzte Anfragen aus Kontakt-Modul */}

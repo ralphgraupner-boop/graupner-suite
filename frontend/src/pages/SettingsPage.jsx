@@ -8,6 +8,7 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
 import { DocumentTemplatesPanel } from "@/components/DocumentTemplatesPanel";
 import { HilfeTab } from "@/components/HilfeTab";
+import { HelpTip } from "@/components/HelpTip";
 
 // ==================== TAB CONFIG ====================
 const TABS = [
@@ -2457,8 +2458,8 @@ const BackupTab = () => {
       {/* Tab Navigation */}
       <div className="flex gap-1 mb-6 border-b overflow-x-auto pb-px" data-testid="settings-tabs">
         {TABS.map(({ id, label, icon: Icon }) => (
+          <HelpTip key={id} id={`settings.tab-${id === "firma" ? "firmendaten" : id === "benutzer" ? "users" : id === "dokumente" ? "briefkopf" : id === "doc-templates" ? "dokument-vorlagen" : id}`} placement="bottom">
           <button
-            key={id}
             onClick={() => setActiveTab(id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap -mb-px ${
               activeTab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
@@ -2468,6 +2469,7 @@ const BackupTab = () => {
             <Icon className="w-4 h-4" />
             {label}
           </button>
+          </HelpTip>
         ))}
       </div>
 

@@ -14,9 +14,9 @@ export const HelpToggle = () => {
     setEnabled(next);
     toast[next ? "success" : "info"](
       next
-        ? "Hilfe-Modus aktiviert — Fahren Sie mit der Maus über Buttons für Erklärungen."
+        ? "Hilfe-Modus aktiviert — Elemente mit gelbem Rahmen haben Tipps. Maus drüber fahren!"
         : "Hilfe-Modus deaktiviert.",
-      { duration: 3000 }
+      { duration: 4000 }
     );
   };
 

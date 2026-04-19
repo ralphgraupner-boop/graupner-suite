@@ -38,7 +38,7 @@ export const HelpTip = ({ id, text, placement = "top", asChild = false, showBadg
   return (
     <Wrapper
       ref={wrapperRef}
-      className={`relative ${displayClass} ${className}`}
+      className={`relative ${displayClass} ${className} ring-2 ring-amber-300/70 rounded-sm`}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
