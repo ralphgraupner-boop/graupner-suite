@@ -672,6 +672,44 @@ async def archive_email(email_id: str, user=Depends(get_current_user)):
     return {"ok": True}
 
 
+class BulkMailAction(BaseModel):
+    ids: List[str]
+
+
+@router.post("/imap/inbox/bulk/mark-read")
+async def bulk_mark_read(payload: BulkMailAction, user=Depends(get_current_user)):
+    """Markiert mehrere E-Mails auf einmal als gelesen."""
+    if not payload.ids:
+        return {"updated": 0}
+    result = await db.email_inbox.update_many(
+        {"id": {"$in": payload.ids}, "status": "ungelesen"},
+        {"$set": {"status": "gelesen"}},
+    )
+    return {"updated": result.modified_count}
+
+
+@router.post("/imap/inbox/bulk/delete")
+async def bulk_delete(payload: BulkMailAction, user=Depends(get_current_user)):
+    """Loescht mehrere E-Mails auf einmal (nur in der Suite-DB, NICHT auf dem IMAP-Server).
+    Dadurch bleiben die Mails in Betterbird weiterhin erhalten."""
+    if not payload.ids:
+        return {"deleted": 0}
+
+    # Zuerst Anhaenge der betroffenen Mails einsammeln
+    att_ids = []
+    async for m in db.email_inbox.find({"id": {"$in": payload.ids}}, {"_id": 0, "attachments": 1}):
+        for att in m.get("attachments", []) or []:
+            if att.get("id"):
+                att_ids.append(att["id"])
+
+    if att_ids:
+        await db.email_attachments.delete_many({"id": {"$in": att_ids}})
+
+    result = await db.email_inbox.delete_many({"id": {"$in": payload.ids}})
+    logger.info(f"Bulk-Delete: {result.deleted_count} E-Mails entfernt")
+    return {"deleted": result.deleted_count}
+
+
 @router.get("/imap/attachment/{att_id}")
 async def get_attachment(att_id: str, user=Depends(get_current_user)):
     att = await db.email_attachments.find_one({"id": att_id}, {"_id": 0})

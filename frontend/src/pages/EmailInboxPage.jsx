@@ -25,6 +25,52 @@ const EmailInboxPage = () => {
   const [replyTo, setReplyTo] = useState(null);
   const [replyForm, setReplyForm] = useState({ subject: "", message: "" });
   const [replySending, setReplySending] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
+
+  const toggleSelected = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllFiltered = () => {
+    setSelected(new Set(filtered.map(e => e.id)));
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const handleBulkMarkRead = async () => {
+    if (selected.size === 0) return;
+    setBulkWorking(true);
+    try {
+      const ids = Array.from(selected);
+      const res = await api.post("/imap/inbox/bulk/mark-read", { ids });
+      setEmails(emails.map(e => ids.includes(e.id) ? { ...e, status: e.status === "ungelesen" ? "gelesen" : e.status } : e));
+      toast.success(`${res.data.updated} E-Mail(s) als gelesen markiert`);
+      clearSelection();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Markieren");
+    } finally { setBulkWorking(false); }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    const ok = window.confirm(`${selected.size} E-Mail(s) aus der Graupner Suite löschen?\n\nHinweis: Die E-Mails bleiben in Ihrem Mailprogramm (Betterbird) erhalten. Nur hier in der Suite werden sie entfernt.`);
+    if (!ok) return;
+    setBulkWorking(true);
+    try {
+      const ids = Array.from(selected);
+      const res = await api.post("/imap/inbox/bulk/delete", { ids });
+      setEmails(emails.filter(e => !ids.includes(e.id)));
+      toast.success(`${res.data.deleted} E-Mail(s) gelöscht`);
+      clearSelection();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Löschen");
+    } finally { setBulkWorking(false); }
+  };
 
   useEffect(() => {
     loadInbox();
@@ -394,22 +440,81 @@ const EmailInboxPage = () => {
           </p>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {filtered.map(mail => {
-            const isExpanded = expandedId === mail.id;
-            const isUnread = mail.status === "ungelesen";
-            const isAssigned = mail.status === "zugeordnet";
-            return (
-              <Card
-                key={mail.id}
-                className={`overflow-hidden transition-all ${isUnread ? "border-primary/30 bg-primary/[0.02]" : ""} ${isAssigned ? "opacity-60" : ""}`}
-                data-testid={`inbox-mail-${mail.id}`}
-              >
-                <div
-                  className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => {
-                    setExpandedId(isExpanded ? null : mail.id);
-                    if (isUnread) handleMarkRead(mail.id);
+        <>
+          {/* Bulk-Toolbar */}
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 mb-2 px-3 py-2 bg-background/95 backdrop-blur border rounded-sm" data-testid="bulk-toolbar">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                data-testid="bulk-select-all"
+                checked={filtered.length > 0 && filtered.every(e => selected.has(e.id))}
+                onChange={(e) => { if (e.target.checked) selectAllFiltered(); else clearSelection(); }}
+                className="h-4 w-4 rounded border-input"
+              />
+              <span className="text-sm text-muted-foreground">
+                {selected.size === 0
+                  ? `${filtered.length} E-Mail${filtered.length !== 1 ? "s" : ""} sichtbar`
+                  : `${selected.size} ausgewählt`
+                }
+              </span>
+            </div>
+            {selected.size > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleBulkMarkRead}
+                  disabled={bulkWorking}
+                  data-testid="btn-bulk-mark-read"
+                >
+                  <MailOpen className="w-4 h-4" /> Als gelesen markieren
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleBulkDelete}
+                  disabled={bulkWorking}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  data-testid="btn-bulk-delete"
+                >
+                  <Trash2 className="w-4 h-4" /> Löschen
+                </Button>
+                <Button size="sm" variant="ghost" onClick={clearSelection} data-testid="btn-bulk-clear">
+                  <X className="w-4 h-4" /> Abbrechen
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {filtered.map(mail => {
+              const isExpanded = expandedId === mail.id;
+              const isUnread = mail.status === "ungelesen";
+              const isAssigned = mail.status === "zugeordnet";
+              const isSelected = selected.has(mail.id);
+              return (
+                <Card
+                  key={mail.id}
+                  className={`overflow-hidden transition-all ${isUnread ? "border-primary/30 bg-primary/[0.02]" : ""} ${isAssigned ? "opacity-60" : ""} ${isSelected ? "ring-2 ring-primary" : ""}`}
+                  data-testid={`inbox-mail-${mail.id}`}
+                >
+                  <div className="flex items-start">
+                    <div className="pt-4 pl-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelected(mail.id)}
+                        className="h-4 w-4 rounded border-input cursor-pointer"
+                        data-testid={`checkbox-${mail.id}`}
+                        aria-label="E-Mail auswählen"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => {
+                          setExpandedId(isExpanded ? null : mail.id);
+                          if (isUnread) handleMarkRead(mail.id);
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -617,10 +722,15 @@ const EmailInboxPage = () => {
                     )}
                   </div>
                 )}
+                  </div>
+                  {/* /div.flex-1.min-w-0 */}
+                </div>
+                {/* /div.flex.items-start */}
               </Card>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Assign to Customer Dialog */}
