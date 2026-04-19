@@ -19,6 +19,45 @@ def _strip_html(html_text):
     return text.strip()
 
 
+def _wrap_text(c, text, font_name, font_size, max_width_pt):
+    """Bricht Text Wort-fuer-Wort auf die verfuegbare Breite um.
+    Gibt Liste von Zeilen zurueck, die in max_width_pt passen."""
+    if not text:
+        return []
+    # Non-breaking-Spaces (&nbsp;) wie normale Leerzeichen behandeln,
+    # damit Zeilenumbruch zwischen Worten moeglich bleibt
+    text = str(text).replace("\u00A0", " ").replace("\u202F", " ")
+    lines = []
+    for raw_line in text.split("\n"):
+        if not raw_line.strip():
+            lines.append("")
+            continue
+        words = raw_line.split(" ")
+        cur = ""
+        for w in words:
+            candidate = (cur + " " + w).strip() if cur else w
+            if c.stringWidth(candidate, font_name, font_size) <= max_width_pt:
+                cur = candidate
+            else:
+                if cur:
+                    lines.append(cur)
+                # Wort selbst zu lang? Hart umbrechen
+                if c.stringWidth(w, font_name, font_size) > max_width_pt:
+                    chunk = ""
+                    for ch in w:
+                        if c.stringWidth(chunk + ch, font_name, font_size) <= max_width_pt:
+                            chunk += ch
+                        else:
+                            lines.append(chunk)
+                            chunk = ch
+                    cur = chunk
+                else:
+                    cur = w
+        if cur:
+            lines.append(cur)
+    return lines
+
+
 def _draw_rich_text(c, x, y, html_text, max_width, font_size=9, line_height=0.35, default_color="#0F172A"):
     """Zeichnet HTML-formatierten Text auf das PDF Canvas.
     Unterstuetzt: <strong>/<b>, <em>/<i>, <u>, <span style='color:...'> """
@@ -75,10 +114,24 @@ def _draw_rich_text(c, x, y, html_text, max_width, font_size=9, line_height=0.35
             y -= line_height * cm
             continue
 
-        # Segmente zeichnen
+        # Gesamten Plain-Text der Zeile bauen um umzubrechen
+        plain_line = "".join(seg["text"] for seg in segments)
+        wrapped_lines = _wrap_text(c, plain_line, "Helvetica", font_size, max_width)
+
+        # Wenn keine Formatierung, direkt Plain-Text zeichnen
+        only_plain = all(not seg["bold"] and not seg["italic"] and not seg["underline"] and seg["color"] == default_color for seg in segments)
+        if only_plain:
+            c.setFont("Helvetica", font_size)
+            c.setFillColor(HexColor(default_color))
+            for wl in wrapped_lines:
+                c.drawString(x, y, wl)
+                y -= line_height * cm
+            continue
+
+        # Mit Formatierung: Segmente in Wrap-Logik beruecksichtigen (vereinfacht: erste Zeile wie bisher)
         cur_x = x
         for seg in segments:
-            text_content = seg["text"][:90]
+            text_content = seg["text"]
             if not text_content:
                 continue
 
@@ -93,17 +146,21 @@ def _draw_rich_text(c, x, y, html_text, max_width, font_size=9, line_height=0.35
             c.setFont(font_name, font_size)
             try:
                 c.setFillColor(HexColor(seg["color"]) if seg["color"].startswith("#") else HexColor(default_color))
-            except:
+            except Exception:
                 c.setFillColor(HexColor(default_color))
 
-            c.drawString(cur_x, y, text_content)
-            text_width = c.stringWidth(text_content, font_name, font_size)
-
-            if seg["underline"]:
-                c.setStrokeColor(HexColor(seg["color"]) if seg["color"].startswith("#") else HexColor(default_color))
-                c.line(cur_x, y - 1, cur_x + text_width, y - 1)
-
-            cur_x += text_width
+            # Segment ggf. umbrechen
+            seg_lines = _wrap_text(c, text_content, font_name, font_size, max_width - (cur_x - x))
+            for idx, sl in enumerate(seg_lines):
+                if idx > 0:
+                    y -= line_height * cm
+                    cur_x = x
+                c.drawString(cur_x, y, sl)
+                text_width = c.stringWidth(sl, font_name, font_size)
+                if seg["underline"]:
+                    c.setStrokeColor(HexColor(seg["color"]) if seg["color"].startswith("#") else HexColor(default_color))
+                    c.line(cur_x, y - 1, cur_x + text_width, y - 1)
+                cur_x += text_width
 
         y -= line_height * cm
 
@@ -416,6 +473,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     tax_id = settings.get("tax_id", "")
     doc_number = data.get(number_keys.get(doc_type, "quote_number"), "")
 
+    # Body-Schriftgroesse aus Settings (small=9, normal=10, large=11)
+    _font_map = {"small": 9, "normal": 10, "large": 11}
+    body_font_size = _font_map.get(str(settings.get("pdf_font_size", "normal")).lower(), 10)
+    body_line_height = 0.35 + (body_font_size - 9) * 0.04  # leicht mitwachsen
+
     # === BRIEFKOPF (Letterhead) ===
     # Left: "Tischlerei Graupner seit 1960"
     y = height - 2 * cm
@@ -529,20 +591,25 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_vt = height - 3.5 * cm
-                y_vt = _draw_rich_text(c, 2 * cm, y_vt, part, width - 4 * cm, font_size=9, default_color="#0F172A")
+                y_vt = _draw_rich_text(c, 2 * cm, y_vt, part, width - 4 * cm, font_size=body_font_size, line_height=body_line_height, default_color="#0F172A")
         else:
-            c.setFont("Helvetica", 9)
+            c.setFont("Helvetica", body_font_size)
             c.setFillColor(text_color)
-            for line in vortext.split("\n")[:20]:
-                if line.strip() == "---":
+            wrap_width = width - 4 * cm
+            segments = vortext.split("\n---\n") if "\n---\n" in vortext else vortext.split("---")
+            for i, seg in enumerate(segments):
+                if i > 0:
                     _draw_footer(c, width, settings, page_num)
                     c.showPage()
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_vt = height - 3.5 * cm
-                    continue
-                c.drawString(2 * cm, y_vt, line[:90])
-                y_vt -= 0.35 * cm
+                    c.setFont("Helvetica", body_font_size)
+                    c.setFillColor(text_color)
+                for raw_line in seg.split("\n"):
+                    for wl in _wrap_text(c, raw_line, "Helvetica", body_font_size, wrap_width):
+                        c.drawString(2 * cm, y_vt, wl)
+                        y_vt -= body_line_height * cm
         y_vt -= 0.2 * cm
 
     # === Positions Table ===
@@ -607,48 +674,56 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             y_pos -= 0.6 * cm
             continue
 
+        # Position-Nummer
+        c.setFillColor(text_color)
+        c.setFont("Helvetica", 9)
         c.drawString(2 * cm, y_pos, numbering[pos_idx])
 
-        desc = pos.get("description", "")
-        desc_lines = desc.split("\n") if desc else [""]
+        # Beschreibung: Breite = von 3cm bis 11.8cm ≈ 8.8cm
+        desc = pos.get("description", "") or ""
+        desc_lines = desc.split("\n")
         first_line = desc_lines[0] if desc_lines else ""
         rest_lines = desc_lines[1:] if len(desc_lines) > 1 else []
+        desc_max_width = 11.5 * cm - 3 * cm  # verfügbare Breite in Punkten
 
-        # Erste Zeile fett
+        row_top_y = y_pos  # Mengen/Preise gehen auf die Höhe der ERSTEN Zeile
+
+        # Erste Zeile fett + Word-Wrap
         c.setFont("Helvetica-Bold", 9)
-        if len(first_line) > 55:
-            c.drawString(3 * cm, y_pos, first_line[:55])
-            y_pos -= 0.35 * cm
-            c.setFont("Helvetica", 8)
-            c.drawString(3 * cm, y_pos, first_line[55:115])
-        else:
-            c.drawString(3 * cm, y_pos, first_line)
-
-        # Restliche Zeilen normal
-        c.setFont("Helvetica", 8)
-        for line in rest_lines:
-            y_pos -= 0.35 * cm
+        wrapped_first = _wrap_text(c, first_line, "Helvetica-Bold", 9, desc_max_width)
+        for i, wl in enumerate(wrapped_first):
             if y_pos < footer_y_limit:
-                _draw_footer(c, width, settings, page_num)
-                c.showPage()
-                page_num += 1
+                _draw_footer(c, width, settings, page_num); c.showPage(); page_num += 1
                 _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                 y_pos = height - 3.5 * cm
                 c.setFillColor(text_color)
-                c.setFont("Helvetica", 8)
-            if len(line) > 60:
-                c.drawString(3 * cm, y_pos, line[:60])
-                y_pos -= 0.35 * cm
-                c.drawString(3 * cm, y_pos, line[60:120])
-            else:
-                c.drawString(3 * cm, y_pos, line)
+                c.setFont("Helvetica-Bold", 9)
+            c.drawString(3 * cm, y_pos, wl)
+            if i < len(wrapped_first) - 1:
+                y_pos -= 0.4 * cm
 
+        # Restliche Zeilen normal + Word-Wrap
+        c.setFont("Helvetica", 8.5)
+        for line in rest_lines:
+            wrapped = _wrap_text(c, line, "Helvetica", 8.5, desc_max_width) or [""]
+            for wl in wrapped:
+                y_pos -= 0.38 * cm
+                if y_pos < footer_y_limit:
+                    _draw_footer(c, width, settings, page_num); c.showPage(); page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_pos = height - 3.5 * cm
+                    c.setFillColor(text_color)
+                    c.setFont("Helvetica", 8.5)
+                c.drawString(3 * cm, y_pos, wl)
+
+        # Menge/Einheit/Preise auf Höhe der ersten Textzeile
         c.setFont("Helvetica", 9)
-        c.drawString(12 * cm, y_pos, str(pos.get("quantity", 1)))
-        c.drawString(13.5 * cm, y_pos, pos.get("unit", "Stück"))
-        c.drawRightString(16.5 * cm, y_pos, f"{pos.get('price_net', 0):.2f} €")
+        c.setFillColor(text_color)
+        c.drawString(12 * cm, row_top_y, str(pos.get("quantity", 1)))
+        c.drawString(13.5 * cm, row_top_y, pos.get("unit", "Stück"))
+        c.drawRightString(16.5 * cm, row_top_y, f"{pos.get('price_net', 0):.2f} €")
         total = pos.get("quantity", 1) * pos.get("price_net", 0)
-        c.drawRightString(width - 2 * cm, y_pos, f"{total:.2f} €")
+        c.drawRightString(width - 2 * cm, row_top_y, f"{total:.2f} €")
         y_pos -= 0.6 * cm
 
     # === Totals ===
@@ -719,26 +794,33 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_pos = height - 3.5 * cm
-                y_pos = _draw_rich_text(c, 2 * cm, y_pos, part, width - 4 * cm, font_size=9, default_color="#0F172A")
+                y_pos = _draw_rich_text(c, 2 * cm, y_pos, part, width - 4 * cm, font_size=body_font_size, line_height=body_line_height, default_color="#0F172A")
         else:
-            c.setFont("Helvetica", 9)
+            c.setFont("Helvetica", body_font_size)
             c.setFillColor(text_color)
-            for line in schlusstext.split("\n")[:20]:
-                if line.strip() == "---":
+            wrap_width = width - 4 * cm
+            segments = schlusstext.split("\n---\n") if "\n---\n" in schlusstext else schlusstext.split("---")
+            for i, seg in enumerate(segments):
+                if i > 0:
                     _draw_footer(c, width, settings, page_num)
                     c.showPage()
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_pos = height - 3.5 * cm
-                    continue
-                if y_pos < footer_y_limit:
-                    _draw_footer(c, width, settings, page_num)
-                    c.showPage()
-                    page_num += 1
-                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                    y_pos = height - 3.5 * cm
-                c.drawString(2 * cm, y_pos, line[:90])
-                y_pos -= 0.35 * cm
+                    c.setFont("Helvetica", body_font_size)
+                    c.setFillColor(text_color)
+                for raw_line in seg.split("\n"):
+                    for wl in _wrap_text(c, raw_line, "Helvetica", body_font_size, wrap_width):
+                        if y_pos < footer_y_limit:
+                            _draw_footer(c, width, settings, page_num)
+                            c.showPage()
+                            page_num += 1
+                            _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                            y_pos = height - 3.5 * cm
+                            c.setFont("Helvetica", body_font_size)
+                            c.setFillColor(text_color)
+                        c.drawString(2 * cm, y_pos, wl)
+                        y_pos -= body_line_height * cm
 
     # Valid until / Due date
     if doc_type == "quote" and data.get("valid_until"):

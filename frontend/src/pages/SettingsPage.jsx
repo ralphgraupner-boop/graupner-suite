@@ -1424,12 +1424,13 @@ const DokumentVorlagenTab = ({ settings, setSettings, onSave, saving }) => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Schriftgröße</label>
-              <select data-testid="select-pdf-font" value={settings.pdf_font_size} onChange={(e) => setSettings({ ...settings, pdf_font_size: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
+              <label className="block text-sm font-medium mb-1">Schriftgröße Fließtext (Vortext, Positionen, Schlusstext)</label>
+              <select data-testid="select-pdf-font" value={settings.pdf_font_size || "normal"} onChange={(e) => setSettings({ ...settings, pdf_font_size: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
                 <option value="small">Klein (9pt)</option>
                 <option value="normal">Normal (10pt)</option>
                 <option value="large">Groß (11pt)</option>
               </select>
+              <p className="text-xs text-muted-foreground mt-1">Wirkt im PDF auf Vortext, Schlusstext und Positionsbeschreibungen.</p>
             </div>
           </div>
           <div>
