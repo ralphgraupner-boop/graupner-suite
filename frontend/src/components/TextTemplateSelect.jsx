@@ -188,19 +188,19 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
         />
       ) : (
         <textarea
+          ref={textareaRef}
           data-testid={`input-${textType}`}
           value={value || ""}
           onChange={(e) => handleChange(e.target.value)}
           placeholder={`${label} eingeben oder aus Textbausteinen waehlen...`}
-          rows={3}
-          className="flex w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y min-h-[60px]"
+          className="flex w-full rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y overflow-hidden"
           style={{ minHeight: "56px" }}
         />
       )}
       {!isBetreff && (
         <div className="flex flex-wrap gap-1 mt-1">
           <span className="text-[10px] text-muted-foreground bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded cursor-pointer" title="Seitenumbruch einfuegen"
-            onClick={() => onChange(value ? value + "<p>---</p>" : "<p>---</p>")}>--- = Seitenumbruch (klicken zum Einfuegen)</span>
+            onClick={() => onChange(value ? value + "\n---\n" : "---")}>--- = Seitenumbruch (klicken zum Einfuegen)</span>
         </div>
       )}
 

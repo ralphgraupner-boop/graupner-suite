@@ -23,6 +23,27 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const { id } = useParams();
   const location = useLocation();
   const isNew = !id || id === "new";
+
+  // Konvertiert HTML-Reste (<p>, &nbsp;, Umlaut-Entitaeten) zurueck in Plain-Text,
+  // damit der Vortext/Schlusstext im Textfeld sauber und komplett lesbar ist.
+  const htmlToPlain = (html) => {
+    if (!html) return "";
+    if (!/<[a-z][^>]*>|&[a-z#0-9]+;/i.test(html)) return html;
+    let t = String(html)
+      .replace(/<p>\s*---\s*<\/p>/gi, "\n---\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>\s*<p>/gi, "\n\n")
+      .replace(/<p>/gi, "")
+      .replace(/<\/p>/gi, "")
+      .replace(/<[^>]+>/g, "");
+    // HTML-Entitaeten dekodieren
+    try {
+      const tmp = document.createElement("textarea");
+      tmp.innerHTML = t;
+      t = tmp.value;
+    } catch { /* no-op */ }
+    return t.replace(/\u00A0/g, " ").trim();
+  };
   
   const [customers, setCustomers] = useState([]);
   const [articles, setArticles] = useState([]);
@@ -155,7 +176,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           }
         }
         setPositions((doc.positions || []).map(p => ({ ...p, type: p.type || "position" })));
-        setNotes(doc.notes || ""); setVortext(doc.vortext || ""); setSchlusstext(doc.schlusstext || "");
+        setNotes(doc.notes || ""); setVortext(htmlToPlain(doc.vortext)); setSchlusstext(htmlToPlain(doc.schlusstext));
         setBetreff(doc.betreff || ""); setVatRate(doc.vat_rate || 19);
         setDiscount(doc.discount || 0); setDiscountType(doc.discount_type || "percent");
         setStatus(doc.status || ""); setDepositAmount(doc.deposit_amount || 0);
