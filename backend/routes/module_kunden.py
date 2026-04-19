@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
 from typing import List, Optional
 from database import db, logger
 from auth import get_current_user
+from utils.anrede_detector import detect_anrede
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -301,7 +302,7 @@ async def import_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
         "name": name,
         "vorname": kontakt.get("vorname", ""),
         "nachname": kontakt.get("nachname", ""),
-        "anrede": kontakt.get("anrede", ""),
+        "anrede": kontakt.get("anrede") or detect_anrede(name=name, vorname=kontakt.get("vorname", ""), nachname=kontakt.get("nachname", "")),
         "firma": kontakt.get("firma", ""),
         "email": kontakt.get("email", ""),
         "phone": kontakt.get("phone", ""),
@@ -323,3 +324,38 @@ async def import_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
     kunde.pop("_id", None)
     logger.info(f"Kontakt -> Kunde: {name}")
     return {"message": f"Kontakt '{name}' als Kunde uebernommen", "kunde": kunde, "already_exists": False}
+
+
+# ==================== ANREDE-MIGRATION ====================
+
+@router.post("/modules/kunden/detect-anrede-bulk")
+async def detect_anrede_bulk(user=Depends(get_current_user)):
+    """Geht alle Kunden/Anfragen ohne Anrede durch und ermittelt sie automatisch.
+    Gibt Anzahl erkannter/unklarer Eintraege zurueck."""
+    cursor = db.module_kunden.find({"$or": [{"anrede": ""}, {"anrede": None}, {"anrede": {"$exists": False}}]}, {"_id": 0})
+    updated = 0
+    unclear = 0
+    samples_updated = []
+    samples_unclear = []
+    async for doc in cursor:
+        detected = detect_anrede(
+            name=doc.get("name", ""),
+            vorname=doc.get("vorname", ""),
+            nachname=doc.get("nachname", ""),
+        )
+        if detected:
+            await db.module_kunden.update_one({"id": doc["id"]}, {"$set": {"anrede": detected}})
+            updated += 1
+            if len(samples_updated) < 10:
+                samples_updated.append({"name": doc.get("name", ""), "anrede": detected})
+        else:
+            unclear += 1
+            if len(samples_unclear) < 10:
+                samples_unclear.append(doc.get("name", ""))
+    logger.info(f"Anrede-Migration: {updated} erkannt, {unclear} unklar")
+    return {
+        "updated": updated,
+        "unclear": unclear,
+        "samples_updated": samples_updated,
+        "samples_unclear": samples_unclear,
+    }

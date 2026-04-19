@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from models import WebhookContact, Anfrage
 from database import db, logger
 from routes.push import send_push_to_all
+from utils.anrede_detector import detect_anrede
 
 router = APIRouter()
 
@@ -167,6 +168,14 @@ async def webhook_contact(contact: WebhookContact):
     kontakt_data = anfrage.model_dump()
     kontakt_data["kontakt_status"] = "Neu"
     kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    # Anrede automatisch erkennen falls nicht gesetzt
+    if not kontakt_data.get("anrede"):
+        kontakt_data["anrede"] = detect_anrede(
+            name=name,
+            vorname=contact.vorname or "",
+            nachname=contact.nachname or "",
+            existing_anrede=contact.anrede or ""
+        )
     await db.module_kunden.insert_one(kontakt_data)
     logger.info(f"Neue Anfrage über Webhook: {name} ({customer_type})")
 
@@ -204,6 +213,8 @@ async def webhook_contact_beacon(name: str = "", nachricht: str = "", email: str
     kontakt_data = anfrage.model_dump()
     kontakt_data["kontakt_status"] = "Neu"
     kontakt_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    if not kontakt_data.get("anrede"):
+        kontakt_data["anrede"] = detect_anrede(name=name)
     await db.module_kunden.insert_one(kontakt_data)
     logger.info(f"Neue Anfrage über Beacon-Webhook: {name}")
 
@@ -736,6 +747,9 @@ async def kontakt_relay(request: Request):
         kontakt_data["objekt_strasse"] = form_dict.get("objstrasse", "")
         kontakt_data["objekt_plz"] = form_dict.get("objplz", "")
         kontakt_data["objekt_ort"] = form_dict.get("objstadt", "")
+        # Anrede automatisch erkennen falls nicht gesetzt
+        if not kontakt_data.get("anrede"):
+            kontakt_data["anrede"] = detect_anrede(name=name, vorname=vorname, nachname=nachname)
         await db.module_kunden.insert_one(kontakt_data)
         logger.info(f"Neue Anfrage über Kontaktformular-Relay: {name}")
 

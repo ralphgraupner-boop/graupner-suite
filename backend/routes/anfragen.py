@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from database import db, logger
 from uuid import uuid4
 from auth import get_current_user
+from utils.anrede_detector import detect_anrede
 
 router = APIRouter()
 
@@ -75,7 +76,7 @@ async def create_anfrage(anfrage: AnfrageCreate):
             "name": name,
             "vorname": anfrage.vorname,
             "nachname": anfrage.nachname,
-            "anrede": anfrage.anrede,
+            "anrede": detect_anrede(name=name, vorname=anfrage.vorname or "", nachname=anfrage.nachname or "", existing_anrede=anfrage.anrede or ""),
             "email": anfrage.email,
             "phone": anfrage.phone,
             "address": anfrage.address,

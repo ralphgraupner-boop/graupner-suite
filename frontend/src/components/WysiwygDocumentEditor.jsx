@@ -798,6 +798,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
               {/* Vortext */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
+                {customer && !customer.anrede && (
+                  <div className="mb-2 flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-sm px-3 py-2" data-testid="anrede-missing-hint">
+                    <span className="text-amber-600">⚠</span>
+                    <span>
+                      Keine Anrede beim Kunden hinterlegt – im Vortext wird <strong>„Sehr geehrte Damen und Herren"</strong> verwendet.
+                      Bitte beim Kunden ergänzen für persönlichere Ansprache.
+                    </span>
+                  </div>
+                )}
                 <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={setVortext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
 
