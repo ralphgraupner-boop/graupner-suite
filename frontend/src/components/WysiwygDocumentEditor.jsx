@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
-import { Package, CheckCircle } from "lucide-react";
+import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star } from "lucide-react";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
@@ -529,6 +529,25 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showLoadTemplate, setShowLoadTemplate] = useState(false);
+
+  const applyTemplate = (tpl) => {
+    const snap = tpl.snapshot || {};
+    if (Array.isArray(snap.positions) && snap.positions.length > 0) {
+      setPositions(snap.positions.map(p => ({ ...p, type: p.type || "position" })));
+    }
+    if (snap.vortext !== undefined) setVortext(snap.vortext || "");
+    if (snap.schlusstext !== undefined) setSchlusstext(snap.schlusstext || "");
+    if (snap.betreff !== undefined) setBetreff(snap.betreff || "");
+    if (snap.notes !== undefined) setNotes(snap.notes || "");
+    if (snap.vat_rate !== undefined) setVatRate(snap.vat_rate);
+    if (snap.discount !== undefined) setDiscount(snap.discount);
+    if (snap.discount_type !== undefined) setDiscountType(snap.discount_type);
+    if (snap.show_lohnanteil !== undefined) setShowLohnanteil(!!snap.show_lohnanteil);
+    if (snap.lohnanteil_custom !== undefined) setLohnanteilCustom(snap.lohnanteil_custom);
+    toast.success(`Vorlage "${tpl.name}" geladen - ${snap.positions?.length || 0} Position${snap.positions?.length !== 1 ? "en" : ""}`);
+    setShowLoadTemplate(false);
+  };
 
   const handleSave = async () => {
     if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return; }
@@ -641,6 +660,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         onOpenMailClient={onOpenMailClient}
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
+        onOpenDocTemplates={() => setShowLoadTemplate(true)}
       />
 
       <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-4">
@@ -798,6 +818,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           onClose={() => setShowTemplateDialog(false)}
         />
       )}
+
+      {showLoadTemplate && (
+        <LoadTemplateDialog
+          preferredType={type}
+          onClose={() => setShowLoadTemplate(false)}
+          onSelect={applyTemplate}
+        />
+      )}
     </div>
   );
 };
@@ -885,5 +913,165 @@ const SaveAsTemplateDialog = ({ docType, docId, defaultName, onClose }) => {
   );
 };
 
-
 export { WysiwygDocumentEditor };
+
+
+// ==================== LOAD TEMPLATE DIALOG ====================
+const TYPE_META = {
+  quote: { label: "Angebot", icon: FileText, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
+  order: { label: "Auftragsbestätigung", icon: ClipboardCheck, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
+  invoice: { label: "Rechnung", icon: Receipt, bg: "bg-green-50", text: "text-green-700", border: "border-green-200" },
+};
+
+const LoadTemplateDialog = ({ preferredType, onClose, onSelect }) => {
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [onlyFavs, setOnlyFavs] = useState(false);
+
+  useEffect(() => {
+    api.get("/document-templates")
+      .then(r => setList(r.data))
+      .catch(() => toast.error("Fehler beim Laden"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = list
+    .filter(t => typeFilter === "all" || t.doc_type === typeFilter)
+    .filter(t => !onlyFavs || t.favorite)
+    .filter(t => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (t.name || "").toLowerCase().includes(q) ||
+             JSON.stringify(t.snapshot?.positions || []).toLowerCase().includes(q);
+    });
+
+  const confirmSelect = (tpl) => {
+    if (tpl.doc_type !== preferredType) {
+      const typeLabels = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
+      if (!window.confirm(`Diese Vorlage ist ein "${typeLabels[tpl.doc_type]}". Möchtest du sie trotzdem in dein ${typeLabels[preferredType]} laden?`)) return;
+    }
+    if (!window.confirm("Bestehende Positionen und Texte werden durch die Vorlage ersetzt. Fortfahren?")) return;
+    onSelect(tpl);
+  };
+
+  const stats = {
+    total: list.length,
+    quote: list.filter(t => t.doc_type === "quote").length,
+    order: list.filter(t => t.doc_type === "order").length,
+    invoice: list.filter(t => t.doc_type === "invoice").length,
+  };
+
+  const tabs = [
+    { id: "all", label: "Alle", count: stats.total },
+    { id: "quote", label: "Angebote", count: stats.quote },
+    { id: "order", label: "Aufträge", count: stats.order },
+    { id: "invoice", label: "Rechnungen", count: stats.invoice },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="load-template-dialog">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div className="p-4 border-b flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2"><Package className="w-5 h-5 text-primary" /> Vorlage öffnen</h3>
+            <p className="text-xs text-muted-foreground mt-1">Angebote, Auftragsbestätigungen und Rechnungen in einem Modul – wähle eine Vorlage zum Laden.</p>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm">✕</button>
+        </div>
+
+        <div className="p-4 border-b space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Vorlage suchen (Name oder Position)..."
+              className="w-full pl-10 pr-3 py-2 border rounded-sm text-sm"
+              autoFocus
+              data-testid="load-tpl-search"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {tabs.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTypeFilter(t.id)}
+                className={`px-3 py-1 rounded-sm text-xs font-medium border ${typeFilter === t.id ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted border-border"}`}
+                data-testid={`load-tpl-filter-${t.id}`}
+              >
+                {t.label} {t.count > 0 && <span className="opacity-70">({t.count})</span>}
+              </button>
+            ))}
+            <button
+              onClick={() => setOnlyFavs(!onlyFavs)}
+              className={`px-3 py-1 rounded-sm text-xs font-medium border flex items-center gap-1 ${onlyFavs ? "bg-amber-100 text-amber-800 border-amber-300" : "hover:bg-muted border-border"}`}
+            >
+              <Star className={`w-3 h-3 ${onlyFavs ? "fill-amber-500" : ""}`} /> Favoriten
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Lade Vorlagen...</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <div className="font-medium mb-1">{list.length === 0 ? "Noch keine Vorlagen" : "Keine Treffer"}</div>
+              <div className="text-sm">
+                {list.length === 0
+                  ? "Speichere ein Dokument und setze den Haken 'Als Vorlage speichern' um deine erste Vorlage zu erstellen."
+                  : "Passe Suche oder Filter an."}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map(tpl => {
+                const meta = TYPE_META[tpl.doc_type] || TYPE_META.quote;
+                const Icon = meta.icon;
+                const positions = tpl.snapshot?.positions?.length || 0;
+                const total = tpl.snapshot?.total_gross || 0;
+                const isMatching = tpl.doc_type === preferredType;
+                return (
+                  <button
+                    key={tpl.id}
+                    onClick={() => confirmSelect(tpl)}
+                    className={`w-full text-left p-3 border rounded-sm hover:shadow-md hover:border-primary transition-all flex items-center gap-3 ${isMatching ? "border-primary/20 bg-primary/5" : ""}`}
+                    data-testid={`load-tpl-${tpl.id}`}
+                  >
+                    <div className={`p-2 rounded-sm ${meta.bg} flex-shrink-0`}>
+                      <Icon className={`w-5 h-5 ${meta.text}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold">{tpl.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${meta.bg} ${meta.text} border ${meta.border}`}>{meta.label}</span>
+                        {tpl.favorite && <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />}
+                        {isMatching && <span className="text-[10px] text-primary font-semibold">← passt zu {TYPE_META[preferredType].label}</span>}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex gap-3 mt-1 flex-wrap">
+                        <span>{positions} Position{positions !== 1 ? "en" : ""}</span>
+                        {total > 0 && <span className="font-mono">{total.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}</span>}
+                        {tpl.usage_count > 0 && <span>{tpl.usage_count}× genutzt</span>}
+                      </div>
+                    </div>
+                    <span className="text-xs text-primary font-medium flex-shrink-0">Laden →</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t flex justify-between items-center">
+          <div className="text-xs text-muted-foreground">
+            Tipp: Positionen und Texte aus der Vorlage werden ins aktuelle Dokument geladen. Kunde und Dokumentnummer bleiben unverändert.
+          </div>
+          <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Schließen</button>
+        </div>
+      </div>
+    </div>
+  );
+};
