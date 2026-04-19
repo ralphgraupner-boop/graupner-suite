@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive, HardHat } from "lucide-react";
-import { toast } from "sonner";
+import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive, HardHat } from "lucide-react";import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
 import { subscribeToPush, unsubscribeFromPush, ensureVapidKey } from "@/lib/push";
 import { PLACEHOLDERS } from "@/components/TextTemplateSelect";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
+import { DocumentTemplatesPanel } from "@/components/DocumentTemplatesPanel";
 
 // ==================== TAB CONFIG ====================
 const TABS = [
@@ -16,6 +16,7 @@ const TABS = [
   { id: "benutzer", label: "Benutzer", icon: Users },
   { id: "mitarbeiter", label: "Mitarbeiter", icon: HardHat },
   { id: "dokumente", label: "Dokument-Vorlagen", icon: Palette },
+  { id: "doc-templates", label: "Angebot/Rechnung-Vorlagen", icon: Package },
   { id: "diverses", label: "Diverses / Info", icon: BookOpen },
   { id: "backup", label: "Backup", icon: Save },
 ];
@@ -2348,6 +2349,11 @@ const BackupTab = () => {
         </div>
       )}
       {activeTab === "dokumente" && <DokumentVorlagenTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
+      {activeTab === "doc-templates" && (
+        <div className="bg-background -mt-2">
+          <DocumentTemplatesPanel variant="embedded" />
+        </div>
+      )}
       {activeTab === "diverses" && <DiversesTab />}
       {activeTab === "backup" && <BackupTab />}
     </div>

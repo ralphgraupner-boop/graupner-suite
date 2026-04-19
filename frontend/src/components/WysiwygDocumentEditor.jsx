@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
+import { Package, CheckCircle } from "lucide-react";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
@@ -527,20 +528,27 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     return true;
   };
 
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+
   const handleSave = async () => {
     if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return; }
     if (positions.length === 0 || !positions[0].description) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return; }
     if (!validateTextFields()) return;
     setSaving(true);
+    let savedId = id;
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       if (isNew) {
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount }) };
         const res = await api.post(`/${endpoint}`, payload); toast.success(`${titles[type]} erstellt!`);
-        if (res?.data?.id) navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true });
+        if (res?.data?.id) { savedId = res.data.id; navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); }
       } else {
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "invoice" && { deposit_amount: depositAmount }) };
         await api.put(`/${endpoint}/${id}`, payload); toast.success(`${titles[type]} gespeichert!`);
+      }
+      // Nach erfolgreichem Speichern: frage ob als Vorlage
+      if (savedId) {
+        setTimeout(() => setShowTemplateDialog(savedId), 400);
       }
     } catch { toast.error("Fehler beim Speichern"); } finally { setSaving(false); }
   };
@@ -781,8 +789,101 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           </div>
         </div>
       )}
+
+      {showTemplateDialog && (
+        <SaveAsTemplateDialog
+          docType={type}
+          docId={showTemplateDialog}
+          defaultName={betreff || `${titles[type]} vom ${new Date().toLocaleDateString("de-DE")}`}
+          onClose={() => setShowTemplateDialog(false)}
+        />
+      )}
     </div>
   );
 };
+
+
+// ==================== SAVE AS TEMPLATE DIALOG ====================
+const SaveAsTemplateDialog = ({ docType, docId, defaultName, onClose }) => {
+  const [step, setStep] = useState("ask"); // ask -> name -> done
+  const [name, setName] = useState(defaultName);
+  const [anonymize, setAnonymize] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!name.trim()) { toast.error("Name erforderlich"); return; }
+    setSaving(true);
+    try {
+      await api.post("/document-templates/from-document", {
+        doc_type: docType, source_id: docId, name: name.trim(), anonymize,
+      });
+      setStep("done");
+      toast.success("Als Vorlage gespeichert");
+    } catch (e) { toast.error(e?.response?.data?.detail || "Fehler"); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="save-template-dialog">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-md">
+        {step === "ask" && (
+          <>
+            <div className="p-5 border-b">
+              <div className="flex items-center gap-2 mb-1">
+                <Package className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-semibold">Als Vorlage speichern?</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">Du kannst dieses Dokument als wiederverwendbare Vorlage ablegen. Beim nächsten ähnlichen Auftrag in 2 Klicks wieder da.</p>
+            </div>
+            <div className="p-5 flex justify-end gap-2">
+              <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted" data-testid="tpl-ask-no">Nein, danke</button>
+              <button onClick={() => setStep("name")} className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90" data-testid="tpl-ask-yes">
+                Ja, Vorlage anlegen
+              </button>
+            </div>
+          </>
+        )}
+        {step === "name" && (
+          <>
+            <div className="p-5 border-b">
+              <h3 className="text-lg font-semibold mb-1">Vorlage benennen</h3>
+              <p className="text-sm text-muted-foreground">Gib einen Namen, unter dem du die Vorlage später wiederfindest.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Vorlagenname</label>
+                <input value={name} onChange={e => setName(e.target.value)} className="w-full border rounded-sm p-2 text-sm" autoFocus placeholder='z.B. "Hebeschiebe Wartung Standard"' data-testid="tpl-name-input" />
+              </div>
+              <label className="flex items-start gap-2 p-3 border rounded-sm cursor-pointer hover:bg-muted/30">
+                <input type="checkbox" checked={anonymize} onChange={e => setAnonymize(e.target.checked)} className="mt-0.5" data-testid="tpl-anonymize" />
+                <div>
+                  <div className="text-sm font-medium">Anschrift als Max Mustermann anlegen?</div>
+                  <div className="text-xs text-muted-foreground">
+                    {anonymize ? "✓ Empfohlen: Kundendaten werden durch Mustermann-Anschrift ersetzt. Die Vorlage ist damit allgemein wiederverwendbar." : "✗ Die Vorlage behält die echten Kundendaten (für persönliche Vorlagen eines Stammkunden)."}
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div className="p-5 border-t flex justify-end gap-2">
+              <button onClick={() => setStep("ask")} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Zurück</button>
+              <button onClick={save} disabled={saving || !name.trim()} className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50" data-testid="tpl-save-final">
+                {saving ? "Speichere..." : "Als Vorlage speichern"}
+              </button>
+            </div>
+          </>
+        )}
+        {step === "done" && (
+          <div className="p-8 text-center">
+            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold mb-1">Gespeichert!</h3>
+            <p className="text-sm text-muted-foreground mb-4">Du findest die Vorlage unter <strong>Einstellungen → Dokument-Vorlagen</strong> oder <strong>Dokumente → Vorlagen</strong>.</p>
+            <button onClick={onClose} className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90">Weiter arbeiten</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 
 export { WysiwygDocumentEditor };
