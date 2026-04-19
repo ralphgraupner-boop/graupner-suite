@@ -106,7 +106,7 @@ const DocumentHeader = ({
           <p>www.tischlerei-graupner.de</p>
           <p>Steuernummer: 45/076/04744</p>
           {/* Dokument-Metadaten */}
-          <div className="mt-3 pt-3 border-t border-blue-200 space-y-0.5 text-xs lg:text-sm">
+          <div className="mt-3 space-y-0.5 text-xs lg:text-sm">
             <p>Kd.-Nr.: {selectedCustomerId ? selectedCustomerId.substring(0, 8).toUpperCase() : "-"}</p>
             {type !== "quote" && <p>Auft.-Nummer: {type === "order" ? (docNumber || "-") : "-"}</p>}
             <p>Datum: {new Date(createdAt).toLocaleDateString("de-DE")}</p>

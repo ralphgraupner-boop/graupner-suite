@@ -459,8 +459,6 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
     # Right: Kd.-Nr., Datum, Dokument-Nr.
     ry -= 0.2 * cm
-    c.setStrokeColor(HexColor("#B3C6E0"))
-    c.line(width - 6 * cm, ry + 0.15 * cm, width - 2 * cm, ry + 0.15 * cm)
     c.setFont("Helvetica", 8)
     c.setFillColor(koenigsblau)
     customer_id = data.get("customer_id", "")
