@@ -38,12 +38,36 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - 100% getestet
 
 ## Completed 19.04.2026
-- [x] Artikel Multi-Format Import/Export (CSV, Excel, JSON, XML)
-- [x] Professionelles Dropdown-UI fuer Export/Import (shadcn)
-- [x] Auto-Nummerierung (ArtNr, Leist, Fremd) mit Prefix-Config
-- [x] Duplikat-Pruefung per Name beim Import
-- [x] Import-Vorlage (CSV) direkt im Dropdown
-- [x] Backend: Response-Import Fix + XML Export/Import
+
+### Artikel Multi-Format Import/Export
+- [x] CSV, Excel, JSON, XML Export-Endpoints
+- [x] Professionelles Dropdown-UI (shadcn)
+- [x] Auto-Nummerierung (ArtNr, Leist, Fremd) + Duplikat-Pruefung
+- [x] Import-Vorlage im Dropdown
+
+### Mitarbeiter-Modul Pro-UI
+- [x] 9 Tabs: Stammdaten · Beschäftigung · Steuer & SV · Bank & Lohn · Urlaub · Krankmeldungen · Verträge & Dokumente · Fortbildungen · Notfall & Notizen
+- [x] Krankenkassen-Dropdown (50+ GKV/PKV in Gruppen)
+- [x] Steuerklassen, Konfession, Personengruppenschlüssel
+- [x] Arbeitsvertrags-Upload mit Kategorisierung (arbeitsvertrag, zeugnis, abmahnung, etc.)
+- [x] Lohnhistorie (Gehaltsänderungen)
+- [x] Urlaub mit Rest-Berechnung, Krankmeldungen mit AU-Flag
+- [x] Geburtstags-Hinweis auf Liste (<30 Tage)
+- [x] 9/9 Frontend-Tests grün
+
+### Kundenportal Paket 2+3
+- [x] Konfigurierbare Begrüßung + Hinweise via /api/portal-settings
+- [x] Auto-Bildkomprimierung (max 1920px, JPEG 80%)
+- [x] Limits: max 5 Bilder/Upload, max 30 pro Portal
+- [x] Rate-Limit: >10 Uploads/60s → Auto-Sperre + Admin-Mail
+- [x] Bidirektionale Dialog-Historie (chronologisch, chat-style)
+- [x] Absenden-Button mit Vorschau-Dialog für Kunde
+- [x] Speichern & Beenden-Button
+- [x] Admin: "Vorschau & Senden" Modal vor An-Kunden-Mitteilungen
+- [x] NEU-Badge in Portal-Liste (customer_has_new_content)
+- [x] Mark-Read beim Öffnen der Portal-Detail
+- [x] "Portal öffnen/anlegen"-Button direkt im Kunden-Modul
+- [x] 18/18 Backend-Tests + alle Frontend-Flows grün
 
 ## Completed 18.04.2026
 - [x] Kundenportal-Modul (26/26 Tests)
