@@ -21,12 +21,15 @@ import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
 import { MitarbeiterModulPage } from "@/pages/MitarbeiterModulPage";
 import { EinsaetzeModulPage } from "@/pages/EinsaetzeModulPage";
+import { HelpProvider } from "@/lib/helpContext";
+import { HelpToggle } from "@/components/HelpToggle";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar onLogout={onLogout} />
       <MobileNav onLogout={onLogout} />
+      <HelpToggle />
       <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 px-4 lg:px-8 py-4 lg:py-8">{children}</main>
     </div>
   );
@@ -46,6 +49,7 @@ function App() {
   return (
     <div className="App">
       <Toaster position="top-right" richColors />
+      <HelpProvider>
       <BrowserRouter>
         <Routes>
           {/* Kundenportal (oeffentlich) */}
@@ -87,6 +91,7 @@ function App() {
           )}
         </Routes>
       </BrowserRouter>
+      </HelpProvider>
     </div>
   );
 }

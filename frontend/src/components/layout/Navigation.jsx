@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat } from "lucide-react";
 import { api } from "@/lib/api";
+import { HelpTip } from "@/components/HelpTip";
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
@@ -137,32 +138,34 @@ const Sidebar = ({ onLogout }) => {
           const badgeCount = path === "/email" ? unreadCounts.email : (path === "/portals" ? unreadCounts.portal : 0);
           const isActive = location.pathname.startsWith(path);
           const hasBadge = badgeCount > 0 && !isActive;
+          const helpKey = `nav.${path.split("/").filter(Boolean).pop()}`;
           return (
-            <Link
-              key={path}
-              to={path}
-              data-testid={`nav-${path.slice(1)}`}
-              className={`relative flex items-center gap-3 px-4 py-3 rounded-sm transition-smooth ${
-                isActive
-                  ? "bg-primary/10 text-primary border-l-2 border-primary"
-                  : hasBadge
-                  ? "text-foreground bg-red-50 hover:bg-red-100 animate-pulse-slow"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <div className="relative shrink-0">
-                <Icon className={`w-5 h-5 ${hasBadge ? "text-red-600" : ""}`} />
+            <HelpTip key={path} id={helpKey} placement="right" block>
+              <Link
+                to={path}
+                data-testid={`nav-${path.slice(1)}`}
+                className={`relative flex items-center gap-3 px-4 py-3 rounded-sm transition-smooth ${
+                  isActive
+                    ? "bg-primary/10 text-primary border-l-2 border-primary"
+                    : hasBadge
+                    ? "text-foreground bg-red-50 hover:bg-red-100 animate-pulse-slow"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <div className="relative shrink-0">
+                  <Icon className={`w-5 h-5 ${hasBadge ? "text-red-600" : ""}`} />
+                  {hasBadge && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold animate-pulse ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </span>
+                  )}
+                </div>
+                <span className={`font-medium ${hasBadge ? "text-red-700" : ""}`}>{label}</span>
                 {hasBadge && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold animate-pulse ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
-                    {badgeCount > 99 ? "99+" : badgeCount}
-                  </span>
+                  <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />
                 )}
-              </div>
-              <span className={`font-medium ${hasBadge ? "text-red-700" : ""}`}>{label}</span>
-              {hasBadge && (
-                <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />
-              )}
-            </Link>
+              </Link>
+            </HelpTip>
           );
         })}
       </nav>

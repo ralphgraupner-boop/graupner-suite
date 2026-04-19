@@ -1,5 +1,6 @@
 import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink, Package } from "lucide-react";
 import { Button, Badge } from "@/components/common";
+import { HelpTip } from "@/components/HelpTip";
 
 const EditorToolbar = ({
   type, isNew, titles, listPaths, docNumber, status,
@@ -67,28 +68,36 @@ const EditorToolbar = ({
             </Button>
           )}
           {!isNew && onOpenMailClient && (
+            <HelpTip id="doc.btn-mail" placement="bottom">
             <Button size="sm" onClick={onOpenMailClient} data-testid="btn-mailto-document" title="In Betterbird / Thunderbird oeffnen" className="bg-blue-600 text-white hover:bg-blue-700">
               <ExternalLink className="w-4 h-4" />
               <span className="hidden sm:inline">Mailprogramm</span>
             </Button>
+            </HelpTip>
           )}
           {!isNew && (
+            <HelpTip id="doc.btn-pdf" placement="bottom" text="Drucken: Speichert den aktuellen Stand und öffnet den Druck-Dialog mit frischem PDF.">
             <Button variant="outline" size="sm" onClick={handlePrint} data-testid="btn-print-document">
               <Printer className="w-4 h-4" />
               <span className="hidden sm:inline">Drucken</span>
             </Button>
+            </HelpTip>
           )}
           {!isNew && (
+            <HelpTip id="doc.btn-pdf" placement="bottom">
             <Button variant="outline" size="sm" onClick={handleDownloadPDF} data-testid="btn-pdf-document">
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">PDF</span>
             </Button>
+            </HelpTip>
           )}
           <div className="h-6 w-px bg-border hidden sm:block" />
+          <HelpTip id="doc.btn-save" placement="bottom">
           <Button size="sm" onClick={handleSave} disabled={saving} data-testid="btn-save-document">
             <Save className="w-4 h-4" />
             <span className="hidden sm:inline">{saving ? "..." : "Speichern"}</span>
           </Button>
+          </HelpTip>
           <Button variant="destructive" size="sm" onClick={handleExit} disabled={saving} data-testid="btn-exit-document">
             <X className="w-4 h-4" />
             <span className="hidden sm:inline">Beenden</span>
