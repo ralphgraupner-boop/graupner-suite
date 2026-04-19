@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -366,6 +366,9 @@ const KundenModulPage = () => {
                         Einsatz erstellen
                       </button>
                     </div>
+
+                    {/* Dokumenten-Hub für diesen Kunden */}
+                    <CustomerDocumentsPanel customerId={kunde.id} />
                   </div>
                 )}
               </Card>
@@ -616,3 +619,169 @@ const KontaktImportModal = ({ isOpen, onClose, onImported }) => {
 };
 
 export { KundenModulPage };
+
+
+// ==================== CUSTOMER DOCUMENTS PANEL ====================
+// Zeigt alle Angebote, Auftragsbestätigungen, Rechnungen für einen Kunden.
+// Ermöglicht Öffnen/Bearbeiten/Neu-Erstellen direkt aus dem Kundenmodul.
+const CustomerDocumentsPanel = ({ customerId }) => {
+  const navigate = useNavigate();
+  const [docs, setDocs] = useState({ quotes: [], orders: [], invoices: [] });
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("all");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [q, o, i] = await Promise.all([
+          api.get("/quotes").then(r => r.data.filter(x => x.customer_id === customerId)).catch(() => []),
+          api.get("/orders").then(r => r.data.filter(x => x.customer_id === customerId)).catch(() => []),
+          api.get("/invoices").then(r => r.data.filter(x => x.customer_id === customerId)).catch(() => []),
+        ]);
+        setDocs({ quotes: q, orders: o, invoices: i });
+      } finally { setLoading(false); }
+    };
+    load();
+  }, [customerId]);
+
+  const newQuote = () => navigate(`/quotes/new?customer=${customerId}`);
+  const newInvoice = () => navigate(`/invoices/new?customer=${customerId}`);
+  const orderFromQuote = async (quoteId) => {
+    try {
+      const res = await api.post(`/orders/from-quote/${quoteId}`);
+      toast.success("Auftragsbestätigung erstellt");
+      navigate(`/orders/edit/${res.data.id}`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Fehler"); }
+  };
+  const invoiceFromOrder = async (orderId) => {
+    try {
+      const res = await api.post(`/invoices/from-order/${orderId}`);
+      toast.success("Rechnung erstellt");
+      navigate(`/invoices/edit/${res.data.id}`);
+    } catch (e) { toast.error(e?.response?.data?.detail || "Fehler"); }
+  };
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString("de-DE") : "—";
+  const fmtEur = (n) => (n || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+
+  const statusColor = (status) => ({
+    draft: "bg-gray-100 text-gray-700",
+    sent: "bg-blue-100 text-blue-700",
+    accepted: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+    paid: "bg-green-100 text-green-700",
+    overdue: "bg-red-100 text-red-700",
+    open: "bg-amber-100 text-amber-700",
+    cancelled: "bg-gray-100 text-gray-500",
+  }[status] || "bg-gray-100 text-gray-700");
+
+  const total = docs.quotes.length + docs.orders.length + docs.invoices.length;
+
+  const tabs = [
+    { id: "all", label: "Alle", icon: FileText, count: total },
+    { id: "quotes", label: "Angebote", icon: FileText, count: docs.quotes.length, color: "blue" },
+    { id: "orders", label: "Aufträge", icon: ClipboardCheck, count: docs.orders.length, color: "purple" },
+    { id: "invoices", label: "Rechnungen", icon: Receipt, count: docs.invoices.length, color: "green" },
+  ];
+
+  const renderDocRow = (doc, type) => {
+    const isQuote = type === "quote", isOrder = type === "order", isInvoice = type === "invoice";
+    const number = doc.quote_number || doc.order_number || doc.invoice_number || doc.id?.slice(0, 8);
+    const editUrl = isQuote ? `/quotes/edit/${doc.id}` : isOrder ? `/orders/edit/${doc.id}` : `/invoices/edit/${doc.id}`;
+    const Icon = isQuote ? FileText : isOrder ? ClipboardCheck : Receipt;
+    const typeColor = isQuote ? "text-blue-600" : isOrder ? "text-purple-600" : "text-green-600";
+    return (
+      <div key={doc.id} className="flex items-center gap-3 p-2.5 border rounded-sm hover:bg-muted/30 transition-colors group" data-testid={`doc-row-${doc.id}`}>
+        <Icon className={`w-5 h-5 flex-shrink-0 ${typeColor}`} />
+        <div className="flex-1 min-w-0 grid grid-cols-4 gap-2 items-center">
+          <div className="font-mono text-sm font-medium truncate">{number}</div>
+          <div className="text-xs text-muted-foreground">{fmtDate(doc.created_at || doc.date)}</div>
+          <Badge className={`${statusColor(doc.status)} text-xs w-fit`}>{doc.status || "—"}</Badge>
+          <div className="text-sm font-mono text-right">{fmtEur(doc.total || doc.brutto || 0)}</div>
+        </div>
+        <div className="flex gap-1 flex-shrink-0">
+          <button
+            onClick={() => navigate(editUrl)}
+            className="p-1.5 hover:bg-primary/10 text-primary rounded-sm transition-colors"
+            title="Öffnen / Bearbeiten"
+            data-testid={`btn-open-${doc.id}`}
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          {isQuote && (
+            <button
+              onClick={() => orderFromQuote(doc.id)}
+              className="p-1.5 hover:bg-purple-50 text-purple-600 rounded-sm transition-colors opacity-0 group-hover:opacity-100"
+              title="Auftragsbestätigung daraus erstellen"
+              data-testid={`btn-to-order-${doc.id}`}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+            </button>
+          )}
+          {isOrder && (
+            <button
+              onClick={() => invoiceFromOrder(doc.id)}
+              className="p-1.5 hover:bg-green-50 text-green-600 rounded-sm transition-colors opacity-0 group-hover:opacity-100"
+              title="Rechnung daraus erstellen"
+              data-testid={`btn-to-invoice-${doc.id}`}
+            >
+              <Receipt className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t" data-testid={`customer-docs-${customerId}`}>
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+          <FileText className="w-4 h-4" /> Dokumente &amp; Vorgänge {total > 0 && <Badge className="bg-slate-100 text-slate-700">{total}</Badge>}
+        </h4>
+        <div className="flex flex-wrap gap-1.5">
+          <button onClick={newQuote} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-sm bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200" data-testid={`btn-new-quote-${customerId}`}>
+            <Plus className="w-3 h-3" /> Angebot
+          </button>
+          <button onClick={newInvoice} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-sm bg-green-50 text-green-700 hover:bg-green-100 border border-green-200" data-testid={`btn-new-invoice-${customerId}`}>
+            <Plus className="w-3 h-3" /> Rechnung
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-xs text-muted-foreground py-3">Lade Dokumente...</div>
+      ) : total === 0 ? (
+        <div className="text-center py-6 bg-slate-50 rounded-sm text-sm text-muted-foreground">
+          <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
+          Noch keine Dokumente für diesen Kunden.
+          <div className="text-xs mt-1">Klicke oben auf &quot;Angebot&quot; oder &quot;Rechnung&quot; um zu beginnen.</div>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-1 mb-3 border-b">
+            {tabs.map(t => {
+              const T = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${tab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                  data-testid={`tab-${t.id}-${customerId}`}
+                >
+                  <T className="w-3.5 h-3.5" /> {t.label} {t.count > 0 && <span className="text-[10px] px-1 rounded bg-slate-100 text-slate-600">{t.count}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-1.5">
+            {(tab === "all" || tab === "quotes") && docs.quotes.map(d => renderDocRow(d, "quote"))}
+            {(tab === "all" || tab === "orders") && docs.orders.map(d => renderDocRow(d, "order"))}
+            {(tab === "all" || tab === "invoices") && docs.invoices.map(d => renderDocRow(d, "invoice"))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
