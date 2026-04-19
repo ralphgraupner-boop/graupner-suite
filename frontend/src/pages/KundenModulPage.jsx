@@ -282,6 +282,30 @@ const KundenModulPage = () => {
                       <button
                         onClick={async () => {
                           try {
+                            const res = await api.get(`/portals/for-customer/${kunde.id}`);
+                            if (res.data?.exists) {
+                              navigate(`/portals`);
+                              toast.info("Portal geöffnet");
+                            } else {
+                              if (!kunde.email) { toast.error("Kunde hat keine E-Mail – erst ergänzen"); return; }
+                              if (!window.confirm(`Neues Kundenportal für ${kunde.vorname} ${kunde.nachname} anlegen?`)) return;
+                              await api.post(`/portals/from-customer/${kunde.id}`, {});
+                              toast.success("Portal erstellt – öffne jetzt die Portal-Übersicht");
+                              navigate("/portals");
+                            }
+                          } catch (err) {
+                            toast.error(err?.response?.data?.detail || "Fehler");
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+                        data-testid={`btn-portal-${kunde.id}`}
+                      >
+                        <Globe className="w-4 h-4" />
+                        Kundenportal öffnen / anlegen
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
                             await api.post(`/einsaetze/from-kunde/${kunde.id}`);
                             toast.success("Einsatz erstellt");
                             window.location.href = "/einsaetze";

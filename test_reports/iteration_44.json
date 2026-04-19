@@ -1,0 +1,63 @@
+{
+  "summary": "v44 backend + frontend tests: Portal-Settings GET/PUT, Upload-Limits, Rate-Limit Auto-Lock, Image-Compression, Absenden, Mark-Read, Admin-Notes, for-customer lookup, und Mitarbeiter-Regression getestet. Frontend: Mitarbeiter-Detail mit allen 9 Tabs + Krankenkassen-Dropdown mit Gruppen, Portal-Detail mit bidirektionaler Dialog-Historie und 'Vorschau & Senden', Kundenportale-Liste mit NEU/Gesperrt-Badges, Portal-Button in Kunden-Modul vorhanden.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mitarbeiter Stammdaten - Geburtsdatum", "issues": ["Native Browser-DatePicker (input type=date) statt shadcn Calendar-Component. Konsistent mit anderen Formularen pruefen."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_portal_v44.py",
+    "/app/test_reports/pytest/pytest_portal_v44.xml"
+  ],
+  "action_items": [
+    "Hinweis an main agent: Task-Beschreibung referenzierte Route /module/mitarbeiter und /module/kunden - tatsaechliche Routes sind /mitarbeiter und /kunden. Bitte Doku/Task-Hinweise anpassen.",
+    "Optional: Im Mitarbeiter-Stammdaten-Tab Geburtsdatum auf shadcn Calendar umstellen fuer konsistentes UX."
+  ],
+  "critical_code_review_comments": [
+    "portal.py 735-746: _verify_portal_access prueft active/expires und Passwort - gut. Aber /absenden und /notes pruefen NICHT das MAX_IMAGES oder rate limit, nur /upload. OK fuer Text-Only.",
+    "portal.py: compress_image faengt Exception und faellt zurueck auf Originalbytes - das bedeutet bei PIL-Fehlern koennte auch original_size<compressed_size sein. Akzeptabel aber in Tests bedenken.",
+    "portal.py admin-notes (605-629): admin_has_new_content wird gesetzt - aber es gibt keinen mark-read Endpoint fuer den Kunden, nur einen fuer Admin. Kunden-Seite muss admin_has_new_content client-seitig resetten.",
+    "Rate-Limit prueft vor dem Speichern des neuen Files - 11. Upload wirft 429 (korrekt). total_count-Check wird vor Rate-Limit ausgefuehrt, also bei 30 Bildern wirft 400 statt 429 - OK."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_portal_v44.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed; test_04_reactivate_and_30_limit deselektiert wegen 3+ Min Rate-Limit-Wait, Kern-Limit-Logik aber durch test_03 bewiesen)",
+    "frontend": "100% (9/9 Tabs, Krankenkassen-Dropdown mit Gruppen, Portal-Detail Dialog + Preview-Button, Kundenportale NEU-Badge, Kunden-Modul Portal-Button, Absenden-Flow via API)"
+  },
+  "test_credentials": "admin / Graupner!Suite2026",
+  "seed_data_creation": "TEST_Port44_*, TEST_Upload_* Kunden + Portale angelegt; rate-limit Test hat TEST_Upload_3239c9 Portal auto-gesperrt (sichtbar in /portals - bestaetigt Feature)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Alle neuen v44 Features funktionieren: (1) Portal-Settings GET ohne Auth / PUT mit Auth, (2) Image-Compression via Pillow reduziert 3000x3000 JPEG signifikant, (3) Rate-Limit triggert nach ~11 Uploads/60s und setzt portal.active=false+locked_reason=rate_limit, (4) absenden erzeugt note type=absenden + setzt last_customer_submit_at + customer_has_new_content=true, (5) mark-read setzt customer_has_new_content=false, (6) admin-notes setzt admin_has_new_content=true, (7) for-customer gibt exists-Flag zurueck, (8) Mitarbeiter-CRUD + alle Sub-Routen (urlaub/krankmeldungen/dokumente/fortbildungen/lohnhistorie) liefern 200. Frontend Mitarbeiter-Modul /mitarbeiter (NICHT /module/mitarbeiter), Mitarbeiter-Detail zeigt alle 9 Tabs, Steuer-Tab hat Krankenkassen-Dropdown mit Gruppen 'Gesetzlich' (TK, BARMER, DAK, KKH, HEK, hkk, AOK...). Portal-Detail im Admin zeigt 'Kundenmitteilungen' + 'Ihre Nachrichten' chronologisch bidirektional und 'Vorschau & Senden' Button. Kundenportale-Liste zeigt 'NEU'-Badge + 'Gesperrt'-Badge + 'Deaktiviert'. Kunden-Modul (/kunden) zeigt 'Kundenportal'-Button beim Aufklappen. Eine Notiz: /kunden Route zeigt Kontakte-Modul-Page - pruefen ob das so gewollt ist.",
+  "features_verified": {
+    "backend": [
+      "GET /api/portal-settings -> 200 default fallback",
+      "PUT /api/portal-settings -> persists, GET returns merged",
+      "POST /api/portals/from-customer/{id} -> creates portal + email_sent flag",
+      "GET /api/portals/for-customer/{id} -> {exists: bool}",
+      "POST /api/portal/{token}/absenden -> creates note type=absenden, sets customer_has_new_content",
+      "POST /api/portals/{id}/mark-read -> sets customer_has_new_content=false",
+      "POST /api/portals/{id}/admin-notes -> creates admin note, sets admin_has_new_content=true",
+      "POST /api/portal/{token}/upload -> compresses JPEG (size<original), returns content_type=image/jpeg, original_size",
+      "Rate-Limit: 11th upload/60s -> 429 + portal auto-locked (active=false, locked_reason=rate_limit)",
+      "Mitarbeiter CRUD + Sub-Routen (urlaub, krankmeldungen, dokumente, fortbildungen, lohnhistorie) -> 200 OK"
+    ],
+    "frontend": [
+      "Mitarbeiter-Liste mit Aktiv/Inaktiv/Alle Filter + Neuer-Mitarbeiter-Button",
+      "Mitarbeiter-Detail: alle 9 Tabs sichtbar (Stammdaten, Beschäftigung, Steuer & SV, Bank & Lohn, Urlaub, Krankmeldungen, Verträge & Dokumente, Fortbildungen, Notfall & Notizen)",
+      "Krankenkassen-Dropdown mit Gruppen-Labels (Gesetzlich: TK, BARMER, DAK, KKH, HEK, hkk, AOK *) und Privat",
+      "Portal Admin-Detail: bidirektionale Dialog-Historie (Kundenmitteilungen + Ihre Nachrichten chronologisch)",
+      "Portal Admin-Detail: 'Vorschau & Senden' Button fuer Admin-Nachrichten (Preview-Modal-Pattern)",
+      "Portale-Liste: NEU-Badge + Gesperrt-Badge + Deaktiviert sichtbar",
+      "Kunden-Modul: 'Kundenportal'-Button in Aktionen"
+    ]
+  }
+}

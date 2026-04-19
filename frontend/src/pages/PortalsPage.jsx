@@ -201,6 +201,12 @@ const PortalsPage = () => {
                   <div className="flex items-center gap-2 mb-1">
                     <User className="w-4 h-4 text-muted-foreground" />
                     <h3 className="font-semibold truncate">{portal.customer_name}</h3>
+                    {portal.customer_has_new_content && (
+                      <Badge className="bg-red-500 text-white animate-pulse" data-testid={`badge-new-${portal.id}`}>● NEU</Badge>
+                    )}
+                    {portal.locked_reason === "rate_limit" && (
+                      <Badge className="bg-red-100 text-red-700" title="Automatisch gesperrt wegen Rate-Limit">🔒 Gesperrt</Badge>
+                    )}
                     {!portal.active ? (
                       <Badge className="bg-red-100 text-red-700">Deaktiviert</Badge>
                     ) : isExpired(portal) ? (
@@ -447,6 +453,8 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
       if (p?.admin_notes) setAdminNotes(p.admin_notes);
     }).catch(() => {});
     api.get("/modules/textvorlagen/data?doc_type=kundenportal").then(res => setVorlagen(res.data)).catch(() => {});
+    // Mark as read when opening the portal detail
+    api.post(`/portals/${portal.id}/mark-read`, {}).catch(() => {});
   }, [portal.id]);
 
   const filtered = vorlagen.filter(v =>
@@ -464,6 +472,8 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
     setShowResults(false);
   };
 
+  const [showPreview, setShowPreview] = useState(false);
+
   const sendAdminNote = async () => {
     if (!msgText.trim()) { toast.error("Nachricht darf nicht leer sein"); return; }
     setSending(true);
@@ -472,6 +482,7 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
       setAdminNotes(prev => [...prev, note.data]);
       setMsgText("");
       setSearchTerm("");
+      setShowPreview(false);
       toast.success("Nachricht an Kunden gesendet");
     } catch { toast.error("Fehler beim Senden"); }
     finally { setSending(false); }
@@ -614,17 +625,42 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
           />
           <div className="flex justify-end">
             <button
-              onClick={sendAdminNote}
+              onClick={() => setShowPreview(true)}
               disabled={sending || !msgText.trim()}
               className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
               data-testid="btn-send-portal-message"
             >
               <Send className="w-4 h-4" />
-              {sending ? "Sende..." : "Nachricht senden"}
+              Vorschau &amp; Senden
             </button>
           </div>
         </div>
       </Card>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="admin-send-preview">
+          <div className="bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold">Nachricht an Kunden – Vorschau</h3>
+              <p className="text-xs text-muted-foreground mt-1">Prüfen Sie die Nachricht, bevor sie im Kundenportal sichtbar wird.</p>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="text-xs text-muted-foreground">An: <span className="font-medium text-foreground">{portal.customer_name}</span> &middot; {portal.customer_email}</div>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-sm text-sm whitespace-pre-wrap">{msgText}</div>
+              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                <strong>Hinweis:</strong> Diese Nachricht erscheint sofort im Kundenportal und der Kunde erhält eine Benachrichtigung.
+              </div>
+            </div>
+            <div className="p-4 border-t flex justify-end gap-2">
+              <button onClick={() => setShowPreview(false)} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Zurück</button>
+              <button onClick={sendAdminNote} disabled={sending} className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2" data-testid="btn-confirm-send">
+                <Send className="w-4 h-4" /> {sending ? "Sende..." : "Verbindlich senden"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Kundenbilder */}

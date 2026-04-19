@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Request
 from fastapi.responses import Response
 from database import db, logger
 from auth import get_current_user
@@ -8,16 +8,94 @@ from datetime import datetime, timezone, timedelta
 import uuid
 import hashlib
 import secrets
+import io
 
 router = APIRouter()
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_DOC_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB
+MAX_IMAGES_PER_PORTAL = 30
+RATE_LIMIT_MAX_UPLOADS = 10
+RATE_LIMIT_WINDOW_SEC = 60
+IMAGE_MAX_DIMENSION = 1920
+IMAGE_JPEG_QUALITY = 80
 
 
 def hash_password(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
+
+
+def compress_image(data: bytes, content_type: str) -> tuple:
+    """Resize to max 1920x1920 and recompress as JPEG 80%. Returns (new_bytes, new_content_type, ext)."""
+    try:
+        from PIL import Image
+        img = Image.open(io.BytesIO(data))
+        # EXIF rotation
+        try:
+            from PIL import ImageOps
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+        # Convert RGBA/P -> RGB for JPEG
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        # Scale down if needed
+        img.thumbnail((IMAGE_MAX_DIMENSION, IMAGE_MAX_DIMENSION), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=IMAGE_JPEG_QUALITY, optimize=True)
+        return buf.getvalue(), "image/jpeg", "jpg"
+    except Exception as e:
+        logger.warning(f"Image compression failed, using original: {e}")
+        ext = "jpg"
+        if content_type == "image/png":
+            ext = "png"
+        elif content_type == "image/webp":
+            ext = "webp"
+        return data, content_type, ext
+
+
+async def _notify_admin(subject: str, body_html: str):
+    """Send admin-notification email if configured."""
+    try:
+        settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+        admin_email = settings.get("email", "")
+        if admin_email:
+            send_email(to_email=admin_email, subject=subject, body_html=body_html)
+    except Exception as e:
+        logger.warning(f"Admin notify failed: {e}")
+
+
+async def _check_rate_limit_or_lock(portal: dict) -> bool:
+    """Return True if portal just got auto-locked due to rate limit."""
+    now = datetime.now(timezone.utc)
+    window_start = (now - timedelta(seconds=RATE_LIMIT_WINDOW_SEC)).isoformat()
+    recent = await db.portal_files.count_documents({
+        "portal_id": portal["id"],
+        "is_deleted": False,
+        "uploaded_by": "customer",
+        "created_at": {"$gte": window_start}
+    })
+    if recent >= RATE_LIMIT_MAX_UPLOADS:
+        # Auto-lock portal
+        await db.portals.update_one(
+            {"id": portal["id"]},
+            {"$set": {"active": False, "locked_reason": "rate_limit", "locked_at": now.isoformat()}}
+        )
+        logger.warning(f"Portal {portal['id']} auto-locked due to rate limit")
+        await _notify_admin(
+            subject=f"⚠️ Kundenportal gesperrt (Rate-Limit): {portal.get('customer_name', 'Kunde')}",
+            body_html=f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h3 style="color: #b91c1c;">Kundenportal automatisch gesperrt</h3>
+              <p>Das Portal von <strong>{portal.get('customer_name', 'Kunde')}</strong> wurde automatisch inaktiv gesetzt, weil in den letzten {RATE_LIMIT_WINDOW_SEC}s mehr als {RATE_LIMIT_MAX_UPLOADS} Uploads erfolgten.</p>
+              <p>Das kann ein Hinweis auf Missbrauch oder einen Hacker-Versuch sein.</p>
+              <p>Bitte kontrollieren und im Admin-Bereich wieder aktivieren, falls legitim.</p>
+            </div>
+            """
+        )
+        return True
+    return False
 
 
 # ===================== ADMIN ENDPOINTS (auth required) =====================
@@ -477,7 +555,10 @@ async def public_add_note(token: str, body: dict):
     }
     await db.portals.update_one(
         {"id": portal["id"]},
-        {"$push": {"customer_notes": note}}
+        {
+            "$push": {"customer_notes": note},
+            "$set": {"customer_has_new_content": True, "last_customer_activity_at": datetime.now(timezone.utc).isoformat()},
+        }
     )
 
     # Push-Benachrichtigung an Admin
@@ -540,7 +621,10 @@ async def add_admin_note(portal_id: str, body: dict, user=Depends(get_current_us
     }
     await db.portals.update_one(
         {"id": portal_id},
-        {"$push": {"admin_notes": note}}
+        {
+            "$push": {"admin_notes": note},
+            "$set": {"admin_has_new_content": True, "last_admin_send_at": datetime.now(timezone.utc).isoformat()},
+        }
     )
     return note
 
@@ -575,21 +659,37 @@ async def public_upload_file(
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(400, "Nur Bilder erlaubt (JPG, PNG, WebP)")
 
+    # Check total image count limit per portal
+    total_count = await db.portal_files.count_documents({
+        "portal_id": portal["id"],
+        "is_deleted": False,
+        "uploaded_by": "customer",
+    })
+    if total_count >= MAX_IMAGES_PER_PORTAL:
+        raise HTTPException(400, f"Maximale Anzahl Bilder erreicht (max. {MAX_IMAGES_PER_PORTAL} pro Portal). Bitte kontaktieren Sie uns direkt.")
+
+    # Rate-limit / auto-lock on suspected abuse
+    locked = await _check_rate_limit_or_lock(portal)
+    if locked:
+        raise HTTPException(429, "Zu viele Uploads in kurzer Zeit. Portal wurde vorsorglich gesperrt.")
+
     data = await file.read()
     if len(data) > MAX_FILE_SIZE:
         raise HTTPException(400, "Datei zu groß (max 15MB)")
 
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    # Auto-compress and normalize image
+    compressed, new_ct, ext = compress_image(data, file.content_type)
     storage_path = f"graupner-suite/portals/{portal['id']}/{uuid.uuid4()}.{ext}"
-    result = put_object(storage_path, data, file.content_type)
+    result = put_object(storage_path, compressed, new_ct)
 
     file_doc = {
         "id": str(uuid.uuid4()),
         "portal_id": portal["id"],
         "storage_path": result["path"],
         "original_filename": file.filename,
-        "content_type": file.content_type,
-        "size": result.get("size", len(data)),
+        "content_type": new_ct,
+        "size": result.get("size", len(compressed)),
+        "original_size": len(data),
         "description": description,
         "uploaded_by": "customer",
         "is_deleted": False,
@@ -597,6 +697,11 @@ async def public_upload_file(
     }
     await db.portal_files.insert_one(file_doc)
     file_doc.pop("_id", None)
+    # Mark new content for admin
+    await db.portals.update_one(
+        {"id": portal["id"]},
+        {"$set": {"customer_has_new_content": True, "last_customer_activity_at": datetime.now(timezone.utc).isoformat()}}
+    )
 
     # Push-Benachrichtigung: Neues Bild
     try:
@@ -609,6 +714,8 @@ async def public_upload_file(
     except Exception as e:
         logger.warning(f"Push for upload failed: {e}")
 
+    # Remaining slots info
+    file_doc["remaining_slots"] = MAX_IMAGES_PER_PORTAL - (total_count + 1)
     return file_doc
 
 
@@ -637,3 +744,115 @@ async def _verify_portal_access(token: str, password: str):
     if hash_password(password) != portal.get("password_hash"):
         raise HTTPException(401, "Falsches Passwort")
     return portal
+
+
+# ===================== PORTAL SETTINGS (Begruessung/Hinweise/Logo) =====================
+
+DEFAULT_PORTAL_SETTINGS = {
+    "begruessung": "Wir Tischlerei Graupner begrüßen Sie herzlich in Ihrem Kundenportal.\nHier können Sie einfach und zuverlässig Kontakt mit uns aufnehmen.",
+    "hinweise": ("Sie können bequem:\n"
+                 "• Bilder hochladen (max. 5 pro Upload, 30 pro Portal insgesamt)\n"
+                 "• Hinweise und Bemerkungen eintragen\n"
+                 "• Ihr Angebot, Auftragsbestätigung und Ihre Rechnung einsehen und herunterladen"),
+    "absende_text": "Ich habe alles eingetragen und sende es jetzt ab",
+    "fertig_text": "Vielen Dank! Wir haben Ihre Nachricht erhalten und melden uns zeitnah bei Ihnen.",
+    "logo_url": "",
+    "zeige_praesenz_bilder": True,
+    "praesenz_bilder": [],
+}
+
+
+@router.get("/portal-settings")
+async def get_portal_settings_public():
+    """Portal-Texte (ohne Auth, fuer Kunden-Ansicht)"""
+    doc = await db.portal_settings.find_one({"id": "portal_settings"}, {"_id": 0})
+    if not doc:
+        return DEFAULT_PORTAL_SETTINGS
+    return {**DEFAULT_PORTAL_SETTINGS, **{k: v for k, v in doc.items() if k != "id"}}
+
+
+@router.put("/portal-settings")
+async def update_portal_settings(data: dict, user=Depends(get_current_user)):
+    allowed = list(DEFAULT_PORTAL_SETTINGS.keys())
+    update = {k: v for k, v in data.items() if k in allowed}
+    await db.portal_settings.update_one(
+        {"id": "portal_settings"},
+        {"$set": update},
+        upsert=True
+    )
+    doc = await db.portal_settings.find_one({"id": "portal_settings"}, {"_id": 0})
+    return {**DEFAULT_PORTAL_SETTINGS, **{k: v for k, v in doc.items() if k != "id"}}
+
+
+# ===================== PORTAL LOOKUP BY CUSTOMER =====================
+
+@router.get("/portals/for-customer/{customer_id}")
+async def portal_for_customer(customer_id: str, user=Depends(get_current_user)):
+    """Gibt das Portal eines Kunden zurueck (fuer Button 'Portal oeffnen' im Kundenmodul)"""
+    portal = await db.portals.find_one({"customer_id": customer_id}, {"_id": 0, "password_hash": 0})
+    if not portal:
+        return {"exists": False}
+    return {"exists": True, "portal": portal}
+
+
+# ===================== KUNDE MARKIERT ALS FERTIG (Absenden-Bestaetigung) =====================
+
+@router.post("/portal/{token}/absenden")
+async def public_absenden(token: str, body: dict):
+    """Kunde klickt 'Absenden' - Nachricht + Hinweis an Admin"""
+    portal = await _verify_portal_access(token, body.get("password", ""))
+    optional_text = body.get("text", "").strip()
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Log submission as a note of type 'absenden'
+    note = {
+        "id": str(uuid.uuid4()),
+        "type": "absenden",
+        "text": optional_text or "Kunde hat seine Eingaben abgesendet.",
+        "created_at": now,
+    }
+    await db.portals.update_one(
+        {"id": portal["id"]},
+        {
+            "$push": {"customer_notes": note},
+            "$set": {"last_customer_submit_at": now, "customer_has_new_content": True},
+        }
+    )
+
+    # Notify admin via push + email
+    try:
+        from routes.push import send_push_to_all
+        await send_push_to_all(
+            title="Kundenportal: Kunde hat abgesendet",
+            body=f"{portal.get('customer_name', 'Kunde')} hat alle Eingaben abgesendet.",
+            url="/portals"
+        )
+    except Exception as e:
+        logger.warning(f"Push for absenden failed: {e}")
+
+    await _notify_admin(
+        subject=f"Portal: {portal.get('customer_name', 'Kunde')} hat abgesendet",
+        body_html=f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+          <h3 style="color: #1a5632;">Kunde hat seine Eingaben abgesendet</h3>
+          <p><strong>Kunde:</strong> {portal.get('customer_name', 'Kunde')}</p>
+          <p><strong>Projekt:</strong> {portal.get('description', '-')}</p>
+          {f'<p><strong>Mitteilung:</strong><br/>{optional_text}</p>' if optional_text else ''}
+          <p>Bitte im Portal prüfen und mit einer Rückmeldung reagieren.</p>
+        </div>
+        """
+    )
+
+    return {"message": "Abgesendet", "note": note}
+
+
+# ===================== ADMIN MARKIERT NOTES ALS GELESEN =====================
+
+@router.post("/portals/{portal_id}/mark-read")
+async def mark_notes_read(portal_id: str, user=Depends(get_current_user)):
+    await db.portals.update_one(
+        {"id": portal_id},
+        {"$set": {"customer_has_new_content": False, "last_admin_read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Als gelesen markiert"}
+

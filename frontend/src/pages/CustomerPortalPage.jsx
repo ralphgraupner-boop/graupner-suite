@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3, Wrench, Clock, User } from "lucide-react";
+import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3, Wrench, Clock, User, LogOut, Eye } from "lucide-react";
 import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
+const MAX_IMAGES_PER_UPLOAD = 5;
+const MAX_IMAGES_PER_PORTAL = 30;
 
 const CustomerPortalPage = () => {
   const { token } = useParams();
   const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [portalInfo, setPortalInfo] = useState(null);
+  const [settings, setSettings] = useState(null);
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -21,6 +24,15 @@ const CustomerPortalPage = () => {
   const [noteType, setNoteType] = useState("hinweis");
   const [sendingNote, setSendingNote] = useState(false);
   const [noteSent, setNoteSent] = useState(false);
+  const [showAbsendenDialog, setShowAbsendenDialog] = useState(false);
+  const [absendenText, setAbsendenText] = useState("");
+  const [absending, setAbsending] = useState(false);
+  const [absendenDone, setAbsendenDone] = useState(false);
+
+  useEffect(() => {
+    // Settings can be loaded without auth
+    axios.get(`${API}/portal-settings`).then(r => setSettings(r.data)).catch(() => setSettings(null));
+  }, []);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -53,8 +65,20 @@ const CustomerPortalPage = () => {
   const handleUpload = async (e) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
+    if (selectedFiles.length > MAX_IMAGES_PER_UPLOAD) {
+      setError(`Maximal ${MAX_IMAGES_PER_UPLOAD} Bilder pro Upload erlaubt. Bitte wählen Sie nicht mehr als ${MAX_IMAGES_PER_UPLOAD} Bilder auf einmal.`);
+      e.target.value = "";
+      return;
+    }
+    const customerCount = files.filter(f => f.uploaded_by === "customer").length;
+    if (customerCount + selectedFiles.length > MAX_IMAGES_PER_PORTAL) {
+      setError(`Pro Portal sind maximal ${MAX_IMAGES_PER_PORTAL} Bilder erlaubt. Aktuell: ${customerCount}. Bitte wählen Sie weniger oder wenden Sie sich an uns.`);
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     setUploadSuccess(false);
+    setError("");
     try {
       for (const file of selectedFiles) {
         const formData = new FormData();
@@ -74,6 +98,27 @@ const CustomerPortalPage = () => {
       setUploading(false);
       e.target.value = "";
     }
+  };
+
+  const handleAbsenden = async () => {
+    setAbsending(true);
+    try {
+      await axios.post(`${API}/portal/${token}/absenden`, { password, text: absendenText });
+      setAbsendenDone(true);
+      setShowAbsendenDialog(false);
+    } catch (e) {
+      setError(e.response?.data?.detail || "Fehler beim Absenden");
+    } finally {
+      setAbsending(false);
+    }
+  };
+
+  const handleBeenden = () => {
+    setAuthenticated(false);
+    setPassword("");
+    setFiles([]);
+    setCustomerNotes([]);
+    setAdminNotes([]);
   };
 
   const customerFiles = files.filter(f => f.uploaded_by === "customer");
@@ -147,23 +192,49 @@ const CustomerPortalPage = () => {
   }
 
   // Authenticated Portal View
+  const customerCount = files.filter(f => f.uploaded_by === "customer").length;
+  const dialogChronological = [
+    ...customerNotes.map(n => ({ ...n, side: "customer" })),
+    ...adminNotes.map(n => ({ ...n, side: "admin" })),
+  ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
+      {/* Header with Logo */}
       <header className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-slate-800">Tischlerei Graupner</h1>
-            <p className="text-xs text-slate-500">Kundenportal</p>
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt="Logo" className="h-10 w-auto object-contain" />
+            ) : null}
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-slate-800 truncate">Tischlerei Graupner</h1>
+              <p className="text-xs text-slate-500">Kundenportal</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-slate-700">{portalInfo?.customer_name}</p>
-            {portalInfo?.description && <p className="text-xs text-slate-500">{portalInfo.description}</p>}
+          <div className="text-right min-w-0">
+            <p className="text-sm font-medium text-slate-700 truncate">{portalInfo?.customer_name}</p>
+            {portalInfo?.description && <p className="text-xs text-slate-500 truncate">{portalInfo.description}</p>}
           </div>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        {/* Begrüßung / Hinweise */}
+        {(settings?.begruessung || settings?.hinweise) && (
+          <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-primary" data-testid="portal-greeting">
+            {settings?.begruessung && (
+              <div className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed mb-3">
+                {settings.begruessung}
+              </div>
+            )}
+            {settings?.hinweise && (
+              <div className="whitespace-pre-wrap text-slate-600 text-sm leading-relaxed bg-slate-50 rounded-lg p-3">
+                {settings.hinweise}
+              </div>
+            )}
+          </section>
+        )}
         {/* Ihre Daten */}
         {customerData && (
           <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-customer-data">
@@ -263,51 +334,42 @@ const CustomerPortalPage = () => {
           </section>
         )}
 
-        {/* Nachrichten von Tischlerei */}
-        {adminNotes.length > 0 && (
-          <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-emerald-500" data-testid="portal-admin-notes">
+        {/* Dialog-Historie (chronologisch, bidirektional) */}
+        {dialogChronological.length > 0 && (
+          <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-dialog-history">
             <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-emerald-600" />
-              Nachrichten von Tischlerei Graupner
+              <MessageSquare className="w-5 h-5 text-blue-600" />
+              Schriftwechsel / Verlauf
             </h2>
-            <div className="space-y-2">
-              {adminNotes.map(note => (
-                <div key={note.id} className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                  <span className="text-xs text-slate-400">{new Date(note.created_at).toLocaleString("de-DE")}</span>
-                  <p className="text-sm whitespace-pre-wrap mt-1">{note.text}</p>
-                </div>
-              ))}
+            <div className="space-y-3">
+              {dialogChronological.map(note => {
+                const isAdmin = note.side === "admin";
+                const labels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo", absenden: "Abgesendet", admin: "Tischlerei Graupner" };
+                return (
+                  <div key={note.id} className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
+                    <div className={`max-w-[85%] p-3 rounded-lg ${isAdmin ? "bg-emerald-50 border border-emerald-100" : "bg-blue-50 border border-blue-100"}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-xs font-medium ${isAdmin ? "text-emerald-700" : "text-blue-700"}`}>
+                          {isAdmin ? "Tischlerei Graupner" : "Sie"} · {labels[note.type] || note.type}
+                        </span>
+                        <span className="text-xs text-slate-400">{new Date(note.created_at).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
+
 
         {/* Mitteilungen & Hinweise */}
         <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-notes-section">
           <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-blue-600" />
-            Mitteilungen & Hinweise
+            Neue Mitteilung senden
           </h2>
-
-          {/* Bestehende Notizen */}
-          {customerNotes.length > 0 && (
-            <div className="space-y-2 mb-4">
-              {customerNotes.map(note => {
-                const labels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo" };
-                const colors = { korrektur: "bg-orange-100 text-orange-700", hinweis: "bg-blue-100 text-blue-700", termin: "bg-green-100 text-green-700", zusatz: "bg-purple-100 text-purple-700" };
-                return (
-                  <div key={note.id} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${colors[note.type] || "bg-gray-100 text-gray-600"}`}>
-                        {labels[note.type] || note.type}
-                      </span>
-                      <span className="text-xs text-slate-400">{new Date(note.created_at).toLocaleString("de-DE")}</span>
-                    </div>
-                    <p className="text-sm whitespace-pre-wrap">{note.text}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
           {/* Neue Nachricht */}
           <div className="space-y-3">
@@ -364,9 +426,11 @@ const CustomerPortalPage = () => {
         </section>
         {/* Upload Section */}
         <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-upload-section">
-          <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Upload className="w-5 h-5 text-blue-600" />
-            Bilder hochladen
+          <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2"><Upload className="w-5 h-5 text-blue-600" />Bilder hochladen</span>
+            <span className={`text-xs font-mono px-2 py-0.5 rounded ${customerCount >= MAX_IMAGES_PER_PORTAL ? "bg-red-100 text-red-700" : customerCount > MAX_IMAGES_PER_PORTAL * 0.8 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"}`}>
+              {customerCount} / {MAX_IMAGES_PER_PORTAL}
+            </span>
           </h2>
           <div>
             <input
@@ -392,7 +456,7 @@ const CustomerPortalPage = () => {
                 <>
                   <Image className="w-10 h-10 text-slate-300 mb-2" />
                   <span className="text-sm text-slate-500">Tippen um Bilder auszuwählen</span>
-                  <span className="text-xs text-slate-400 mt-1">JPG, PNG, WebP (max. 15MB)</span>
+                  <span className="text-xs text-slate-400 mt-1">Max. {MAX_IMAGES_PER_UPLOAD} pro Upload · JPG, PNG, WebP · Wird automatisch komprimiert</span>
                 </>
               )}
               <input
@@ -460,6 +524,100 @@ const CustomerPortalPage = () => {
               ))}
             </div>
           </section>
+        )}
+
+        {/* Error Display (global) */}
+        {error && authenticated && (
+          <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3" data-testid="portal-global-error">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">{error}</div>
+            <button onClick={() => setError("")} className="text-red-500 hover:text-red-700 font-bold">×</button>
+          </div>
+        )}
+
+        {/* Absende & Beenden Buttons */}
+        {!absendenDone ? (
+          <section className="bg-gradient-to-r from-primary/10 to-blue-50 rounded-xl shadow-sm p-6" data-testid="portal-actions">
+            <h2 className="text-base font-semibold text-slate-800 mb-2 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-primary" />
+              Fertig?
+            </h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Wenn Sie alles eingetragen haben, senden Sie Ihre Eingaben jetzt an uns oder speichern Sie einfach und kehren später zurück.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setShowAbsendenDialog(true)}
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-primary/90"
+                data-testid="btn-absenden"
+              >
+                <Send className="w-4 h-4" /> {settings?.absende_text || "Ich habe alles eingetragen und sende es jetzt ab"}
+              </button>
+              <button
+                onClick={handleBeenden}
+                className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-50"
+                data-testid="btn-beenden"
+              >
+                <LogOut className="w-4 h-4" /> Speichern & Beenden
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="bg-green-50 border-2 border-green-200 rounded-xl p-6 text-center" data-testid="portal-absenden-done">
+            <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
+            <h2 className="text-lg font-semibold text-green-900 mb-2">Abgesendet!</h2>
+            <p className="text-sm text-green-800 whitespace-pre-wrap">{settings?.fertig_text || "Vielen Dank! Wir haben Ihre Nachricht erhalten und melden uns zeitnah bei Ihnen."}</p>
+          </section>
+        )}
+
+        {/* Absenden-Dialog mit Vorschau */}
+        {showAbsendenDialog && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="absenden-dialog">
+            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-5 border-b">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-primary" /> Vorschau vor dem Absenden
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Bitte prüfen Sie Ihre Eingaben</p>
+              </div>
+              <div className="p-5 space-y-3 text-sm">
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xs text-slate-500 mb-1">Hochgeladene Bilder</div>
+                  <div className="font-semibold">{customerCount} Bild{customerCount !== 1 ? "er" : ""}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <div className="text-xs text-slate-500 mb-1">Gesendete Mitteilungen</div>
+                  <div className="font-semibold">{customerNotes.length} Nachricht{customerNotes.length !== 1 ? "en" : ""}</div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Abschließende Nachricht (optional)</label>
+                  <textarea
+                    value={absendenText}
+                    onChange={(e) => setAbsendenText(e.target.value)}
+                    placeholder='z.B. "Das wars von meiner Seite, bitte melden Sie sich" (optional)'
+                    className="w-full border border-slate-200 rounded-lg p-3 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    data-testid="absenden-text"
+                  />
+                </div>
+              </div>
+              <div className="p-5 border-t flex justify-end gap-2">
+                <button
+                  onClick={() => setShowAbsendenDialog(false)}
+                  className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50"
+                >
+                  Zurück
+                </button>
+                <button
+                  onClick={handleAbsenden}
+                  disabled={absending}
+                  className="px-5 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                  data-testid="btn-absenden-confirm"
+                >
+                  <Send className="w-4 h-4" /> {absending ? "Sende ab..." : "Jetzt verbindlich absenden"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Footer */}
