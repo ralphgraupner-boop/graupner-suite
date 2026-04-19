@@ -214,6 +214,25 @@ async def update_invoice_status(invoice_id: str, status: str = Body(..., embed=T
     return {"message": "Status aktualisiert"}
 
 
+@router.put("/invoices/{invoice_id}/print-status")
+async def toggle_invoice_print_status(invoice_id: str, payload: dict = Body(...)):
+    """Markiert die Rechnung manuell als 'Gedruckt' oder setzt es zurueck.
+    WICHTIG: Solange eine Rechnung nicht als gedruckt markiert ist, darf sie
+    frei bearbeitet werden. Ab dem Zeitpunkt des Markierens gilt sie aus
+    Nutzer-Sicht als rechtsverbindlich ausgegeben."""
+    is_printed = bool(payload.get("is_printed", True))
+    update = {"is_printed": is_printed}
+    if is_printed:
+        update["printed_at"] = datetime.now(timezone.utc).isoformat()
+    else:
+        update["printed_at"] = None
+    result = await db.invoices.update_one({"id": invoice_id}, {"$set": update})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
+    return {"ok": True, "is_printed": is_printed, "printed_at": update["printed_at"]}
+
+
+
 @router.put("/invoices/{invoice_id}", response_model=Invoice)
 async def update_invoice(invoice_id: str, update: InvoiceUpdate):
     """Rechnung bearbeiten mit Anzahlung und optionaler Gesamtsummen-Anpassung"""

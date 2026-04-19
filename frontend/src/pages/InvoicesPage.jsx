@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle, Eye, Search } from "lucide-react";
+import { Receipt, Plus, Download, Mail, Trash2, Edit, CheckCircle, AlertTriangle, Eye, Search, Printer, FileCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -56,6 +56,21 @@ const InvoicesPage = ({ readOnly = false }) => {
       loadInvoices();
     } catch (err) {
       toast.error("Fehler beim Aktualisieren");
+    }
+  };
+
+  const handleTogglePrinted = async (id, currentlyPrinted, e) => {
+    e?.stopPropagation();
+    const msg = currentlyPrinted
+      ? "Gedruckt-Markierung entfernen? Die Rechnung gilt dann wieder als Entwurf (nicht verbindlich)."
+      : "Rechnung als 'Gedruckt' markieren?\n\nDamit bestätigen Sie, dass diese Rechnung rechtsverbindlich an den Kunden ausgegeben wurde. Ab dann sollten Sie keine Änderungen mehr vornehmen.";
+    if (!window.confirm(msg)) return;
+    try {
+      await api.put(`/invoices/${id}/print-status`, { is_printed: !currentlyPrinted });
+      toast.success(currentlyPrinted ? "Markierung entfernt" : "Als gedruckt markiert");
+      loadInvoices();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Aktualisieren");
     }
   };
 
@@ -373,6 +388,11 @@ const InvoicesPage = ({ readOnly = false }) => {
                     <p className="font-mono text-sm text-muted-foreground">{invoice.invoice_number}</p>
                     <p className="font-semibold truncate">{invoice.customer_name}</p>
                     {invoice.betreff && <p className="text-sm text-muted-foreground truncate mt-0.5">{invoice.betreff}</p>}
+                    {invoice.is_printed && (
+                      <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-medium rounded-full" title={`Gedruckt: ${invoice.printed_at ? new Date(invoice.printed_at).toLocaleDateString('de-DE') : ''}`}>
+                        <FileCheck className="w-3 h-3" /> Gedruckt
+                      </span>
+                    )}
                   </div>
                   {getStatusBadge(invoice.status)}
                 </div>
@@ -386,12 +406,22 @@ const InvoicesPage = ({ readOnly = false }) => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
-                  {!readOnly && <button data-testid={`btn-edit-invoice-${invoice.id}`} onClick={(e) => handleEdit(invoice, e)} className="p-2 hover:bg-muted rounded-sm"><Edit className="w-4 h-4" /></button>}
-                  <button onClick={(e) => handleDownloadPDF(invoice.id, invoice.invoice_number, e)} className="p-2 hover:bg-muted rounded-sm"><Download className="w-4 h-4" /></button>
-                  {!readOnly && invoice.status === "Offen" && (
-                    <button onClick={(e) => handleMarkPaid(invoice.id, e)} className="p-2 hover:bg-green-100 text-green-700 rounded-sm"><CheckCircle className="w-4 h-4" /></button>
+                  {!readOnly && <button data-testid={`btn-edit-invoice-${invoice.id}`} onClick={(e) => handleEdit(invoice, e)} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>}
+                  <button onClick={(e) => handleDownloadPDF(invoice.id, invoice.invoice_number, e)} className="p-2 hover:bg-muted rounded-sm" title="PDF herunterladen"><Download className="w-4 h-4" /></button>
+                  {!readOnly && (
+                    <button
+                      onClick={(e) => handleTogglePrinted(invoice.id, invoice.is_printed, e)}
+                      className={`p-2 rounded-sm ${invoice.is_printed ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "hover:bg-muted"}`}
+                      title={invoice.is_printed ? "Als Gedruckt markiert (klicken zum Zurücksetzen)" : "Als Gedruckt markieren"}
+                      data-testid={`btn-toggle-printed-${invoice.id}`}
+                    >
+                      {invoice.is_printed ? <FileCheck className="w-4 h-4" /> : <Printer className="w-4 h-4" />}
+                    </button>
                   )}
-                  {!readOnly && <button onClick={(e) => handleDelete(invoice.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm"><Trash2 className="w-4 h-4" /></button>}
+                  {!readOnly && invoice.status === "Offen" && (
+                    <button onClick={(e) => handleMarkPaid(invoice.id, e)} className="p-2 hover:bg-green-100 text-green-700 rounded-sm" title="Als bezahlt markieren"><CheckCircle className="w-4 h-4" /></button>
+                  )}
+                  {!readOnly && <button onClick={(e) => handleDelete(invoice.id, e)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-sm" title="Löschen"><Trash2 className="w-4 h-4" /></button>}
                 </div>
               </Card>
             ))}
@@ -420,7 +450,14 @@ const InvoicesPage = ({ readOnly = false }) => {
                     className="border-b table-row-hover cursor-pointer"
                     onClick={() => setPreviewInvoice(invoice)}
                   >
-                    <td className="p-4 font-mono text-sm">{invoice.invoice_number}</td>
+                    <td className="p-4 font-mono text-sm">
+                      {invoice.invoice_number}
+                      {invoice.is_printed && (
+                        <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-medium rounded-full" title={`Gedruckt am ${invoice.printed_at ? new Date(invoice.printed_at).toLocaleDateString('de-DE') : ''}`}>
+                          <FileCheck className="w-3 h-3" /> Gedruckt
+                        </span>
+                      )}
+                    </td>
                     <td className="p-4">{invoice.customer_name}</td>
                     <td className="p-4 text-muted-foreground text-sm max-w-[250px] truncate">{invoice.betreff || "-"}</td>
                     <td className="p-4 text-muted-foreground">
@@ -453,6 +490,16 @@ const InvoicesPage = ({ readOnly = false }) => {
                         >
                           <Download className="w-4 h-4" />
                         </button>
+                        {!readOnly && (
+                          <button
+                            data-testid={`btn-toggle-printed-table-${invoice.id}`}
+                            onClick={(e) => handleTogglePrinted(invoice.id, invoice.is_printed, e)}
+                            className={`p-2 rounded-sm ${invoice.is_printed ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "hover:bg-muted"}`}
+                            title={invoice.is_printed ? "Als Gedruckt markiert – klicken zum Zurücksetzen" : "Als Gedruckt markieren"}
+                          >
+                            {invoice.is_printed ? <FileCheck className="w-4 h-4" /> : <Printer className="w-4 h-4" />}
+                          </button>
+                        )}
                         {!readOnly && invoice.status === "Offen" && (
                           <button
                             data-testid={`btn-mark-paid-${invoice.id}`}

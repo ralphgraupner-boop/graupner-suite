@@ -154,6 +154,22 @@ const HELP_SECTIONS = [
     ],
   },
   {
+    id: "rechnungen-gedruckt",
+    icon: FileText,
+    title: "Rechnungen: 'Gedruckt'-Markierung (manuell)",
+    intro: "Solange die Suite noch im Test-/Einführungs-Betrieb ist, werden Rechnungen NICHT automatisch nach GoBD gesperrt. Sie entscheiden selbst, wann eine Rechnung als verbindlich ausgegeben gilt.",
+    lines: [
+      "1. Rechnung wird normal erstellt – sie ist beliebig oft bearbeitbar (wie ein Entwurf).",
+      "2. Wenn Sie die Rechnung tatsächlich an den Kunden geschickt/gedruckt haben: Drucker-Icon in der Rechnungsliste klicken.",
+      "3. Bestätigungs-Dialog erscheint: mit 'OK' bestätigen.",
+      "4. Danach erscheint ein blaues 'Gedruckt'-Abzeichen neben der Rechnungsnummer.",
+      "5. Die Rechnung gilt ab dem Moment aus Ihrer Sicht als rechtsverbindlich ausgegeben – Änderungen sollten vermieden werden.",
+      "6. Zurücksetzen möglich: Nochmal auf das blaue Icon klicken – Bestätigung – Markierung entfernt.",
+      "7. Datum/Uhrzeit der Markierung werden automatisch gespeichert.",
+      "8. Später (wenn alles rund läuft) kann dies in eine echte GoBD-Sperre umgestellt werden – einfach Bescheid sagen.",
+    ],
+  },
+  {
     id: "shortcuts",
     icon: Keyboard,
     title: "Nützliche Tipps & Tricks",
