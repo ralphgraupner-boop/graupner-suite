@@ -221,6 +221,113 @@ async def export_artikel(user=Depends(get_current_user)):
     return {"module": modul, "data": items, "exported_at": datetime.now(timezone.utc).isoformat(), "count": len(items)}
 
 
+# ==================== DUPLIKAT-FINDER ====================
+
+def _normalize_name(s: str) -> str:
+    """Normalisiert Namen fuer Duplikat-Vergleich: lowercase, trim, collapse whitespace"""
+    if not s:
+        return ""
+    import re
+    s = s.lower().strip()
+    s = re.sub(r"\s+", " ", s)
+    # Entferne gaengige Fuellwoerter und Sonderzeichen
+    s = re.sub(r"[.,;:!?()\[\]\-_/\\]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+
+def _completeness_score(item: dict) -> int:
+    """Hoeher = vollstaendiger. Dient zur Empfehlung welcher Datensatz behalten werden soll."""
+    score = 0
+    if item.get("description"): score += 3
+    if item.get("ek_preis", 0) > 0: score += 2
+    if item.get("price_net", 0) > 0: score += 2
+    if item.get("vk_preis_1", 0) > 0: score += 1
+    if item.get("vk_preis_2", 0) > 0: score += 1
+    if item.get("vk_preis_3", 0) > 0: score += 1
+    if item.get("artikel_nr"): score += 2
+    if item.get("unit"): score += 1
+    if item.get("gewerk"): score += 1
+    if item.get("lieferant"): score += 1
+    if item.get("labor_cost", 0) > 0: score += 1
+    return score
+
+
+@router.get("/modules/artikel/find-duplicates")
+async def find_duplicates(user=Depends(get_current_user)):
+    """Findet Duplikate basierend auf normalisiertem Namen + gleichem Typ.
+    Gibt Gruppen zurueck inkl. Empfehlung welcher behalten werden soll."""
+    items = await db.module_artikel.find({}, {"_id": 0}).to_list(10000)
+
+    # Gruppiere nach (typ, normalisierter_name)
+    groups = {}
+    for it in items:
+        key = (it.get("typ", "Artikel"), _normalize_name(it.get("name", "")))
+        if not key[1]:
+            continue
+        groups.setdefault(key, []).append(it)
+
+    duplicates = []
+    for (typ, norm_name), group in groups.items():
+        if len(group) < 2:
+            continue
+        # Sort: hoechster Completeness-Score zuerst, bei Gleichstand aeltester (created_at) zuerst
+        scored = [(_completeness_score(i), -1 * len(i.get("created_at", "")), i) for i in group]
+        scored.sort(key=lambda x: (-x[0], x[1]))
+
+        keep = scored[0][2]
+        delete_candidates = [s[2] for s in scored[1:]]
+
+        duplicates.append({
+            "typ": typ,
+            "normalized_name": norm_name,
+            "count": len(group),
+            "keep_recommended": {
+                "id": keep.get("id"),
+                "name": keep.get("name"),
+                "artikel_nr": keep.get("artikel_nr", ""),
+                "price_net": keep.get("price_net", 0),
+                "ek_preis": keep.get("ek_preis", 0),
+                "unit": keep.get("unit", ""),
+                "description": keep.get("description", ""),
+                "score": _completeness_score(keep),
+            },
+            "delete_suggestions": [
+                {
+                    "id": i.get("id"),
+                    "name": i.get("name"),
+                    "artikel_nr": i.get("artikel_nr", ""),
+                    "price_net": i.get("price_net", 0),
+                    "ek_preis": i.get("ek_preis", 0),
+                    "unit": i.get("unit", ""),
+                    "description": i.get("description", ""),
+                    "score": _completeness_score(i),
+                }
+                for i in delete_candidates
+            ],
+        })
+
+    # Sortiere Gruppen: groesste zuerst
+    duplicates.sort(key=lambda g: -g["count"])
+    return {
+        "total_items": len(items),
+        "duplicate_groups": len(duplicates),
+        "total_duplicates_found": sum(g["count"] - 1 for g in duplicates),
+        "groups": duplicates,
+    }
+
+
+@router.post("/modules/artikel/bulk-delete")
+async def bulk_delete(body: dict, user=Depends(get_current_user)):
+    """Loescht eine Liste von Artikel-IDs auf einmal"""
+    ids = body.get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        raise HTTPException(400, "Keine IDs angegeben")
+    result = await db.module_artikel.delete_many({"id": {"$in": ids}})
+    logger.info(f"Bulk-delete: {result.deleted_count} Artikel geloescht")
+    return {"deleted": result.deleted_count, "requested": len(ids)}
+
+
 
 # ==================== CSV IMPORT ====================
 

@@ -85,6 +85,13 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - [ ] Bild-Upload Kategorien erweitern
 - [ ] "Einsatz erstellen" Button im Kontakt- und Kunden-Modul
 
+## P1 - In Arbeit / Gemerkt
+
+### Stundenplan-Kontrolle (wichtig, auf morgen verschoben)
+- Monatlicher Stundenplan-Ausdruck pro Mitarbeiter (Arbeitsbeginn/-ende)
+- Beispiel-PDF als Referenz von User erwartet
+- Ziel: Zeiterfassungs-Kontrolle parallel zu Lexware-Abrechnung
+
 ## P2 - Backlog
 - [ ] DATEV-Export
 - [ ] Lexoffice-Anbindung

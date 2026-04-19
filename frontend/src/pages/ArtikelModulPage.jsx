@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Download, Package, Wrench, Users, Settings, Upload, FileDown } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Package, Wrench, Users, Settings, Upload, FileDown, FileSpreadsheet, FileJson, FileCode, FileText, ChevronDown, Copy, AlertTriangle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 
 const TYPE_CONFIG = {
@@ -19,6 +20,7 @@ const ArtikelModulPage = () => {
   const [editItem, setEditItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [showDupes, setShowDupes] = useState(false);
 
   useEffect(() => { loadItems(); }, []);
 
@@ -114,6 +116,9 @@ const ArtikelModulPage = () => {
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={() => setShowConfig(!showConfig)} data-testid="btn-config-artikel">
             <Settings className="w-4 h-4" /> Konfiguration
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowDupes(true)} data-testid="btn-find-duplicates">
+            <Copy className="w-4 h-4" /> Duplikate finden
           </Button>
 
           {/* Export Dropdown */}
@@ -252,6 +257,7 @@ const ArtikelModulPage = () => {
       )}
 
       <ArtikelFormModal isOpen={showModal} onClose={() => setShowModal(false)} item={editItem} onSave={() => { setShowModal(false); loadItems(); }} />
+      {showDupes && <DuplicateFinderModal onClose={() => setShowDupes(false)} onCleaned={() => { setShowDupes(false); loadItems(); }} />}
     </div>
   );
 };
@@ -489,3 +495,135 @@ const ArtikelConfig = ({ onClose }) => {
 };
 
 export { ArtikelModulPage };
+
+
+// ==================== DUPLICATE FINDER MODAL ====================
+const DuplicateFinderModal = ({ onClose, onCleaned }) => {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(null);
+  const [selected, setSelected] = useState({}); // { groupIdx: Set(ids to delete) }
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    api.get("/modules/artikel/find-duplicates").then(res => {
+      setData(res.data);
+      // Preselect: alle delete_suggestions per default angehakt
+      const init = {};
+      (res.data.groups || []).forEach((g, idx) => {
+        init[idx] = new Set(g.delete_suggestions.map(d => d.id));
+      });
+      setSelected(init);
+    }).catch(() => toast.error("Fehler beim Suchen"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const toggleId = (groupIdx, id) => {
+    setSelected(prev => {
+      const s = new Set(prev[groupIdx] || []);
+      if (s.has(id)) s.delete(id); else s.add(id);
+      return { ...prev, [groupIdx]: s };
+    });
+  };
+
+  const totalToDelete = Object.values(selected).reduce((sum, s) => sum + (s?.size || 0), 0);
+
+  const handleDelete = async () => {
+    const allIds = Object.values(selected).flatMap(s => [...(s || [])]);
+    if (allIds.length === 0) { toast.error("Nichts ausgewaehlt"); return; }
+    if (!window.confirm(`${allIds.length} Eintraege wirklich unwiderruflich loeschen?`)) return;
+    setDeleting(true);
+    try {
+      const res = await api.post("/modules/artikel/bulk-delete", { ids: allIds });
+      toast.success(`${res.data.deleted} Duplikate geloescht`);
+      onCleaned();
+    } catch { toast.error("Fehler beim Loeschen"); }
+    finally { setDeleting(false); }
+  };
+
+  const typColors = { Artikel: "bg-blue-100 text-blue-800", Leistung: "bg-green-100 text-green-800", Fremdleistung: "bg-orange-100 text-orange-800" };
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Duplikate finden & aufraeumen" size="xl">
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground">Suche Duplikate...</div>
+      ) : !data || data.duplicate_groups === 0 ? (
+        <div className="text-center py-12" data-testid="no-duplicates">
+          <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-3" />
+          <p className="font-semibold">Keine Duplikate gefunden</p>
+          <p className="text-sm text-muted-foreground mt-1">Alle {data?.total_items || 0} Eintraege sind einzigartig. Top!</p>
+          <Button onClick={onClose} className="mt-4">Schliessen</Button>
+        </div>
+      ) : (
+        <div className="space-y-4" data-testid="duplicates-modal">
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-sm p-3 text-sm">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p><strong>{data.duplicate_groups} Gruppen</strong> mit insgesamt <strong>{data.total_duplicates_found} Duplikaten</strong> gefunden.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Gruene Zeilen = empfohlen zu behalten (meiste Details). Rote Zeilen = Loeschvorschlag.
+                Haken an = wird beim Klick auf &quot;Loeschen&quot; entfernt. Du kannst frei umentscheiden.
+              </p>
+            </div>
+          </div>
+
+          <div className="max-h-[55vh] overflow-y-auto space-y-3 pr-2">
+            {data.groups.map((g, idx) => (
+              <div key={idx} className="border rounded-sm p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className={typColors[g.typ] || "bg-gray-100"}>{g.typ}</Badge>
+                  <span className="font-semibold text-sm">{g.keep_recommended.name}</span>
+                  <span className="text-xs text-muted-foreground">({g.count} gefunden)</span>
+                </div>
+                {/* Keep-recommended Zeile */}
+                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-sm mb-1 text-sm">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
+                    <span className="font-mono text-xs text-muted-foreground">{g.keep_recommended.artikel_nr || "—"}</span>
+                    <span className="truncate">{g.keep_recommended.name}</span>
+                    <span className="text-xs text-muted-foreground">{g.keep_recommended.unit}</span>
+                    <span className="font-mono text-xs">{(g.keep_recommended.price_net || 0).toFixed(2)} EUR</span>
+                    {g.keep_recommended.description && <span className="text-xs text-muted-foreground italic truncate max-w-[200px]">"{g.keep_recommended.description.slice(0, 50)}"</span>}
+                    <Badge className="bg-green-100 text-green-700 text-xs">Score: {g.keep_recommended.score}</Badge>
+                  </div>
+                  <span className="text-xs font-medium text-green-700">Behalten</span>
+                </div>
+                {/* Delete candidates */}
+                {g.delete_suggestions.map(d => (
+                  <label key={d.id} className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-sm mb-1 text-sm cursor-pointer hover:bg-red-100" data-testid={`dupe-item-${d.id}`}>
+                    <input
+                      type="checkbox"
+                      checked={selected[idx]?.has(d.id) || false}
+                      onChange={() => toggleId(idx, d.id)}
+                      className="flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0 flex items-center gap-3 flex-wrap">
+                      <span className="font-mono text-xs text-muted-foreground">{d.artikel_nr || "—"}</span>
+                      <span className="truncate">{d.name}</span>
+                      <span className="text-xs text-muted-foreground">{d.unit}</span>
+                      <span className="font-mono text-xs">{(d.price_net || 0).toFixed(2)} EUR</span>
+                      {d.description && <span className="text-xs text-muted-foreground italic truncate max-w-[200px]">"{d.description.slice(0, 50)}"</span>}
+                      <Badge className="bg-gray-100 text-gray-700 text-xs">Score: {d.score}</Badge>
+                    </div>
+                    <span className="text-xs font-medium text-red-700">Loeschen</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t">
+            <div className="text-sm">
+              <strong className="text-red-700">{totalToDelete}</strong> Eintraege zum Loeschen markiert
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+              <Button onClick={handleDelete} disabled={deleting || totalToDelete === 0} className="bg-red-600 hover:bg-red-700 text-white" data-testid="btn-delete-duplicates">
+                <Trash2 className="w-4 h-4 mr-1" /> {deleting ? "Loesche..." : `${totalToDelete} Duplikate loeschen`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+};
