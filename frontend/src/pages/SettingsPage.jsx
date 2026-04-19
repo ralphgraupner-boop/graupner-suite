@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive } from "lucide-react";
+import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive, HardHat } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
 import { subscribeToPush, unsubscribeFromPush, ensureVapidKey } from "@/lib/push";
 import { PLACEHOLDERS } from "@/components/TextTemplateSelect";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
 
 // ==================== TAB CONFIG ====================
 const TABS = [
@@ -13,6 +14,7 @@ const TABS = [
   { id: "kalkulation", label: "Kalkulation", icon: Calculator },
   { id: "email", label: "E-Mail", icon: Mail },
   { id: "benutzer", label: "Benutzer", icon: Users },
+  { id: "mitarbeiter", label: "Mitarbeiter", icon: HardHat },
   { id: "dokumente", label: "Dokument-Vorlagen", icon: Palette },
   { id: "diverses", label: "Diverses / Info", icon: BookOpen },
   { id: "backup", label: "Backup", icon: Save },
@@ -2340,6 +2342,11 @@ const BackupTab = () => {
       {activeTab === "kalkulation" && <KalkulationTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
       {activeTab === "email" && <EmailTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
       {activeTab === "benutzer" && <BenutzerTab />}
+      {activeTab === "mitarbeiter" && (
+        <div className="bg-background -mt-2">
+          <MitarbeiterModulPage />
+        </div>
+      )}
       {activeTab === "dokumente" && <DokumentVorlagenTab settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />}
       {activeTab === "diverses" && <DiversesTab />}
       {activeTab === "backup" && <BackupTab />}
