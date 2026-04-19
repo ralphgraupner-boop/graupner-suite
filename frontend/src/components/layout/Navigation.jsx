@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat } from "lucide-react";
+import { api } from "@/lib/api";
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
@@ -36,6 +37,39 @@ const Sidebar = ({ onLogout }) => {
   const username = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "null"); return typeof u === "object" ? u.username : u; } catch { return ""; } })();
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0 });
+  const prevEmailRef = useRef(0);
+
+  // Poll fuer ungelesene E-Mails und Portal-Aktivitaeten
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCounts = async () => {
+      try {
+        const [emailRes, portalRes] = await Promise.all([
+          api.get("/imap/inbox/stats").catch(() => ({ data: { unread: 0 } })),
+          api.get("/portals/unread-count").catch(() => ({ data: { count: 0 } })),
+        ]);
+        if (cancelled) return;
+        const emailCount = emailRes.data?.unread || 0;
+        const portalCount = portalRes.data?.count || 0;
+        // Sound bei neuer Mail spielen (nur wenn Anzahl gestiegen)
+        if (emailCount > prevEmailRef.current && prevEmailRef.current !== 0) {
+          try {
+            const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+            audio.volume = 0.3;
+            audio.play().catch(() => {});
+          } catch { /* ignore */ }
+        }
+        prevEmailRef.current = emailCount;
+        setUnreadCounts({ email: emailCount, portal: portalCount });
+      } catch { /* ignore */ }
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
+    const onFocus = () => fetchCounts();
+    window.addEventListener("focus", onFocus);
+    return () => { cancelled = true; clearInterval(interval); window.removeEventListener("focus", onFocus); };
+  }, []);
 
   const handleLogoutClick = () => {
     setShowBackupDialog(true);
@@ -99,21 +133,38 @@ const Sidebar = ({ onLogout }) => {
         )}
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ path, icon: Icon, label }) => (
-          <Link
-            key={path}
-            to={path}
-            data-testid={`nav-${path.slice(1)}`}
-            className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-smooth ${
-              location.pathname.startsWith(path)
-                ? "bg-primary/10 text-primary border-l-2 border-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            <Icon className="w-5 h-5" />
-            <span className="font-medium">{label}</span>
-          </Link>
-        ))}
+        {navItems.map(({ path, icon: Icon, label }) => {
+          const badgeCount = path === "/email" ? unreadCounts.email : (path === "/portals" ? unreadCounts.portal : 0);
+          const isActive = location.pathname.startsWith(path);
+          const hasBadge = badgeCount > 0 && !isActive;
+          return (
+            <Link
+              key={path}
+              to={path}
+              data-testid={`nav-${path.slice(1)}`}
+              className={`relative flex items-center gap-3 px-4 py-3 rounded-sm transition-smooth ${
+                isActive
+                  ? "bg-primary/10 text-primary border-l-2 border-primary"
+                  : hasBadge
+                  ? "text-foreground bg-red-50 hover:bg-red-100 animate-pulse-slow"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <div className="relative shrink-0">
+                <Icon className={`w-5 h-5 ${hasBadge ? "text-red-600" : ""}`} />
+                {hasBadge && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold animate-pulse ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                )}
+              </div>
+              <span className={`font-medium ${hasBadge ? "text-red-700" : ""}`}>{label}</span>
+              {hasBadge && (
+                <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              )}
+            </Link>
+          );
+        })}
       </nav>
       <div className="p-4 border-t">
         <button
