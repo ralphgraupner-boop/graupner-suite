@@ -150,12 +150,14 @@ def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
     c.setFillColor(koenigsblau)
     c.drawString(2 * cm + tw + 2, y, "Graupner")
     gw = c.stringWidth("Graupner", "Helvetica-Bold", 22)
-    c.setFont("Helvetica-Bold", 9)
+    # Groesse der "seit 1960" + Handwerkskammer-Zeile aus Settings
+    slogan_size = int(settings.get("slogan_font_size", 9) or 9)
+    c.setFont("Helvetica-Bold", slogan_size)
     c.setFillColor(red_accent)
     c.drawString(2 * cm + tw + gw + 8, y + 2, "seit 1960")
 
     y -= 0.5 * cm
-    c.setFont("Helvetica", 9)
+    c.setFont("Helvetica", slogan_size)
     c.setFillColor(koenigsblau)
     c.drawString(2 * cm, y, "Mitglied der Handwerkskammer Hamburg")
 
@@ -424,12 +426,13 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     c.setFillColor(koenigsblau)
     c.drawString(2 * cm + tischlerei_width + 2, y, "Graupner")
     graupner_width = c.stringWidth("Graupner", "Helvetica-Bold", 22)
-    c.setFont("Helvetica-Bold", 9)
+    slogan_size = int(settings.get("slogan_font_size", 9) or 9)
+    c.setFont("Helvetica-Bold", slogan_size)
     c.setFillColor(red_accent)
     c.drawString(2 * cm + tischlerei_width + graupner_width + 8, y + 2, "seit 1960")
 
     y -= 0.5 * cm
-    c.setFont("Helvetica", 9)
+    c.setFont("Helvetica", slogan_size)
     c.setFillColor(koenigsblau)
     c.drawString(2 * cm, y, "Mitglied der Handwerkskammer Hamburg")
 

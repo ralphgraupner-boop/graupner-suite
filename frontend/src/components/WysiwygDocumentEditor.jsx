@@ -275,6 +275,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       const artRes = await api.get("/modules/artikel/data");
       setArticles((artRes.data || []).filter(a => a.typ === "Artikel"));
       setServices((artRes.data || []).filter(a => a.typ === "Leistung" || a.typ === "Fremdleistung"));
+      setSidebarSearch("");
+      setSidebarTab(saveAsType === "Artikel" ? "articles" : "services");
     } catch { toast.error("Fehler beim Speichern"); }
   };
 
@@ -528,6 +530,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     return true;
   };
 
+  const validatePositions = () => {
+    const problems = [];
+    positions.filter(p => p.type !== "titel").forEach((p, idx) => {
+      if (!p.description?.trim()) return;
+      if (!p.price_net || p.price_net === 0) problems.push(`Position ${idx + 1}: "${p.description.substring(0, 45)}${p.description.length > 45 ? "..." : ""}" hat keinen Preis (0,00 EUR)`);
+      if (!p.quantity || p.quantity === 0) problems.push(`Position ${idx + 1}: "${p.description.substring(0, 45)}${p.description.length > 45 ? "..." : ""}" hat Menge 0`);
+    });
+    if (problems.length === 0) return true;
+    const msg = `Plausibilitätsprüfung - ${problems.length} Auffälligkeit${problems.length !== 1 ? "en" : ""} gefunden:\n\n${problems.slice(0, 6).join("\n")}${problems.length > 6 ? `\n... und ${problems.length - 6} weitere` : ""}\n\nWirklich trotzdem fortfahren?`;
+    return window.confirm(msg);
+  };
+
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showLoadTemplate, setShowLoadTemplate] = useState(false);
 
@@ -553,6 +567,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return; }
     if (positions.length === 0 || !positions[0].description) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return; }
     if (!validateTextFields()) return;
+    if (!validatePositions()) return;
     setSaving(true);
     let savedId = id;
     try {
@@ -582,13 +597,23 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleDownloadPDF = async () => {
     if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
     if (!validateTextFields()) return;
+    if (!validatePositions()) return;
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       const res = await axios.get(`${API}/pdf/${endpoint}/${id}`, { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a"); link.href = url; link.setAttribute("download", `${titles[type]}_${docNumber}.pdf`);
-      document.body.appendChild(link); link.click(); link.remove(); toast.success("PDF heruntergeladen");
-    } catch { toast.error("Fehler beim PDF-Download"); }
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      // 1. Öffne Inline-Vorschau in neuem Tab
+      const previewWin = window.open(url, "_blank");
+      if (!previewWin) {
+        // Fallback bei Popup-Blocker → Download
+        const link = document.createElement("a"); link.href = url; link.setAttribute("download", `${titles[type]}_${docNumber}.pdf`);
+        document.body.appendChild(link); link.click(); link.remove();
+        toast.warning("Popup blockiert - PDF wurde stattdessen heruntergeladen");
+      } else {
+        toast.success("PDF wird in neuem Tab geöffnet");
+      }
+    } catch (e) { console.error("PDF error:", e); toast.error("Fehler beim PDF-Erzeugen: " + (e?.response?.statusText || e?.message || "unbekannt")); }
   };
 
   const handlePrint = async () => {
@@ -619,21 +644,35 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const onOpenEmailDialog = () => { setShowEmailDialog(true); };
 
+  const [showMailDialog, setShowMailDialog] = useState(null);
+
   const onOpenMailClient = () => {
+    if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
+    setShowMailDialog({ open: true });
+  };
+
+  const executeMailClient = async (withText, saveFirst) => {
     const to = customer?.email || "";
     const docTitle = titles[type] || "Dokument";
     const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
-    if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
-    const mitText = window.confirm("Vortext und Schlusstext in die E-Mail uebernehmen?");
-    const body = mitText
+    const body = withText
       ? encodeURIComponent(`${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
       : "";
-    const doOpen = () => { window.location.href = `mailto:${to}?subject=${subject}&body=${body}`; navigate(listPaths[type]); };
-    if (window.confirm("Dokument vorher speichern?")) {
-      handleSave().then(() => doOpen()).catch(() => doOpen());
-    } else {
-      doOpen();
+    const doOpen = () => {
+      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+      // Status auf "Versendet" / "Gesendet" setzen falls nicht schon in dem Status
+      if (!isNew && status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
+        const newStatus = type === "quote" ? "Versendet" : type === "order" ? "Gesendet" : "Versendet";
+        const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
+        api.put(`/${endpoint}/${id}`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
+      }
+      navigate(listPaths[type]);
+    };
+    if (saveFirst) {
+      await handleSave();
     }
+    doOpen();
+    setShowMailDialog(null);
   };
 
   // ==================== COMPUTED VALUES ====================
@@ -702,6 +741,24 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 type={type} docNumber={docNumber} createdAt={createdAt}
                 setPositions={setPositions} positions={positions}
               />
+
+              {/* Dokument-Ueberschrift: grosse Titel-Zeile ueber Betreff (wie altes System) */}
+              <div className="px-4 lg:px-10 py-4 lg:py-5 border-b bg-gradient-to-b from-primary/5 to-transparent">
+                <div className="flex items-baseline gap-4 flex-wrap">
+                  <h2 className="text-2xl lg:text-3xl font-bold" style={{ color: "#003399" }}>
+                    {titles[type]}
+                  </h2>
+                  <span className="text-xl lg:text-2xl font-semibold text-slate-700 font-mono">
+                    {docNumber || (isNew ? "(wird beim Speichern vergeben)" : "")}
+                  </span>
+                  <div className="flex-1" />
+                  {createdAt && (
+                    <span className="text-sm text-muted-foreground">
+                      Datum: <span className="font-medium text-foreground">{new Date(createdAt).toLocaleDateString("de-DE")}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
 
               {/* Betreff */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
@@ -790,6 +847,53 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       )}
 
       {/* Beenden-Dialog */}
+      {showMailDialog && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="mail-client-dialog">
+          <div className="bg-background rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-5 border-b">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                Mailprogramm öffnen
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">Wie soll die E-Mail vorbereitet werden?</p>
+            </div>
+            <div className="p-5 space-y-2">
+              <button
+                onClick={() => executeMailClient(true, false)}
+                className="w-full p-3 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-left flex items-start gap-3"
+                data-testid="btn-mail-with-text"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                <div>
+                  <div className="font-semibold text-primary">Mit Vortext &amp; Schlusstext senden</div>
+                  <div className="text-xs text-muted-foreground">Vortext, Schlusstext und Grußformel werden in die E-Mail übernommen</div>
+                </div>
+              </button>
+              <button
+                onClick={() => executeMailClient(false, false)}
+                className="w-full p-3 rounded-sm border hover:bg-muted/40 text-left flex items-start gap-3"
+                data-testid="btn-mail-without-text"
+              >
+                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center flex-shrink-0 font-bold">—</div>
+                <div>
+                  <div className="font-semibold">Ohne Text (leer)</div>
+                  <div className="text-xs text-muted-foreground">E-Mail wird ohne Inhalt vorbereitet - du schreibst selbst</div>
+                </div>
+              </button>
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <button
+                onClick={() => setShowMailDialog(null)}
+                className="px-4 py-2 text-sm border rounded-sm hover:bg-muted"
+                data-testid="btn-mail-cancel"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showExitConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="exit-confirm-dialog">
           <div className="bg-card rounded-lg shadow-2xl p-6 max-w-sm w-full">

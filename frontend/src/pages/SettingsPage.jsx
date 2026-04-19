@@ -57,7 +57,6 @@ const FirmendatenTab = ({ settings, setSettings, onSave, saving }) => (
         </div>
       </Card>
 
-      <Card className="p-4 lg:p-6">
         <h3 className="text-lg font-semibold mb-4">Bankverbindung</h3>
         <div className="space-y-4">
           <div>

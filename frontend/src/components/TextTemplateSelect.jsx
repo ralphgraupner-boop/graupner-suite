@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronDown, Bookmark, FileText, Search, X, Copy, Check } from "lucide-react";
+import { ChevronDown, Bookmark, FileText, Search, X, Copy, Check, Pencil } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -232,6 +232,9 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
   const [showCreate, setShowCreate] = useState(false);
   const [newForm, setNewForm] = useState({ title: "", content: "", doc_type: docType || "allgemein", text_type: textType || "vortext" });
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", content: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadAll = () => {
     api.get("/modules/textvorlagen/data").then(res => setAllTemplates(res.data || [])).catch(() => setAllTemplates(templates));
@@ -260,6 +263,38 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
       onSelect(res.data);
     } catch { toast.error("Fehler beim Speichern"); }
     finally { setSaving(false); }
+  };
+
+  const startEdit = () => {
+    if (!selectedTemplate) return;
+    setEditForm({ title: selectedTemplate.title, content: selectedTemplate.content });
+    setEditMode(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.title?.trim() || !editForm.content?.trim()) { toast.error("Titel und Inhalt erforderlich"); return; }
+    setSavingEdit(true);
+    try {
+      await api.put(`/modules/textvorlagen/data/${selectedId}`, {
+        ...selectedTemplate, title: editForm.title, content: editForm.content,
+      });
+      toast.success("Textvorlage aktualisiert");
+      setEditMode(false);
+      loadAll();
+    } catch { toast.error("Fehler beim Speichern"); }
+    finally { setSavingEdit(false); }
+  };
+
+  const deleteTemplate = async () => {
+    if (!selectedTemplate) return;
+    if (!window.confirm(`Textvorlage "${selectedTemplate.title}" wirklich löschen?`)) return;
+    try {
+      await api.delete(`/modules/textvorlagen/data/${selectedId}`);
+      toast.success("Gelöscht");
+      setSelectedId(null);
+      setEditMode(false);
+      loadAll();
+    } catch { toast.error("Fehler"); }
   };
 
   return (
@@ -387,18 +422,54 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
                       "bg-gray-100 text-gray-700"
                     }`}>{TEXT_TYPE_LABELS[selectedTemplate.text_type]}</span>
                     <span className="text-xs text-muted-foreground">{DOC_TYPE_LABELS[selectedTemplate.doc_type]}</span>
+                    <div className="flex-1" />
+                    {!editMode && (
+                      <>
+                        <button type="button" onClick={startEdit} className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded-sm hover:bg-blue-50 inline-flex items-center gap-1" data-testid="btn-edit-template">
+                          <Pencil className="w-3 h-3" /> Bearbeiten
+                        </button>
+                        <button type="button" onClick={deleteTemplate} className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1 rounded-sm hover:bg-red-50 inline-flex items-center gap-1" data-testid="btn-delete-template">
+                          <X className="w-3 h-3" /> Löschen
+                        </button>
+                      </>
+                    )}
                   </div>
-                  <div className="bg-muted/30 rounded-sm p-4 border">
-                    <p className="text-sm whitespace-pre-line leading-relaxed">{resolvedPreview}</p>
-                  </div>
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Titel</label>
+                        <input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} className="w-full h-9 rounded-sm border border-input bg-background px-3 text-sm" data-testid="edit-template-title" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Inhalt</label>
+                        <textarea value={editForm.content} onChange={e => setEditForm({ ...editForm, content: e.target.value })} className="w-full rounded-sm border border-input bg-background p-3 text-sm min-h-[200px]" data-testid="edit-template-content" />
+                        <p className="text-xs text-muted-foreground mt-1">Tipp: Platzhalter wie {"{{kunde}}"}, {"{{firma}}"} werden automatisch ersetzt.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-muted/30 rounded-sm p-4 border">
+                      <p className="text-sm whitespace-pre-line leading-relaxed">{resolvedPreview}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="p-4 border-t shrink-0 flex justify-end gap-3">
-                  <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-sm border hover:bg-muted transition-colors">Abbrechen</button>
-                  <button type="button" onClick={() => onSelect(selectedTemplate)}
-                    className="px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                    data-testid="btn-template-confirm">
-                    <Check className="w-4 h-4 inline mr-1.5" />Uebernehmen
-                  </button>
+                  {editMode ? (
+                    <>
+                      <button type="button" onClick={() => setEditMode(false)} className="px-4 py-2 text-sm font-medium rounded-sm border hover:bg-muted">Abbrechen</button>
+                      <button type="button" onClick={saveEdit} disabled={savingEdit} className="px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50" data-testid="btn-save-edit-template">
+                        {savingEdit ? "Speichere..." : "Änderungen speichern"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-sm border hover:bg-muted transition-colors">Abbrechen</button>
+                      <button type="button" onClick={() => onSelect(selectedTemplate)}
+                        className="px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        data-testid="btn-template-confirm">
+                        <Check className="w-4 h-4 inline mr-1.5" />Uebernehmen
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             ) : (
