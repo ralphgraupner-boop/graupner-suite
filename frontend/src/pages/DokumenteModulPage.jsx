@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, FileText, ClipboardCheck, Receipt, Download, Star, Archive } from "lucide-react";
+import { Package, FileText, ClipboardCheck, Receipt, Download, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Badge, Card } from "@/components/common";
 import { api } from "@/lib/api";
@@ -7,14 +7,12 @@ import { QuotesPage } from "@/pages/QuotesPage";
 import { OrdersPage } from "@/pages/OrdersPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
 import { DocumentTemplatesPanel } from "@/components/DocumentTemplatesPanel";
-import { PdfArchivePanel } from "@/components/PdfArchivePanel";
 
 const TABS = [
   { id: "quotes", label: "Angebote", icon: FileText },
   { id: "orders", label: "Auftraege", icon: ClipboardCheck },
   { id: "invoices", label: "Rechnungen", icon: Receipt },
   { id: "templates", label: "Vorlagen", icon: Star },
-  { id: "archive", label: "PDF-Archiv", icon: Archive },
 ];
 
 const DokumenteModulPage = () => {
@@ -96,7 +94,6 @@ const DokumenteModulPage = () => {
         {activeTab === "orders" && <OrdersPage />}
         {activeTab === "invoices" && <InvoicesPage />}
         {activeTab === "templates" && <DocumentTemplatesPanel variant="embedded" />}
-        {activeTab === "archive" && <PdfArchivePanel variant="embedded" />}
       </div>
     </div>
   );

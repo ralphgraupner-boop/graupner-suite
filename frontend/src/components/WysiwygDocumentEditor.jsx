@@ -3,7 +3,6 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
 import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star } from "lucide-react";
-import { PdfArchivePanel } from "@/components/PdfArchivePanel";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
@@ -531,19 +530,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showLoadTemplate, setShowLoadTemplate] = useState(false);
-  const [showArchivePicker, setShowArchivePicker] = useState(false);
-
-  const applyArchiveSources = (data) => {
-    if (data.positions?.length > 0) {
-      const existing = positions.filter(p => p.description);
-      const combined = [...existing, ...data.positions];
-      setPositions(combined.length > 0 ? combined : [{ type: "position", pos_nr: 1, description: "", quantity: 1, unit: "Stk.", price_net: 0, discount: 0 }]);
-    }
-    if (data.betreff && !betreff) setBetreff(data.betreff);
-    if (data.vortext) setVortext(prev => (prev ? prev + "\n\n" : "") + data.vortext);
-    if (data.schlusstext && !schlusstext) setSchlusstext(data.schlusstext);
-    toast.success(`${data.count} Dokument${data.count !== 1 ? "e" : ""} übernommen - ${data.positions?.length || 0} Position${data.positions?.length !== 1 ? "en" : ""} hinzugefügt`);
-  };
 
   const applyTemplate = (tpl) => {
     const snap = tpl.snapshot || {};
@@ -675,7 +661,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
         onOpenDocTemplates={() => setShowLoadTemplate(true)}
-        onOpenArchive={() => setShowArchivePicker(true)}
       />
 
       <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-4">
@@ -841,27 +826,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           onSelect={applyTemplate}
         />
       )}
-
-      {showArchivePicker && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-background rounded-lg shadow-xl w-full max-w-5xl max-h-[92vh] flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span className="inline-flex items-center gap-2 text-amber-800">
-                    📦 Aus PDF-Archiv übernehmen
-                  </span>
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1">Merke bis zu 5 Dokumente vor, prüfe sie, und übernimm die Positionen ins aktuelle Dokument.</p>
-              </div>
-              <button onClick={() => setShowArchivePicker(false)} className="p-1 hover:bg-muted rounded-sm">✕</button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <PdfArchivePickerEmbed onApply={applyArchiveSources} onClose={() => setShowArchivePicker(false)} />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -947,11 +911,6 @@ const SaveAsTemplateDialog = ({ docType, docId, defaultName, onClose }) => {
       </div>
     </div>
   );
-};
-
-// Wrapper fuer Editor-Integration des Archivs
-const PdfArchivePickerEmbed = ({ onApply, onClose }) => {
-  return <PdfArchivePanel variant="embedded" mode="picker" onApply={onApply} onClose={onClose} />;
 };
 
 export { WysiwygDocumentEditor };
