@@ -10,9 +10,23 @@ import hashlib
 import secrets
 import io
 
+# HEIC/HEIF support for iPhone uploads
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+    HEIC_SUPPORTED = True
+except Exception as _e:
+    HEIC_SUPPORTED = False
+    logger.warning(f"pillow-heif not available - HEIC uploads will fail: {_e}")
+
 router = APIRouter()
 
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+    "image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence",
+    # Some browsers/phones send empty or generic content types - accept them and validate via PIL
+    "application/octet-stream", "",
+}
 ALLOWED_DOC_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB
 MAX_IMAGES_PER_PORTAL = 30
@@ -656,8 +670,12 @@ async def public_upload_file(
 ):
     portal = await _verify_portal_access(token, password)
 
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(400, "Nur Bilder erlaubt (JPG, PNG, WebP)")
+    # Accept based on content-type whitelist OR file extension (some phones send generic content-type)
+    ct = (file.content_type or "").lower()
+    fname = (file.filename or "").lower()
+    valid_ext = fname.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"))
+    if ct not in ALLOWED_IMAGE_TYPES and not valid_ext:
+        raise HTTPException(400, "Nur Bilder erlaubt (JPG, PNG, WebP, HEIC).")
 
     # Check total image count limit per portal
     total_count = await db.portal_files.count_documents({

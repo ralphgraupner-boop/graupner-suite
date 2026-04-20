@@ -456,13 +456,13 @@ const CustomerPortalPage = () => {
                 <>
                   <Image className="w-10 h-10 text-slate-300 mb-2" />
                   <span className="text-sm text-slate-500">Tippen um Bilder auszuwählen</span>
-                  <span className="text-xs text-slate-400 mt-1">Max. {MAX_IMAGES_PER_UPLOAD} pro Upload · JPG, PNG, WebP · Wird automatisch komprimiert</span>
+                  <span className="text-xs text-slate-400 mt-1">Max. {MAX_IMAGES_PER_UPLOAD} pro Upload · JPG, PNG, WebP, HEIC · Wird automatisch komprimiert</span>
                 </>
               )}
               <input
                 type="file"
                 className="hidden"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*,image/heic,image/heif,.heic,.heif"
                 multiple
                 onChange={handleUpload}
                 disabled={uploading}

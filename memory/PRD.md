@@ -124,3 +124,11 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - [x] Frontend `TextvorlagenModulPage.jsx`: Button "Portal-Vorlagen importieren" (Sparkles-Icon), `portal_nachricht` in Labels+Colors
 - [x] Verifikation: Seed 2x getestet (3 inserted → 3 skipped), Lint clean
 - [x] Live-Deploy: User klickt nach Redeploy einmal auf "Portal-Vorlagen importieren"
+
+## Completed 20.02.2026 - HEIC/iPhone-Upload Fix (Kundenportal)
+- [x] Backend: `pillow-heif==1.3.0` installiert + `register_heif_opener()` in `portal.py`, requirements.txt aktualisiert
+- [x] Backend `ALLOWED_IMAGE_TYPES` um `image/heic`, `image/heif`, `image/heic-sequence`, `image/heif-sequence`, `application/octet-stream` erweitert
+- [x] Backend: Fallback-Validierung per Datei-Endung (`.heic`, `.heif`, `.jpg`, `.png`, `.webp`) falls Handy-Browser generischen content-type sendet
+- [x] Frontend `CustomerPortalPage.jsx`: `accept="image/*,image/heic,image/heif,.heic,.heif"` statt restriktiv JPG/PNG/WebP
+- [x] `compress_image` konvertiert HEIC automatisch zu JPEG (testweise 421 Byte HEIC → 361 Byte JPEG erfolgreich)
+- [x] Verifikation E2E: HEIC-Upload + JPEG-Regression beide OK via curl, Lint clean
