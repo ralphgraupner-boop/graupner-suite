@@ -717,6 +717,22 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
                 <Input data-testid="input-imap-folder" value={settings.imap_folder || "INBOX"} onChange={(e) => setSettings({ ...settings, imap_folder: e.target.value })} placeholder="INBOX" />
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Rueckblick-Zeitraum (Tage)</label>
+              <Input
+                type="number"
+                min="1"
+                max="365"
+                data-testid="input-imap-lookback-days"
+                value={settings.imap_lookback_days ?? 30}
+                onChange={(e) => setSettings({ ...settings, imap_lookback_days: parseInt(e.target.value) || 30 })}
+                placeholder="30"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Graupner Suite holt alle Mails der letzten X Tage (auch schon gelesene). Duplikate werden automatisch vermieden.<br/>
+                <strong>30 Tage</strong> = Standard. Erhöhen z.B. auf 90 wenn Sie viele alte Anfragen importieren wollen.
+              </p>
+            </div>
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <label className="block text-sm font-medium mb-1">Auto-Abruf Intervall (Minuten)</label>

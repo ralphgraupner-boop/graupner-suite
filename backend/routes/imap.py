@@ -226,9 +226,16 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
 
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     folder = settings.get("imap_folder", "INBOX")
-    mail.select(folder, readonly=False)
+    # readonly=True damit wir keine Flags wie \Seen setzen
+    mail.select(folder, readonly=True)
 
-    status, data = mail.search(None, "UNSEEN")
+    # Alle Mails der letzten X Tage holen (auch bereits gelesene),
+    # Duplikate werden spaeter ueber message_id abgefangen.
+    # Default: 30 Tage; konfigurierbar in company_settings.imap_lookback_days
+    lookback = int(settings.get("imap_lookback_days", 30) or 30)
+    from datetime import timedelta
+    since_date = (datetime.now(timezone.utc) - timedelta(days=lookback)).strftime("%d-%b-%Y")
+    status, data = mail.search(None, f'(SINCE "{since_date}")')
     if status != "OK":
         mail.logout()
         return 0
