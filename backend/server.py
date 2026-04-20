@@ -100,9 +100,11 @@ async def startup_event():
         logger.warning(f"Storage init: {e}")
     # Migrate module_kontakt -> module_kunden (einmalig)
     await migrate_kontakt_to_kunden()
-    # Start IMAP polling background task
+    # IMAP polling background task - TEMPORAERE DEAKTIVIERT (User-Wunsch)
+    # Um wieder zu aktivieren: naechste Zeile einkommentieren
     import asyncio
-    asyncio.create_task(imap_polling_loop())
+    # asyncio.create_task(imap_polling_loop())  # DEAKTIVIERT
+    logger.info("IMAP-Polling DEAKTIVIERT (manuell per Code)")
     # Start automatic daily backup task
     asyncio.create_task(daily_backup_loop())
 
