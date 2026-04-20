@@ -25,8 +25,50 @@ const EmailInboxPage = () => {
   const [replyTo, setReplyTo] = useState(null);
   const [replyForm, setReplyForm] = useState({ subject: "", message: "" });
   const [replySending, setReplySending] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+
+  // Vorlagen einmalig laden (nur email-Vorlagen)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/text-templates?text_type=email");
+        // Favoriten zuerst
+        const sorted = (res.data || []).sort((a, b) => (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0) || (a.title || "").localeCompare(b.title || ""));
+        setEmailTemplates(sorted);
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  // Platzhalter ersetzen (Anrede je nach Kundendaten)
+  const resolvePlaceholders = (text, sender) => {
+    if (!text) return "";
+    const senderName = sender?.name || sender?.from_name || "";
+    const lower = senderName.toLowerCase();
+    let anredeBrief = "Sehr geehrte Damen und Herren,";
+    if (sender?.anrede === "Frau" || /\bfrau\b/.test(lower)) {
+      anredeBrief = `Sehr geehrte Frau ${senderName.replace(/^frau\s+/i, "").trim() || ""},`.trim().replace(/,$/, ",");
+    } else if (sender?.anrede === "Herr" || /\bherr\b/.test(lower)) {
+      anredeBrief = `Sehr geehrter Herr ${senderName.replace(/^herr\s+/i, "").trim() || ""},`.trim().replace(/,$/, ",");
+    }
+    return String(text)
+      .replace(/\{anrede_brief\}/g, anredeBrief)
+      .replace(/\{name\}/g, senderName)
+      .replace(/\{datum\}/g, new Date().toLocaleDateString("de-DE"));
+  };
+
+  const applyTemplate = (tpl) => {
+    if (!tpl || !replyTo) return;
+    const text = resolvePlaceholders(tpl.content, {
+      name: replyTo.from_name || replyTo.reply_to,
+      from_name: replyTo.from_name,
+      anrede: replyTo.customer_anrede,
+    });
+    setReplyForm(rf => ({ ...rf, message: text }));
+    // usage_count erhoehen (best effort)
+    api.put(`/text-templates/${tpl.id}`, { ...tpl, usage_count: (tpl.usage_count || 0) + 1 }).catch(() => {});
+  };
 
   const toggleSelected = (id) => {
     setSelected(prev => {
@@ -856,14 +898,36 @@ const EmailInboxPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Nachricht</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium">Nachricht</label>
+                {emailTemplates.length > 0 && (
+                  <select
+                    data-testid="select-reply-template"
+                    onChange={(e) => {
+                      const tpl = emailTemplates.find(t => t.id === e.target.value);
+                      if (tpl) applyTemplate(tpl);
+                      e.target.value = "";
+                    }}
+                    className="text-xs h-8 rounded-sm border border-input bg-background px-2"
+                    defaultValue=""
+                  >
+                    <option value="">Vorlage einfügen…</option>
+                    {emailTemplates.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.is_favorite ? "⭐ " : ""}{t.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <Textarea
                 value={replyForm.message}
                 onChange={(e) => setReplyForm({ ...replyForm, message: e.target.value })}
                 placeholder="Ihre Antwort..."
-                rows={8}
+                rows={12}
                 data-testid="reply-message"
               />
+              <p className="text-xs text-muted-foreground mt-1">Tipp: Platzhalter wie <code>{"{anrede_brief}"}</code> werden beim Einfügen automatisch ersetzt.</p>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
               <Button variant="outline" onClick={() => setReplyTo(null)}>Abbrechen</Button>
