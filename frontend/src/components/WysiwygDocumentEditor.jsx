@@ -587,7 +587,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const persistDocument = async () => {
     // Silent save - gibt savedId oder null zurueck, ohne Template-Dialog
     if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return null; }
-    if (positions.length === 0 || !positions[0].description) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return null; }
+    if (positions.length === 0 || !positions.some(p => p.description && p.description.trim())) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return null; }
     if (!validateTextFields()) return null;
     if (!validatePositions()) return null;
     setSaving(true);
