@@ -464,9 +464,27 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
 
   const applyVorlage = (vorlage) => {
     let text = vorlage.content || "";
+    // Strip HTML tags, die ggf. aus Rich-Text-Editor stammen
+    text = text.replace(/<br\s*\/?>(?!\n)/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]*>/g, "");
+    // Anrede aus Kundennamen ableiten: "Herr Mueller" / "Frau Schmidt" / sonst "Damen und Herren"
+    const fullName = (portal.customer_name || "").trim();
+    let anredeBrief = "Sehr geehrte Damen und Herren";
+    const cleanName = fullName.replace(/^(Herr|Frau|Divers)\s+/i, "").trim();
+    const parts = cleanName.split(/\s+/);
+    const nachname = parts.length > 1 ? parts[parts.length - 1] : cleanName;
+    if (/^Herr\s+/i.test(fullName)) anredeBrief = `Sehr geehrter Herr ${nachname}`;
+    else if (/^Frau\s+/i.test(fullName)) anredeBrief = `Sehr geehrte Frau ${nachname}`;
+    else if (nachname) anredeBrief = `Sehr geehrte/r ${cleanName}`;
+
+    const today = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
     text = text
-      .replace(/\{kunde_name\}/g, portal.customer_name || "")
-      .replace(/\{firma_name\}/g, "Tischlerei Graupner");
+      .replace(/\{anrede_brief\}/g, anredeBrief)
+      .replace(/\{kunde_name\}/g, fullName)
+      .replace(/\{kunde_email\}/g, portal.customer_email || "")
+      .replace(/\{kunde_telefon\}/g, portal.customer_phone || "")
+      .replace(/\{firma\}/g, "Tischlerei Graupner")
+      .replace(/\{firma_name\}/g, "Tischlerei Graupner")
+      .replace(/\{datum\}/g, today);
     setMsgText(text);
     setSearchTerm(vorlage.title || "");
     setShowResults(false);

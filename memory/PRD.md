@@ -116,3 +116,11 @@ Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenst
 - [ ] Handy-App (Monteur-Zugang)
 - [ ] Standalone Homepage
 - [ ] Windows Desktop App
+
+## Completed 19.02.2026 - Kundenportal Text-Vorlagen mit {anrede_brief}
+- [x] Backend `module_textvorlagen.py`: `VALID_DOC_TYPES` erweitert um `kundenportal`, `einsatz`, `termin`; `VALID_TEXT_TYPES` um `portal_nachricht`
+- [x] Backend neuer Endpoint `POST /api/modules/textvorlagen/seed-kundenportal` - legt 3 Standard-Vorlagen idempotent an (Begruessung+Bilder, Weitere Bilder, Rueckfrage)
+- [x] Frontend `PortalsPage.jsx`: `applyVorlage` ersetzt jetzt `{anrede_brief}`, `{kunde_name}`, `{kunde_email}`, `{kunde_telefon}`, `{firma}`, `{datum}` + HTML-Tag-Strip
+- [x] Frontend `TextvorlagenModulPage.jsx`: Button "Portal-Vorlagen importieren" (Sparkles-Icon), `portal_nachricht` in Labels+Colors
+- [x] Verifikation: Seed 2x getestet (3 inserted → 3 skipped), Lint clean
+- [x] Live-Deploy: User klickt nach Redeploy einmal auf "Portal-Vorlagen importieren"

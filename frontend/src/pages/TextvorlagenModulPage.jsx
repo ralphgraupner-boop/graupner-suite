@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Download, Package, FileText, ClipboardCheck, Receipt, Copy } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Package, FileText, ClipboardCheck, Receipt, Copy, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { RichTextEditor } from "@/components/RichTextEditor";
 
 const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", kundenportal: "Kundenportal", einsatz: "Einsatz", termin: "Termin", allgemein: "Allgemein" };
-const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung" };
-const TEXT_TYPE_COLORS = { vortext: "bg-blue-100 text-blue-800", schlusstext: "bg-green-100 text-green-800", betreff: "bg-purple-100 text-purple-800", bemerkung: "bg-gray-100 text-gray-800", titel: "bg-amber-100 text-amber-800", email: "bg-cyan-100 text-cyan-800", mahnung: "bg-red-100 text-red-800" };
+const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung", portal_nachricht: "Portal-Nachricht" };
+const TEXT_TYPE_COLORS = { vortext: "bg-blue-100 text-blue-800", schlusstext: "bg-green-100 text-green-800", betreff: "bg-purple-100 text-purple-800", bemerkung: "bg-gray-100 text-gray-800", titel: "bg-amber-100 text-amber-800", email: "bg-cyan-100 text-cyan-800", mahnung: "bg-red-100 text-red-800", portal_nachricht: "bg-emerald-100 text-emerald-800" };
 
 const TextvorlagenModulPage = () => {
   const [items, setItems] = useState([]);
@@ -54,6 +54,22 @@ const TextvorlagenModulPage = () => {
     } catch { toast.error("Fehler"); }
   };
 
+  const [seeding, setSeeding] = useState(false);
+  const handleSeedPortal = async () => {
+    if (!window.confirm("Die 3 Standard-Vorlagen fuer das Kundenportal anlegen?\n\n- Begruessung + Bilder-Anfrage\n- Weitere Bilder benoetigt\n- Rueckfrage / Eigene Frage\n\nVorhandene Vorlagen mit gleichem Titel werden NICHT ueberschrieben.")) return;
+    setSeeding(true);
+    try {
+      const res = await api.post("/modules/textvorlagen/seed-kundenportal");
+      const { inserted, skipped } = res.data || {};
+      toast.success(`${inserted} neu angelegt, ${skipped} bereits vorhanden`);
+      loadItems();
+    } catch {
+      toast.error("Fehler beim Anlegen");
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const filtered = items.filter(i => {
     const matchSearch = !search || i.title.toLowerCase().includes(search.toLowerCase()) || i.content.toLowerCase().includes(search.toLowerCase());
     const matchText = !filterTextType || i.text_type === filterTextType;
@@ -76,6 +92,9 @@ const TextvorlagenModulPage = () => {
           <p className="text-muted-foreground mt-1 text-sm">{items.length} Vorlagen gesamt</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={handleSeedPortal} disabled={seeding} data-testid="btn-seed-portal-vorlagen" title="Legt die 3 Standard-Vorlagen fuer das Kundenportal an">
+            <Sparkles className="w-4 h-4" /> {seeding ? "Lege an..." : "Portal-Vorlagen importieren"}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
           <Button size="sm" className="lg:h-10 lg:px-4" onClick={() => { setEditItem(null); setShowModal(true); }} data-testid="btn-new-vorlage">
             <Plus className="w-4 h-4" /> Neue Vorlage

@@ -6,8 +6,8 @@ from uuid import uuid4
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "allgemein"]
-VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "allgemein"]
+VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht"]
 
 PLACEHOLDERS = [
     {"alias": "{anrede_brief}", "beschreibung": "Sehr geehrter Herr/Sehr geehrte Frau + Name"},
@@ -119,3 +119,83 @@ async def export_textvorlagen(user=Depends(get_current_user)):
     items = await db.module_textvorlagen.find({}, {"_id": 0}).to_list(10000)
     modul = await db.modules.find_one({"slug": "textvorlagen"}, {"_id": 0})
     return {"module": modul, "data": items, "exported_at": datetime.now(timezone.utc).isoformat(), "count": len(items)}
+
+
+# Standard-Vorlagen fuer das Kundenportal (werden per Seed-Endpoint eingespielt)
+STANDARD_PORTAL_VORLAGEN = [
+    {
+        "title": "Begruessung + Bilder-Anfrage",
+        "doc_type": "kundenportal",
+        "text_type": "portal_nachricht",
+        "content": (
+            "{anrede_brief},\n\n"
+            "vielen Dank fuer Ihr Vertrauen und die Beauftragung unserer Tischlerei.\n\n"
+            "Damit wir Ihren Auftrag optimal vorbereiten koennen, bitten wir Sie, uns ueber das Kundenportal einige Bilder der aktuellen Situation vor Ort hochzuladen (z.B. Tuer, Fenster, Raumsituation, Detailaufnahmen).\n\n"
+            "Sie koennen die Bilder einfach ueber den Upload-Button im Portal hochladen. So sparen wir uns gegenseitig Wege und koennen zuegig mit der Planung starten.\n\n"
+            "Vielen Dank und freundliche Gruesse\nIhre Tischlerei Graupner"
+        ),
+    },
+    {
+        "title": "Weitere Bilder benoetigt",
+        "doc_type": "kundenportal",
+        "text_type": "portal_nachricht",
+        "content": (
+            "{anrede_brief},\n\n"
+            "vielen Dank fuer die bereits hochgeladenen Bilder. Fuer eine praezise Planung benoetigen wir noch zusaetzliche Aufnahmen:\n\n"
+            "- Gesamtansicht des Bereichs\n- Detail-/Nahaufnahmen der betroffenen Stellen\n- ggf. Massangaben (mit Zollstock sichtbar)\n\n"
+            "Bitte laden Sie die weiteren Bilder ueber das Kundenportal hoch. Bei Fragen melden Sie sich gerne.\n\n"
+            "Freundliche Gruesse\nIhre Tischlerei Graupner"
+        ),
+    },
+    {
+        "title": "Rueckfrage / Eigene Frage",
+        "doc_type": "kundenportal",
+        "text_type": "portal_nachricht",
+        "content": (
+            "{anrede_brief},\n\n"
+            "zu Ihrem Auftrag haetten wir noch eine kurze Rueckfrage:\n\n"
+            "[Hier Ihre Frage einfuegen]\n\n"
+            "Bitte antworten Sie uns einfach ueber das Kundenportal oder per E-Mail. Vielen Dank!\n\n"
+            "Freundliche Gruesse\nIhre Tischlerei Graupner"
+        ),
+    },
+]
+
+
+@router.post("/modules/textvorlagen/seed-kundenportal")
+async def seed_kundenportal_vorlagen(user=Depends(get_current_user)):
+    """Legt die 3 Standard-Kundenportal-Vorlagen an, falls sie noch nicht existieren.
+    Idempotent: vorhandene Vorlagen (Match ueber title + doc_type) werden NICHT ueberschrieben.
+    """
+    await ensure_modul_registered()
+    inserted = 0
+    skipped = 0
+    results = []
+    for v in STANDARD_PORTAL_VORLAGEN:
+        existing = await db.module_textvorlagen.find_one({
+            "title": v["title"],
+            "doc_type": v["doc_type"],
+        })
+        if existing:
+            skipped += 1
+            results.append({"title": v["title"], "status": "existiert bereits"})
+            continue
+        item = {
+            "id": str(uuid4()),
+            "title": v["title"],
+            "content": v["content"],
+            "doc_type": v["doc_type"],
+            "text_type": v["text_type"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.module_textvorlagen.insert_one(item)
+        inserted += 1
+        results.append({"title": v["title"], "status": "neu angelegt"})
+    return {
+        "inserted": inserted,
+        "skipped": skipped,
+        "total": len(STANDARD_PORTAL_VORLAGEN),
+        "details": results,
+    }
+
