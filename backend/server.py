@@ -32,6 +32,7 @@ from routes.diverses import router as diverses_router
 from routes.backup import router as backup_router
 from routes.auto_backup import router as auto_backup_router
 from routes.anfragen import router as anfragen_router
+from routes.anfragen_fetcher import router as anfragen_fetcher_router
 from routes.documents_manager import router as documents_manager_router
 from routes.modules import router as modules_router
 from routes.module_artikel import router as module_artikel_router
@@ -74,6 +75,7 @@ api_router.include_router(diverses_router)
 api_router.include_router(backup_router)
 api_router.include_router(auto_backup_router)
 api_router.include_router(anfragen_router)
+api_router.include_router(anfragen_fetcher_router)
 api_router.include_router(documents_manager_router)
 api_router.include_router(modules_router)
 api_router.include_router(module_artikel_router)

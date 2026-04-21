@@ -11,6 +11,29 @@ import os
 router = APIRouter()
 
 
+async def _get_imap_for_sent():
+    """Baut die IMAP-Settings fuer die Sent-Ordner-Kopie zusammen.
+    Liest Credentials aus .env (gleiche Quelle wie routes/imap.py).
+    Gibt None zurueck, wenn deaktiviert oder Credentials fehlen."""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    # Feature-Flag (Default an): in Settings kann man es abschalten
+    if settings.get("imap_sent_copy_enabled", True) is False:
+        return None
+    server = os.environ.get("IMAP_SERVER", "")
+    port = int(os.environ.get("IMAP_PORT", 993))
+    username = os.environ.get("IMAP_USER", "")
+    password = os.environ.get("IMAP_PASSWORD", "")
+    if not (server and username and password):
+        return None
+    return {
+        "imap_server": server,
+        "imap_port": port,
+        "imap_user": username,
+        "imap_password": password,
+        "imap_sent_folder": settings.get("imap_sent_folder"),
+    }
+
+
 async def log_email(to_email: str, subject: str, doc_type: str, doc_id: str, doc_number: str, customer_name: str, status: str = "gesendet"):
     """E-Mail-Versand protokollieren"""
     import uuid
@@ -119,11 +142,13 @@ async def email_document(doc_type: str, doc_id: str, req: EmailRequest, user=Dep
     body_html = wrap_email_body(email_content)
 
     try:
+        imap_cfg = await _get_imap_for_sent()
         send_email(
             to_email=req.to_email,
             subject=req.subject or f"{doc_label} {doc_number} - {company_name}",
             body_html=body_html,
-            attachments=[{"filename": f"{doc_label}_{doc_number}.pdf", "data": pdf_data}]
+            attachments=[{"filename": f"{doc_label}_{doc_number}.pdf", "data": pdf_data}],
+            imap_settings=imap_cfg,
         )
         await log_email(req.to_email, req.subject or f"{doc_label} {doc_number}", doc_type, doc_id, doc_number, doc.get("customer_name", ""), "gesendet")
         return {"message": f"{doc_label} erfolgreich an {req.to_email} gesendet"}
@@ -163,11 +188,13 @@ async def email_dunning(invoice_id: str, req: EmailRequest, user=Depends(get_cur
     body_html = wrap_email_body(email_content)
 
     try:
+        imap_cfg = await _get_imap_for_sent()
         send_email(
             to_email=req.to_email,
             subject=req.subject or f"{level_label} - Rechnung {invoice_number} - {company_name}",
             body_html=body_html,
-            attachments=[{"filename": f"{level_label}_{invoice_number}.pdf", "data": pdf_data}]
+            attachments=[{"filename": f"{level_label}_{invoice_number}.pdf", "data": pdf_data}],
+            imap_settings=imap_cfg,
         )
         await log_email(req.to_email, f"{level_label}: {invoice_number}", "invoice", invoice_id, invoice_number, invoice.get("customer_name", ""), "gesendet")
         return {"message": f"{level_label} erfolgreich an {req.to_email} gesendet"}
@@ -205,11 +232,13 @@ async def send_followup_email(quote_id: str, req: EmailRequest, user=Depends(get
     body_html = wrap_email_body(email_content)
 
     try:
+        imap_cfg = await _get_imap_for_sent()
         send_email(
             to_email=req.to_email,
             subject=req.subject or f"Nachfrage zu Angebot {quote_number} - {company_name}",
             body_html=body_html,
-            attachments=[{"filename": f"Angebot_{quote_number}.pdf", "data": pdf_data}]
+            attachments=[{"filename": f"Angebot_{quote_number}.pdf", "data": pdf_data}],
+            imap_settings=imap_cfg,
         )
         await log_email(req.to_email, req.subject or f"Follow-up: Angebot {quote_number}", "quote", quote_id, quote_number, quote.get("customer_name", ""), "gesendet")
         return {"message": f"Follow-up E-Mail erfolgreich an {req.to_email} gesendet"}

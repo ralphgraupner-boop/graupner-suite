@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { toast } from "sonner";
 import { HelpTip } from "@/components/HelpTip";
 import { Button, Card, StatCard } from "@/components/common";
+import { AnfragenFetcherButton } from "@/components/AnfragenFetcherButton";
 import { api, API } from "@/lib/api";
 
 const DashboardPage = () => {
@@ -111,8 +112,13 @@ const DashboardPage = () => {
   return (
     <div data-testid="dashboard-page">
       <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl lg:text-4xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">Übersicht Ihrer Geschäftstätigkeit</p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl lg:text-4xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">Übersicht Ihrer Geschäftstätigkeit</p>
+          </div>
+          <AnfragenFetcherButton onFetched={() => { loadStats(); }} />
+        </div>
       </div>
 
       {/* Kompakte Hinweisleiste */}

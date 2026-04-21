@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, ChevronDown, Download, Upload, X, File, Image as ImageIcon, Globe, Package, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
+import { AnfragenFetcherButton } from "@/components/AnfragenFetcherButton";
 import { api } from "@/lib/api";
 
 const KontaktModulPage = () => {
@@ -84,6 +85,7 @@ const KontaktModulPage = () => {
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">{contacts.length} Kontakte gesamt - Eigenstaendiger Datensammler</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <AnfragenFetcherButton onFetched={() => { loadContacts?.(); }} />
           <Button variant="outline" size="sm" onClick={handleExport} data-testid="btn-export-kontakt">
             <Download className="w-4 h-4" /> Export
           </Button>
