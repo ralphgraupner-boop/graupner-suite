@@ -51,17 +51,25 @@ const Sidebar = ({ onLogout }) => {
   // Poll fuer ungelesene E-Mails und Portal-Aktivitaeten
   useEffect(() => {
     let cancelled = false;
+    // Feature-Flag pruefen: wenn E-Mail-Modul aus -> KEINE IMAP-Calls im Hintergrund
+    let emailModuleEnabled = false;
+    try {
+      const flags = JSON.parse(localStorage.getItem("feature_flags") || "{}");
+      emailModuleEnabled = !!flags.email_module_enabled;
+    } catch { /* ignore */ }
+
     const fetchCounts = async () => {
       try {
-        const [emailRes, portalRes] = await Promise.all([
-          api.get("/imap/inbox/stats").catch(() => ({ data: { unread: 0 } })),
-          api.get("/portals/unread-count").catch(() => ({ data: { count: 0 } })),
-        ]);
+        const calls = [api.get("/portals/unread-count").catch(() => ({ data: { count: 0 } }))];
+        if (emailModuleEnabled) {
+          calls.unshift(api.get("/imap/inbox/stats").catch(() => ({ data: { unread: 0 } })));
+        }
+        const results = await Promise.all(calls);
         if (cancelled) return;
-        const emailCount = emailRes.data?.unread || 0;
-        const portalCount = portalRes.data?.count || 0;
+        const emailCount = emailModuleEnabled ? (results[0].data?.unread || 0) : 0;
+        const portalCount = emailModuleEnabled ? (results[1].data?.count || 0) : (results[0].data?.count || 0);
         // Sound bei neuer Mail spielen (nur wenn Anzahl gestiegen)
-        if (emailCount > prevEmailRef.current && prevEmailRef.current !== 0) {
+        if (emailModuleEnabled && emailCount > prevEmailRef.current && prevEmailRef.current !== 0) {
           try {
             const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
             audio.volume = 0.3;

@@ -46,6 +46,14 @@ const DashboardPage = () => {
   }, []);
 
   const loadInboxStats = async () => {
+    // Feature-Flag pruefen: wenn E-Mail-Modul aus -> keine IMAP-Calls
+    try {
+      const flags = JSON.parse(localStorage.getItem("feature_flags") || "{}");
+      if (!flags.email_module_enabled) {
+        setInboxStats({ unread: 0 });
+        return;
+      }
+    } catch { /* ignore */ }
     try {
       const res = await api.get("/imap/inbox/stats");
       setInboxStats(res.data);
