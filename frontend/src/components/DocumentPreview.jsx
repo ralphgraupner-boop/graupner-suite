@@ -32,6 +32,21 @@ const splitAtPageBreaks = (text) => {
   return text.split(PAGE_BREAK_MARKER).map(t => t.trim()).filter(t => t);
 };
 
+/* Konvertiert Plain-Text (mit \n) zu sicherem HTML fuer die Vorschau-Anzeige.
+   - HTML wird escaped, damit keine Tags aus Vortext interpretiert werden
+   - Zeilenumbrueche werden zu <br/>
+   - Wenn der Text bereits HTML-Tags enthaelt (z.B. Legacy-Daten), wird er durchgereicht */
+const plainToSafeHtml = (text) => {
+  if (!text) return "";
+  // Falls schon HTML (enthaelt Tags) -> durchreichen
+  if (/<(p|br|div|span|strong|em|b|i|u)[\s>/]/i.test(text)) return text;
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br/>");
+};
+
 const estPosH = (p) => {
   if (p.type === "titel") return TITEL_H;
   const lines = (p.description || "").split("\n");
@@ -336,7 +351,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
       {doc.betreff && (
         <p className="font-bold text-sm mb-2" style={{ color: "#003399" }}>{doc.betreff}</p>
       )}
-      {doc.vortext && currentPg?.vortextPart && <div className="text-xs mb-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: currentPg.vortextPart }} />}
+      {doc.vortext && currentPg?.vortextPart && <div className="text-xs mb-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: plainToSafeHtml(currentPg.vortextPart) }} />}
     </>
   );
 
@@ -480,7 +495,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
                 {pg.last && (
                   <>
                     {renderTotals()}
-                    {pg.schlusstextPart && <div className="text-xs whitespace-pre-line mb-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: pg.schlusstextPart }} />}
+                    {pg.schlusstextPart && <div className="text-xs mb-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: plainToSafeHtml(pg.schlusstextPart) }} />}
                     {doc.valid_until && (
                       <p className="text-xs font-semibold">Gültig bis: {new Date(doc.valid_until).toLocaleDateString("de-DE")}</p>
                     )}
