@@ -373,6 +373,11 @@ async def update_portal(portal_id: str, body: dict, user=Depends(get_current_use
         updates["active"] = body["active"]
     if "description" in body:
         updates["description"] = body["description"]
+    if "customer_email" in body:
+        new_email = (body["customer_email"] or "").strip()
+        if new_email and "@" not in new_email:
+            raise HTTPException(400, "Ungueltige E-Mail-Adresse")
+        updates["customer_email"] = new_email
     if not updates:
         raise HTTPException(400, "Keine Änderungen")
     await db.portals.update_one({"id": portal_id}, {"$set": updates})

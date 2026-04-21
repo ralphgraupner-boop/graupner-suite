@@ -506,18 +506,39 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
   };
 
   const [showPreview, setShowPreview] = useState(false);
+  const [editableEmail, setEditableEmail] = useState("");
+
+  useEffect(() => {
+    if (showPreview) setEditableEmail(portal.customer_email || "");
+  }, [showPreview, portal.customer_email]);
 
   const sendAdminNote = async () => {
     if (!msgText.trim()) { toast.error("Nachricht darf nicht leer sein"); return; }
     setSending(true);
     try {
+      // Falls E-Mail geaendert wurde -> am Portal speichern
+      const origEmail = (portal.customer_email || "").trim();
+      const newEmail = (editableEmail || "").trim();
+      let emailUpdated = false;
+      if (newEmail !== origEmail) {
+        if (newEmail && !newEmail.includes("@")) {
+          toast.error("Ungueltige E-Mail-Adresse");
+          setSending(false);
+          return;
+        }
+        await api.put(`/portals/${portal.id}`, { customer_email: newEmail });
+        portal.customer_email = newEmail; // lokal updaten
+        emailUpdated = true;
+      }
       const note = await api.post(`/portals/${portal.id}/admin-notes`, { text: msgText });
       setAdminNotes(prev => [...prev, note.data]);
       setMsgText("");
       setSearchTerm("");
       setShowPreview(false);
-      toast.success("Nachricht an Kunden gesendet");
-    } catch { toast.error("Fehler beim Senden"); }
+      toast.success(emailUpdated ? "Nachricht gesendet · E-Mail-Adresse aktualisiert" : "Nachricht an Kunden gesendet");
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Senden");
+    }
     finally { setSending(false); }
   };
 
@@ -679,7 +700,23 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
               <p className="text-xs text-muted-foreground mt-1">Prüfen Sie die Nachricht, bevor sie im Kundenportal sichtbar wird.</p>
             </div>
             <div className="p-4 space-y-3">
-              <div className="text-xs text-muted-foreground">An: <span className="font-medium text-foreground">{portal.customer_name}</span> &middot; {portal.customer_email}</div>
+              <div className="text-xs text-muted-foreground">An: <span className="font-medium text-foreground">{portal.customer_name}</span></div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">E-Mail-Adresse</label>
+                <input
+                  type="email"
+                  value={editableEmail}
+                  onChange={(e) => setEditableEmail(e.target.value)}
+                  placeholder="kunde@beispiel.de"
+                  className="w-full border rounded-sm p-2 text-sm"
+                  data-testid="preview-customer-email-input"
+                />
+                {(editableEmail || "").trim() !== (portal.customer_email || "").trim() && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    Geändert – wird beim Senden dauerhaft am Portal gespeichert.
+                  </p>
+                )}
+              </div>
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-sm text-sm whitespace-pre-wrap">{msgText}</div>
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
                 <strong>Hinweis:</strong> Diese Nachricht erscheint sofort im Kundenportal und der Kunde erhält eine Benachrichtigung.
