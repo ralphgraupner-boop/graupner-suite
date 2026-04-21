@@ -20,134 +20,181 @@
 
 ## Sachverhalt
 
-### 1. Meine Vorgabe (seit Projektbeginn und mehrfach wiederholt)
+### 1. Projekt-Fakten
 
-Ich habe wiederholt und nachweislich festgelegt, dass neue Features und Bug-Fixes in meiner
-Graupner Suite **ausschließlich modular** (Module-First-Prinzip) umzusetzen sind:
+- **Projektbeginn:** 03.03.2026 (Initial Commit)
+- **Projektlaufzeit:** ueber 7 Wochen (03.03. - 21.04.2026)
+- **Aktive Arbeitstage:** 22 Tage
+- **Gesamtanzahl Commits:** 502
 
-- Eigene Backend-Route je Modul (z.B. `routes/module_kunden.py`)
-- Eigene Frontend-Seite je Modul (z.B. `pages/KundenModulPage.jsx`)
-- Eigene DB-Collection
-- Feature-Flag in den Einstellungen zum An-/Ausschalten
+### 2. Meine Vorgabe - SEIT PROJEKTBEGINN schriftlich dokumentiert
 
-Diese Vorgabe ist fest im Projekt dokumentiert in `/app/memory/PRD.md` unter der Rubrik
-*"Code Architecture / Module-First Principle"*:
+Die Module-First-Architektur ist die **zentrale, von mir explizit vorgegebene
+Designentscheidung** und steht ausdruecklich in der Projekt-Dokumentation
+`/app/memory/PRD.md`:
 
-> *"Module-First Principle: New features (like Rechnungen v2) are built completely isolated
-> (`routes/rechnungen_v2.py`, `RechnungenV2Page.jsx`, own DB collection, and a Feature Flag
-> in Settings) to prevent regressions in the core app."*
+> *Zeile 4:* "Handwerker-Verwaltungssoftware ('Graupner Suite') - **modularer Aufbau
+> mit eigenstaendigen Bausteinen**."
+>
+> *Zeile 11:* "**Prinzip: Modulare Architektur - jedes Modul ist eigenstaendig**"
 
-Zu Beginn der heutigen Session (21.04.2026) wurde zusätzlich ein expliziter
-**"Arbeits-Pakt"** geschlossen:
+Das ist **nicht** eine heutige Ergaenzung, sondern **seit dem Initial-Commit**
+fest im Projekt hinterlegt.
 
-1. Vor jeder Code-Änderung: schriftliche **Änderungs-Definition** zur Freigabe
-2. **Modul-First** strikt einhalten
-3. Keine ungefragten Seitenthemen, keine großen Refactors der Kern-Dateien
+Zusaetzlich wurde zu Beginn der heutigen Session (21.04.2026) ein expliziter
+**"Arbeits-Pakt"** mit dem Agenten geschlossen:
 
----
+1. Vor jeder Code-Aenderung: schriftliche **Aenderungs-Definition** zur Freigabe
+2. **Module-First** strikt einhalten
+3. Keine ungefragten Seitenthemen, keine grossen Refactors der Kern-Dateien
 
-### 2. Tatsächliches Verhalten des Agenten
+Die Vorgabe ist so bedeutsam, dass sie sogar **in den Session-Uebergabe-Notizen**
+("Handoff-Dateien") zwischen den Agenten als wichtiger Hinweis weitergegeben wird:
 
-Die git-Historie der letzten 2 Tage zeigt folgende Datei-Änderungen:
+> *Zitat aus der Agent-Handoff-Notiz:*
+> "Continue **strictly following the Module-First Principle**: any new major
+> feature must be built in isolated files with its own DB collection and Feature
+> Flag to avoid breaking the user's daily workflow."
 
-**Kern-Dateien (NICHT modular – verboten laut Vorgabe):**
-
-| Datei | Anzahl Änderungen |
-|-------|-------------------|
-| `frontend/src/pages/PortalsPage.jsx` | 3 |
-| `frontend/src/pages/DashboardPage.jsx` | 3 |
-| `backend/routes/portal.py` | 3 |
-| `frontend/src/pages/SettingsPage.jsx` | 2 |
-| `frontend/src/pages/EmailInboxPage.jsx` | 1 |
-| `frontend/src/pages/CustomerPortalPage.jsx` | 1 |
-| `frontend/src/components/WysiwygDocumentEditor.jsx` | 1 |
-| `frontend/src/components/DocumentPreview.jsx` | 1 |
-| `backend/routes/imap.py` | 1 |
-| `backend/routes/email.py` | 1 |
-| **Summe Kern-Dateien** | **17 Änderungen** |
-
-**Modul-Dateien (korrekt laut Vorgabe):**
-
-| Datei | Anzahl Änderungen |
-|-------|-------------------|
-| `frontend/src/pages/KundenModulPage.jsx` | 2 |
-| `frontend/src/pages/TextvorlagenModulPage.jsx` | 1 |
-| `frontend/src/pages/KontaktModulPage.jsx` | 1 |
-| `backend/routes/module_textvorlagen.py` | 1 |
-| `backend/routes/module_kunden.py` | 1 |
-| **Summe Modul-Dateien** | **6 Änderungen** |
-
-**Ergebnis: ca. 75 % aller Änderungen wurden in Kern-Dateien gemacht, obwohl meine
-schriftliche Vorgabe das Gegenteil fordert.**
+**Dieser Hinweis wurde von vorherigen Agenten in die Handoff-Notiz
+aufgenommen - d.h. die Vorgabe musste bereits in frueheren Sessions mehrfach
+betont werden.**
 
 ---
 
-### 3. Konkrete Beispiele für Verstöße (Auszug)
+### 3. Tatsaechliches Verhalten - Zahlen der letzten 7 Tage
 
-1. **`WysiwygDocumentEditor.jsx`**: direkt editiert, obwohl in der Projekt-Dokumentation
-   explizit als *"nicht anfassen – 1200 Zeilen, kritisch"* markiert.
-   Korrekt wäre ein separates Fix-/Helper-Modul gewesen.
+Die git-Historie der letzten 7 Arbeitstage zeigt:
 
-2. **`backend/routes/portal.py`**: mit neuer Helper-Funktion `_build_portal_email_html`
-   erweitert, obwohl ein separates `portal_mail_builder.py`-Modul korrekt gewesen wäre.
+**Datei-Aenderungen (Kern-Dateien - NICHT modular, verboten laut Vorgabe):**
 
-3. **`backend/utils/__init__.py`**: die zentrale SMTP-Funktion wurde um IMAP-Sent-Kopie-Logik
-   erweitert. Das ist ein Eingriff in den Kern – genau das, was Module-First verbietet.
-   Korrekt wäre ein separates `utils/imap_sent_copy.py` gewesen.
+| Kern-Datei | Anzahl Aenderungen (7 Tage) |
+|------------|-----------------------------|
+| `frontend/src/components/WysiwygDocumentEditor.jsx` | **24** |
+| `frontend/src/components/layout/Navigation.jsx` | **13** |
+| `frontend/src/components/TextTemplateSelect.jsx` | **13** |
+| `frontend/src/pages/SettingsPage.jsx` | **12** |
+| `frontend/src/pages/DashboardPage.jsx` | **10** |
+| `frontend/src/components/DocumentPreview.jsx` | **9** |
+| `backend/routes/imap.py` | **9** |
+| `frontend/src/pages/PortalsPage.jsx` | **7** |
+| `backend/routes/portal.py` | **7** |
+| `frontend/src/components/wysiwyg/EditorToolbar.jsx` | **7** |
+| `frontend/src/pages/EmailInboxPage.jsx` | **5** |
+| `backend/routes/webhook.py` | **5** |
+| Weitere Kern-Dateien | **75** |
 
-4. **`DashboardPage.jsx`**: direkt erweitert mit Anfragen-Fetcher-Integration, obwohl die
-   Integration als isolierte Komponente hätte bleiben müssen.
+**Summe Kern-Datei-Aenderungen (7 Tage): 196**
+
+**Modul-Datei-Aenderungen (korrekt laut Vorgabe):**
+
+| Modul-Datei | Anzahl |
+|-------------|--------|
+| `frontend/src/pages/KundenModulPage.jsx` | 15 |
+| `frontend/src/pages/EinsaetzeModulPage.jsx` | 7 |
+| `backend/routes/module_kunden.py` | 7 |
+| `backend/routes/module_artikel.py` | 7 |
+| `frontend/src/pages/TextvorlagenModulPage.jsx` | 6 |
+| `frontend/src/pages/KontaktModulPage.jsx` | 6 |
+| Weitere Module | 13 |
+
+**Summe Modul-Datei-Aenderungen (7 Tage): 61**
 
 ---
 
-### 4. Folgen dieser Verstöße
+### 4. Ergebnis
 
-- **Mehrfache Fehlersuche und Rollbacks** (gestern mehrere Deployments, Rollback auf
-  Deployment v16 nötig, Dashboard lud endlos wegen IMAP-Hintergrund-Calls).
-- **Heute erneut** unerwünschte Mail-Abholungen in die Live-Datenbank (43 Mails), die vom
-  Nutzer manuell gelöscht werden mussten.
-- **Hoher Credit-Verbrauch** durch nachträgliche Korrektur-Arbeit, obwohl die ursprüngliche
-  Vorgabe klar war.
-- **Verlust an Vertrauen und Arbeitszeit** auf Nutzer-Seite, insbesondere da die App
-  unter laufenden Geschäftsbedingungen genutzt werden soll.
+```
+Kern-Datei-Aenderungen  : 196 (76 %)
+Modul-Datei-Aenderungen :  61 (24 %)
+-------------------------------
+Gesamt                  : 257
+```
+
+**Ueber 3 von 4 Aenderungen wurden in Kern-Dateien vorgenommen - also genau in
+dem Bereich, den meine schriftliche und seit Projektbeginn dokumentierte
+Vorgabe ausdruecklich verbietet.**
 
 ---
 
-### 5. Nachweise
+### 5. Konkrete Beispiele fuer Verstoesse (Auszug)
 
-Alle genannten Fakten sind beweisbar:
+1. **`WysiwygDocumentEditor.jsx` - 24 Aenderungen in 7 Tagen.** Diese Datei
+   ist in der Projekt-Doku explizit als *"Areas that need refactoring - ueber
+   1200 Zeilen, handles complex state"* markiert. Trotzdem wurde sie 24 Mal
+   direkt editiert, statt Fixes in kleine Helper-Module auszulagern.
 
-- **Git-Log:** Jede Änderung ist mit Zeitstempel und Commit-Hash dokumentiert
-  (im Projekt-Repository nachvollziehbar)
-- **`/app/memory/PRD.md`**: enthält die schriftliche Vorgabe zum Module-First-Prinzip
-- **Chat-Historie:** Dokumentiert die wiederholten Hinweise an den Agenten und die
-  ausdrückliche Vereinbarung vom Morgen des 21.04.2026
-- **Deployment-Historie:** Die Abfolge der Deployments v15 → v17 → Rollback v16 → v20 → v25
-  ist in der Emergent-Oberfläche einsehbar
+2. **`backend/routes/portal.py`** wurde heute mit neuer Helper-Funktion
+   `_build_portal_email_html` erweitert, statt ein separates
+   `portal_mail_builder.py`-Modul anzulegen.
+
+3. **`backend/utils/__init__.py`**: die zentrale SMTP-Funktion wurde heute
+   um IMAP-Sent-Kopie-Logik erweitert. Das ist ein Eingriff in den absoluten
+   Kern - genau das, was Module-First verbietet. Korrekt waere ein separates
+   `utils/imap_sent_copy.py` gewesen.
+
+4. **`DashboardPage.jsx` - 10 Aenderungen in 7 Tagen**. Der Anfragen-Fetcher
+   wurde zwar als isolierte Komponente gebaut, aber dann direkt im Dashboard
+   integriert, statt den Dashboard-Core unberuehrt zu lassen.
+
+---
+
+### 6. Folgen dieser Verstoesse
+
+- **Mehrere Rollbacks und Neudeployments** (gestern Rollback auf
+  Deployment v16, heute mehrere Re-Deploys noetig).
+- **Dashboard lud endlos** wegen IMAP-Hintergrund-Calls, die trotz
+  Abschaltungs-Anweisung nicht konsequent entfernt wurden.
+- **Erneut 43 unerwuenschte Mails** in der Live-Datenbank (heute), die der
+  Nutzer manuell loeschen musste.
+- **Wiederholte Erinnerung** des Nutzers an die Module-Vorgabe - ueber Wochen,
+  nicht nur heute.
+- **Hoher Credit-Verbrauch** durch nachtraegliche Korrektur-Arbeit, obwohl
+  die urspruengliche Vorgabe klar war.
+- **Nicht hinnehmbarer Zeit- und Geld-Einsatz** von Nutzer-Seite, zumal die
+  App unter realen Geschaeftsbedingungen genutzt werden soll.
+
+---
+
+### 7. Nachweise - alle im Emergent-System hinterlegt und pruefbar
+
+- **Git-Log des Projekts:** jede Datei-Aenderung mit Zeitstempel und Commit-Hash
+  dokumentiert (502 Commits seit 03.03.2026)
+- **`/app/memory/PRD.md`** Zeile 4 und 11: schriftliche Module-First-Vorgabe
+  seit Projektstart
+- **Agent-Handoff-Notizen:** enthalten den Hinweis
+  "strictly following the Module-First Principle" - dies wurde explizit
+  weitergegeben, weil es bereits zuvor betont werden musste
+- **Deployment-Historie:** Abfolge der Deployments mit den bewussten Rollback-
+  Vorgaengen ist in der Emergent-Oberflaeche einsehbar
+- **Chat-Historie der Session:** dokumentiert die wiederholten Hinweise und den
+  Arbeits-Pakt vom Morgen des 21.04.2026
 
 ---
 
 ## Mein Anspruch
 
-Ich bitte Emergent um **anteilige Kompensation** der durch diese Vertragsverletzung
-entstandenen Mehraufwände. Denkbare Formen:
+Ich bitte Emergent um **anteilige Kompensation** der durch diese
+Vertragsverletzung entstandenen Mehraufwaende. Denkbare Formen:
 
-1. **Credit-Gutschrift** für die durch Verstöße entstandene Nacharbeit
-2. **Alternativ:** zusätzliche Credits als Kulanz
-3. **Alternativ:** Freischaltung erweiterter Features ohne zusätzliche Kosten
+1. **Credit-Gutschrift** fuer die durch Verstoesse entstandene Nacharbeit
+   (Rollbacks, Re-Deploys, wiederholte Debug-Sessions)
+2. **Alternativ:** zusaetzliche Credits als Kulanz
+3. **Alternativ:** Freischaltung erweiterter Features ohne zusaetzliche Kosten
 
-Ich bin offen für eine faire Regelung und eine sachliche Diskussion.
+Ich bin offen fuer eine faire Regelung und eine sachliche Diskussion.
 
 ---
 
 ## Weiteres Vorgehen
 
-Ich habe die aktuelle Arbeitsversion über **"Save to GitHub"** gesichert, so dass ein
-definierter Rollback-Punkt besteht. Die App läuft derzeit stabil unter der Live-URL. Ich
-bitte um eine Rückmeldung innerhalb der üblichen Support-Frist.
+Ich habe die aktuelle Arbeitsversion ueber **"Save to GitHub"** gesichert, so
+dass ein definierter Rollback-Punkt besteht. Die App laeuft derzeit stabil
+unter der Live-URL. Ich bitte um eine Rueckmeldung innerhalb der ueblichen
+Support-Frist.
 
-Für Rückfragen stehe ich gerne zur Verfügung.
+Fuer Rueckfragen stehe ich gerne zur Verfuegung.
 
-Mit freundlichen Grüßen  
+Mit freundlichen Gruessen  
 Ralph Graupner  
 ralph.graupner@gmail.com
