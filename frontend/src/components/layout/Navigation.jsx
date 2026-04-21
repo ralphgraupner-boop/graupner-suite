@@ -15,7 +15,7 @@ const allNavItems = [
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
   { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2" },
-  { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"] },
+  { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"], featureFlag: "email_module_enabled" },
   { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
 ];
 

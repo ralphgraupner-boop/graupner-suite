@@ -1814,6 +1814,11 @@ const FeatureFlagsCard = () => {
       title: "Rechnungen (Neu) – BETA",
       desc: "Neues Rechnungs-Modul mit GoBD-konformem Verweis auf Angebot/Auftragsbestätigung. Komplett getrennt vom alten Rechnungsmodul; kann jederzeit deaktiviert werden, ohne dass Daten im alten Modul verloren gehen. Separater Nummernkreis RV2-2026-…",
     },
+    {
+      key: "email_module_enabled",
+      title: "E-Mail-Modul in der Sidebar anzeigen",
+      desc: "Wenn Sie hauptsächlich mit Betterbird / einem externen Mailprogramm arbeiten, kann das integrierte E-Mail-Modul ausgeblendet werden. Neue Anfragen aus dem Kontaktformular werden weiterhin über den Button 'Anfragen abrufen' (Dashboard / Kontakte) importiert. Standard: AUS.",
+    },
   ];
 
   return (
