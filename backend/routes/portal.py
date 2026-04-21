@@ -28,6 +28,110 @@ ALLOWED_IMAGE_TYPES = {
     "application/octet-stream", "",
 }
 ALLOWED_DOC_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
+
+
+def _build_anrede_brief(customer_name: str) -> str:
+    """Erzeugt passende Briefanrede aus dem Kundennamen."""
+    name = (customer_name or "").strip()
+    if not name:
+        return "Sehr geehrte Damen und Herren"
+    # Prefix aus dem Namen lesen
+    clean = name
+    prefix = ""
+    for p in ("Herr", "Frau", "Divers"):
+        if clean.startswith(p + " "):
+            prefix = p
+            clean = clean[len(p):].strip()
+            break
+    parts = clean.split()
+    nachname = parts[-1] if parts else clean
+    if prefix == "Herr":
+        return f"Sehr geehrter Herr {nachname}"
+    if prefix == "Frau":
+        return f"Sehr geehrte Frau {nachname}"
+    return f"Sehr geehrte/r {clean}"
+
+
+async def _build_portal_email_html(
+    customer_name: str,
+    portal_url: str,
+    password: str,
+    expires_iso: str,
+    description: str = "",
+) -> tuple[str, str]:
+    """Baut Betreff + HTML-Body der Kundenportal-Zugangsmail.
+    Einheitlich fuer Auto-Versand und manuellen Re-Send.
+    """
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    company = settings.get("company_name", "Tischlerei Graupner")
+    company_phone = settings.get("company_phone", "")
+    company_email = settings.get("company_email", "")
+
+    anrede = _build_anrede_brief(customer_name)
+    try:
+        expires = datetime.fromisoformat(expires_iso).strftime("%d.%m.%Y")
+    except Exception:
+        expires = expires_iso or "-"
+
+    # Kontakt-Zeile nur wenn vorhanden
+    contact_parts = []
+    if company_phone:
+        contact_parts.append(f"Tel.: {company_phone}")
+    if company_email:
+        contact_parts.append(f'E-Mail: <a href="mailto:{company_email}" style="color:#1a5632;">{company_email}</a>')
+    contact_line = " &middot; ".join(contact_parts)
+
+    anliegen_block = ""
+    if description:
+        import html as _html
+        safe = _html.escape(description)
+        anliegen_block = f"""
+        <div style="background:#fff7ed;border-left:4px solid #ea580c;padding:12px 16px;margin:20px 0;border-radius:4px;">
+          <p style="margin:0 0 4px 0;font-size:13px;color:#9a3412;font-weight:600;">Ihr Anliegen:</p>
+          <p style="margin:0;font-size:14px;color:#333;">{safe}</p>
+        </div>
+        """
+
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;color:#1f2937;line-height:1.55;">
+      <h2 style="color:#1a5632;margin:0 0 16px 0;">Ihr Kundenportal bei {company}</h2>
+
+      <p>{anrede},</p>
+      <p>wir freuen uns, Sie als Kunde bei der {company} begruessen zu duerfen. Fuer Ihre Anfrage haben wir ein persoenliches, sicheres Kundenportal eingerichtet.</p>
+
+      {anliegen_block}
+
+      <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:20px;margin:24px 0;">
+        <p style="margin:0 0 12px 0;font-size:14px;font-weight:700;color:#1a5632;">&#128228; Ihr Zugang</p>
+        <p style="margin:0 0 8px 0;font-size:14px;"><strong>Link zum Portal:</strong><br/>
+          <a href="{portal_url}" style="color:#1a5632;word-break:break-all;">{portal_url}</a>
+        </p>
+        <p style="margin:0;font-size:14px;"><strong>Passwort:</strong> <code style="background:#fff;padding:4px 10px;border-radius:4px;border:1px solid #cbd5e1;font-size:15px;">{password}</code></p>
+      </div>
+
+      <h3 style="color:#1a5632;font-size:16px;margin:24px 0 8px 0;">&#128203; So funktioniert das Portal - Schritt fuer Schritt:</h3>
+      <ol style="padding-left:20px;margin:0 0 16px 0;">
+        <li style="margin-bottom:6px;">Klicken Sie oben auf den <strong>Link</strong>. Sie werden zum Portal weitergeleitet.</li>
+        <li style="margin-bottom:6px;">Geben Sie das <strong>Passwort</strong> ein und klicken auf &quot;Anmelden&quot;.</li>
+        <li style="margin-bottom:6px;">Laden Sie gewuenschte <strong>Fotos hoch</strong> (z.B. vom Fenster, Tueren, dem betroffenen Raum) - einfach per Klick oder Drag &amp; Drop.</li>
+        <li style="margin-bottom:6px;">Bei Rueckfragen koennen Sie uns direkt <strong>eine Nachricht schreiben</strong>.</li>
+        <li>Wenn alles hochgeladen ist, klicken Sie auf <strong>&quot;Absenden&quot;</strong> - wir erhalten automatisch Bescheid.</li>
+      </ol>
+
+      <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;padding:12px 16px;margin:20px 0;font-size:13px;color:#065f46;">
+        &#128274; <strong>Datenschutz:</strong> Das Portal ist verschluesselt (HTTPS) und nur mit Ihrem Passwort zugaenglich.
+      </div>
+
+      <p style="font-size:13px;color:#64748b;">Das Portal ist gueltig bis <strong>{expires}</strong>.</p>
+
+      {f'<p style="font-size:13px;color:#475569;">Bei Fragen erreichen Sie uns unter {contact_line}.</p>' if contact_line else ''}
+
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px 0;"/>
+      <p style="margin:0;font-size:13px;color:#475569;">Mit freundlichen Gruessen<br/>Ihr Team der <strong>{company}</strong></p>
+    </div>
+    """
+    subject = f"Ihr Kundenportal bei {company}"
+    return subject, html
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB
 MAX_IMAGES_PER_PORTAL = 30
 RATE_LIMIT_MAX_UPLOADS = 10
@@ -178,25 +282,14 @@ async def create_portal_from_customer(customer_id: str, body: dict, user=Depends
     email_sent = False
     if portal_url and customer_email:
         try:
-            settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
-            company = settings.get("company_name", "Tischlerei Graupner")
-            expires = datetime.fromisoformat(portal["expires_at"]).strftime("%d.%m.%Y")
-            html = f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1a5632;">Ihr persönliches Kundenportal</h2>
-              <p>Sehr geehrte/r {customer_name},</p>
-              <p>wir haben für Sie ein persönliches Portal eingerichtet.</p>
-              <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0 0 10px 0;"><strong>Ihr Zugang:</strong></p>
-                <p style="margin: 0 0 5px 0;">Link: <a href="{portal_url}" style="color: #1a5632;">{portal_url}</a></p>
-                <p style="margin: 0;">Passwort: <strong>{password}</strong></p>
-              </div>
-              <p style="color: #666; font-size: 12px;">Gültig bis {expires}.</p>
-              <hr style="border: none; border-top: 1px solid #e2e8f0;">
-              <p style="font-size: 12px; color: #64748B;">{company}</p>
-            </div>
-            """
-            send_email(to_email=customer_email, subject=f"Ihr Kundenportal - {company}", body_html=html)
+            subject, html = await _build_portal_email_html(
+                customer_name=customer_name,
+                portal_url=portal_url,
+                password=password,
+                expires_iso=portal["expires_at"],
+                description=portal.get("description", ""),
+            )
+            send_email(to_email=customer_email, subject=subject, body_html=html)
             email_sent = True
         except Exception as e:
             logger.error(f"Auto-send portal email failed: {e}")
@@ -320,38 +413,16 @@ async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(g
     email_sent = False
     if portal_url and customer_email:
         try:
-            settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
-            company = settings.get("company_name", "Tischlerei Graupner")
-            expires = datetime.fromisoformat(portal["expires_at"]).strftime("%d.%m.%Y")
-
-            html = f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1a5632;">Ihr persönliches Kundenportal</h2>
-              <p>Sehr geehrte/r {customer_name},</p>
-              <p>wir haben Ihre Anfrage erhalten und für Sie ein persönliches Portal eingerichtet, über das Sie uns bequem Bilder und Informationen zukommen lassen können.</p>
-              {f'<p><strong>Projekt:</strong> {description}</p>' if description else ''}
-              <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0 0 10px 0;"><strong>Ihr Zugang:</strong></p>
-                <p style="margin: 0 0 5px 0;">Link: <a href="{portal_url}" style="color: #1a5632;">{portal_url}</a></p>
-                <p style="margin: 0;">Passwort: <strong>{password}</strong></p>
-              </div>
-              <p>Über dieses Portal können Sie:</p>
-              <ul>
-                <li>Fotos hochladen (z.B. von Schäden, Fenstern, Türen)</li>
-                <li>Nachrichten an uns senden</li>
-                <li>Unsere Dokumente und Angebote einsehen</li>
-              </ul>
-              <p style="color: #666; font-size: 12px;">Das Portal ist gültig bis {expires}.</p>
-              <hr style="border: none; border-top: 1px solid #e2e8f0;">
-              <p style="font-size: 12px; color: #64748B;">
-                {company}<br>
-                {settings.get('phone', '')}
-              </p>
-            </div>
-            """
+            subject, html = await _build_portal_email_html(
+                customer_name=customer_name,
+                portal_url=portal_url,
+                password=password,
+                expires_iso=portal["expires_at"],
+                description=description,
+            )
             send_email(
                 to_email=customer_email,
-                subject=f"Ihr Kundenportal - {company}",
+                subject=subject,
                 body_html=html,
             )
             email_sent = True
@@ -455,38 +526,23 @@ async def send_portal_email(portal_id: str, body: dict, user=Depends(get_current
     if not portal_url:
         raise HTTPException(400, "Portal-URL fehlt")
 
-    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
-    company = settings.get("company_name", "Tischlerei Graupner")
     customer_name = portal.get("customer_name", "Kunde")
     description = portal.get("description", "")
     password = portal.get("password_plain", "")
-    expires = datetime.fromisoformat(portal["expires_at"]).strftime("%d.%m.%Y")
 
-    html = f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #1a5632;">Ihr persönliches Kundenportal</h2>
-      <p>Sehr geehrte/r {customer_name},</p>
-      <p>wir haben für Sie ein persönliches Portal eingerichtet, über das Sie uns bequem Bilder und Informationen zu Ihrem Projekt zukommen lassen können.</p>
-      {f'<p><strong>Projekt:</strong> {description}</p>' if description else ''}
-      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin: 0 0 10px 0;"><strong>Ihr Zugang:</strong></p>
-        <p style="margin: 0 0 5px 0;">Link: <a href="{portal_url}" style="color: #1a5632;">{portal_url}</a></p>
-        <p style="margin: 0;">Passwort: <strong>{password}</strong></p>
-      </div>
-      <p>Über dieses Portal können Sie:</p>
-      <ul>
-        <li>Fotos hochladen (z.B. von Schäden, Fenstern, Türen)</li>
-        <li>Unsere Dokumente und Angebote einsehen</li>
-      </ul>
-      <p style="color: #666; font-size: 12px;">Das Portal ist gültig bis {expires}.</p>
-      <p>Mit freundlichen Grüßen<br/>{company}</p>
-    </div>
-    """
+    subject, html = await _build_portal_email_html(
+        customer_name=customer_name,
+        portal_url=portal_url,
+        password=password,
+        expires_iso=portal["expires_at"],
+        description=description,
+    )
+
     try:
         send_email(
             to_email=customer_email,
-            subject=f"Ihr Kundenportal – {company}",
-            body_html=html
+            subject=subject,
+            body_html=html,
         )
         return {"message": "E-Mail gesendet", "sent_to": customer_email}
     except Exception as e:
