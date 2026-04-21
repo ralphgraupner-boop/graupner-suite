@@ -29,6 +29,7 @@ const KundenModulPage = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [vcfUploading, setVcfUploading] = useState(false);
+  const [vcfDuplicateDialog, setVcfDuplicateDialog] = useState(null);
   const [showKontaktImport, setShowKontaktImport] = useState(false);
   const navigate = useNavigate();
 
@@ -64,15 +65,33 @@ const KundenModulPage = () => {
   const handleVcfUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = "";
+    await _uploadVcf(file, false);
+  };
+
+  const _uploadVcf = async (file, force) => {
     setVcfUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      await api.post("/modules/kunden/import-vcf", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      const url = force ? "/modules/kunden/import-vcf?force=true" : "/modules/kunden/import-vcf";
+      await api.post(url, formData, { headers: { "Content-Type": "multipart/form-data" } });
       toast.success(`VCF importiert: ${file.name}`);
+      setVcfDuplicateDialog(null);
       loadKunden();
-    } catch { toast.error("Fehler beim VCF-Import"); }
-    finally { setVcfUploading(false); e.target.value = ""; }
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        const detail = err.response.data?.detail || {};
+        setVcfDuplicateDialog({
+          filename: file.name,
+          duplicates: detail.duplicates || [],
+          retry: () => _uploadVcf(file, true),
+        });
+      } else {
+        toast.error("Fehler beim VCF-Import");
+      }
+    }
+    finally { setVcfUploading(false); }
   };
 
   const handleExport = async () => {
@@ -382,9 +401,60 @@ const KundenModulPage = () => {
 
       {/* Kontakt-Import Modal */}
       <KontaktImportModal isOpen={showKontaktImport} onClose={() => setShowKontaktImport(false)} onImported={() => { setShowKontaktImport(false); loadKunden(); }} />
+
+      {/* VCF-Duplikat-Dialog */}
+      {vcfDuplicateDialog && (
+        <DuplicateDialog
+          title={`Kunde aus "${vcfDuplicateDialog.filename}" koennte bereits existieren`}
+          duplicates={vcfDuplicateDialog.duplicates}
+          onCancel={() => setVcfDuplicateDialog(null)}
+          onOpen={(id) => { setVcfDuplicateDialog(null); setEditKunde(kunden.find(k => k.id === id)); setShowModal(true); }}
+          onForce={vcfDuplicateDialog.retry}
+          loading={vcfUploading}
+        />
+      )}
     </div>
   );
 };
+
+
+// ==================== DUPLICATE DIALOG ====================
+const DuplicateDialog = ({ title, duplicates, onCancel, onOpen, onForce, loading }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="duplicate-dialog">
+    <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+      <h3 className="text-lg font-semibold text-amber-700 mb-2">{title || "Kunde koennte bereits existieren"}</h3>
+      <p className="text-sm text-slate-600 mb-4">Folgende Kunden wurden gefunden:</p>
+      <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+        {duplicates.map((d) => (
+          <div key={d.id} className="border rounded p-3 hover:bg-slate-50">
+            <div className="font-medium">{d.name || "(ohne Name)"}</div>
+            {d.email && <div className="text-sm text-slate-600">{d.email}</div>}
+            {d.phone && <div className="text-sm text-slate-600">{d.phone}</div>}
+            {d.address && <div className="text-sm text-slate-500">{d.address}</div>}
+            {onOpen && (
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:underline mt-1"
+                onClick={() => onOpen(d.id)}
+                data-testid={`btn-open-existing-${d.id}`}
+              >
+                Bestehenden oeffnen →
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} disabled={loading} className="px-4 py-2 border rounded hover:bg-slate-50" data-testid="btn-duplicate-cancel">
+          Abbrechen
+        </button>
+        <button type="button" onClick={onForce} disabled={loading} className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50" data-testid="btn-duplicate-force">
+          {loading ? "Lege an..." : "Trotzdem anlegen"}
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 
 // ==================== KUNDEN FORM MODAL ====================
@@ -416,6 +486,10 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    await _doSubmit(false);
+  };
+
+  const _doSubmit = async (force) => {
     if (!form.vorname && !form.nachname && !form.firma) { toast.error("Vorname, Nachname oder Firma erforderlich"); return; }
     setLoading(true);
     try {
@@ -424,7 +498,8 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
         await api.put(`/modules/kunden/data/${kunde.id}`, form);
         toast.success("Kunde aktualisiert");
       } else {
-        const res = await api.post("/modules/kunden/data", form);
+        const payload = force ? { ...form, force: true } : form;
+        const res = await api.post("/modules/kunden/data", payload);
         kundeId = res.data.id;
         toast.success("Kunde erstellt");
       }
@@ -433,10 +508,24 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
         selectedFiles.forEach(f => formData.append('files', f));
         await api.post(`/modules/kunden/data/${kundeId}/upload`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       }
+      setDuplicateDialog(null);
       onSave();
-    } catch { toast.error("Fehler"); }
+    } catch (err) {
+      // Duplikat-Konflikt (nur bei Neu-Anlegen)
+      if (err?.response?.status === 409 && !kunde) {
+        const detail = err.response.data?.detail || {};
+        setDuplicateDialog({
+          duplicates: detail.duplicates || [],
+          retry: () => _doSubmit(true),
+        });
+      } else {
+        toast.error("Fehler");
+      }
+    }
     finally { setLoading(false); }
   };
+
+  const [duplicateDialog, setDuplicateDialog] = useState(null);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
@@ -446,6 +535,14 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={kunde ? "Kunde bearbeiten" : "Neuer Kunde"} size="lg">
+      {duplicateDialog && (
+        <DuplicateDialog
+          duplicates={duplicateDialog.duplicates}
+          onCancel={() => setDuplicateDialog(null)}
+          onForce={duplicateDialog.retry}
+          loading={loading}
+        />
+      )}
       <form onSubmit={handleSubmit} className="space-y-4" data-testid="kunden-modul-form">
         <div className="grid grid-cols-2 gap-4">
           <div>

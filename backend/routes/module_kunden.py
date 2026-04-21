@@ -8,6 +8,56 @@ from uuid import uuid4
 
 router = APIRouter()
 
+
+def _normalize_phone(p: str) -> str:
+    """Entfernt Leerzeichen, Bindestriche, Klammern, Punkte fuer Telefon-Vergleich"""
+    if not p:
+        return ""
+    return "".join(c for c in p if c.isdigit())
+
+
+async def _find_duplicates(vorname: str, nachname: str, email: str, phone: str) -> list:
+    """Findet bestehende Kunden mit gleichem Vor+Nachname ODER gleicher E-Mail ODER gleichem Telefon.
+    Gibt eine Liste von Duplikaten zurueck (leer wenn keine)."""
+    vorname = (vorname or "").strip().lower()
+    nachname = (nachname or "").strip().lower()
+    email = (email or "").strip().lower()
+    phone_norm = _normalize_phone(phone)
+
+    if not vorname and not nachname and not email and not phone_norm:
+        return []
+
+    or_conditions = []
+    if vorname and nachname:
+        or_conditions.append({
+            "$and": [
+                {"vorname": {"$regex": f"^{vorname}$", "$options": "i"}},
+                {"nachname": {"$regex": f"^{nachname}$", "$options": "i"}},
+            ]
+        })
+    if email:
+        or_conditions.append({"email": {"$regex": f"^{email}$", "$options": "i"}})
+
+    if not or_conditions and not phone_norm:
+        return []
+
+    query = {"$or": or_conditions} if or_conditions else {}
+    candidates = await db.module_kunden.find(query, {"_id": 0}).to_list(50)
+
+    # Phone-Match per Python (weil normalisiert gespeichert ist wie eingegeben)
+    if phone_norm:
+        phone_matches = []
+        async for doc in db.module_kunden.find({}, {"_id": 0}):
+            if _normalize_phone(doc.get("phone", "")) == phone_norm:
+                phone_matches.append(doc)
+        # Merge, avoid duplicates
+        existing_ids = {c["id"] for c in candidates}
+        for m in phone_matches:
+            if m["id"] not in existing_ids:
+                candidates.append(m)
+
+    return candidates
+
 KUNDEN_MODUL = {
     "name": "Kunden-Modul",
     "slug": "kunden",
@@ -122,9 +172,45 @@ async def get_kunde(kunde_id: str, user=Depends(get_current_user)):
     return item
 
 
+@router.get("/modules/kunden/check-duplicate")
+async def check_duplicate(vorname: str = "", nachname: str = "", email: str = "", phone: str = "", user=Depends(get_current_user)):
+    """Prueft ob ein Kunde mit gleichem Vor+Nachname ODER gleicher E-Mail ODER gleichem Telefon bereits existiert."""
+    duplicates = await _find_duplicates(vorname, nachname, email, phone)
+    return {"count": len(duplicates), "duplicates": duplicates}
+
+
 @router.post("/modules/kunden/data")
 async def create_kunde(data: dict, user=Depends(get_current_user)):
     await ensure_modul_registered()
+    force = bool(data.get("force", False))
+
+    # Duplikat-Check (wenn nicht force)
+    if not force:
+        duplicates = await _find_duplicates(
+            data.get("vorname", ""),
+            data.get("nachname", ""),
+            data.get("email", ""),
+            data.get("phone", ""),
+        )
+        if duplicates:
+            # 409 Conflict + Duplikat-Liste
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "Kunde koennte bereits existieren",
+                    "duplicates": [
+                        {
+                            "id": d.get("id"),
+                            "name": d.get("name", ""),
+                            "email": d.get("email", ""),
+                            "phone": d.get("phone", ""),
+                            "address": d.get("address", ""),
+                        }
+                        for d in duplicates
+                    ],
+                },
+            )
+
     name = f"{data.get('vorname', '')} {data.get('nachname', '')}".strip() or data.get('firma', 'Unbekannt')
     address = f"{data.get('strasse', '')} {data.get('hausnummer', '')}, {data.get('plz', '')} {data.get('ort', '')}".strip().strip(",").strip()
     item = {
@@ -191,13 +277,40 @@ async def delete_kunde(kunde_id: str, user=Depends(get_current_user)):
 
 
 @router.post("/modules/kunden/import-vcf")
-async def import_vcf_kunde(file: UploadFile = File(...), user=Depends(get_current_user)):
+async def import_vcf_kunde(file: UploadFile = File(...), force: bool = False, user=Depends(get_current_user)):
     if not file.filename.lower().endswith(".vcf"):
         raise HTTPException(400, "Nur .vcf Dateien erlaubt")
     content = (await file.read()).decode("utf-8", errors="ignore")
     data = parse_vcf(content)
     if not data.get("vorname") and not data.get("nachname") and not data["name"]:
         raise HTTPException(400, "Kein Name in der VCF-Datei gefunden")
+
+    # Duplikat-Check (wenn nicht force)
+    if not force:
+        duplicates = await _find_duplicates(
+            data.get("vorname", ""),
+            data.get("nachname", ""),
+            data.get("email", ""),
+            data.get("phone", ""),
+        )
+        if duplicates:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "Kunde koennte bereits existieren",
+                    "duplicates": [
+                        {
+                            "id": d.get("id"),
+                            "name": d.get("name", ""),
+                            "email": d.get("email", ""),
+                            "phone": d.get("phone", ""),
+                            "address": d.get("address", ""),
+                        }
+                        for d in duplicates
+                    ],
+                },
+            )
+
     # Create via module
     item = {
         "id": str(uuid4()),
