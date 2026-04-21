@@ -348,15 +348,19 @@ const KundenModulPage = () => {
                         onClick={async () => {
                           try {
                             const res = await api.get(`/portals/for-customer/${kunde.id}`);
-                            if (res.data?.exists) {
-                              navigate(`/portals`);
-                              toast.info("Portal geöffnet");
+                            if (res.data?.exists && res.data?.portal?.id) {
+                              navigate(`/portals?portal=${res.data.portal.id}`);
                             } else {
                               if (!kunde.email) { toast.error("Kunde hat keine E-Mail – erst ergänzen"); return; }
-                              if (!window.confirm(`Neues Kundenportal für ${kunde.vorname} ${kunde.nachname} anlegen?`)) return;
-                              await api.post(`/portals/from-customer/${kunde.id}`, {});
-                              toast.success("Portal erstellt – öffne jetzt die Portal-Übersicht");
-                              navigate("/portals");
+                              if (!window.confirm(`Neues Kundenportal für ${kunde.vorname || ""} ${kunde.nachname || ""}${kunde.firma ? ` (${kunde.firma})` : ""} anlegen?`)) return;
+                              const created = await api.post(`/portals/from-customer/${kunde.id}`, {});
+                              const newId = created.data?.id;
+                              toast.success("Portal erstellt");
+                              if (newId) {
+                                navigate(`/portals?portal=${newId}`);
+                              } else {
+                                navigate(`/portals`);
+                              }
                             }
                           } catch (err) {
                             toast.error(err?.response?.data?.detail || "Fehler");

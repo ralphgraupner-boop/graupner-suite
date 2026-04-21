@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare, Download, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 
 const PortalsPage = () => {
+  const location = useLocation();
   const [portals, setPortals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -27,6 +29,19 @@ const PortalsPage = () => {
     loadPortals();
     api.get("/modules/kunden/data").then(r => setCustomers(r.data)).catch(() => {});
   }, [loadPortals]);
+
+  // Query-Parameter ?portal=<id> -> Portal direkt oeffnen
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const portalId = params.get("portal");
+    if (!portalId || portals.length === 0) return;
+    const target = portals.find(p => p.id === portalId);
+    if (target) {
+      setSelectedPortal(target);
+      loadFiles(target.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, portals]);
 
   const loadFiles = async (portalId) => {
     try {
