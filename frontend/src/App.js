@@ -23,6 +23,7 @@ import { MitarbeiterModulPage } from "@/pages/MitarbeiterModulPage";
 import { EinsaetzeModulPage } from "@/pages/EinsaetzeModulPage";
 import { RechnungenV2Page } from "@/pages/RechnungenV2Page";
 import { PortalV2AdminPage } from "@/pages/portal_v2/PortalV2AdminPage";
+import { PortalV2DetailPage } from "@/pages/portal_v2/PortalV2DetailPage";
 import { PortalV2LoginPage } from "@/pages/portal_v2/PortalV2LoginPage";
 import { PortalV2CustomerPage } from "@/pages/portal_v2/PortalV2CustomerPage";
 import { HelpProvider } from "@/lib/helpContext";
@@ -90,6 +91,7 @@ function App() {
               <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
               <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
               <Route path="/portal-v2" element={<MainLayout onLogout={logout}><PortalV2AdminPage /></MainLayout>} />
+              <Route path="/portal-v2/detail/:id" element={<MainLayout onLogout={logout}><PortalV2DetailPage /></MainLayout>} />
               <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterModulPage /></MainLayout>} />
               <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzeModulPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />

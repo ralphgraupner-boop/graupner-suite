@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Users, Plus, Pencil, Trash2, Settings as SettingsIcon, Power, Mail, Download, Send, CheckCircle2 } from "lucide-react";
@@ -11,6 +12,7 @@ import { PortalV2ImportDialog } from "@/pages/portal_v2/PortalV2ImportDialog";
  * Backend: /api/portal-v2/admin/*
  */
 export function PortalV2AdminPage() {
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState(null);
@@ -215,10 +217,11 @@ export function PortalV2AdminPage() {
             {accounts.map((a) => (
               <div
                 key={a.id}
-                className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition"
+                className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition cursor-pointer"
+                onClick={() => navigate(`/portal-v2/detail/${a.id}`)}
                 data-testid={`portal-v2-account-row-${a.id}`}
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="font-medium truncate">{a.name || "(ohne Name)"}</div>
                   <div className="text-sm text-muted-foreground flex items-center gap-1 truncate">
                     <Mail className="w-3 h-3" />
@@ -227,7 +230,7 @@ export function PortalV2AdminPage() {
                   </div>
                   {a.notes && <div className="text-xs text-muted-foreground mt-0.5 truncate">{a.notes}</div>}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                   {a.last_login ? (
                     <span className="hidden md:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 mr-1" title={`Letzter Login: ${a.last_login}`}>
                       <CheckCircle2 className="w-3 h-3" /> eingeloggt
