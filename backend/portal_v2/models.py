@@ -46,6 +46,7 @@ class PortalV2Settings(BaseModel):
     rate_limit_window_sec: int = 3600
     email_subject_invite: str = "Ihr Kundenzugang – Graupner Suite"
     email_footer: str = ""
+    public_base_url: str = ""  # z.B. https://code-import-flow-1.emergent.host
 
 
 class PortalV2SettingsUpdate(BaseModel):
@@ -54,3 +55,4 @@ class PortalV2SettingsUpdate(BaseModel):
     rate_limit_window_sec: Optional[int] = None
     email_subject_invite: Optional[str] = None
     email_footer: Optional[str] = None
+    public_base_url: Optional[str] = None

@@ -23,6 +23,8 @@ import { MitarbeiterModulPage } from "@/pages/MitarbeiterModulPage";
 import { EinsaetzeModulPage } from "@/pages/EinsaetzeModulPage";
 import { RechnungenV2Page } from "@/pages/RechnungenV2Page";
 import { PortalV2AdminPage } from "@/pages/portal_v2/PortalV2AdminPage";
+import { PortalV2LoginPage } from "@/pages/portal_v2/PortalV2LoginPage";
+import { PortalV2CustomerPage } from "@/pages/portal_v2/PortalV2CustomerPage";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
 
@@ -56,6 +58,10 @@ function App() {
         <Routes>
           {/* Kundenportal (oeffentlich) */}
           <Route path="/portal/:token" element={<CustomerPortalPage />} />
+          {/* Kundenportal v2 (oeffentlich) */}
+          <Route path="/portal-v2/login" element={<PortalV2LoginPage />} />
+          <Route path="/portal-v2/login/:token" element={<PortalV2LoginPage />} />
+          <Route path="/portal-v2/app" element={<PortalV2CustomerPage />} />
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLogin={login} />} />
           ) : (

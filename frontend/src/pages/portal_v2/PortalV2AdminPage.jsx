@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Users, Plus, Pencil, Trash2, Settings as SettingsIcon, Power, Mail, Download } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Settings as SettingsIcon, Power, Mail, Download, Send, CheckCircle2 } from "lucide-react";
 import { PortalV2ImportDialog } from "@/pages/portal_v2/PortalV2ImportDialog";
 
 /**
@@ -85,6 +85,27 @@ export function PortalV2AdminPage() {
     try {
       await api.delete(`/portal-v2/admin/accounts/${account.id}`);
       toast.success("Gelöscht");
+      loadAll();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    }
+  };
+
+  const sendInvite = async (account) => {
+    if (!window.confirm(`Einladung an ${account.email} senden?\n\nDas generiert ein neues Passwort und verschickt den Zugang per Mail.`)) return;
+    try {
+      const res = await api.post(`/portal-v2/admin/accounts/${account.id}/invite`);
+      if (res.data?.sent) {
+        toast.success(`Einladung an ${account.email} gesendet`);
+      } else {
+        toast.warning("Einladung erstellt, aber Mail-Versand hat nicht funktioniert. Link kopieren?");
+      }
+      if (res.data?.login_url) {
+        try {
+          await navigator.clipboard.writeText(res.data.login_url);
+          toast.info("Login-Link in Zwischenablage kopiert");
+        } catch { /* ignore clipboard errors */ }
+      }
       loadAll();
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
@@ -207,6 +228,27 @@ export function PortalV2AdminPage() {
                   {a.notes && <div className="text-xs text-muted-foreground mt-0.5 truncate">{a.notes}</div>}
                 </div>
                 <div className="flex items-center gap-1">
+                  {a.last_login ? (
+                    <span className="hidden md:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 mr-1" title={`Letzter Login: ${a.last_login}`}>
+                      <CheckCircle2 className="w-3 h-3" /> eingeloggt
+                    </span>
+                  ) : a.invite_sent_at ? (
+                    <span className="hidden md:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 mr-1" title={`Einladung: ${a.invite_sent_at}`}>
+                      <Send className="w-3 h-3" /> eingeladen
+                    </span>
+                  ) : (
+                    <span className="hidden md:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 mr-1">
+                      offen
+                    </span>
+                  )}
+                  <button
+                    onClick={() => sendInvite(a)}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                    title={a.invite_sent_at ? "Einladung erneut senden (neues Passwort)" : "Einladung senden"}
+                    data-testid={`portal-v2-invite-${a.id}`}
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => openEdit(a)}
                     className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"

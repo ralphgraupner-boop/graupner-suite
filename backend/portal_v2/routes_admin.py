@@ -3,11 +3,13 @@ Portal v2 – Admin-Routes
 Alle Endpoints unter /api/portal-v2/admin/*
 Zugriff: nur mit JWT-Auth der Suite.
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from datetime import datetime, timezone
 
 from database import db, logger
 from auth import get_current_user
+from utils import send_email
+from utils.email_signatur import wrap_email_body
 from .models import (
     PortalAccount,
     PortalAccountCreate,
@@ -15,6 +17,10 @@ from .models import (
     PortalV2Settings,
     PortalV2SettingsUpdate,
 )
+from .auth import generate_password, hash_password, generate_login_token
+from .mail_builder import build_invite_email
+
+import os
 
 router = APIRouter(prefix="/admin")
 
@@ -137,3 +143,91 @@ async def delete_account(account_id: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Account nicht gefunden")
     logger.info(f"Portal v2 Account geloescht: {account_id}")
     return {"deleted": True, "id": account_id}
+
+
+# ============== INVITE / PASSWORD RESET ==============
+
+async def _prepare_invite(account_id: str, request: Request | None = None) -> tuple[dict, str, str]:
+    """Generiert neues Passwort + Token, speichert Hash, liefert Klartext + URL."""
+    account = await db.portal2_accounts.find_one({"id": account_id}, {"_id": 0})
+    if not account:
+        raise HTTPException(404, "Account nicht gefunden")
+    if not account.get("email"):
+        raise HTTPException(400, "Account hat keine E-Mail")
+
+    password_plain = generate_password()
+    password_hash = hash_password(password_plain)
+    token = generate_login_token()
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db.portal2_accounts.update_one(
+        {"id": account_id},
+        {"$set": {
+            "password_hash": password_hash,
+            "token": token,
+            "invite_sent_at": now,
+            "updated_at": now,
+        }},
+    )
+
+    # Login-URL: Priorität: Settings → ENV → Origin-Header
+    settings_doc = await _get_settings_doc()
+    frontend_base = (settings_doc.get("public_base_url") or "").strip()
+    if not frontend_base:
+        frontend_base = os.environ.get("FRONTEND_PUBLIC_URL", "").strip()
+    if not frontend_base and request is not None:
+        origin = request.headers.get("origin") or request.headers.get("referer") or ""
+        if origin:
+            # Nimm nur scheme+host, kein Pfad
+            from urllib.parse import urlparse
+            p = urlparse(origin)
+            if p.scheme and p.netloc:
+                frontend_base = f"{p.scheme}://{p.netloc}"
+    login_url = f"{frontend_base.rstrip('/')}/portal-v2/login/{token}"
+
+    return account, password_plain, login_url
+
+
+@router.post("/accounts/{account_id}/invite")
+async def send_invite(account_id: str, request: Request, user=Depends(get_current_user)):
+    """Generiert Passwort + Token und sendet Einladungs-Mail."""
+    settings_doc = await _get_settings_doc()
+    account, password_plain, login_url = await _prepare_invite(account_id, request)
+
+    subject, html = await build_invite_email(
+        customer_name=account.get("name", ""),
+        customer_email=account["email"],
+        login_url=login_url,
+        password_plain=password_plain,
+        settings_doc=settings_doc,
+    )
+
+    try:
+        wrapped = wrap_email_body(html)
+    except Exception:
+        wrapped = html
+
+    ok = send_email(
+        to_email=account["email"],
+        subject=subject,
+        body_html=wrapped,
+    )
+
+    await db.portal2_activity.insert_one({
+        "portal_id": account_id,
+        "action": "invite_sent" if ok else "invite_failed",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+
+    logger.info(f"Portal v2 Einladung {'gesendet' if ok else 'fehlgeschlagen'}: {account['email']}")
+    return {
+        "sent": bool(ok),
+        "email": account["email"],
+        "login_url": login_url,
+    }
+
+
+@router.post("/accounts/{account_id}/reset-password")
+async def reset_password(account_id: str, request: Request, user=Depends(get_current_user)):
+    """Neu-Generierung + erneute Einladungs-Mail."""
+    return await send_invite(account_id, request, user)
