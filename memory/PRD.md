@@ -1,134 +1,173 @@
-# Graupner Suite - PRD
+# Graupner Suite – Product Requirements (PRD)
 
-## Original Problem Statement
-Handwerker-Verwaltungssoftware ("Graupner Suite") - modularer Aufbau mit eigenstaendigen Bausteinen.
+**Projekt:** Graupner Suite – Handwerker-Verwaltungssoftware für die Tischlerei R.Graupner
+**Prinzip:** **Modulare Architektur — jedes Modul ist eigenständig (Module-First).**
+**Live-URL:** https://code-import-flow-1.emergent.host
+**Preview-URL:** https://handwerk-deploy.preview.emergentagent.com
 
-## Architecture
-- **Frontend**: React + TailwindCSS + Shadcn/UI
-- **Backend**: FastAPI + MongoDB
-- **Storage**: Emergent Object Storage
-- **Auth**: JWT-based (admin/Graupner!Suite2026)
-- **Prinzip**: Modulare Architektur - jedes Modul ist eigenstaendig
+---
 
-## Module
+## 🚨 ABSOLUTE REGEL FÜR ALLE ZUKÜNFTIGEN AGENTEN (Module-First)
 
-### 1. Kontakt-Modul `/module/kontakt`
-### 2. Kunden-Modul `/module/kunden`
-### 3. Artikel & Leistungen `/module/artikel`
-### 4. Dokumente `/module/dokumente`
-### 5. Textvorlagen `/module/textvorlagen`
-### 6. Kundenportal `/portals` + `/portal/:token`
-### 7. Kontaktformular `/api/kontakt` + IONOS standalone
-### 8. Buchhaltung `/buchhaltung` + Rechnungen `/invoices`
-### 9. Einsaetze-Modul `/einsaetze` (NEU 18.04.2026)
-- Auftragsbearbeitung wie das "gruene Formular"
-- Kundendaten, Objektadresse, Beschreibung + Bemerkungen
-- Reparaturgruppen + Material Dropdown (konfigurierbar)
-- Monteur-Zuweisung (1. + 2. Monteur aus Mitarbeiter-Modul)
-- Summe Netto/Brutto, Status, Prioritaet, Termine
-- Kategorisierte Bild-Uploads (Kundenanfrage, Besichtigung, Abnahme etc.)
-- E-Mail-Versand + ICS-Kalender-Download
-- Einsatz aus Kontakt oder Kunde erstellbar
-- 100% getestet (21/21 Backend + Frontend)
+Diese Regel steht **seit Projektbeginn (03.03.2026)** in diesem Dokument
+und wurde am **21.04.2026 in einer formellen Beschwerde** (`/app/support_beschwerde_graupner.md`)
+nach Credit-Verbrauch von **1.000 €** und Analyse der Git-Historie erneut durchgesetzt.
 
-### 10. Mitarbeiter-Modul `/mitarbeiter` (NEU 18.04.2026)
-- Frontend fuer bestehendes Backend (654 Zeilen)
-- CRUD + Suche + Status aktiv/inaktiv
-- Verknuepft mit Einsaetze (Monteur-Zuweisung)
-- 100% getestet
+**Jedes neue Feature, jede neue Integration, jeder Helper MUSS in einem eigenen,
+isolierten Ordner/Modul entstehen — mit eigenen Collections und Feature-Flag.**
 
-## Completed 19.04.2026
+### Konkret verboten:
+- ❌ Änderungen an `utils/__init__.py` (SMTP-Kern) für neue Features
+- ❌ Direkte Bearbeitung von `WysiwygDocumentEditor.jsx` (>1200 Zeilen, Core)
+- ❌ Einbauen neuer Logik in `routes/portal.py`, `routes/webhook.py`, `DashboardPage.jsx`
+- ❌ Hinzufügen neuer Helper-Funktionen in Core-Dateien
 
-### Artikel Multi-Format Import/Export
-- [x] CSV, Excel, JSON, XML Export-Endpoints
-- [x] Professionelles Dropdown-UI (shadcn)
-- [x] Auto-Nummerierung (ArtNr, Leist, Fremd) + Duplikat-Pruefung
-- [x] Import-Vorlage im Dropdown
+### Korrekt vorgehen:
+- ✅ Neuer Ordner `/app/backend/<modulname>/` mit `__init__.py`, eigenen Routes, Models
+- ✅ Eigene MongoDB-Collections mit Prefix (`portal2_*`, `rechnungen_v2_*`, …)
+- ✅ Eigenes API-Prefix (`/api/portal-v2/*`, `/api/v2/*`, …)
+- ✅ Feature-Flag in eigener Settings-Collection, toggelbar aus der UI
+- ✅ Einzige erlaubte Änderung an Core: +1 Zeile Import + 1 Zeile `include_router` in `server.py`,
+  +1 Menüpunkt in `Navigation.jsx`, +1–2 Routes in `App.js`
+- ✅ Nur lesender Zugriff auf Bestands-Collections (`module_kunden`, `settings`)
 
-### Mitarbeiter-Modul Pro-UI
-- [x] 9 Tabs: Stammdaten · Beschäftigung · Steuer & SV · Bank & Lohn · Urlaub · Krankmeldungen · Verträge & Dokumente · Fortbildungen · Notfall & Notizen
-- [x] Krankenkassen-Dropdown (50+ GKV/PKV in Gruppen)
-- [x] Steuerklassen, Konfession, Personengruppenschlüssel
-- [x] Arbeitsvertrags-Upload mit Kategorisierung (arbeitsvertrag, zeugnis, abmahnung, etc.)
-- [x] Lohnhistorie (Gehaltsänderungen)
-- [x] Urlaub mit Rest-Berechnung, Krankmeldungen mit AU-Flag
-- [x] Geburtstags-Hinweis auf Liste (<30 Tage)
-- [x] 9/9 Frontend-Tests grün
+### Begründung (aus Nutzer-Sicht):
+*„Ich habe 1000 Euro ausgegeben und es wurde nicht gemacht. Die Beschwerde wurde
+eingereicht. Ab jetzt wird es richtig gemacht."* — Ralph Graupner, 22.04.2026
 
-### Kundenportal Paket 2+3
-- [x] Konfigurierbare Begrüßung + Hinweise via /api/portal-settings
-- [x] Auto-Bildkomprimierung (max 1920px, JPEG 80%)
-- [x] Limits: max 5 Bilder/Upload, max 30 pro Portal
-- [x] Rate-Limit: >10 Uploads/60s → Auto-Sperre + Admin-Mail
-- [x] Bidirektionale Dialog-Historie (chronologisch, chat-style)
-- [x] Absenden-Button mit Vorschau-Dialog für Kunde
-- [x] Speichern & Beenden-Button
-- [x] Admin: "Vorschau & Senden" Modal vor An-Kunden-Mitteilungen
-- [x] NEU-Badge in Portal-Liste (customer_has_new_content)
-- [x] Mark-Read beim Öffnen der Portal-Detail
-- [x] "Portal öffnen/anlegen"-Button direkt im Kunden-Modul
-- [x] 18/18 Backend-Tests + alle Frontend-Flows grün
+---
 
-## Completed 18.04.2026
-- [x] Kundenportal-Modul (26/26 Tests)
-- [x] Kontaktformular-Modul (18/18 Tests) + IONOS Upload
-- [x] Buchhaltung & Mahnwesen (30/30 Tests)
-- [x] Einsaetze + Mitarbeiter Module (21/21 Tests)
-- [x] Portal-Textbausteine (doc_type: kundenportal)
-- [x] Links per Mail + in Diverses gespeichert
-- [x] Redeploy auf Live-Domain (code-import-flow-1.emergent.host)
+## 🏗️ Architektur
 
-## Noch offen / Naechste Schritte
-- [ ] Termintext-Vorlagen + Google Calendar Integration
-- [ ] Mailtexte im Einsatz (Textvorlagen doc_type: einsatz)
-- [ ] Arbeitsblatt-/Formular-Auswahl im Einsatz
-- [ ] Bild-Upload Kategorien erweitern
-- [ ] "Einsatz erstellen" Button im Kontakt- und Kunden-Modul
+- **Frontend:** React + Tailwind + Shadcn/ui
+- **Backend:** FastAPI
+- **DB:** MongoDB (Name: `graupner_suite`, auf Live separat)
+- **Storage:** Emergent Object Storage (`utils/storage.py`)
+- **Auth:** JWT (Suite-Nutzer) + separater JWT für Portal-v2-Kunden
+- **Email:** SMTP (service24@tischlerei-graupner.de, IONOS)
 
-## P1 - In Arbeit / Gemerkt
+---
 
-### Stundenplan-Kontrolle (wichtig, auf morgen verschoben)
-- Monatlicher Stundenplan-Ausdruck pro Mitarbeiter (Arbeitsbeginn/-ende)
-- Beispiel-PDF als Referenz von User erwartet
-- Ziel: Zeiterfassungs-Kontrolle parallel zu Lexware-Abrechnung
+## 📦 Aktuell existierende Module (Stand 22.04.2026)
 
-## Completed 19.04.2026 (Nachmittag) - Dokument-Editor Feedback-Fixes
+### Core-Module (stabil, minimale Änderungen erlaubt)
+- `routes/auth.py` — JWT-Login für Suite-Admin
+- `routes/module_kunden.py` — Kundenkartei (26 Einträge live ~24)
+- `routes/module_artikel.py` — Artikel & Leistungen
+- `routes/module_dokumente.py` — Dokumente-Verwaltung
+- `routes/module_textvorlagen.py` — Textvorlagen für Angebote/Mails
+- `routes/modules.py` — Modul-Meta + Kontakt-Datenquelle (`module_kontakt`)
+- `routes/einsaetze.py` — Einsatz-/Termin-Planung
+- `routes/mitarbeiter.py` — Personal
+- `routes/webhook.py` — Kontaktformular-Webhook (schreibt in `module_kunden`)
+- `routes/anfragen.py` + `routes/anfragen_fetcher.py` — Anfragen-Modul & IMAP-Fetcher
+- `routes/portal.py` — **Altes Portal** (weiterhin aktiv, ~10 Accounts live)
 
-### KRITISCHE REPARATUR
-- [x] **SettingsPage.jsx Syntax-Fehler behoben**: Unpaariger `<Card>`-Tag in FirmendatenTab hatte die komplette Frontend-Kompilierung blockiert → deshalb funktionierten PDF-Button, Text-Korrektur etc. bei User NICHT. Nach Reparatur lädt App wieder.
+### Isolierte Module (Module-First)
+- `routes/rechnungen_v2.py` — `/api/v2/*`, Collection `rechnungen_v2`
+- `portal_v2/` — **Kundenportal v2** (NEU 22.04.2026, s. unten)
 
-### Feedback-Fixes (10-Punkte-Liste vom User)
-- [x] **FIX 1** - Textvorlagen inline bearbeitbar: Bearbeiten + Löschen Buttons in TextTemplateSelect.jsx (data-testid: btn-edit-template / btn-delete-template / btn-save-edit-template)
-- [x] **FIX 2** - Große Dokument-Headline über Betreff ("Angebot A-2026-0001" text-2xl lg:text-3xl in #003399) für quote/order/invoice
-- [x] **FIX 3** - Plausibilitätsprüfung: validatePositions warnt bei Position mit Beschreibung aber 0€ Preis oder Menge 0
-- [x] **FIX 4** - PDF-Button öffnet in neuem Tab (window.open) mit Fallback-Download bei Popup-Blocker
-- [x] **FIX 5** - Mail-Dialog mit 2 Optionen ("Mit Vortext & Schlusstext" / "Ohne Text") + Abbrechen (data-testid: mail-client-dialog)
-- [x] **FIX 6** - Briefkopf-Slogan Schriftgröße: slogan_font_size in Settings-Model + SettingsPage (Dokument-Vorlagen Tab) + pdf_generator.py nutzt Wert für "seit 1960" & "Mitglied der Handwerkskammer"
-- [x] **Neue Leistung/Artikel Sync**: handleSavePositionAsArticle setzt setSidebarSearch("") + wechselt sidebarTab nach dem Speichern → neue Position sofort sichtbar
+### Deaktivierte Module
+- IMAP-Polling im Hintergrund → AUS (User nutzt Betterbird extern)
+- E-Mail-Modul-Menü → hinter `email_module_enabled`-Flag versteckt
 
-### Verifikation
-- Backend: 8/8 pytest green (slogan_font_size GET/PUT/persist, PDF generation mit custom size)
-- Frontend: Mail-Dialog visuell bestätigt, PDF-Button + große Headline sichtbar, Settings-Feld funktioniert
+---
 
-## P2 - Backlog
-- [ ] DATEV-Export
-- [ ] Lexoffice-Anbindung
-- [ ] Handy-App (Monteur-Zugang)
-- [ ] Standalone Homepage
-- [ ] Windows Desktop App
+## ✅ Kundenportal v2 (fertig am 22.04.2026)
 
-## Completed 19.02.2026 - Kundenportal Text-Vorlagen mit {anrede_brief}
-- [x] Backend `module_textvorlagen.py`: `VALID_DOC_TYPES` erweitert um `kundenportal`, `einsatz`, `termin`; `VALID_TEXT_TYPES` um `portal_nachricht`
-- [x] Backend neuer Endpoint `POST /api/modules/textvorlagen/seed-kundenportal` - legt 3 Standard-Vorlagen idempotent an (Begruessung+Bilder, Weitere Bilder, Rueckfrage)
-- [x] Frontend `PortalsPage.jsx`: `applyVorlage` ersetzt jetzt `{anrede_brief}`, `{kunde_name}`, `{kunde_email}`, `{kunde_telefon}`, `{firma}`, `{datum}` + HTML-Tag-Strip
-- [x] Frontend `TextvorlagenModulPage.jsx`: Button "Portal-Vorlagen importieren" (Sparkles-Icon), `portal_nachricht` in Labels+Colors
-- [x] Verifikation: Seed 2x getestet (3 inserted → 3 skipped), Lint clean
-- [x] Live-Deploy: User klickt nach Redeploy einmal auf "Portal-Vorlagen importieren"
+**Pfad Backend:** `/app/backend/portal_v2/`
+**Pfad Frontend:** `/app/frontend/src/pages/portal_v2/`
+**API-Prefix:** `/api/portal-v2/*`
+**Feature-Flag:** `portal2_settings.feature_enabled`
+**Menü:** „Kundenportal v2" (`/portal-v2`)
 
-## Completed 20.02.2026 - HEIC/iPhone-Upload Fix (Kundenportal)
-- [x] Backend: `pillow-heif==1.3.0` installiert + `register_heif_opener()` in `portal.py`, requirements.txt aktualisiert
-- [x] Backend `ALLOWED_IMAGE_TYPES` um `image/heic`, `image/heif`, `image/heic-sequence`, `image/heif-sequence`, `application/octet-stream` erweitert
-- [x] Backend: Fallback-Validierung per Datei-Endung (`.heic`, `.heif`, `.jpg`, `.png`, `.webp`) falls Handy-Browser generischen content-type sendet
-- [x] Frontend `CustomerPortalPage.jsx`: `accept="image/*,image/heic,image/heif,.heic,.heif"` statt restriktiv JPG/PNG/WebP
-- [x] `compress_image` konvertiert HEIC automatisch zu JPEG (testweise 421 Byte HEIC → 361 Byte JPEG erfolgreich)
-- [x] Verifikation E2E: HEIC-Upload + JPEG-Regression beide OK via curl, Lint clean
+### Module-First-Einhaltung
+- ✅ Null Änderungen an `portal.py`, `utils/__init__.py`, `webhook.py`, `DashboardPage.jsx`, `WysiwygDocumentEditor.jsx`
+- ✅ Neue Collections: `portal2_accounts`, `portal2_messages`, `portal2_uploads`, `portal2_activity`, `portal2_settings`, `portal2_sync_log`
+- ✅ Kern-Änderungen: +2 Zeilen in `server.py`, +1 Menüpunkt in `Navigation.jsx`, +4 Routes in `App.js`
+
+### Features (MVP komplett)
+- **Phase 1 (Gerüst + CRUD):** Account anlegen/editieren/löschen, Settings-Panel mit Feature-Toggle
+- **Phase 2 (Import):** Bulk-Import aus `module_kunden` (nur lesend), mit Dubletten-Check + Sync-Log
+- **Phase 3 (Auth):** Auto-generierte Passwörter (bcrypt), Token-Link-Login, Einladungs-Mail (eigener `mail_builder.py`)
+- **Phase 4 (Chat):** Beidseitiger Chat Admin↔Kunde, Lese-Status, Badges
+- **Phase 5 (Uploads):** Datei-Upload Bilder+PDF, HEIC→JPEG, Rate-Limit (20/h default)
+
+### Struktur
+```
+portal_v2/
+├── __init__.py          # Router
+├── models.py            # Pydantic
+├── auth.py              # Passwort/Token/bcrypt/JWT-Session
+├── database.py          # (nicht genutzt, db aus database.py)
+├── routes_admin.py      # Admin-CRUD, Invite, Reset-Password
+├── routes_customer.py   # Public: Login, Preflight, Me
+├── sync.py              # Import aus module_kunden
+├── messages.py          # Chat
+├── uploads.py           # Dateien
+└── mail_builder.py      # Einladungs-HTML (mit Anrede-Brief)
+```
+
+### Frontend-Seiten
+```
+pages/portal_v2/
+├── PortalV2AdminPage.jsx       # Admin-Übersicht (Menüpunkt)
+├── PortalV2ImportDialog.jsx    # Import-Modal
+├── PortalV2DetailPage.jsx      # Admin: Chat + Galerie pro Account
+├── PortalV2LoginPage.jsx       # Public: /portal-v2/login/:token?
+└── PortalV2CustomerPage.jsx    # Public: /portal-v2/app (nach Login)
+```
+
+---
+
+## 📋 Aktuelle Prioritäten / Backlog
+
+### P0 (offen vor 22.04.)
+- Chrome Push-Notifications „Angebots-Wiedervorlage" Spam
+  → Feature-Flag zum Abschalten oder SW-Cleanup-Button
+  → Status: PAUSIERT (User hat Thema ruhen gelassen, Fokus Portal v2)
+
+### P1 (nach Portal v2 MVP)
+- **Portal v2 – Phase 6 (Polish):**
+  - Ungelesen-Badge im Sidebar-Menü (`GET /api/portal-v2/admin/unread-summary` ist schon da)
+  - E-Mail-Notification an Admin, wenn Kunde Nachricht/Upload sendet
+  - Passwort-Vergessen-Flow
+  - Dokumente-Tab (Admin kann PDFs für Kunden hochladen – teilweise schon da)
+- PDF-Archiv-Modul (GoBD-konform, Dokumente in Object Storage)
+  → als isoliertes Modul `/app/backend/pdf_archiv/`
+- Live-Test des gesamten Portal-v2-Flows mit echtem Kunden
+
+### P2 (Backlog)
+- Automatische Kundennummern (`G210426/0625`)
+- Stundenplan-Kontrolle (BLOCKED: PDF-Beispiel vom User fehlt)
+- SEO/Ranking-Modul
+- DATEV-Export
+- Monteur-PWA / Handy-App
+
+---
+
+## 🔑 Wichtige Hinweise für neue Agenten
+
+1. **Language:** ALLE Antworten auf DEUTSCH.
+2. **Live vs Preview:** User arbeitet LIVE. Preview ist Test-Umgebung. DBs getrennt.
+   → Nach Features: immer „Save to GitHub + Re-Deploy"-Hinweis.
+3. **E-Mail:** Betterbird wird extern genutzt — kein Hintergrund-IMAP-Polling aktivieren!
+4. **Kontaktdaten-Quelle:** `module_kunden` (NICHT `anfragen` oder `module_kontakt`).
+   → Webhook-Eingang von `kontakt-graupner.de` schreibt in `module_kunden`.
+5. **Erst ask_human, dann code:** Vor jeder Feature-Implementierung `ask_human` mit Plan.
+6. **Credits respektieren:** User hat 1000 € bereits ausgegeben. Kein Refactoring ohne Bitte.
+
+---
+
+## 📝 Changelog der Session 22.04.2026
+
+- ✅ Portal v2 Phase 1 (Gerüst + CRUD)
+- ✅ Portal v2 Phase 2 (Import aus module_kunden)
+- ✅ Portal v2 Phase 3 (Login + Einladungs-Mail, bcrypt, Token-Link)
+- ✅ Portal v2 Phase 4 (Chat beidseitig)
+- ✅ Portal v2 Phase 5 (Uploads mit HEIC, Rate-Limit)
+- ✅ Live-getestet: Account, Invite, Login, Chat, Upload alle OK
+- ✅ Beschwerde (1000 € Credits) an Support eingereicht
+
+**Stand Abend 22.04.:** Portal v2 MVP komplett, Feature-Flag-steuerbar,
+**Module-First zu 100 % eingehalten**, Live-Deploy durchgeführt.
