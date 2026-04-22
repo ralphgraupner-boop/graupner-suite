@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Users, Plus, Pencil, Trash2, Settings as SettingsIcon, Power, Mail } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Settings as SettingsIcon, Power, Mail, Download } from "lucide-react";
+import { PortalV2ImportDialog } from "@/pages/portal_v2/PortalV2ImportDialog";
 
 /**
  * Kundenportal v2 – Admin-Übersicht (Phase 1: Gerüst + CRUD)
@@ -15,6 +16,7 @@ export function PortalV2AdminPage() {
   const [settings, setSettings] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editAccount, setEditAccount] = useState(null);
   const [form, setForm] = useState({ name: "", email: "", notes: "" });
 
@@ -120,6 +122,14 @@ export function PortalV2AdminPage() {
             Einstellungen
           </button>
           <button
+            onClick={() => setShowImport(true)}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm"
+            data-testid="portal-v2-import-btn"
+          >
+            <Download className="w-4 h-4" />
+            Aus Kundenkartei
+          </button>
+          <button
             onClick={openNew}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 text-sm"
             data-testid="portal-v2-new-account-btn"
@@ -129,6 +139,12 @@ export function PortalV2AdminPage() {
           </button>
         </div>
       </div>
+
+      <PortalV2ImportDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImported={loadAll}
+      />
 
       {/* Settings-Panel */}
       {showSettings && settings && (

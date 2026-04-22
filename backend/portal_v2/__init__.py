@@ -10,6 +10,8 @@ Phase 1: Admin-CRUD + Feature-Flag
 from fastapi import APIRouter
 
 from . import routes_admin
+from . import sync
 
 router = APIRouter(prefix="/api/portal-v2", tags=["portal-v2"])
 router.include_router(routes_admin.router)
+router.include_router(sync.router)
