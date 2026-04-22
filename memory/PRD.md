@@ -7,6 +7,83 @@
 
 ---
 
+## 🚦 BRIEFING FÜR DEN NÄCHSTEN AGENTEN (Start der nächsten Session)
+
+**Stand: Abend 22.04.2026 – vor dem Schlafengehen:**
+
+### 🛑 SOFORT-ANWEISUNGEN (nicht übergehen!)
+
+1. **Sprache: NUR DEUTSCH.**
+2. **Der User (Ralph Graupner) hat am 21.04.2026 eine formelle Beschwerde
+   wegen Module-First-Verletzung eingereicht** (siehe `/app/support_beschwerde_graupner.md`,
+   1.000 € ausgegeben, 76% der Änderungen in Kern-Dateien statt isolierten Modulen).
+   → **Jede Änderung an Core-Dateien ist verboten. Siehe „ABSOLUTE REGEL" unten.**
+3. **Start der Session:** `ask_human` mit Plan und Bestätigung bevor du loslegst.
+
+### 📋 DER AKTUELLE PLAN FÜR MORGEN
+
+Der User und ich (Agent vom 22.04.) haben am Abend **diesen verbindlichen Plan** festgelegt:
+
+#### Aufgabe: „Dokumente v2" als neues, isoliertes Modul bauen
+- Ort: `/app/backend/dokumente_v2/` (Ordner-Struktur wie `portal_v2/`)
+- Frontend: `/app/frontend/src/pages/dokumente_v2/`
+- API-Prefix: `/api/dokumente-v2/*`
+- Collections: `dokumente_v2`, `dokumente_v2_counters`, `dokumente_v2_settings`
+- Feature-Flag: `dokumente_v2_settings.feature_enabled`
+
+#### Phasen-Plan (wie Portal v2, jede Phase einzeln testbar)
+- **Phase 1:** Gerüst (Ordner, Models, Router, CRUD, Settings-Flag)
+- **Phase 2:** Editor-MVP (NEUER Editor – **nicht** `WysiwygDocumentEditor.jsx` wiederverwenden, auch nicht anfassen!)
+- **Phase 3:** PDF-Generierung + Nummernkreise aus DB
+- **Phase 4:** State-Machine Angebot → Auftragsbestätigung → Rechnung
+- **Phase 5 (OPTIONAL, nur wenn User zustimmt):** Portal-v2-Anbindung
+
+#### Kern-Verbesserung vs. altes System
+| Alt | Dokumente v2 |
+|---|---|
+| 3 Collections (`quotes`, `orders`, `invoices`) mit 95% gleichem Schema | **1 Collection** `dokumente_v2` mit `type`-Feld |
+| `WysiwygDocumentEditor.jsx` (>1200 Zeilen, Monolith) | Neue kleine Komponenten <300 Zeilen each |
+| Dokumenten-Logik in 4 Dateien verstreut | 1 Ordner, klar strukturiert |
+| PDF verwoben mit Editor | PDF klar getrennt |
+
+#### User-Kontext (WICHTIG!)
+- **Der User nutzt Dokumente NOCH NICHT produktiv** — er testet nur, Firma arbeitet weiter mit „Baufaktura" (externes Altsystem).
+- Daher: **keine Bestandsdaten-Migration nötig**, kein Geschäftsrisiko — perfekter Moment für ein sauberes neues Modul.
+- **Altes System** (`routes/documents.py`, `quotes.py`, `orders.py`, `invoices.py`, `WysiwygDocumentEditor.jsx`) **bleibt UNBERÜHRT** und läuft parallel, bis der User Dokumente v2 für produktionsreif erklärt.
+
+### 🔒 PORTAL V2 IST TABU
+
+Das Kundenportal v2 (`portal_v2/` Backend + `portal_v2/` Frontend) ist **FERTIG und LIVE**.
+**Es darf KEINE Änderung an folgenden Pfaden erfolgen, solange der User es nicht ausdrücklich verlangt:**
+- ❌ `/app/backend/portal_v2/` (kompletter Ordner)
+- ❌ `/app/frontend/src/pages/portal_v2/` (kompletter Ordner)
+- ❌ Collections `portal2_*`
+- ❌ Route `/api/portal-v2/*`
+
+**User-Zitat 22.04.2026:** *„wir fassen aber portal v2 nicht an das läuft richtig"*
+
+**Ausnahme (nur auf expliziten User-Wunsch):** Wenn der User in Phase 5 von Dokumente v2
+die Portal-Anbindung will, dann **eine neue Datei** `portal_v2/documents.py` anlegen, die
+lesend auf `dokumente_v2` zugreift. **Keine Änderung** an bestehenden Portal-v2-Dateien.
+
+### 📤 DEPLOY-STATUS
+
+- **Portal v2 Phase 1–3:** ✅ Bereits deployed, live-getestet, User war zufrieden („cool das sieht gut aus").
+- **Portal v2 Phase 4+5 (Chat + Uploads):** ✅ Im Code fertig, live-getestet im Preview.
+  → **User macht am Morgen des nächsten Tages Save to GitHub + Re-Deploy.**
+  → Das ist seine Hausaufgabe, **nicht deine**. Du musst das nicht erneut deployen.
+  → Falls der User das noch nicht gemacht hat, **erinnere ihn** zuerst vor Dokumente v2 startet.
+
+### ✋ Erster Schritt des neuen Agenten
+
+1. PRD.md lesen (wo du gerade bist)
+2. `ask_human` mit Plan:
+   - „Moin! Portal v2 steht. Heute starten wir mit **Dokumente v2 Phase 1** (Gerüst + CRUD), richtig?"
+   - Bestätigung einholen
+3. Erst dann bauen.
+
+---
+
 ## 🚨 ABSOLUTE REGEL FÜR ALLE ZUKÜNFTIGEN AGENTEN (Module-First)
 
 Diese Regel steht **seit Projektbeginn (03.03.2026)** in diesem Dokument
