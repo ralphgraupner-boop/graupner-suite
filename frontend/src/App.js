@@ -30,6 +30,7 @@ import { PortalV3AdminPage } from "@/pages/portal_v3/PortalV3AdminPage";
 import { PortalV3DetailPage } from "@/pages/portal_v3/PortalV3DetailPage";
 import { PortalV3LoginPage } from "@/pages/portal_v3/PortalV3LoginPage";
 import { PortalV3CustomerPage } from "@/pages/portal_v3/PortalV3CustomerPage";
+import { HandyZugangPage } from "@/pages/handy_zugang/HandyZugangPage";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
 
@@ -102,6 +103,7 @@ function App() {
               <Route path="/portal-v2/detail/:id" element={<MainLayout onLogout={logout}><PortalV2DetailPage /></MainLayout>} />
               <Route path="/portal-v3" element={<MainLayout onLogout={logout}><PortalV3AdminPage /></MainLayout>} />
               <Route path="/portal-v3/detail/:id" element={<MainLayout onLogout={logout}><PortalV3DetailPage /></MainLayout>} />
+              <Route path="/handy-zugang" element={<MainLayout onLogout={logout}><HandyZugangPage /></MainLayout>} />
               <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterModulPage /></MainLayout>} />
               <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzeModulPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
