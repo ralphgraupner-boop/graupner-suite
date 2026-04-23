@@ -408,7 +408,7 @@ function FileThumb({ id, session }) {
 function PdfPlaceholder({ filename }) {
   const baseName = (filename || "PDF").replace(/\.pdf$/i, "");
   return (
-    <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-700 flex flex-col items-center justify-center text-white p-3">
+    <div className="w-full h-full bg-gradient-to-br from-emerald-700 to-emerald-900 flex flex-col items-center justify-center text-white p-3">
       <FileText className="w-10 h-10 mb-2 drop-shadow" />
       <div className="text-[10px] font-semibold uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full mb-1">PDF</div>
       <div
