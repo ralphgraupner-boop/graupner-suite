@@ -72,24 +72,46 @@ export function PortalV3DetailPage() {
     }
   };
 
-  const uploadFile = async (file) => {
-    if (!file) return;
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const uploadFile = async (files) => {
+    const list = Array.from(files || []);
+    if (list.length === 0) return;
     setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("description", "");
-      await api.post(`/portal-v3/admin/accounts/${id}/uploads`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      toast.success("Hochgeladen");
-      loadUploads();
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || err.message);
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
+    const total = list.length;
+    let done = 0;
+    let failed = 0;
+    const CONCURRENCY = 3;
+    const queue = [...list];
+    setUploadProgress({ done: 0, total, failed: 0 });
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const f = queue.shift();
+        try {
+          const fd = new FormData();
+          fd.append("file", f);
+          fd.append("description", "");
+          await api.post(`/portal-v3/admin/accounts/${id}/uploads`, fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } catch (err) {
+          failed++;
+          toast.error(`${f.name}: ${err?.response?.data?.detail || err.message}`);
+        }
+        done++;
+        setUploadProgress({ done, total, failed });
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY, total) }, () => worker());
+    await Promise.all(workers);
+
+    const ok = total - failed;
+    if (ok > 0) toast.success(`${ok} von ${total} hochgeladen`);
+    setUploading(false);
+    setUploadProgress(null);
+    if (fileRef.current) fileRef.current.value = "";
+    loadUploads();
   };
 
   const deleteUpload = async (up) => {
@@ -263,8 +285,9 @@ export function PortalV3DetailPage() {
               <input
                 ref={fileRef}
                 type="file"
+                multiple
                 accept="image/*,application/pdf"
-                onChange={(e) => uploadFile(e.target.files?.[0])}
+                onChange={(e) => uploadFile(e.target.files)}
                 className="hidden"
                 data-testid="portal-v3-upload-input"
               />
@@ -275,10 +298,21 @@ export function PortalV3DetailPage() {
                 data-testid="portal-v3-upload-btn"
               >
                 <Upload className="w-4 h-4" />
-                {uploading ? "Lade hoch…" : "Datei hochladen"}
+                {uploading
+                  ? (uploadProgress ? `${uploadProgress.done} / ${uploadProgress.total}` : "Lade hoch…")
+                  : "Dateien hochladen"}
               </button>
-              <div className="text-xs text-muted-foreground">Bild oder PDF, max. 15 MB</div>
+              <div className="text-xs text-muted-foreground">Mehrere möglich · Bild oder PDF, max. 15 MB</div>
             </div>
+
+            {uploadProgress && uploadProgress.total > 1 && (
+              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${(uploadProgress.done / uploadProgress.total) * 100}%` }}
+                />
+              </div>
+            )}
 
             {uploads.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground py-16">
@@ -288,16 +322,21 @@ export function PortalV3DetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {uploads.map((up) => {
                   const isImg = (up.content_type || "").startsWith("image/");
+                  const isPdf = (up.content_type || "") === "application/pdf";
                   return (
                     <div key={up.id} className="border rounded-lg overflow-hidden bg-white group relative" data-testid={`portal-v3-upload-${up.id}`}>
                       <button
                         onClick={() => openFile(up)}
-                        className="block w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden hover:bg-gray-100"
+                        className="block w-full aspect-square flex items-center justify-center overflow-hidden"
                       >
                         {isImg ? (
                           <AdminThumb upload={up} />
+                        ) : isPdf ? (
+                          <PdfPlaceholder filename={up.original_filename} />
                         ) : (
-                          <FileText className="w-12 h-12 text-gray-400" />
+                          <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                            <FileText className="w-12 h-12 text-gray-400" />
+                          </div>
                         )}
                       </button>
                       <div className="p-2 text-xs">
@@ -336,3 +375,15 @@ export function PortalV3DetailPage() {
 }
 
 export default PortalV3DetailPage;
+
+/** PDF-Placeholder: nicht grau, rot-oranger Gradient mit PDF-Badge. */
+function PdfPlaceholder({ filename }) {
+  const baseName = (filename || "PDF").replace(/\.pdf$/i, "");
+  return (
+    <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-700 flex flex-col items-center justify-center text-white p-3">
+      <FileText className="w-10 h-10 mb-2 drop-shadow" />
+      <div className="text-[10px] font-semibold uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full mb-1">PDF</div>
+      <div className="text-[11px] text-center truncate w-full px-1 opacity-90">{baseName}</div>
+    </div>
+  );
+}
