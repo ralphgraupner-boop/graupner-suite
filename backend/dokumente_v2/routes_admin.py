@@ -2,7 +2,9 @@
 Dokumente v2 – Admin-Routes (CRUD, Settings, Issue, Cancel)
 """
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
+import io
 
 from database import db, logger
 from auth import get_current_user
@@ -15,6 +17,7 @@ from .models import (
     STRICT_TYPES,
 )
 from .numbers import issue_number
+from .pdf import generate_pdf
 
 router = APIRouter(prefix="/admin")
 
@@ -231,3 +234,42 @@ async def cancel_dokument(doc_id: str, reason: str = "", user=Depends(get_curren
     )
     logger.info(f"Dokumente v2 storniert: {doc_id} reason={reason!r}")
     return await get_dokument(doc_id, user)
+
+
+# ============== PDF ==============
+
+@router.get("/dokumente/{doc_id}/pdf")
+async def pdf_dokument(doc_id: str, user=Depends(get_current_user)):
+    doc = await db.dokumente_v2.find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Nicht gefunden")
+    pdf_bytes = await generate_pdf(doc)
+    filename = f"{doc.get('type', 'dokument')}_{doc.get('nummer') or 'entwurf'}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+# ============== KUNDEN LOOKUP (nur lesend aus module_kunden) ==============
+
+@router.get("/kunden-suche")
+async def kunden_suche(q: str = "", limit: int = 20, user=Depends(get_current_user)):
+    """Sucht in module_kunden, liefert nur ein paar Felder (lesend, niemals schreiben)."""
+    query = {}
+    if q:
+        query = {
+            "$or": [
+                {"vorname": {"$regex": q, "$options": "i"}},
+                {"nachname": {"$regex": q, "$options": "i"}},
+                {"name": {"$regex": q, "$options": "i"}},
+                {"firma": {"$regex": q, "$options": "i"}},
+                {"email": {"$regex": q, "$options": "i"}},
+            ]
+        }
+    kunden = await db.module_kunden.find(query, {
+        "_id": 0, "id": 1, "vorname": 1, "nachname": 1, "name": 1, "firma": 1,
+        "email": 1, "strasse": 1, "hausnummer": 1, "plz": 1, "ort": 1, "anrede": 1,
+    }).limit(limit).to_list(limit)
+    return kunden
