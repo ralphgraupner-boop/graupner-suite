@@ -330,25 +330,36 @@ export function PortalV3CustomerPage() {
   );
 }
 
-/** Thumbnail für Kunden-Upload – lädt Bild authentifiziert als Blob. */
+/** Thumbnail für Kunden-Upload – lädt authentifiziert als Blob, Session-weit gecached. */
+const THUMB_CACHE = new Map();
+
 function FileThumb({ id, session }) {
-  const [src, setSrc] = useState("");
+  const [src, setSrc] = useState(THUMB_CACHE.get(id) || "");
   useEffect(() => {
+    if (THUMB_CACHE.has(id)) { setSrc(THUMB_CACHE.get(id)); return; }
     let cancel = false;
     const load = async () => {
       try {
-        const res = await fetch(`${API}/uploads/${id}`, { headers: { Authorization: `Bearer ${session}` } });
+        const res = await fetch(`${API}/uploads/${id}/thumb`, { headers: { Authorization: `Bearer ${session}` } });
         if (!res.ok) return;
         const blob = await res.blob();
         if (cancel) return;
-        setSrc(window.URL.createObjectURL(blob));
+        const url = window.URL.createObjectURL(blob);
+        THUMB_CACHE.set(id, url);
+        setSrc(url);
       } catch { /* ignore */ }
     };
     load();
     return () => { cancel = true; };
   }, [id, session]);
-  if (!src) return <ImageIcon className="w-10 h-10 text-gray-300" />;
-  return <img src={src} alt="" className="w-full h-full object-cover" />;
+  if (!src) {
+    return (
+      <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center">
+        <ImageIcon className="w-8 h-8 text-gray-300" />
+      </div>
+    );
+  }
+  return <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />;
 }
 
 export default PortalV3CustomerPage;

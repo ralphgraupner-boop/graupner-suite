@@ -10,6 +10,8 @@ import {
 /**
  * Portal v3 – Admin-Detail: Chat + Uploads für einen Account.
  */
+const ADMIN_THUMB_CACHE = new Map();
+
 export function PortalV3DetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -117,24 +119,33 @@ export function PortalV3DetailPage() {
   };
 
   const AdminThumb = ({ upload }) => {
-    const [src, setSrc] = useState("");
+    const [src, setSrc] = useState(ADMIN_THUMB_CACHE.get(upload.id) || "");
     useEffect(() => {
+      if (ADMIN_THUMB_CACHE.has(upload.id)) { setSrc(ADMIN_THUMB_CACHE.get(upload.id)); return; }
       let cancel = false;
       const run = async () => {
         try {
           const res = await api.get(
-            `/portal-v3/admin/accounts/${id}/uploads/${upload.id}/file`,
+            `/portal-v3/admin/accounts/${id}/uploads/${upload.id}/thumb`,
             { responseType: "blob" }
           );
           if (cancel) return;
-          setSrc(window.URL.createObjectURL(res.data));
+          const url = window.URL.createObjectURL(res.data);
+          ADMIN_THUMB_CACHE.set(upload.id, url);
+          setSrc(url);
         } catch { /* ignore */ }
       };
       run();
       return () => { cancel = true; };
     }, [upload.id]);
-    if (!src) return <ImageIcon className="w-10 h-10 text-gray-300" />;
-    return <img src={src} alt="" className="w-full h-full object-cover" />;
+    if (!src) {
+      return (
+        <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center">
+          <ImageIcon className="w-8 h-8 text-gray-300" />
+        </div>
+      );
+    }
+    return <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />;
   };
 
   if (!account) {

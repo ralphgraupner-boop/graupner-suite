@@ -66,6 +66,34 @@ def _convert_image(data: bytes, content_type: str, filename: str) -> tuple[bytes
     return data, ct or "application/octet-stream", ext
 
 
+def _make_thumbnail(image_data: bytes, max_side: int = 400) -> bytes | None:
+    """Erzeugt ein quadratisches/max-side Thumbnail (JPEG). None wenn kein Bild."""
+    if not _PIL_OK:
+        return None
+    try:
+        img = Image.open(io.BytesIO(image_data))
+        img = ImageOps.exif_transpose(img)
+        img.thumbnail((max_side, max_side))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=70, optimize=True, progressive=True)
+        return buf.getvalue()
+    except Exception as e:
+        logger.warning(f"Portal v3 thumbnail failed: {e}")
+        return None
+
+
+def _cache_headers(immutable: bool = True) -> dict:
+    """HTTP-Cache für Upload-Downloads (privat, 7 Tage)."""
+    # Uploads sind per Id unveränderlich -> 7d + immutable
+    ttl = 7 * 24 * 3600
+    value = f"private, max-age={ttl}"
+    if immutable:
+        value += ", immutable"
+    return {"Cache-Control": value}
+
+
 async def _check_rate_limit(account_id: str) -> bool:
     """True = blockiert (Limit überschritten)."""
     settings = await db.portal3_settings.find_one({"id": "portal3_settings_default"}, {"_id": 0})
@@ -98,14 +126,28 @@ async def _save_upload(account_id: str, file: UploadFile, description: str, uplo
         raise HTTPException(400, "Datei zu groß (max. 15 MB)")
 
     payload, new_ct, ext = _convert_image(data, file.content_type, file.filename or "")
-    storage_path = f"graupner-suite/portal3/{account_id}/{_uuid.uuid4()}.{ext}"
+    upload_id = str(_uuid.uuid4())
+    storage_path = f"graupner-suite/portal3/{account_id}/{upload_id}.{ext}"
     result = put_object(storage_path, payload, new_ct)
+
+    # Thumbnail NUR fuer Bilder (nicht PDFs) erzeugen
+    thumb_path = None
+    thumb_size = None
+    if new_ct.startswith("image/"):
+        thumb_bytes = _make_thumbnail(payload, max_side=400)
+        if thumb_bytes:
+            thumb_path_raw = f"graupner-suite/portal3/{account_id}/{upload_id}_thumb.jpg"
+            thumb_result = put_object(thumb_path_raw, thumb_bytes, "image/jpeg")
+            thumb_path = thumb_result["path"]
+            thumb_size = thumb_result.get("size", len(thumb_bytes))
 
     now = datetime.now(timezone.utc).isoformat()
     doc = {
-        "id": str(_uuid.uuid4()),
+        "id": upload_id,
         "portal_id": account_id,
         "storage_path": result["path"],
+        "thumb_path": thumb_path,
+        "thumb_size": thumb_size,
         "original_filename": file.filename,
         "content_type": new_ct,
         "size": result.get("size", len(payload)),
@@ -158,7 +200,29 @@ async def customer_get_upload(upload_id: str, account=Depends(get_current_custom
     if not rec:
         raise HTTPException(404, "Nicht gefunden")
     data, ct = get_object(rec["storage_path"])
-    return StreamingResponse(io.BytesIO(data), media_type=ct or rec.get("content_type", "application/octet-stream"))
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=ct or rec.get("content_type", "application/octet-stream"),
+        headers=_cache_headers(),
+    )
+
+
+@router.get("/uploads/{upload_id}/thumb")
+async def customer_get_thumb(upload_id: str, account=Depends(get_current_customer)):
+    """Kleines Thumbnail (400px) fuer die Galerie. Fallback: Originalbild."""
+    rec = await db.portal3_uploads.find_one(
+        {"id": upload_id, "portal_id": account["id"], "is_deleted": False},
+        {"_id": 0},
+    )
+    if not rec:
+        raise HTTPException(404, "Nicht gefunden")
+    path = rec.get("thumb_path") or rec["storage_path"]
+    data, ct = get_object(path)
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=ct or "image/jpeg",
+        headers=_cache_headers(),
+    )
 
 
 # ============== ADMIN ==============
@@ -199,7 +263,28 @@ async def admin_get_upload(account_id: str, upload_id: str, user=Depends(get_cur
     if not rec:
         raise HTTPException(404, "Nicht gefunden")
     data, ct = get_object(rec["storage_path"])
-    return StreamingResponse(io.BytesIO(data), media_type=ct or rec.get("content_type", "application/octet-stream"))
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=ct or rec.get("content_type", "application/octet-stream"),
+        headers=_cache_headers(),
+    )
+
+
+@router.get("/admin/accounts/{account_id}/uploads/{upload_id}/thumb")
+async def admin_get_thumb(account_id: str, upload_id: str, user=Depends(get_current_user)):
+    rec = await db.portal3_uploads.find_one(
+        {"id": upload_id, "portal_id": account_id, "is_deleted": False},
+        {"_id": 0},
+    )
+    if not rec:
+        raise HTTPException(404, "Nicht gefunden")
+    path = rec.get("thumb_path") or rec["storage_path"]
+    data, ct = get_object(path)
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=ct or "image/jpeg",
+        headers=_cache_headers(),
+    )
 
 
 @router.delete("/admin/accounts/{account_id}/uploads/{upload_id}")
