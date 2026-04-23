@@ -26,6 +26,10 @@ import { PortalV2AdminPage } from "@/pages/portal_v2/PortalV2AdminPage";
 import { PortalV2DetailPage } from "@/pages/portal_v2/PortalV2DetailPage";
 import { PortalV2LoginPage } from "@/pages/portal_v2/PortalV2LoginPage";
 import { PortalV2CustomerPage } from "@/pages/portal_v2/PortalV2CustomerPage";
+import { PortalV3AdminPage } from "@/pages/portal_v3/PortalV3AdminPage";
+import { PortalV3DetailPage } from "@/pages/portal_v3/PortalV3DetailPage";
+import { PortalV3LoginPage } from "@/pages/portal_v3/PortalV3LoginPage";
+import { PortalV3CustomerPage } from "@/pages/portal_v3/PortalV3CustomerPage";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
 
@@ -63,6 +67,10 @@ function App() {
           <Route path="/portal-v2/login" element={<PortalV2LoginPage />} />
           <Route path="/portal-v2/login/:token" element={<PortalV2LoginPage />} />
           <Route path="/portal-v2/app" element={<PortalV2CustomerPage />} />
+          {/* Kundenportal v3 (oeffentlich, Test) */}
+          <Route path="/portal-v3/login" element={<PortalV3LoginPage />} />
+          <Route path="/portal-v3/login/:token" element={<PortalV3LoginPage />} />
+          <Route path="/portal-v3/app" element={<PortalV3CustomerPage />} />
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLogin={login} />} />
           ) : (
@@ -92,6 +100,8 @@ function App() {
               <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
               <Route path="/portal-v2" element={<MainLayout onLogout={logout}><PortalV2AdminPage /></MainLayout>} />
               <Route path="/portal-v2/detail/:id" element={<MainLayout onLogout={logout}><PortalV2DetailPage /></MainLayout>} />
+              <Route path="/portal-v3" element={<MainLayout onLogout={logout}><PortalV3AdminPage /></MainLayout>} />
+              <Route path="/portal-v3/detail/:id" element={<MainLayout onLogout={logout}><PortalV3DetailPage /></MainLayout>} />
               <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterModulPage /></MainLayout>} />
               <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzeModulPage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
