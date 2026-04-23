@@ -12,6 +12,7 @@ from .models import (
     Dokument,
     DokumentCreate,
     DokumentUpdate,
+    DokumentConvert,
     DokumenteV2Settings,
     DokumenteV2SettingsUpdate,
     STRICT_TYPES,
@@ -250,6 +251,87 @@ async def pdf_dokument(doc_id: str, user=Depends(get_current_user)):
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
+
+
+# ============== CONVERT (State-Machine: Angebot -> AB -> Rechnung, Rechnung -> Gutschrift) ==============
+
+# Erlaubte Uebergaenge: source -> {allowed target_types}
+ALLOWED_TRANSITIONS: dict[str, set[str]] = {
+    "angebot": {"auftrag", "rechnung"},          # Angebot kann zu AB oder direkt zu Rechnung
+    "auftrag": {"rechnung"},                     # AB kann zur Rechnung werden
+    "rechnung": {"gutschrift"},                  # Rechnung kann zu Gutschrift werden (Storno)
+    "gutschrift": set(),                         # Gutschriften sind Endstation
+}
+
+
+@router.post("/dokumente/{doc_id}/convert")
+async def convert_dokument(doc_id: str, payload: DokumentConvert, user=Depends(get_current_user)):
+    """Erstellt ein neues Dokument aus einem bestehenden (Kopie mit parent_id)."""
+    source = await db.dokumente_v2.find_one({"id": doc_id}, {"_id": 0})
+    if not source:
+        raise HTTPException(404, "Quell-Dokument nicht gefunden")
+    if source.get("status") == "storniert":
+        raise HTTPException(409, "Stornierte Dokumente koennen nicht umgewandelt werden")
+
+    src_type = source["type"]
+    tgt_type = payload.target_type
+    allowed = ALLOWED_TRANSITIONS.get(src_type, set())
+    if tgt_type not in allowed:
+        raise HTTPException(
+            409,
+            f"Umwandlung {src_type} -> {tgt_type} nicht erlaubt. Erlaubt: {sorted(allowed) or 'keine'}",
+        )
+
+    now = datetime.now(timezone.utc).isoformat()
+    # Positionen-Kopie: neue IDs vergeben, Inhalt 1:1 uebernehmen
+    from uuid import uuid4
+    new_positions = []
+    for p in source.get("positions") or []:
+        new_pos = dict(p)
+        new_pos["id"] = str(uuid4())
+        new_positions.append(new_pos)
+
+    new_doc = Dokument(
+        type=tgt_type,
+        status="entwurf",
+        kunde_id=source.get("kunde_id"),
+        kunde_name=source.get("kunde_name", ""),
+        kunde_adresse=source.get("kunde_adresse", ""),
+        kunde_email=source.get("kunde_email", ""),
+        betreff=source.get("betreff", ""),
+        vortext=source.get("vortext", ""),
+        schlusstext=source.get("schlusstext", ""),
+        positions=[],  # wird unten gesetzt (als dicts, nicht Position-Objekte)
+        parent_id=source["id"],
+    ).model_dump()
+    new_doc["positions"] = new_positions
+    new_doc.update(_calc_totals(new_positions))
+    new_doc["created_at"] = now
+    new_doc["updated_at"] = now
+
+    await db.dokumente_v2.insert_one(new_doc)
+    new_doc.pop("_id", None)
+    logger.info(f"Dokumente v2 Convert: {src_type}({doc_id}) -> {tgt_type}({new_doc['id']})")
+    return new_doc
+
+
+@router.get("/dokumente/{doc_id}/chain")
+async def get_chain(doc_id: str, user=Depends(get_current_user)):
+    """Liefert Vorgaenger (parent) + Nachfolger (children) des Dokuments."""
+    doc = await db.dokumente_v2.find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Nicht gefunden")
+    parent = None
+    if doc.get("parent_id"):
+        parent = await db.dokumente_v2.find_one(
+            {"id": doc["parent_id"]},
+            {"_id": 0, "id": 1, "type": 1, "nummer": 1, "status": 1, "betreff": 1, "created_at": 1},
+        )
+    children = await db.dokumente_v2.find(
+        {"parent_id": doc_id},
+        {"_id": 0, "id": 1, "type": 1, "nummer": 1, "status": 1, "betreff": 1, "created_at": 1},
+    ).sort("created_at", 1).to_list(100)
+    return {"parent": parent, "children": children}
 
 
 # ============== KUNDEN LOOKUP (nur lesend aus module_kunden) ==============

@@ -1,0 +1,45 @@
+{
+  "summary": "Dokumente v2 Phase 4 (State-Machine: Convert + Chain) vollständig getestet – 21/21 Pytest green. Alle 4 erlaubten Transitions (angebot->auftrag, angebot->rechnung, auftrag->rechnung, rechnung->gutschrift) funktionieren korrekt, alle 8 verbotenen Transitions liefern 409, stornierte Quelldokumente werden geblockt, Multi-Level-Chain-Referenzen (Angebot->Auftrag->Rechnung) mit korrekten parent_ids, Chain-Response nur mit projizierten Feldern, Positions-Kopie mit neuen UUIDs bei identischem Inhalt, Isolation zu Legacy-Collections gewahrt.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dokumente_v2_phase4.py",
+    "/app/test_reports/pytest/pytest_dokumente_v2_phase4.xml"
+  ],
+  "action_items": [
+    "Keine offenen Action Items für Phase 4 Backend – alle Spec-Anforderungen verifiziert.",
+    "Frontend-Smoke-Test für Convert-UI wird vom Main-Agent selbst durchgeführt (laut Review-Request)."
+  ],
+  "critical_code_review_comments": [
+    "routes_admin.py ALLOWED_TRANSITIONS ist sauber als dict[str, set[str]] definiert, korrekt: angebot->{auftrag,rechnung}, auftrag->{rechnung}, rechnung->{gutschrift}, gutschrift->{} (Endstation).",
+    "convert_dokument prüft zuerst 404 (Quelle nicht gefunden), dann 409 (storniert), dann 409 (Transition nicht erlaubt) – Reihenfolge korrekt, Fehlermeldungen aussagekräftig.",
+    "Positions-Kopie: for-Loop mit dict(p) + str(uuid4()) – garantiert neue UUIDs, Inhalt (beschreibung/menge/einzelpreis/rabatt_prozent/mwst_satz/lohn_anteil) 1:1 übernommen.",
+    "Totals werden im neuen Dokument neu berechnet via _calc_totals(new_positions) – nicht blind von source übernommen, korrekt.",
+    "Neues Dokument bekommt status='entwurf', nummer=None, parent_id=source.id, kunde_/betreff/vortext/schlusstext kopiert. Keine nummer vererbt – korrekt.",
+    "get_chain mit Mongo-Projection {id,type,nummer,status,betreff,created_at} schliesst _id und positions explizit aus. Kein Leak verifiziert.",
+    "Chain-Children sortiert nach created_at asc, limit 100 – sinnvoll.",
+    "Isolation-Check (Count-Snapshot vor/nach komplettem 4-Stufen-Convert-Flow inkl. issue+cancel) bestätigt: quotes/orders/invoices/module_kunden unverändert.",
+    "Angebot bleibt als nicht-strict Typ auch nach Issue konvertierbar – entspricht Spec (nur storniert blockiert Convert).",
+    "Rechnung->Gutschrift Storno-Szenario: issued Rechnung wird NICHT verändert beim Convert, neue Gutschrift startet als Entwurf. Entspricht GoBD."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dokumente_v2_phase4.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 pytest) – alle Phase 4 Convert/Chain Flows green",
+    "frontend": "not tested (backend-only Auftrag, Main-Agent macht Smoke-Test selbst)"
+  },
+  "test_credentials": "admin / Graupner!Suite2026",
+  "seed_data_creation": "Tests legen TEST_P4_ prefixierte Dokumente temporär an, räumen per finally-Block und zz_final_cleanup wieder auf: Drafts gelöscht, issued Rechnungen/Gutschriften storniert (GoBD-konform). Post-Test-Scan: 0 TEST_P4 Docs in dokumente_v2.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Dokumente v2 Phase 4 Backend State-Machine vollständig verifiziert. Test-Datei /app/backend/tests/test_dokumente_v2_phase4.py (21 Tests, ~5s Laufzeit) dient als Regressions-Test. Zusammen mit phase23.py (28 Tests) jetzt insgesamt 49 Backend-Tests für dokumente_v2 modul. Nächster Schritt wahrscheinlich Frontend-Convert-Button-UI. ALLOWED_TRANSITIONS-Dict ist Source-of-Truth für erlaubte Umwandlungen – bei Frontend-Impl. gleiche Matrix verwenden (angebot->[auftrag,rechnung], auftrag->[rechnung], rechnung->[gutschrift], gutschrift->disabled).",
+  "rca_of_the_issue": "Keine Bugs gefunden. State-Machine-Implementation in routes_admin.py entspricht zu 100% der Spec: ALLOWED_TRANSITIONS-Matrix korrekt, Cancel-Blocker wirksam, parent_id-Verknüpfung korrekt, Positions-UUIDs neu, Kundendaten kopiert, Totals neu berechnet, Chain-Projection leakt weder _id noch positions, Isolation zu Legacy-Collections gewahrt."
+}

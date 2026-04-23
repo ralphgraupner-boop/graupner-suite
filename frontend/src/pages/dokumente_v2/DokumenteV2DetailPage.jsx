@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Plus, Trash2, ArrowUp, ArrowDown, Hash,
-  User, FileDown, Copy, AlertCircle, Search,
+  User, FileDown, AlertCircle, Search, GitBranch, ExternalLink,
 } from "lucide-react";
 
 const TYPE_LABEL = {
@@ -16,6 +16,14 @@ const TYPE_LABEL = {
 const TYPE_STRICT = { rechnung: true, gutschrift: true };
 const MWST_PRESETS = [19, 7, 0];
 const EINHEITEN = ["Stk", "Std", "m", "m²", "m³", "kg", "pauschal"];
+
+// State-Machine: erlaubte Umwandlungen
+const ALLOWED_CONVERT = {
+  angebot: ["auftrag", "rechnung"],
+  auftrag: ["rechnung"],
+  rechnung: ["gutschrift"],
+  gutschrift: [],
+};
 
 const fmtEur = (v) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(Number(v || 0));
@@ -42,6 +50,8 @@ export function DokumenteV2DetailPage() {
   const [kundenSuche, setKundenSuche] = useState(false);
   const [kundenList, setKundenList] = useState([]);
   const [kundenQ, setKundenQ] = useState("");
+  const [chain, setChain] = useState({ parent: null, children: [] });
+  const [convertMenuOpen, setConvertMenuOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -49,6 +59,11 @@ export function DokumenteV2DetailPage() {
       const res = await api.get(`/dokumente-v2/admin/dokumente/${id}`);
       setDok(res.data);
       setDirty(false);
+      // Kette parallel laden (Vorgänger + Nachfolger)
+      try {
+        const c = await api.get(`/dokumente-v2/admin/dokumente/${id}/chain`);
+        setChain(c.data || { parent: null, children: [] });
+      } catch { /* nicht kritisch */ }
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
       navigate("/dokumente-v2");
@@ -169,6 +184,20 @@ export function DokumenteV2DetailPage() {
     }
   };
 
+  const convertTo = async (targetType) => {
+    setConvertMenuOpen(false);
+    if (dirty && !window.confirm("Es gibt ungespeicherte Änderungen. Erst speichern, dann umwandeln?")) return;
+    if (dirty) await save();
+    if (!window.confirm(`Neues ${TYPE_LABEL[targetType]} aus diesem ${TYPE_LABEL[dok.type]} erstellen?\n\nPositionen und Kundendaten werden kopiert. Das neue Dokument startet als Entwurf.`)) return;
+    try {
+      const res = await api.post(`/dokumente-v2/admin/dokumente/${id}/convert`, { target_type: targetType });
+      toast.success(`${TYPE_LABEL[targetType]} als Entwurf angelegt`);
+      navigate(`/dokumente-v2/${res.data.id}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    }
+  };
+
   const searchKunden = async () => {
     try {
       const res = await api.get("/dokumente-v2/admin/kunden-suche", { params: { q: kundenQ } });
@@ -235,8 +264,68 @@ export function DokumenteV2DetailPage() {
           <button onClick={openPdf} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-muted text-sm" data-testid="dok-v2-pdf">
             <FileDown className="w-4 h-4" /> PDF
           </button>
+          {(ALLOWED_CONVERT[dok.type] || []).length > 0 && dok.status !== "storniert" && (
+            <div className="relative">
+              <button onClick={() => setConvertMenuOpen(v => !v)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-sm" data-testid="dok-v2-convert-btn">
+                <GitBranch className="w-4 h-4" /> Umwandeln in…
+              </button>
+              {convertMenuOpen && (
+                <div className="absolute right-0 mt-1 w-56 bg-white border rounded-lg shadow-lg z-20" data-testid="dok-v2-convert-menu" onMouseLeave={() => setConvertMenuOpen(false)}>
+                  {ALLOWED_CONVERT[dok.type].map(t => (
+                    <button
+                      key={t}
+                      onClick={() => convertTo(t)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 text-sm border-b last:border-b-0 flex items-center gap-2"
+                      data-testid={`dok-v2-convert-to-${t}`}
+                    >
+                      <GitBranch className="w-4 h-4 text-emerald-600" />
+                      {TYPE_LABEL[t]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Dokumenten-Kette (Vorgaenger + Nachfolger) */}
+      {(chain.parent || (chain.children || []).length > 0) && (
+        <div className="border rounded-xl bg-gradient-to-r from-emerald-50/60 to-white p-3 flex flex-wrap items-center gap-2 text-sm" data-testid="dok-v2-chain">
+          {chain.parent && (
+            <>
+              <span className="text-xs text-muted-foreground">Vorgänger:</span>
+              <button
+                onClick={() => navigate(`/dokumente-v2/${chain.parent.id}`)}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border hover:bg-muted font-mono text-xs"
+                data-testid={`dok-v2-chain-parent-${chain.parent.id}`}
+              >
+                <ExternalLink className="w-3 h-3" />
+                {TYPE_LABEL[chain.parent.type]} · {chain.parent.nummer || "(Entwurf)"}
+              </button>
+            </>
+          )}
+          {chain.parent && (chain.children || []).length > 0 && (
+            <span className="text-muted-foreground mx-1">·</span>
+          )}
+          {(chain.children || []).length > 0 && (
+            <>
+              <span className="text-xs text-muted-foreground">Nachfolger:</span>
+              {chain.children.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => navigate(`/dokumente-v2/${c.id}`)}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border hover:bg-muted font-mono text-xs"
+                  data-testid={`dok-v2-chain-child-${c.id}`}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {TYPE_LABEL[c.type]} · {c.nummer || "(Entwurf)"}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Kunde */}
       <div className="border rounded-xl bg-card p-4 space-y-3">

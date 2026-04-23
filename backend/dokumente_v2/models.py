@@ -45,6 +45,10 @@ class DokumentCreate(BaseModel):
     parent_id: Optional[str] = None
 
 
+class DokumentConvert(BaseModel):
+    target_type: DocType
+
+
 class DokumentUpdate(BaseModel):
     kunde_id: Optional[str] = None
     kunde_name: Optional[str] = None
