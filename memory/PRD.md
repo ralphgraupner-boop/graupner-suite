@@ -62,6 +62,16 @@ Das Kundenportal v2 (`portal_v2/` Backend + `portal_v2/` Frontend) ist **FERTIG 
 
 **User-Zitat 22.04.2026:** *„wir fassen aber portal v2 nicht an das läuft richtig"*
 
+**🛑 VERSCHÄRFT AM 23.04.2026 (User-Zitat):**
+> *„wir werden nicht am portal v2 arbeiten es seid ich gebe die direkte und präzise erlaubniss"*
+
+**Das bedeutet für dich als Agent:**
+- Portal v2 **niemals** anfassen, auch nicht für „logische" oder „kleine" Änderungen.
+- Auch wenn eine Änderung zu einem neuen Feature (z.B. Dokumente v2) „passt" — **Hände weg**, solange keine explizite Erlaubnis vorliegt.
+- Gültige Erlaubnis sieht so aus: Der User schreibt explizit, dass du Portal v2 anfassen darfst
+  (z.B. „du darfst jetzt in portal_v2/X ändern" oder „ich erlaube dir, Portal v2 anzufassen").
+- **Vage Hinweise oder Schlussfolgerungen reichen NICHT.** Im Zweifel: `ask_human` und explizit fragen.
+
 **Ausnahme (nur auf expliziten User-Wunsch):** Wenn der User in Phase 5 von Dokumente v2
 die Portal-Anbindung will, dann **eine neue Datei** `portal_v2/documents.py` anlegen, die
 lesend auf `dokumente_v2` zugreift. **Keine Änderung** an bestehenden Portal-v2-Dateien.
