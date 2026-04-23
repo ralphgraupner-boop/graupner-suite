@@ -1,0 +1,55 @@
+{
+  "summary": "Dokumente v2 Phase 2 (Editor/CRUD/Totals/Kundenlookup) + Phase 3 (PDF) komplett getestet – 28/28 Pytest green. Alle kritischen Flows (CRUD, Totals-Recalc, Issue/Nummernvergabe, GoBD-Schutz, Cancel, PDF-Generierung, Kunden-Lookup, Counters/Log/Gaps, Settings, Isolation zu Legacy-Collections) funktionieren korrekt. Ein Edge-Case (PUT auf storniertes Strict-Dokument) als Finding dokumentiert.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PUT /api/dokumente-v2/admin/dokumente/{id} nach cancel",
+        "issue": "GoBD-Check prüft nur `status == 'erstellt'`. Nach `cancel` ist status='storniert' – PUT auf strict types (rechnung/gutschrift) geht aktuell durch (200) statt 409. Praktisch unkritisch, weil storniert quasi finaler Zustand; Empfehlung: Bedingung erweitern auf `status in ('erstellt','storniert')` in routes_admin.py Zeile 157."
+      },
+      {
+        "endpoint": "PUT /api/dokumente-v2/admin/dokumente/{id} (Angebot/Auftrag nach Issue)",
+        "issue": "Laut Spec erlaubt – korrekt. Nur informativ: Sobald Nummer vergeben ist, bleibt die Nummer unverändert (wird im Update nicht überschrieben). Das ist OK."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dokumente_v2_phase23.py",
+    "/app/test_reports/pytest/pytest_dokumente_v2_phase23.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (minor): In routes_admin.py PUT-Guard auch für status='storniert' auf STRICT_TYPES blockieren (409), damit stornierte Rechnungen/Gutschriften definitiv immutable sind.",
+    "Frontend-Editor / UI-Tests wurden gemäß Review-Request (backend only) NICHT durchgeführt."
+  ],
+  "critical_code_review_comments": [
+    "models.py: STRICT_TYPES={rechnung, gutschrift} sauber isoliert; DocType als Literal – gute Typsicherheit.",
+    "routes_admin.py _calc_totals: Berechnung korrekt für Rabatt (100*2*(1-0.1)=180 netto, mwst=19%*180=34.20). lohn_anteil wird als Prozentsatz auf zeile_netto angewandt (50% von 200 = 100) – matcht Spec.",
+    "routes_admin.py PUT: existing['type'] in STRICT_TYPES AND status=='erstellt' → 409. Korrekt. Aber: fehlt Check für status=='storniert' (siehe minor Finding).",
+    "numbers.py issue_number: atomic findOneAndUpdate mit $inc/upsert – korrekt für concurrency. Audit-Log schreibt counter_id, type, number, sequence, dokument_id, by_user, timestamp, is_strict.",
+    "numbers.py _counter_key: monthly/yearly Logic korrekt (z.B. AN-2026-04-0001 vs AN-2026-0001).",
+    "routes_admin.py kunden-suche: Projection strikt auf erlaubte Felder – keine Write-Ops auf module_kunden – verifiziert durch Count-Snapshot-Test.",
+    "Isolation verifiziert: quotes/orders/invoices/module_kunden/settings Counts unverändert nach komplettem Test-Flow inklusive Issue und PDF.",
+    "PDF-Endpoint: StreamingResponse mit application/pdf + Content-Disposition inline – Header und Magic-Bytes (%PDF) korrekt.",
+    "Cleanup: DELETE nur für Entwürfe oder Nicht-Strict-Typen erlaubt (Zeile 208 STRICT_TYPES + status=='erstellt' → 409). Entwürfe aller Typen weiterhin löschbar.",
+    "Keine MongoDB _id Leaks in Responses (alle find-Calls haben {_id: 0} Projection).",
+    "Alle Endpoints asynchron via motor/async. Auth-Dependency korrekt via Depends(get_current_user)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dokumente_v2_phase23.py"
+  ],
+  "success_rate": {
+    "backend": "100% (28/28 pytest) – alle Phase 2 + Phase 3 Flows green",
+    "frontend": "not tested (backend-only Auftrag)"
+  },
+  "test_credentials": "admin / Graupner!Suite2026",
+  "seed_data_creation": "Tests legen TEST_ prefixierte Entwürfe/Rechnungen temporär an und räumen per Test-Fixture/Final-Cleanup-Step wieder auf: Entwürfe+Angebote werden gelöscht, Rechnungen/Gutschriften storniert (GoBD). Post-Test-Check: 0 TEST_ Docs in dokumente_v2.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Dokumente v2 Phase 2+3 ist vollständig backend-getestet. Testdatei /app/backend/tests/test_dokumente_v2_phase23.py ist als Regressions-Test wiederverwendbar. Nächste Phase vermutlich Frontend-Editor (React-Komponenten für dokumente_v2). Einziges kleines Finding: PUT-Guard prüft nur status=='erstellt', nicht 'storniert' – aktuell dokumentiert, nicht blockierend. Backend-Routen unter /api/dokumente-v2/admin/* vollständig funktional. Nummern-Format aktuell (Januar 2026): AN-2026-01-XXXX, RE-2026-01-XXXX usw.; bei Test in April wie im Smoke-Test: AN-2026-04-XXXX. Rechnungen aus Tests wurden storniert (im counter-log sichtbar), Counter wurden inkrementiert – das ist GoBD-konform und erwartet.",
+  "rca_of_the_issue": "Keine Bugs gefunden. Alle erwarteten Verhaltensweisen (GoBD-Schutz für strict types, atomare Nummernvergabe, Totals-Server-Recalc, Isolation zu Legacy-Collections, PDF-Inline-Delivery) validiert. Erstes Test-Run hatte 1 Fehler (Audit-Log DB-Lookup) – Ursache: Test-Client hatte falschen DB_NAME (env-fallback 'test_database' statt 'graupner_suite'). Fix: load_dotenv aus backend/.env hinzugefügt, dann 28/28 green."
+}

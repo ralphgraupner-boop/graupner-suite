@@ -28,7 +28,6 @@ def _prefix_from_type(settings: dict, doc_type: str) -> str:
 
 def _counter_key(settings: dict, doc_type: str, dt: datetime) -> tuple[str, str]:
     """Berechnet (counter_id, period_key)."""
-    prefix = _prefix_from_type(settings, doc_type)
     year = dt.year
     if settings.get("counter_reset", "monthly") == "monthly":
         period = f"{year}-{dt.month:02d}"
