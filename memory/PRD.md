@@ -11,16 +11,16 @@
 
 ### 🛑 SOFORT-ANWEISUNGEN
 1. **Sprache: NUR DEUTSCH.**
-2. **Portal v2 ist TABU** (siehe unten). Dokumente v2 ebenfalls nur mit Plan anfassen.
+2. **Portal v2 ist TABU** (siehe unten). Dokumente v2 nur mit Plan anfassen.
 3. **Start der Session:** `ask_human` mit Plan und Bestätigung bevor du loslegst.
 4. **Module-First-Regel einhalten** — keine Änderungen an Core-Dateien ohne Bitte.
 
-### 📅 Stand: 23.04.2026 Morgen
+### 📅 Stand: 23.04.2026 Mittag
 
-- Portal v2: LIVE, tabu
-- Dokumente v2 Phase 1+2+3: ✅ **komplett getestet** (28/28 Pytest grün, Frontend smoke OK), LIVE deployed
-- Navigation: v2-Module visuell grün hervorgehoben, Legacy-Module (Dokumente/Kundenportale) ausgegraut mit „ALT"-Badge
-- Dokumente v2 Neu-Dialog: Kunden-Auswahl aus `module_kunden` mit Autocomplete + auto-Fill (Adresse, E-Mail)
+- Portal v2: LIVE, TABU
+- **Dokumente v2 Phase 1+2+3+4: ✅ komplett getestet** (49/49 Pytest grün), Navigation + UX-Polish abgeschlossen
+- State-Machine: Angebot→Auftrag→Rechnung→Gutschrift per Klick, Vorgänger/Nachfolger-Verlinkung sichtbar
+- Nächster Step: Deploy durch User, dann entweder Phase 5 (Portal-Anbindung, optional) oder andere Prioritäten
 
 ---
 
@@ -58,7 +58,6 @@
 - **Frontend:** React + Tailwind + Shadcn/ui
 - **Backend:** FastAPI
 - **DB:** MongoDB (`graupner_suite`)
-- **Storage:** Emergent Object Storage
 - **Auth:** JWT (Suite-Admin) + separater JWT für Portal-v2-Kunden
 - **Email:** SMTP (service24@tischlerei-graupner.de, IONOS)
 
@@ -67,26 +66,22 @@
 ## 📦 Module
 
 ### Core-Module (stabil)
-- `routes/auth.py`, `routes/module_kunden.py`, `routes/module_artikel.py`, `routes/module_dokumente.py` (LEGACY, wird ersetzt), `routes/module_textvorlagen.py`, `routes/modules.py`, `routes/einsaetze.py`, `routes/mitarbeiter.py`, `routes/webhook.py`, `routes/anfragen.py`, `routes/portal.py` (altes Portal)
+`routes/auth.py`, `routes/module_kunden.py`, `routes/module_artikel.py`, `routes/module_dokumente.py` (LEGACY), `routes/module_textvorlagen.py`, `routes/modules.py`, `routes/einsaetze.py`, `routes/mitarbeiter.py`, `routes/webhook.py`, `routes/anfragen.py`, `routes/portal.py` (altes Portal)
 
 ### Isolierte Module (Module-First)
-- `routes/rechnungen_v2.py` — `/api/v2/*`, Collection `rechnungen_v2`
+- `routes/rechnungen_v2.py` — Sandbox
 - **`portal_v2/`** — Kundenportal v2 (LIVE, TABU)
-- `portal_v3/` — Portal-Sandbox (Thumbnails, Multi-Upload)
-- **`dokumente_v2/`** — NEU (23.04.2026), s. unten
-
-### Frontend-Helper-Seiten
-- `pages/handy_zugang/HandyZugangPage.jsx`
-- `pages/wissen/WissenPage.jsx`
+- `portal_v3/` — Portal-Sandbox
+- **`dokumente_v2/`** — NEU (23.04.2026), Phase 1-4 komplett
 
 ### Sidebar visuell (23.04.2026)
-- **NEU-Badge (grün hervorgehoben):** Dokumente (v2), Kundenportal (v2)
-- **ALT-Badge (ausgegraut, durchgestrichen):** Dokumente (alt), Kundenportale (alt)
-- **TEST-Badge (amber, gestrichelt):** Kundenportal (Test) = v3-Sandbox
+- **NEU (grün, fette Border, NEU-Badge):** Dokumente (v2), Kundenportal (v2)
+- **ALT (ausgegraut, kursiv, durchgestrichen, ALT-Badge):** Dokumente (alt), Kundenportale (alt)
+- **TEST (amber, gestrichelt, TEST-Badge):** Kundenportal (Test) = v3-Sandbox
 
 ---
 
-## ✅ Dokumente v2 (Phase 1-3 fertig, 23.04.2026)
+## ✅ Dokumente v2 (Phase 1-4 fertig, 23.04.2026)
 
 **Pfad Backend:** `/app/backend/dokumente_v2/`
 **Pfad Frontend:** `/app/frontend/src/pages/dokumente_v2/`
@@ -95,37 +90,37 @@
 
 ### Phasen
 - ✅ **Phase 1** – Gerüst, CRUD, GoBD-Nummerngenerator (atomic `$inc`, Audit-Log, Lücken-Check)
-- ✅ **Phase 2** – Editor-MVP (Positionen, Kundenlookup, Totals-Recalc server-side, §35a-Lohnanteil)
-- ✅ **Phase 3** – PDF-Generator (eigener ReportLab, isoliert – KEIN Zugriff auf `utils/pdf.py`)
-- ✅ **UX-Verfeinerung (23.04.)** – Neu-Dialog: Kunden-Picker mit Live-Autocomplete aus `module_kunden`, Auto-Fill (Adresse, Email)
-- 🟡 **Phase 4** (TODO) – State-Machine Angebot → Auftragsbestätigung → Rechnung
+- ✅ **Phase 2** – Editor-MVP (Positionen, Kundenlookup, Totals, §35a-Lohnanteil)
+- ✅ **Phase 3** – PDF-Generator (eigener ReportLab, isoliert)
+- ✅ **Phase 4** – State-Machine: Convert-Endpoint + Chain-Endpoint
+  - Erlaubt: angebot→auftrag, angebot→rechnung, auftrag→rechnung, rechnung→gutschrift
+  - Positionen werden kopiert (mit neuen UUIDs), Kundendaten übernommen, parent_id gesetzt
+  - Frontend: „Umwandeln in…"-Dropdown + Vorgänger/Nachfolger-Badges im Editor
+- ✅ **UX-Polish** – Neu-Dialog Kunden-Autocomplete aus `module_kunden`, Auto-Fill
 - 🟡 **Phase 5** (OPTIONAL, nur mit User-OK) – Portal-v2-Anbindung
 
 ### Collections
 `dokumente_v2`, `dokumente_v2_counters`, `dokumente_v2_counter_log`, `dokumente_v2_settings`
 
 ### GoBD
-- Rechnungen + Gutschriften = STRICT_TYPES: nach Issue unveränderbar, nicht löschbar (nur stornierbar)
+- Rechnungen + Gutschriften = STRICT_TYPES: nach Issue unveränderbar, nicht löschbar, nur stornierbar
+- Stornierte Dokumente: weder editierbar noch konvertierbar
 - Monatlicher Reset (Format: `RE-2026-04-0001`)
-- Audit-Log jeder Nummernvergabe
 - §35a-EStG-Hinweis auf Rechnungen mit Lohnanteil
 
-### Isolation verifiziert (28/28 Pytest grün)
-- Keine Schreibzugriffe auf `quotes`, `orders`, `invoices`, `module_kunden`, `settings`
-- Nur lesend: `settings.company_settings`, `module_kunden`
-
-### Test-Datei
-`/app/backend/tests/test_dokumente_v2_phase23.py`
+### Test-Abdeckung: 49/49 pytest grün
+- `/app/backend/tests/test_dokumente_v2_phase23.py` (28 Tests)
+- `/app/backend/tests/test_dokumente_v2_phase4.py` (21 Tests)
 
 ---
 
 ## 📋 Prioritäten
 
-### P0
-- Dokumente v2 **Phase 4** – State-Machine (Angebot → AB → Rechnung per Klick, `parent_id`, Positionen-Copy)
+### P0 (offen)
+- **Push to GitHub + Re-Deploy** (durch User) damit Phase 4 + UI-Polish live gehen
 
 ### P1
-- Dokumente v2 Phase 5 (optional, nur mit User-OK)
+- Phase 5 (optional): Portal-v2-Anbindung (nur mit expliziter User-Erlaubnis)
 - Push-Notification „Wiedervorlage"-Spam-Flag
 
 ### P2
@@ -142,19 +137,18 @@
 3. E-Mail: Betterbird extern → kein IMAP-Polling!
 4. Kontaktdaten-Quelle: `module_kunden`.
 5. Vor Feature: `ask_human` mit Plan.
-6. Credits respektieren: User hat 1000 € durch Module-First-Verletzungen verloren.
+6. Credits respektieren.
 
 ---
 
 ## 📝 Changelog
 
 ### 22.04.2026 – Portal v2 MVP
-- Portal v2 Phase 1-5 (Gerüst, Import, Auth, Chat, Uploads)
-- Portal v3 Sandbox (Thumbnails, Multi-Upload)
-- Handy-Zugang, Wissen & Tipps
+Portal v2 Phase 1-5 (Gerüst, Import, Auth, Chat, Uploads), Portal v3 Sandbox, Handy-Zugang, Wissen & Tipps
 
-### 23.04.2026 – Dokumente v2 + UI-Polish
-- Dokumente v2 Phase 1+2+3 komplett, 28/28 Pytest grün
+### 23.04.2026 – Dokumente v2 + UI-Polish + State-Machine
+- Phase 1+2+3+4 komplett, **49/49 Pytest grün**
 - Minor GoBD: PUT auf stornierte Strict-Dokumente → 409
-- Neu-Dialog: Kunden-Picker mit Autocomplete aus `module_kunden`, Auto-Fill
+- Neu-Dialog: Kunden-Picker mit Autocomplete, Auto-Fill (Adresse, Email)
 - Navigation: v2-Module grün hervorgehoben, ALT-Module ausgegraut, TEST-Module amber
+- State-Machine: `POST /convert` + `GET /chain`, „Umwandeln in…"-Dropdown, Vorgänger/Nachfolger-Badges
