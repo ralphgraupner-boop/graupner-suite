@@ -42,6 +42,7 @@ from routes.module_kunden import router as module_kunden_router
 from routes.rechnungen_v2 import router as rechnungen_v2_router
 from portal_v2 import router as portal_v2_router
 from portal_v3 import router as portal_v3_router
+from dokumente_v2 import router as dokumente_v2_router
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -96,6 +97,7 @@ app.include_router(api_router)
 app.include_router(rechnungen_v2_router)  # v2-Modul mit eigenem prefix /api/v2
 app.include_router(portal_v2_router)  # Kundenportal v2 – Modul-First, prefix /api/portal-v2
 app.include_router(portal_v3_router)  # Kundenportal v3 (Test/Performance-Sandbox), prefix /api/portal-v3
+app.include_router(dokumente_v2_router)  # Dokumente v2 – Modul-First, prefix /api/dokumente-v2
 
 @app.on_event("startup")
 async def startup_event():

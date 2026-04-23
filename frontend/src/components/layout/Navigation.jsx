@@ -16,6 +16,7 @@ const allNavItems = [
   { path: "/portal-v3", icon: Users, label: "Kundenportal v3 (Test)", roles: ["admin"] },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"] },
   { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"] },
+  { path: "/dokumente-v2", icon: FileText, label: "Dokumente v2 (Neu)", roles: ["admin"] },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
   { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2" },
