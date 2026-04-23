@@ -38,6 +38,11 @@ export function DokumenteV2Page() {
   const [newType, setNewType] = useState("angebot");
   const [newKunde, setNewKunde] = useState("");
   const [newBetreff, setNewBetreff] = useState("");
+  // Kunden-Picker im Neu-Dialog
+  const [kundenQ, setKundenQ] = useState("");
+  const [kundenList, setKundenList] = useState([]);
+  const [kundenSearching, setKundenSearching] = useState(false);
+  const [selectedKunde, setSelectedKunde] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -76,24 +81,60 @@ export function DokumenteV2Page() {
   };
 
   const createDraft = async () => {
-    if (!newKunde || !newBetreff) {
-      toast.error("Kundenname und Betreff sind erforderlich");
+    if (!newBetreff.trim()) {
+      toast.error("Betreff ist erforderlich");
+      return;
+    }
+    if (!selectedKunde && !newKunde.trim()) {
+      toast.error("Bitte Kunde auswählen oder Namen eintragen");
       return;
     }
     try {
-      const res = await api.post("/dokumente-v2/admin/dokumente", {
+      const payload = {
         type: newType,
-        kunde_name: newKunde,
         betreff: newBetreff,
-      });
+      };
+      if (selectedKunde) {
+        const name = `${selectedKunde.vorname || ""} ${selectedKunde.nachname || ""}`.trim()
+          || selectedKunde.name || selectedKunde.firma || "";
+        const strasse = [selectedKunde.strasse, selectedKunde.hausnummer].filter(Boolean).join(" ");
+        const plzort = [selectedKunde.plz, selectedKunde.ort].filter(Boolean).join(" ");
+        payload.kunde_id = selectedKunde.id;
+        payload.kunde_name = name;
+        payload.kunde_adresse = [strasse, plzort].filter(Boolean).join("\n");
+        payload.kunde_email = selectedKunde.email || "";
+      } else {
+        payload.kunde_name = newKunde;
+      }
+      const res = await api.post("/dokumente-v2/admin/dokumente", payload);
       toast.success(`${TYPE_LABEL[newType]} als Entwurf angelegt`);
       setShowNew(false);
       setNewKunde(""); setNewBetreff("");
+      setSelectedKunde(null); setKundenQ(""); setKundenList([]);
       navigate(`/dokumente-v2/${res.data.id}`);
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
     }
   };
+
+  const searchKunden = async (q) => {
+    setKundenSearching(true);
+    try {
+      const res = await api.get("/dokumente-v2/admin/kunden-suche", { params: { q: q || "", limit: 20 } });
+      setKundenList(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    } finally {
+      setKundenSearching(false);
+    }
+  };
+
+  // Debounced Kundensuche im Dialog
+  useEffect(() => {
+    if (!showNew) return;
+    const t = setTimeout(() => { searchKunden(kundenQ); }, 250);
+    return () => clearTimeout(t);
+  }, [kundenQ, showNew]); // eslint-disable-line
 
   const issueDoc = async (d) => {
     if (!window.confirm(`${TYPE_LABEL[d.type]} erstellen und Nummer vergeben? (nicht mehr änderbar bei Rechnung/Gutschrift)`)) return;
@@ -272,24 +313,108 @@ export function DokumenteV2Page() {
       {/* Dialog Neu */}
       {showNew && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
-          <div className="bg-card rounded-xl shadow-xl w-full max-w-md p-5 space-y-4" onClick={e => e.stopPropagation()} data-testid="dok-v2-new-dialog">
+          <div className="bg-card rounded-xl shadow-xl w-full max-w-lg p-5 space-y-4" onClick={e => e.stopPropagation()} data-testid="dok-v2-new-dialog">
             <div className="font-semibold text-lg">Neues Dokument (Entwurf)</div>
+
             <label className="block">
               <span className="text-xs text-muted-foreground">Typ</span>
               <select value={newType} onChange={e => setNewType(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" data-testid="dok-v2-new-type">
                 {Object.entries(TYPE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
-            <label className="block">
-              <span className="text-xs text-muted-foreground">Kunde (Name)</span>
-              <input type="text" value={newKunde} onChange={e => setNewKunde(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" data-testid="dok-v2-new-kunde" />
-            </label>
+
+            {/* Kunden-Auswahl aus Kundenkartei */}
+            <div className="space-y-2">
+              <div className="text-xs text-muted-foreground flex items-center justify-between">
+                <span>Kunde (aus Kundenkartei)</span>
+                {selectedKunde && (
+                  <button onClick={() => { setSelectedKunde(null); setKundenQ(""); }} className="text-xs text-primary hover:underline" data-testid="dok-v2-new-kunde-clear">Auswahl löschen</button>
+                )}
+              </div>
+              {selectedKunde ? (
+                <div className="border-2 border-emerald-300 bg-emerald-50 rounded-lg p-3" data-testid="dok-v2-new-kunde-selected">
+                  <div className="font-medium text-sm">
+                    {[selectedKunde.vorname, selectedKunde.nachname].filter(Boolean).join(" ") || selectedKunde.name || selectedKunde.firma || "(ohne Namen)"}
+                  </div>
+                  {selectedKunde.firma && selectedKunde.firma !== selectedKunde.name && (
+                    <div className="text-xs text-muted-foreground">{selectedKunde.firma}</div>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {[selectedKunde.strasse, selectedKunde.hausnummer].filter(Boolean).join(" ")}
+                    {(selectedKunde.plz || selectedKunde.ort) && <> · {[selectedKunde.plz, selectedKunde.ort].filter(Boolean).join(" ")}</>}
+                  </div>
+                  {selectedKunde.email && <div className="text-xs text-primary">{selectedKunde.email}</div>}
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={kundenQ}
+                    onChange={e => setKundenQ(e.target.value)}
+                    placeholder="Name, Firma, E-Mail…"
+                    className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
+                    data-testid="dok-v2-new-kunde-search"
+                    autoFocus
+                  />
+                  {(kundenList.length > 0 || kundenSearching) && (
+                    <div className="mt-1 max-h-60 overflow-y-auto border rounded-lg bg-white divide-y shadow-sm" data-testid="dok-v2-new-kunde-list">
+                      {kundenSearching && <div className="px-3 py-2 text-xs text-muted-foreground">Suche…</div>}
+                      {!kundenSearching && kundenList.map(k => (
+                        <button
+                          key={k.id}
+                          onClick={() => { setSelectedKunde(k); setKundenList([]); setNewKunde(""); }}
+                          className="w-full text-left px-3 py-2 hover:bg-emerald-50 text-sm"
+                          data-testid={`dok-v2-new-kunde-option-${k.id}`}
+                        >
+                          <div className="font-medium">
+                            {[k.vorname, k.nachname].filter(Boolean).join(" ") || k.name || k.firma || "(ohne Namen)"}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {k.email} · {[k.strasse, k.hausnummer, k.plz, k.ort].filter(Boolean).join(" ")}
+                          </div>
+                        </button>
+                      ))}
+                      {!kundenSearching && kundenList.length === 0 && kundenQ && (
+                        <div className="px-3 py-2 text-xs text-muted-foreground">Keine Treffer</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Fallback: Freitext falls Kunde noch nicht in Kartei */}
+              {!selectedKunde && (
+                <details className="text-xs">
+                  <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
+                    Kunde nicht in Kartei? Namen manuell eintragen
+                  </summary>
+                  <input
+                    type="text"
+                    value={newKunde}
+                    onChange={e => setNewKunde(e.target.value)}
+                    placeholder="Vorname Nachname oder Firma"
+                    className="w-full mt-2 px-3 py-2 border rounded-lg text-sm"
+                    data-testid="dok-v2-new-kunde"
+                  />
+                </details>
+              )}
+            </div>
+
             <label className="block">
               <span className="text-xs text-muted-foreground">Betreff</span>
-              <input type="text" value={newBetreff} onChange={e => setNewBetreff(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" data-testid="dok-v2-new-betreff" />
+              <input
+                type="text"
+                value={newBetreff}
+                onChange={e => setNewBetreff(e.target.value)}
+                placeholder="z.B. Fensterreparatur, Küchenmontage…"
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+                data-testid="dok-v2-new-betreff"
+              />
             </label>
+
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <button onClick={() => setShowNew(false)} className="px-3 py-2 rounded-lg border text-sm hover:bg-muted">Abbrechen</button>
+              <button onClick={() => { setShowNew(false); setSelectedKunde(null); setKundenQ(""); setKundenList([]); }} className="px-3 py-2 rounded-lg border text-sm hover:bg-muted">Abbrechen</button>
               <button onClick={createDraft} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:opacity-90" data-testid="dok-v2-new-save">Anlegen</button>
             </div>
           </div>

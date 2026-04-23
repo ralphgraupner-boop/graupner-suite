@@ -9,14 +9,14 @@ const allNavItems = [
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
-  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
+  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated" },
+  { path: "/dokumente-v2", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "new" },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
-  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
-  { path: "/portal-v2", icon: Users, label: "Kundenportal v2", roles: ["admin"] },
-  { path: "/portal-v3", icon: Users, label: "Kundenportal v3 (Test)", roles: ["admin"] },
+  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"], variant: "deprecated" },
+  { path: "/portal-v2", icon: Users, label: "Kundenportal", roles: ["admin"], variant: "new" },
+  { path: "/portal-v3", icon: Users, label: "Kundenportal (Test)", roles: ["admin"], variant: "sandbox" },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"] },
   { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"] },
-  { path: "/dokumente-v2", icon: FileText, label: "Dokumente v2 (Neu)", roles: ["admin"] },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
   { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2" },
@@ -154,11 +154,14 @@ const Sidebar = ({ onLogout }) => {
         )}
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ path, icon: Icon, label }) => {
+        {navItems.map(({ path, icon: Icon, label, variant }) => {
           const badgeCount = path === "/email" ? unreadCounts.email : (path === "/portals" ? unreadCounts.portal : 0);
           const isActive = location.pathname.startsWith(path);
           const hasBadge = badgeCount > 0 && !isActive;
           const helpKey = `nav.${path.split("/").filter(Boolean).pop()}`;
+          const isDeprecated = variant === "deprecated";
+          const isNew = variant === "new";
+          const isSandbox = variant === "sandbox";
           return (
             <HelpTip key={path} id={helpKey} placement="right" block>
               <Link
@@ -166,14 +169,22 @@ const Sidebar = ({ onLogout }) => {
                 data-testid={`nav-${path.slice(1)}`}
                 className={`relative flex items-center gap-3 px-4 py-3 rounded-sm transition-smooth ${
                   isActive
-                    ? "bg-primary/10 text-primary border-l-2 border-primary"
+                    ? (isNew
+                        ? "bg-emerald-100 text-emerald-800 border-l-4 border-emerald-600 shadow-sm"
+                        : "bg-primary/10 text-primary border-l-2 border-primary")
+                    : isDeprecated
+                    ? "text-muted-foreground/60 italic hover:bg-muted hover:text-muted-foreground line-through decoration-muted-foreground/40"
+                    : isNew
+                    ? "text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100/70 border-l-4 border-emerald-300 font-medium"
+                    : isSandbox
+                    ? "text-amber-700 hover:bg-amber-50 border-l-2 border-dashed border-amber-300"
                     : hasBadge
                     ? "text-foreground bg-red-50 hover:bg-red-100 animate-pulse-slow"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <div className="relative shrink-0">
-                  <Icon className={`w-5 h-5 ${hasBadge ? "text-red-600" : ""}`} />
+                  <Icon className={`w-5 h-5 ${hasBadge ? "text-red-600" : isNew ? "text-emerald-600" : ""}`} />
                   {hasBadge && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold animate-pulse ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
                       {badgeCount > 99 ? "99+" : badgeCount}
@@ -181,7 +192,16 @@ const Sidebar = ({ onLogout }) => {
                   )}
                 </div>
                 <span className={`font-medium ${hasBadge ? "text-red-700" : ""}`}>{label}</span>
-                {hasBadge && (
+                {isNew && !isActive && (
+                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 text-white tracking-wider">NEU</span>
+                )}
+                {isDeprecated && (
+                  <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-500 tracking-wider">ALT</span>
+                )}
+                {isSandbox && !isActive && (
+                  <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 tracking-wider border border-amber-300">TEST</span>
+                )}
+                {hasBadge && !isNew && !isDeprecated && !isSandbox && (
                   <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />
                 )}
               </Link>
