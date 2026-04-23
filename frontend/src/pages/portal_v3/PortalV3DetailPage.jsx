@@ -383,7 +383,12 @@ function PdfPlaceholder({ filename }) {
     <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-700 flex flex-col items-center justify-center text-white p-3">
       <FileText className="w-10 h-10 mb-2 drop-shadow" />
       <div className="text-[10px] font-semibold uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full mb-1">PDF</div>
-      <div className="text-[11px] text-center truncate w-full px-1 opacity-90">{baseName}</div>
+      <div
+        className="text-[11px] text-center w-full px-1 opacity-90 overflow-hidden"
+        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word" }}
+      >
+        {baseName}
+      </div>
     </div>
   );
 }
