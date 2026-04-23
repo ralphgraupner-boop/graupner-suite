@@ -154,7 +154,7 @@ async def update_dokument(doc_id: str, update: DokumentUpdate, user=Depends(get_
         raise HTTPException(404, "Nicht gefunden")
 
     # GoBD: strenge Typen (Rechnung/Gutschrift) nach Issue nicht mehr aenderbar
-    if existing["type"] in STRICT_TYPES and existing.get("status") == "erstellt":
+    if existing["type"] in STRICT_TYPES and existing.get("status") in ("erstellt", "storniert"):
         raise HTTPException(409, "Rechnungen/Gutschriften können nach Erstellung nicht mehr geändert werden (GoBD)")
 
     changes = {k: v for k, v in update.model_dump(exclude_unset=True).items() if v is not None}
