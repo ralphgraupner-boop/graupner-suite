@@ -29,6 +29,9 @@ def _norm_phone(s: str) -> str:
     # '0049...' oder '+49...' -> '49...'
     if digits.startswith("00"):
         digits = digits[2:]
+    # Mindestlaenge gegen False-Positives (Kurzwahlen, Notfallnummern, Durchwahlen)
+    if len(digits) < 6:
+        return ""
     return digits
 
 
@@ -266,13 +269,15 @@ async def merge_pair(payload: MergePayload, user=Depends(get_current_user)):
         if addr:
             update["address"] = addr
     update["updated_at"] = now
-    # Notiz an bestehende notes anhaengen
+    # Merge-Marker-Notiz: IMMER anhaengen – auch wenn Admin notes in merged_fields geschickt hat
     merge_note = (
         f"[{now[:10]}] Datensatz verschmolzen mit {loser.get('name') or loser['id']} "
         f"(ID {loser['id']})."
     )
-    old_notes = winner.get("notes") or ""
-    update["notes"] = (old_notes + ("\n" if old_notes else "") + merge_note) if "notes" not in update else update["notes"]
+    base_notes = update.get("notes")
+    if base_notes is None:
+        base_notes = winner.get("notes") or ""
+    update["notes"] = (base_notes + ("\n" if base_notes else "") + merge_note)
 
     await db.module_kunden.update_one({"id": payload.winner_id}, {"$set": update})
 

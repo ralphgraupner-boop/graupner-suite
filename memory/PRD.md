@@ -152,3 +152,19 @@ Portal v2 Phase 1-5 (Gerüst, Import, Auth, Chat, Uploads), Portal v3 Sandbox, H
 - Neu-Dialog: Kunden-Picker mit Autocomplete, Auto-Fill (Adresse, Email)
 - Navigation: v2-Module grün hervorgehoben, ALT-Module ausgegraut, TEST-Module amber
 - State-Machine: `POST /convert` + `GET /chain`, „Umwandeln in…"-Dropdown, Vorgänger/Nachfolger-Badges
+
+### 24.04.2026 – Auto-Sync kontakt_status + Duplikate-Modul
+- **Auto-Sync Startup-Hook** (`routes/module_kunden.py::auto_sync_kontakt_status_on_startup`):
+  - Läuft einmal beim Backend-Start, gleicht Alt-Datensätze an (`status` = `kontakt_status`)
+  - Idempotent, logged: „N kontakt_status gesetzt, M status angeglichen (von X Kunden)"
+  - Manueller „Status aufräumen"-Button aus `KundenModulPage.jsx` entfernt (Admin-Endpoint bleibt als Fallback)
+- **Neues Modul `module_duplikate`** (Module-First, isoliert):
+  - Backend: `/app/backend/module_duplikate/` mit Prefix `/api/module-duplikate/*`
+  - Eigene Collections: `module_duplikate_settings`, `duplikate_ignored`, `duplikate_merge_log`
+  - Heuristik: E-Mail ODER (Name + PLZ) ODER (Name + Telefon ≥6 Ziffern), archivierte Kunden ausgeschlossen
+  - Merge: Feld-für-Feld-Entscheidung (A / B / Eigen), Verlierer wird archiviert (nicht gelöscht), Audit-Trail in `duplikate_merge_log`
+  - Frontend: `DuplikateModulPage.jsx` – Scan-Liste, Vergleichs-Modal mit Stats (Dokumente, Einsätze, Fotos, Notizen), Merge-Log
+  - Route `/module/duplikate`, Sidebar-Eintrag (NEU-Badge)
+  - `backup.py` erweitert um `module_duplikate_*`, `monteur_app_*` Collections
+- **Tests:** `/app/backend/tests/test_module_duplikate.py` – **10/10 grün**
+
