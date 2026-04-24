@@ -264,6 +264,13 @@ async def update_kunde(kunde_id: str, data: dict, user=Depends(get_current_user)
     ort = update.get("ort", existing.get("ort", ""))
     if strasse or plz or ort:
         update["address"] = f"{strasse} {hausnummer}, {plz} {ort}".strip().strip(",").strip()
+    # Status-Sync: wenn eines der Felder (status oder kontakt_status) gesetzt wird,
+    # das andere automatisch mit dem gleichen Wert setzen – verhindert den Konflikt,
+    # wo das alte Formular nur 'status' schreibt, Frontend aber 'kontakt_status' liest.
+    if "status" in update and update["status"]:
+        update["kontakt_status"] = update["status"]
+    elif "kontakt_status" in update and update["kontakt_status"]:
+        update["status"] = update["kontakt_status"]
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.module_kunden.update_one({"id": kunde_id}, {"$set": update})
     updated = await db.module_kunden.find_one({"id": kunde_id}, {"_id": 0})
@@ -492,16 +499,27 @@ _MIGR_WEBHOOK_SOURCES = {"webhook", "kontaktformular", "anfragen_fetcher"}
 
 def _determine_new_kontakt_status(doc: dict) -> str:
     current = (doc.get("kontakt_status") or "").strip()
+    legacy = (doc.get("status") or "").strip()
+    # WENN beide gesetzt sind, aber unterschiedlich:
+    # "Fortgeschrittenere" Status (Kunde/Abgeschlossen/Archiv) hat Vorrang
+    # vor Initial-Status (Neu/Anfrage/Interessent). Das spiegelt den typischen
+    # Workflow: Man klickt gezielt nach vorne, nie zurueck.
+    ADVANCED = {"Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"}
+    if current and legacy and current != legacy:
+        if legacy in ADVANCED and current not in ADVANCED:
+            return legacy
+        if current in ADVANCED and legacy not in ADVANCED:
+            return current
+        # Beide advanced oder beide initial: kontakt_status gewinnt
+        return current
     if current:
         return current  # nicht anfassen
     source = (doc.get("source") or "").strip().lower()
     if source in _MIGR_WEBHOOK_SOURCES:
         return "Neu"
-    legacy = (doc.get("status") or "").strip()
     if legacy in ("Neu", "Anfrage", "In Bearbeitung", "in_bearbeitung"):
-        # Ohne klare Quelle, aber als Anfrage markiert -> bleibt Anfrage
         return "Neu" if legacy in ("Neu", "Anfrage") else "In Bearbeitung"
-    return "Kunde"  # Default: Bestandskunde
+    return "Kunde"
 
 
 @router.get("/modules/kunden/migrate-kontakt-status")
