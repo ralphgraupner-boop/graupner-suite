@@ -241,9 +241,11 @@ async def get_dashboard_stats():
     total_invoices_value = sum(i.get("total_gross", 0) for i in invoices)
     paid_invoices_value = sum(i.get("total_gross", 0) for i in invoices if i.get("status") == "Bezahlt")
 
-    # Kontakt-Modul: Anfragen = Kontakte mit Status "Anfrage"
+    # Kontakt-Modul: Anfragen = Kontakte mit aktivem Kontakt-Status (nicht "Kunde")
+    # Wichtig: kontakt_status hat Vorrang vor dem Legacy-Feld status (sonst zaehlen wir
+    # Kontakte mit veraltetem status='Anfrage' doppelt, die laengst "Kunde" sind).
     kontakte = await db.module_kunden.find({}, {"_id": 0}).to_list(10000)
-    anfragen = [k for k in kontakte if (k.get("status") or k.get("kontakt_status") or "") in ("Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung")]
+    anfragen = [k for k in kontakte if (k.get("kontakt_status") or k.get("status") or "") in ("Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung")]
 
     recent_anfragen = sorted(anfragen, key=lambda x: (
         0 if x.get("kontakt_status") == "Neu" else 1 if x.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung") else 2,
