@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   FileText, Plus, Search, CheckCircle2, AlertCircle, Clock, XCircle,
-  Settings as SettingsIcon, Scale, Trash2, Hash, Power,
+  Settings as SettingsIcon, Scale, Trash2, Hash, Power, Pencil,
 } from "lucide-react";
 
 /**
@@ -262,7 +262,12 @@ export function DokumenteV2Page() {
             const sb = STATUS_BADGES[d.status] || STATUS_BADGES.entwurf;
             const StatusIcon = sb.icon;
             return (
-              <div key={d.id} className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 gap-3" data-testid={`dok-v2-row-${d.id}`}>
+              <div
+                key={d.id}
+                onClick={() => navigate(`/dokumente-v2/${d.id}`)}
+                className="px-4 py-3 flex items-center justify-between hover:bg-muted/30 gap-3 cursor-pointer"
+                data-testid={`dok-v2-row-${d.id}`}
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-mono">{TYPE_LABEL[d.type]}</span>
@@ -287,7 +292,15 @@ export function DokumenteV2Page() {
                     Brutto: {(d.brutto || 0).toFixed(2).replace(".", ",")} € · {new Date(d.created_at).toLocaleString("de-DE")}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => navigate(`/dokumente-v2/${d.id}`)}
+                    title="Öffnen / Bearbeiten"
+                    className="p-2 rounded-lg hover:bg-primary/10 text-primary"
+                    data-testid={`dok-v2-edit-${d.id}`}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
                   {d.status === "entwurf" && (
                     <button onClick={() => issueDoc(d)} title="Erstellen + Nummer" className="p-2 rounded-lg hover:bg-primary/10 text-primary" data-testid={`dok-v2-issue-${d.id}`}>
                       <Hash className="w-4 h-4" />
