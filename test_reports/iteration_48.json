@@ -1,0 +1,37 @@
+{
+  "summary": "Portal v4 Sandbox-Komplettabdeckung: Admin-CRUD, Settings, Customer-Login (Token + Email), /me, Messages, Uploads, Documents-Endpoints (List/Detail/PDF), Dokumente-v2 Portal-v4-Freigabe PATCH und alle SECURITY-Tests (Cross-Customer-Isolation, None-customer_id, nicht freigegebene Dokumente, V2<->V4 Collection-Trennung, Read-Only-Garantie für dokumente_v2). 25/25 Tests GRÜN.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_portal_v4.py",
+    "/app/test_reports/pytest/pytest_portal_v4.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "portal_v4/uploads.py:101 – storage_path nutzt hardcodiert Prefix 'graupner-suite/portal2/' (statt 'portal4/'). Funktioniert, aber bricht das Module-First-Prinzip und vermischt Storage-Namespaces mit Portal v2. Empfehlung: auf 'graupner-suite/portal4/' umstellen, sonst sammeln sich Portal-v4-Uploads unter /portal2/ in S3/Storage.",
+    "portal_v4/auth.py:14 – PORTAL_V2_TOKEN_AUD = 'portal-v2-customer' wird für Portal v4 JWTs als audience verwendet. Sessions aus Portal v2 könnten theoretisch in Portal v4 validieren, falls beide denselben JWT_SECRET teilen und die portal4_accounts.id zufällig mit einer portal2_accounts.id kollidiert. Empfehlung: eigenen Audience-String 'portal-v4-customer' nutzen.",
+    "portal_v4/routes_admin.py:233 – reset_password() ruft send_invite(account_id, request, user) mit 3 Positional-Args auf, aber send_invite ist als async def send_invite(account_id, request, user=Depends(...)) definiert. Beim direkten Python-Aufruf (nicht via FastAPI-Routing) wird user damit NICHT durch die Dependency ermittelt – hier funktioniert es nur, weil user vom äußeren Endpoint durchgereicht wird. Akzeptabel, aber fragil.",
+    "portal_v4/documents.py:75 – PDF-Download logged account.get('id'), das ist die Account-ID, nicht die Kunde-ID. Für Audit besser zusätzlich customer_id mitloggen.",
+    "dokumente_v2/routes_admin.py:270 – Ternär-Ausdruck-Präzedenz unklar: `(user or {}).get('username') or 'unknown' if freigegeben else None` wird als `((user or {}).get('username') or 'unknown') if freigegeben else None` geparst → funktioniert, aber schwer lesbar. Klammern setzen."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_portal_v4.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "not tested (backend-only request)"
+  },
+  "test_credentials": "admin / Graupner!Suite2026. Seed-Accounts werden pro Testlauf in DB angelegt und am Ende entfernt (TEST_P4_A, TEST_P4_B, TEST_P4_NOCID).",
+  "seed_data_creation": "Im Fixture `seed` werden 3 portal4_accounts (test-p4-acc-a mit kunde_id=Max Mustermann, test-p4-acc-b mit kunde_id=Ellen Graupner, test-p4-acc-nocid ohne customer_id) sowie 3 dokumente_v2 (A freigegeben, A nicht freigegeben, B freigegeben) angelegt. Cleanup am Ende des Moduls entfernt alle TEST_P4_* Accounts, Dokumente, Messages, Uploads, Activity-Logs vollständig.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pytest mit ENV-Variable: `REACT_APP_BACKEND_URL=<frontend.env-Wert> python -m pytest backend/tests/test_portal_v4.py -v`. Tests müssen aus /app/backend heraus laufen (sys.path-Setup), nicht aus /app. Fixture `seed` erstellt Accounts direkt in DB (SMTP wird bewusst umgangen), Login läuft über hash_password + Token aus portal_v4.auth. Alle Security-Cases (Cross-Customer, None customer_id, nicht freigegeben, V2-Isolation, dokumente_v2 read-only) sind abgedeckt und GRÜN.",
+  "rca of the issue": "Kein Bug gefunden. Der von Ralph gemeldete Fix 'customer_id vs kunde_id' greift korrekt: portal_v4/documents.py:_build_filter nutzt account.customer_id und vergleicht mit dokumente_v2.kunde_id. SECURITY-Tests bestätigen: (a) Cross-Customer-Zugriff = 404, (b) Account ohne customer_id sieht 0 Dokumente (Sentinel-Filter '__never_match__'), (c) nicht freigegebene Dokumente werden nie geliefert (auch nicht via /{id}/pdf), (d) Dokumente v2 wird durch Portal v4 Reads NICHT modifiziert (updated_at unverändert vor/nach Reads), (e) portal2_accounts enthält keine test_p4_* Accounts."
+}
