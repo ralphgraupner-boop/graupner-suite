@@ -8,12 +8,13 @@ import { toast } from "sonner";
  * schnell aufs Handy bekommt.
  */
 export function HandyZugangPage() {
-  const [target, setTarget] = useState("suite"); // suite | portal-v3
+  const [target, setTarget] = useState("suite"); // suite | portal | monteur
   const [copied, setCopied] = useState(false);
 
   const urls = {
     suite: "https://code-import-flow-1.emergent.host",
-    "portal-v3": "https://code-import-flow-1.emergent.host/portal-v3",
+    portal: "https://code-import-flow-1.emergent.host/portal-v2",
+    monteur: "https://code-import-flow-1.emergent.host/monteur",
   };
 
   const url = urls[target];
@@ -59,11 +60,18 @@ export function HandyZugangPage() {
           Graupner Suite (Admin)
         </button>
         <button
-          onClick={() => setTarget("portal-v3")}
-          className={`px-4 py-2 rounded-lg text-sm border ${target === "portal-v3" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+          onClick={() => setTarget("monteur")}
+          className={`px-4 py-2 rounded-lg text-sm border ${target === "monteur" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+          data-testid="handy-target-monteur"
+        >
+          Monteur-App
+        </button>
+        <button
+          onClick={() => setTarget("portal")}
+          className={`px-4 py-2 rounded-lg text-sm border ${target === "portal" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
           data-testid="handy-target-portal"
         >
-          Kundenportal v3
+          Kundenportal
         </button>
       </div>
 
@@ -149,7 +157,7 @@ export function HandyZugangPage() {
       )}
 
       {/* Hinweis Portal */}
-      {target === "portal-v3" && (
+      {target === "portal" && (
         <div className="border rounded-xl bg-gradient-to-br from-[#14532D]/5 to-transparent p-6" data-testid="handy-portal-info">
           <div className="font-semibold mb-2">Hinweis Kundenportal</div>
           <p className="text-sm text-muted-foreground">
@@ -160,13 +168,26 @@ export function HandyZugangPage() {
         </div>
       )}
 
+      {/* Hinweis Monteur-App */}
+      {target === "monteur" && (
+        <div className="border rounded-xl bg-gradient-to-br from-amber-500/5 to-transparent p-6" data-testid="handy-monteur-info">
+          <div className="font-semibold mb-2">Hinweis Monteur-App</div>
+          <p className="text-sm text-muted-foreground">
+            Monteure melden sich mit ihrem persönlichen Suite-Login an (gleiche Zugangsdaten wie am PC).
+            Nach dem Login sehen sie automatisch nur ihre eigenen Einsätze. Installiere die Seite aufs
+            Handy wie oben beschrieben – dann startet sie beim Antippen direkt in der Mobilansicht.
+          </p>
+        </div>
+      )}
+
       {/* Was am Handy praktikabel ist */}
       <div className="border rounded-xl bg-card p-6" data-testid="handy-tips">
         <div className="font-semibold mb-3">Am Handy gut nutzbar</div>
         <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
           <li>Dashboard &amp; Anfragen prüfen</li>
+          <li>Monteur-App — Einsatz-Details, Navigation, Fotos, Bemerkungen</li>
           <li>Kunden-Modul durchsuchen, Kontakte anzeigen</li>
-          <li>Kundenportal v3 — Nachrichten an Kunden, Foto-Uploads</li>
+          <li>Kundenportal — Nachrichten an Kunden, Foto-Uploads</li>
           <li>Einsätze / Termine einsehen</li>
         </ul>
         <div className="font-semibold mt-4 mb-3">Lieber am PC machen</div>
