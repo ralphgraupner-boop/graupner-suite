@@ -573,3 +573,46 @@ async def execute_kontakt_status_migration(user=Depends(get_current_user)):
         updated += 1
     logger.info(f"Kontakt-Status-Migration ausgefuehrt: {updated} Eintraege aktualisiert")
     return {"updated": updated, "total": len(kunden), "timestamp": now}
+
+
+# ==================== AUTO-SYNC (Startup-Hook) ====================
+# Laeuft einmal beim Backend-Start: gleicht Alt-Datensaetze an, damit
+# 'status' (Legacy) und 'kontakt_status' (neu) synchron sind.
+# Nutzt die gleiche Heuristik wie die manuelle Migration.
+# Idempotent: mehrfaches Ausfuehren ist sicher.
+async def auto_sync_kontakt_status_on_startup():
+    """Background: beim Backend-Start einmalig Status-Felder konsolidieren."""
+    try:
+        kunden = await db.module_kunden.find({}, {"_id": 0}).to_list(10000)
+        if not kunden:
+            return
+        now = datetime.now(timezone.utc).isoformat()
+        synced_status = 0  # status != kontakt_status angeglichen
+        filled_kontakt = 0  # leeres kontakt_status gesetzt
+        for k in kunden:
+            current_kontakt = (k.get("kontakt_status") or "").strip()
+            legacy = (k.get("status") or "").strip()
+            new_kontakt = _determine_new_kontakt_status(k)
+            updates = {}
+            if current_kontakt != new_kontakt:
+                updates["kontakt_status"] = new_kontakt
+                if not current_kontakt:
+                    filled_kontakt += 1
+            # status muss immer == kontakt_status sein
+            target_status = updates.get("kontakt_status", current_kontakt) or new_kontakt
+            if legacy != target_status and target_status:
+                updates["status"] = target_status
+                synced_status += 1
+            if updates:
+                updates["updated_at"] = now
+                await db.module_kunden.update_one({"id": k["id"]}, {"$set": updates})
+        if synced_status or filled_kontakt:
+            logger.info(
+                f"Auto-Sync kontakt_status beim Startup: "
+                f"{filled_kontakt} kontakt_status gesetzt, {synced_status} status angeglichen "
+                f"(von {len(kunden)} Kunden)"
+            )
+        else:
+            logger.info(f"Auto-Sync kontakt_status: alle {len(kunden)} Kunden konsistent")
+    except Exception as e:
+        logger.warning(f"Auto-Sync kontakt_status fehlgeschlagen: {e}")

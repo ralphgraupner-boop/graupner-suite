@@ -1,0 +1,37 @@
+{
+  "summary": "Backend-Verifikation module_duplikate + Auto-Sync kontakt_status Startup-Hook. 10/10 pytest-Tests GRUEN. Scan, Pair-Detail, Ignore/Unignore, Merge (inkl. status<->kontakt_status Sync + name/address Rebuild), Audit-Log, Admin-Settings (GET/PUT), Auth-Guards (401/403) sowie Archiv-Ausschluss beim Scan vollstaendig abgedeckt. Auto-Sync-Log in backend.err.log bestaetigt: 'alle 26 Kunden konsistent'. KundenModulPage.jsx enthaelt kein btn-status-migration und keinen KontaktStatusMigrationDialog mehr (grep clean).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_module_duplikate.py",
+    "/app/test_reports/pytest/pytest_module_duplikate.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "module_duplikate/routes.py:62 – archivierte Kunden werden im Scan via Mongo-Filter ausgeschlossen (gut). Aber: 'kontakt_status != Archiv' matcht NICHT bei kunden, wo das Feld komplett fehlt – $ne matcht auch Dokumente ohne das Feld (True). Nach Auto-Sync ist das Feld gesetzt, aber Edge-Case bei Neukunden vor Auto-Sync-Lauf ist ok (kein Fehler, nur Hinweis).",
+    "module_duplikate/routes.py:275 – Die notes-Merge-Logik: `update[\"notes\"] = (...) if \"notes\" not in update else update[\"notes\"]` liest sich verdreht. Wenn der Admin explizit notes in merged_fields schickt, wird die Merge-Marker-Notiz NICHT angehaengt – das ueberrascht. Besser: Merge-Notiz immer anhaengen, egal ob notes im merged_fields war oder nicht.",
+    "module_duplikate/routes.py:81 – Telefon-Dedup nutzt phone | mobile | telefon als OR-Fallback. Falls Kunde A phone='040-123' und Kunde B mobile='040-123' hat, werden sie als Duplikat erkannt (korrektes Verhalten), aber Achtung: schon 5 Ziffern genuegen als Match – ggf. Mindestlaenge (z.B. >=6 Ziffern) einfuehren, um False Positives bei 'Notfallnummer 112' o.ae. zu vermeiden.",
+    "module_duplikate/settings.py:14 – DuplikateSettings enthaelt nur feature_enabled. Wenn Modul-Feature-Flag geprueft werden soll, muss der Frontend-Code /admin/settings lesen – aktuell wird feature_enabled im Scan/Merge-Endpoint NICHT abgefragt. D.h. setzen auf False hat serverseitig keinen Effekt, nur UI-Seite. Nicht kritisch, aber dokumentieren.",
+    "module_duplikate/routes.py:271 – Merge-Notiz haengt auch beim Winner dran, was gut ist. Allerdings fehlt der Log-Eintrag, wer genau welche alten Werte ueberschrieben hat (nur merged_fields-Input wird geloggt). Fuer forensische Auswertung waere ein 'before_values' Snapshot der ersetzten Felder hilfreich."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_module_duplikate.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10)",
+    "frontend": "not tested (backend-only request)"
+  },
+  "test_credentials": "admin / Graupner!Suite2026",
+  "seed_data_creation": "Im Modul-Fixture test_customers werden pro Testlauf zwei Kunden (TEST_DUP_A Meier, TEST_DUP_B Meier) mit gleicher E-Mail via POST /api/modules/kunden/data (force=True um den Duplikat-Check zu umgehen) angelegt. Cleanup am Ende via DELETE /api/modules/kunden/data/{id}. Nach Abschluss: 0 TEST_DUP-Leichen, verifiziert per API-Listing.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Lauf: `cd /app/backend && REACT_APP_BACKEND_URL=<frontend-env-url> python -m pytest tests/test_module_duplikate.py -v`. Falls vor dem Lauf noch TEST_DUP_* Kunden (z.B. aus abgebrochenem Lauf) existieren, greift force=True im Fixture, d.h. keine Vorab-Cleanup noetig. Der Auto-Sync-Test liest /api/modules/kunden/data und prueft status == kontakt_status fuer alle Eintraege mit gesetztem kontakt_status.",
+  "rca of the issue": "Kein Bug. Beim ersten Testlauf schlug die B-Erstellung mit 409 'Kunde koennte bereits existieren' fehl, weil module_kunden ein Duplikat-Check hat. Loesung: 'force: true' in beiden Payloads gesetzt (sowohl A als auch B) – einerseits fuer den Zweck des Tests (wir WOLLEN ein Duplikat), andererseits damit zurueckgebliebene TEST_DUP_* Kunden aus abgebrochenen Laeufen den Testlauf nicht blockieren. Alle 10 Tests gruen, inkl. Archiv-Ausschluss des Verlierers nach Merge."
+}

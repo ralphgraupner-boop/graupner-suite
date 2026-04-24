@@ -46,6 +46,14 @@ async def get_available_collections(user=Depends(get_current_user)):
         {"id": "portal4_messages", "name": "Kundenportal v4 Nachrichten", "icon": "💬", "group": "portal_v4"},
         {"id": "portal4_uploads", "name": "Kundenportal v4 Uploads", "icon": "📎", "group": "portal_v4"},
         {"id": "portal4_settings", "name": "Kundenportal v4 Einstellungen", "icon": "⚙️", "group": "portal_v4"},
+        # === Monteur-App Modul ===
+        {"id": "monteur_app_settings", "name": "Monteur-App Einstellungen", "icon": "⚙️", "group": "monteur_app"},
+        {"id": "monteur_app_notizen", "name": "Monteur-App Notizen", "icon": "📝", "group": "monteur_app"},
+        {"id": "monteur_app_fotos", "name": "Monteur-App Fotos", "icon": "📷", "group": "monteur_app"},
+        # === Duplikate-Modul ===
+        {"id": "module_duplikate_settings", "name": "Duplikate-Modul Einstellungen", "icon": "⚙️", "group": "module_duplikate"},
+        {"id": "duplikate_ignored", "name": "Duplikate Ignoriert", "icon": "🙈", "group": "module_duplikate"},
+        {"id": "duplikate_merge_log", "name": "Duplikate Merge-Log", "icon": "📑", "group": "module_duplikate"},
         # === Legacy ===
         {"id": "customers", "name": "Kunden (Alt)", "icon": "👥", "group": "legacy"},
         {"id": "quotes", "name": "Angebote (Alt)", "icon": "📄", "group": "legacy"},
@@ -97,6 +105,10 @@ async def export_backup(
                 "portal3_accounts", "portal3_messages", "portal3_uploads", "portal3_settings",
                 # Portal v4 (Sandbox)
                 "portal4_accounts", "portal4_messages", "portal4_uploads", "portal4_settings",
+                # Monteur-App
+                "monteur_app_settings", "monteur_app_notizen", "monteur_app_fotos",
+                # Duplikate-Modul
+                "module_duplikate_settings", "duplikate_ignored", "duplikate_merge_log",
                 # Legacy
                 "customers", "quotes", "orders", "invoices", "articles", "rechnungen_v2",
                 "email_vorlagen", "text_templates", "leistungsbloecke", "diverses",

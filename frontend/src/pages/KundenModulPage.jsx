@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Wand2 } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
-import { KontaktStatusMigrationDialog } from "@/components/migrations/KontaktStatusMigrationDialog";
 import { CATEGORIES } from "@/lib/constants";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
@@ -32,7 +31,6 @@ const KundenModulPage = () => {
   const [vcfUploading, setVcfUploading] = useState(false);
   const [vcfDuplicateDialog, setVcfDuplicateDialog] = useState(null);
   const [showKontaktImport, setShowKontaktImport] = useState(false);
-  const [migrationDialog, setMigrationDialog] = useState(null); // {preview: {...}, executing: bool}
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -174,22 +172,6 @@ const KundenModulPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                const res = await api.get("/modules/kunden/migrate-kontakt-status");
-                setMigrationDialog({ preview: res.data, executing: false });
-              } catch (err) {
-                toast.error(err?.response?.data?.detail || err.message);
-              }
-            }}
-            data-testid="btn-status-migration"
-            title="Einmalige Aufraeum-Migration: setzt fehlende Kontakt-Status-Felder automatisch"
-          >
-            <Wand2 className="w-4 h-4" /> Status aufräumen
-          </Button>
           <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import-kunden-modul">
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF importieren"}</span>
@@ -498,27 +480,6 @@ const KundenModulPage = () => {
           onOpen={(id) => { setVcfDuplicateDialog(null); setEditKunde(kunden.find(k => k.id === id)); setShowModal(true); }}
           onForce={vcfDuplicateDialog.retry}
           loading={vcfUploading}
-        />
-      )}
-
-      {/* Kontakt-Status-Migration Dialog (ausgelagert in eigene Komponente) */}
-      {migrationDialog && (
-        <KontaktStatusMigrationDialog
-          preview={migrationDialog.preview}
-          executing={migrationDialog.executing}
-          onCancel={() => setMigrationDialog(null)}
-          onExecute={async () => {
-            setMigrationDialog(s => ({ ...s, executing: true }));
-            try {
-              const res = await api.post("/modules/kunden/migrate-kontakt-status");
-              toast.success(`Migration ausgeführt: ${res.data.updated} Einträge aktualisiert`);
-              setMigrationDialog(null);
-              loadKunden();
-            } catch (err) {
-              toast.error(err?.response?.data?.detail || err.message);
-              setMigrationDialog(s => ({ ...s, executing: false }));
-            }
-          }}
         />
       )}
     </div>
