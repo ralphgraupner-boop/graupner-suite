@@ -21,6 +21,18 @@ from .settings import _get_or_create_settings
 router = APIRouter()
 
 
+# ==================== VERSION (fuer App-Aktualitaets-Check) ====================
+
+# Wird beim Backend-Start gesetzt. Aendert sich bei jedem Deploy/Restart.
+APP_VERSION = datetime.now(timezone.utc).isoformat()
+
+
+@router.get("/version")
+async def get_version():
+    """Wird vom Frontend alle 60s gepollt. Aendert sich beim Deploy -> Reload-Hinweis."""
+    return {"version": APP_VERSION}
+
+
 # ==================== MODELS ====================
 
 class NotizCreate(BaseModel):
@@ -31,6 +43,16 @@ class NotizCreate(BaseModel):
 
 class NotizUpdate(BaseModel):
     text: str
+
+
+class TodoCreate(BaseModel):
+    einsatz_id: str
+    text: str
+
+
+class FeedbackUpdate(BaseModel):
+    mood: str  # "zufrieden" | "neutral" | "veraergert"
+    notiz: str = ""
 
 
 # ==================== HELPERS ====================
@@ -101,12 +123,20 @@ async def get_einsatz(einsatz_id: str, user=Depends(get_current_user)):
     fotos = await db.monteur_app_fotos.find(
         {"einsatz_id": einsatz_id}, {"_id": 0, "storage_path": 0}
     ).sort("uploaded_at", -1).to_list(200)
+    todos = await db.monteur_app_todos.find(
+        {"einsatz_id": einsatz_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(200)
+    feedback = await db.monteur_app_feedback.find_one(
+        {"einsatz_id": einsatz_id}, {"_id": 0}
+    )
 
     return {
         **einsatz,
         "kunde_detail": kunde,
         "monteur_notizen": notizen,
         "monteur_fotos": fotos,
+        "monteur_todos": todos,
+        "monteur_feedback": feedback,
     }
 
 
@@ -245,3 +275,113 @@ async def delete_foto(foto_id: str, user=Depends(get_current_user)):
     await db.monteur_app_fotos.delete_one({"id": foto_id})
     # Storage-Rest belassen (wird selten, Storage-Cleanup koennen wir spaeter machen)
     return {"deleted": True, "id": foto_id}
+
+
+# ==================== TODOS (Phase 3: noch zu erledigen) ====================
+
+@router.post("/todos")
+async def create_todo(payload: TodoCreate, user=Depends(get_current_user)):
+    await _require_enabled()
+    einsatz = await db.einsaetze.find_one({"id": payload.einsatz_id}, {"_id": 0})
+    if not einsatz:
+        raise HTTPException(404, "Einsatz nicht gefunden")
+    if not _einsatz_matches_user(einsatz, user):
+        raise HTTPException(403, "Nicht zugewiesen")
+    if not payload.text.strip():
+        raise HTTPException(400, "Text darf nicht leer sein")
+    now = datetime.now(timezone.utc).isoformat()
+    todo = {
+        "id": str(uuid4()),
+        "einsatz_id": payload.einsatz_id,
+        "text": payload.text.strip(),
+        "erledigt": False,
+        "erledigt_at": None,
+        "erledigt_by": None,
+        "created_at": now,
+        "created_by": (user or {}).get("username", "unknown"),
+    }
+    await db.monteur_app_todos.insert_one(todo)
+    todo.pop("_id", None)
+    return todo
+
+
+@router.patch("/todos/{todo_id}/toggle")
+async def toggle_todo(todo_id: str, user=Depends(get_current_user)):
+    await _require_enabled()
+    existing = await db.monteur_app_todos.find_one({"id": todo_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(404, "Todo nicht gefunden")
+    einsatz = await db.einsaetze.find_one({"id": existing["einsatz_id"]}, {"_id": 0})
+    if not einsatz or not _einsatz_matches_user(einsatz, user):
+        raise HTTPException(403, "Nicht zugewiesen")
+    now = datetime.now(timezone.utc).isoformat()
+    new_state = not existing.get("erledigt", False)
+    await db.monteur_app_todos.update_one(
+        {"id": todo_id},
+        {"$set": {
+            "erledigt": new_state,
+            "erledigt_at": now if new_state else None,
+            "erledigt_by": (user or {}).get("username") if new_state else None,
+        }},
+    )
+    return await db.monteur_app_todos.find_one({"id": todo_id}, {"_id": 0})
+
+
+@router.delete("/todos/{todo_id}")
+async def delete_todo(todo_id: str, user=Depends(get_current_user)):
+    await _require_enabled()
+    existing = await db.monteur_app_todos.find_one({"id": todo_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(404, "Todo nicht gefunden")
+    einsatz = await db.einsaetze.find_one({"id": existing["einsatz_id"]}, {"_id": 0})
+    if not einsatz or not _einsatz_matches_user(einsatz, user):
+        raise HTTPException(403, "Nicht zugewiesen")
+    await db.monteur_app_todos.delete_one({"id": todo_id})
+    return {"deleted": True, "id": todo_id}
+
+
+# ==================== FEEDBACK / KUNDENSTIMMUNG (Phase 4) ====================
+
+_VALID_MOODS = {"zufrieden", "neutral", "veraergert"}
+
+
+@router.put("/einsaetze/{einsatz_id}/feedback")
+async def upsert_feedback(einsatz_id: str, payload: FeedbackUpdate, user=Depends(get_current_user)):
+    await _require_enabled()
+    einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
+    if not einsatz:
+        raise HTTPException(404, "Einsatz nicht gefunden")
+    if not _einsatz_matches_user(einsatz, user):
+        raise HTTPException(403, "Nicht zugewiesen")
+    if payload.mood not in _VALID_MOODS:
+        raise HTTPException(400, f"mood muss einer von {_VALID_MOODS} sein")
+    now = datetime.now(timezone.utc).isoformat()
+    existing = await db.monteur_app_feedback.find_one({"einsatz_id": einsatz_id}, {"_id": 0})
+    update = {
+        "mood": payload.mood,
+        "notiz": (payload.notiz or "").strip(),
+        "updated_at": now,
+        "updated_by": (user or {}).get("username", "unknown"),
+    }
+    if existing:
+        await db.monteur_app_feedback.update_one({"einsatz_id": einsatz_id}, {"$set": update})
+    else:
+        new_doc = {
+            "id": str(uuid4()),
+            "einsatz_id": einsatz_id,
+            "created_at": now,
+            **update,
+        }
+        await db.monteur_app_feedback.insert_one(new_doc)
+    return await db.monteur_app_feedback.find_one({"einsatz_id": einsatz_id}, {"_id": 0})
+
+
+@router.delete("/einsaetze/{einsatz_id}/feedback")
+async def clear_feedback(einsatz_id: str, user=Depends(get_current_user)):
+    await _require_enabled()
+    einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
+    if not einsatz or not _einsatz_matches_user(einsatz, user):
+        raise HTTPException(403, "Nicht zugewiesen")
+    await db.monteur_app_feedback.delete_one({"einsatz_id": einsatz_id})
+    return {"deleted": True, "einsatz_id": einsatz_id}
+

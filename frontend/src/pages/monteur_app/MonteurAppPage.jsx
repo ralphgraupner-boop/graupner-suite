@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   HardHat, MapPin, Phone, Mail, ChevronRight, RefreshCw, Calendar, Wrench, User as UserIcon,
 } from "lucide-react";
+import { useVersionCheck } from "./useVersionCheck";
 
 const STATUS_LABEL = {
   aktiv: "Aktiv",
@@ -30,6 +31,7 @@ export function MonteurAppPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("aktiv");
   const [featureEnabled, setFeatureEnabled] = useState(null);
+  const { outdated, reload } = useVersionCheck();
 
   const load = async () => {
     setLoading(true);
@@ -85,6 +87,20 @@ export function MonteurAppPage() {
 
   return (
     <div className="max-w-3xl mx-auto" data-testid="monteur-app-page">
+      {/* Update-Banner wenn neue Version verfuegbar */}
+      {outdated && (
+        <div className="sticky top-0 z-30 bg-amber-500 text-white rounded-xl shadow-lg px-4 py-3 mb-4 flex items-center gap-3" data-testid="update-banner-list">
+          <RefreshCw className="w-5 h-5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm">Neue Version verfügbar</div>
+            <div className="text-xs opacity-90">Jetzt aktualisieren.</div>
+          </div>
+          <button onClick={reload} className="px-3 py-1.5 bg-white text-amber-700 rounded-lg font-semibold text-sm" data-testid="btn-reload-app-list">
+            Aktualisieren
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">

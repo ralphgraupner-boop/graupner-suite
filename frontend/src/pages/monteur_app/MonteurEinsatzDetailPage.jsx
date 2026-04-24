@@ -4,8 +4,9 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   ArrowLeft, MapPin, Phone, Mail, Camera, Plus, Eye, Trash2, Edit2, X, Save,
-  ClipboardList, HardHat,
+  ClipboardList, HardHat, CheckCircle2, Circle, Smile, Meh, Frown, RefreshCw,
 } from "lucide-react";
+import { useVersionCheck } from "./useVersionCheck";
 
 const PHASE_LABEL = {
   besichtigung: "Besichtigung",
@@ -27,13 +28,18 @@ export function MonteurEinsatzDetailPage() {
   const [editNotizText, setEditNotizText] = useState("");
   const [uploadingFoto, setUploadingFoto] = useState(false);
   const [previewFoto, setPreviewFoto] = useState(null);
+  const [newTodoText, setNewTodoText] = useState("");
+  const [feedbackNotiz, setFeedbackNotiz] = useState("");
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const { outdated, reload } = useVersionCheck();
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await api.get(`/monteur/einsaetze/${id}`);
       setEinsatz(res.data);
+      setFeedbackNotiz(res.data?.monteur_feedback?.notiz || "");
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
       navigate("/monteur");
@@ -122,6 +128,67 @@ export function MonteurEinsatzDetailPage() {
     }
   };
 
+  // ======= Todos =======
+  const addTodo = async () => {
+    if (!newTodoText.trim()) return;
+    try {
+      await api.post("/monteur/todos", { einsatz_id: id, text: newTodoText });
+      setNewTodoText("");
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    }
+  };
+  const toggleTodo = async (tid) => {
+    try {
+      await api.patch(`/monteur/todos/${tid}/toggle`);
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    }
+  };
+  const deleteTodo = async (tid) => {
+    try {
+      await api.delete(`/monteur/todos/${tid}`);
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    }
+  };
+
+  // ======= Kundenstimmung =======
+  const setMood = async (mood) => {
+    setFeedbackSaving(true);
+    try {
+      await api.put(`/monteur/einsaetze/${id}/feedback`, { mood, notiz: feedbackNotiz });
+      toast.success("Kundenstimmung gespeichert");
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    } finally {
+      setFeedbackSaving(false);
+    }
+  };
+  const saveFeedbackNotiz = async () => {
+    if (!einsatz?.monteur_feedback?.mood) {
+      toast.error("Bitte zuerst Stimmung wählen");
+      return;
+    }
+    setFeedbackSaving(true);
+    try {
+      await api.put(`/monteur/einsaetze/${id}/feedback`, {
+        mood: einsatz.monteur_feedback.mood,
+        notiz: feedbackNotiz,
+      });
+      toast.success("Notiz gespeichert");
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    } finally {
+      setFeedbackSaving(false);
+    }
+  };
+
   if (loading) return <div className="text-center py-10 text-muted-foreground">Lade…</div>;
   if (!einsatz) return null;
 
@@ -136,6 +203,20 @@ export function MonteurEinsatzDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4 pb-24" data-testid="monteur-einsatz-detail">
+      {/* Update-Banner wenn neue Version verfuegbar */}
+      {outdated && (
+        <div className="sticky top-0 z-30 bg-amber-500 text-white rounded-xl shadow-lg px-4 py-3 flex items-center gap-3" data-testid="update-banner">
+          <RefreshCw className="w-5 h-5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm">Neue Version verfügbar</div>
+            <div className="text-xs opacity-90">Bitte aktualisieren für neue Funktionen und Bugfixes.</div>
+          </div>
+          <button onClick={reload} className="px-3 py-1.5 bg-white text-amber-700 rounded-lg font-semibold text-sm" data-testid="btn-reload-app">
+            Aktualisieren
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-2">
         <button onClick={() => navigate("/monteur")} className="p-2 rounded-lg hover:bg-muted" data-testid="btn-back-monteur">
@@ -318,6 +399,112 @@ export function MonteurEinsatzDetailPage() {
             <Plus className="w-4 h-4 inline mr-1" /> Bemerkung speichern
           </button>
         </div>
+      </div>
+
+      {/* Phase 3: Noch zu erledigen (Todos) */}
+      <div className="border-t pt-4">
+        <h3 className="text-sm font-semibold mb-2 flex items-center gap-1">
+          <ClipboardList className="w-4 h-4" /> Noch zu erledigen
+          {(einsatz.monteur_todos || []).length > 0 && (
+            <span className="text-xs text-muted-foreground ml-1">
+              ({(einsatz.monteur_todos || []).filter(t => !t.erledigt).length} offen / {(einsatz.monteur_todos || []).length})
+            </span>
+          )}
+        </h3>
+        <div className="space-y-1 mb-3">
+          {(einsatz.monteur_todos || []).length === 0 ? (
+            <div className="text-center text-xs text-muted-foreground py-4 border border-dashed rounded-lg">
+              Keine offenen Punkte. Alles erledigt? 🎉
+            </div>
+          ) : (einsatz.monteur_todos || []).map(t => (
+            <div key={t.id} className={`flex items-center gap-2 p-2 rounded-lg border ${t.erledigt ? "bg-emerald-50 border-emerald-200" : "bg-card"}`} data-testid={`todo-${t.id}`}>
+              <button onClick={() => toggleTodo(t.id)} className="p-1 hover:bg-muted rounded" data-testid={`todo-toggle-${t.id}`}>
+                {t.erledigt
+                  ? <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  : <Circle className="w-5 h-5 text-muted-foreground" />}
+              </button>
+              <div className={`flex-1 text-sm ${t.erledigt ? "line-through text-muted-foreground" : ""}`}>{t.text}</div>
+              <button onClick={() => deleteTodo(t.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded" data-testid={`todo-del-${t.id}`}>
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newTodoText}
+            onChange={e => setNewTodoText(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && addTodo()}
+            placeholder="Was muss noch erledigt werden?"
+            className="flex-1 px-3 py-2 border rounded-lg text-sm"
+            data-testid="todo-input"
+          />
+          <button
+            onClick={addTodo}
+            disabled={!newTodoText.trim()}
+            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-50"
+            data-testid="btn-add-todo"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Phase 4: Kundenstimmung */}
+      <div className="border-t pt-4">
+        <h3 className="text-sm font-semibold mb-2">Kundenstimmung</h3>
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[
+            { key: "zufrieden", label: "Zufrieden", Icon: Smile, color: "emerald" },
+            { key: "neutral", label: "Neutral", Icon: Meh, color: "gray" },
+            { key: "veraergert", label: "Verärgert", Icon: Frown, color: "red" },
+          ].map(({ key, label, Icon, color }) => {
+            const active = einsatz.monteur_feedback?.mood === key;
+            const colorMap = {
+              emerald: active ? "bg-emerald-500 text-white border-emerald-600" : "border-emerald-200 hover:bg-emerald-50",
+              gray: active ? "bg-gray-500 text-white border-gray-600" : "border-gray-200 hover:bg-gray-50",
+              red: active ? "bg-red-500 text-white border-red-600" : "border-red-200 hover:bg-red-50",
+            };
+            return (
+              <button
+                key={key}
+                onClick={() => setMood(key)}
+                disabled={feedbackSaving}
+                className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 text-sm font-medium transition-all ${colorMap[color]}`}
+                data-testid={`mood-${key}`}
+              >
+                <Icon className="w-6 h-6" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {einsatz.monteur_feedback?.mood && (
+          <div className="space-y-2">
+            <textarea
+              value={feedbackNotiz}
+              onChange={e => setFeedbackNotiz(e.target.value)}
+              placeholder="Optionale Notiz zur Kundenstimmung…"
+              className="w-full p-3 border rounded-lg text-sm"
+              rows={2}
+              data-testid="feedback-notiz-input"
+            />
+            <button
+              onClick={saveFeedbackNotiz}
+              disabled={feedbackSaving}
+              className="w-full py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:bg-muted/80 disabled:opacity-50"
+              data-testid="btn-save-feedback-notiz"
+            >
+              {feedbackSaving ? "Speichert…" : "Notiz speichern"}
+            </button>
+            {einsatz.monteur_feedback.updated_by && (
+              <div className="text-xs text-muted-foreground text-center">
+                Zuletzt: {einsatz.monteur_feedback.updated_by} · {new Date(einsatz.monteur_feedback.updated_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Foto-Preview-Modal */}
