@@ -34,6 +34,8 @@ import { PortalV4AdminPage } from "@/pages/portal_v4/PortalV4AdminPage";
 import { PortalV4DetailPage } from "@/pages/portal_v4/PortalV4DetailPage";
 import { PortalV4LoginPage } from "@/pages/portal_v4/PortalV4LoginPage";
 import { PortalV4CustomerPage } from "@/pages/portal_v4/PortalV4CustomerPage";
+import { MonteurAppPage } from "@/pages/monteur_app/MonteurAppPage";
+import { MonteurEinsatzDetailPage } from "@/pages/monteur_app/MonteurEinsatzDetailPage";
 import { HandyZugangPage } from "@/pages/handy_zugang/HandyZugangPage";
 import { WissenPage } from "@/pages/wissen/WissenPage";
 import { DokumenteV2Page } from "@/pages/dokumente_v2/DokumenteV2Page";
@@ -116,6 +118,9 @@ function App() {
               <Route path="/portal-v3/detail/:id" element={<MainLayout onLogout={logout}><PortalV3DetailPage /></MainLayout>} />
               <Route path="/portal-v4" element={<MainLayout onLogout={logout}><PortalV4AdminPage /></MainLayout>} />
               <Route path="/portal-v4/detail/:id" element={<MainLayout onLogout={logout}><PortalV4DetailPage /></MainLayout>} />
+              {/* Monteur-App (mobile, eigenes Modul) */}
+              <Route path="/monteur" element={<MainLayout onLogout={logout}><MonteurAppPage /></MainLayout>} />
+              <Route path="/monteur/einsatz/:id" element={<MainLayout onLogout={logout}><MonteurEinsatzDetailPage /></MainLayout>} />
               <Route path="/handy-zugang" element={<MainLayout onLogout={logout}><HandyZugangPage /></MainLayout>} />
               <Route path="/wissen" element={<MainLayout onLogout={logout}><WissenPage /></MainLayout>} />
               <Route path="/dokumente-v2" element={<MainLayout onLogout={logout}><DokumenteV2Page /></MainLayout>} />
