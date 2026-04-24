@@ -247,6 +247,10 @@ async def get_dashboard_stats():
     kontakte = await db.module_kunden.find({}, {"_id": 0}).to_list(10000)
     anfragen = [k for k in kontakte if (k.get("kontakt_status") or k.get("status") or "") in ("Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung")]
 
+    # Aktive Kunden (alles AUSSER Abgeschlossen/Archiv) - neue Default-Anzeige
+    archiv_states = ("Abgeschlossen", "Archiv")
+    aktive_kunden = [k for k in kontakte if (k.get("kontakt_status") or k.get("status") or "") not in archiv_states]
+
     recent_anfragen = sorted(anfragen, key=lambda x: (
         0 if x.get("kontakt_status") == "Neu" else 1 if x.get("kontakt_status") in ("In Bearbeitung", "in_bearbeitung") else 2,
         x.get("created_at", "") 
@@ -337,6 +341,10 @@ async def get_dashboard_stats():
         "anfragen": {
             "total": len(anfragen),
             "recent": recent_anfragen
+        },
+        "kunden_aktiv": {
+            "total": len(aktive_kunden),
+            "archiviert": len(kontakte) - len(aktive_kunden),
         },
         "monthly": months_data,
         "invoice_statuses": invoice_statuses,

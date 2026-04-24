@@ -24,7 +24,7 @@ const KundenModulPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("aktiv");
   const [showModal, setShowModal] = useState(false);
   const [editKunde, setEditKunde] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -36,12 +36,11 @@ const KundenModulPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // URL-Parameter ?filter=anfragen -> Status-Filter "anfragen" aktivieren
+  // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const f = params.get("filter");
-    if (f === "anfragen") setStatusFilter("anfragen");
-    else if (f) setStatusFilter(f);
+    if (f) setStatusFilter(f);
   }, [location.search]);
 
   useEffect(() => { loadKunden(); }, []);
@@ -121,6 +120,7 @@ const KundenModulPage = () => {
   // kontakt_status hat Vorrang (konsistent mit Dashboard-Backend)
   const effStatus = (c) => c.kontakt_status || c.status || "Anfrage";
   const ANFRAGE_STATES = ["Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung"];
+  const ARCHIV_STATES = ["Abgeschlossen", "Archiv"];
 
   const filtered = kunden.filter(c => {
     const s = effStatus(c);
@@ -129,9 +129,23 @@ const KundenModulPage = () => {
       (c.firma || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.nachricht || "").toLowerCase().includes(search.toLowerCase()));
     const catMatch = !categoryFilter || (c.categories || []).includes(categoryFilter);
-    const statusMatch = !statusFilter
-      || (statusFilter === "anfragen" ? ANFRAGE_STATES.includes(s) : s === statusFilter);
-    return searchMatch && catMatch && statusMatch;
+    // Filter-Logik mit zwei Sonderkategorien:
+    //   "aktiv"  -> alle AUSSER Abgeschlossen/Archiv (neuer Standard)
+    //   "anfragen" -> nur Anfrage/Neu/In Bearbeitung
+    //   "archiv" -> nur Abgeschlossen/Archiv (explizit sichtbar machen)
+    //   ""       -> ALLES (inkl. Archiv), nur sinnvoll mit Suchfeld
+    //   sonst    -> exakter Status-Match
+    const statusMatch = (() => {
+      if (!statusFilter) return true;
+      if (statusFilter === "aktiv") return !ARCHIV_STATES.includes(s);
+      if (statusFilter === "anfragen") return ANFRAGE_STATES.includes(s);
+      if (statusFilter === "archiv") return ARCHIV_STATES.includes(s);
+      return s === statusFilter;
+    })();
+    // Wenn explizit gesucht wird, ist das Archiv immer mit drin
+    const searchActive = search.trim().length > 0;
+    const finalStatusMatch = searchActive ? true : statusMatch;
+    return searchMatch && catMatch && finalStatusMatch;
   }).sort((a, b) => {
     const sa = statusOrder[effStatus(a)] ?? 9;
     const sb = statusOrder[effStatus(b)] ?? 9;
@@ -142,6 +156,8 @@ const KundenModulPage = () => {
   const statusCounts = {};
   KUNDEN_STATUSES.forEach(s => { statusCounts[s] = kunden.filter(k => effStatus(k) === s).length; });
   const anfragenCount = kunden.filter(k => ANFRAGE_STATES.includes(effStatus(k))).length;
+  const aktivCount = kunden.filter(k => !ARCHIV_STATES.includes(effStatus(k))).length;
+  const archivCount = kunden.filter(k => ARCHIV_STATES.includes(effStatus(k))).length;
 
   return (
     <div data-testid="kunden-modul-page">
@@ -152,7 +168,9 @@ const KundenModulPage = () => {
             <h1 className="text-2xl lg:text-4xl font-bold">Kunden</h1>
             <Badge variant="default" className="text-xs">Solo</Badge>
           </div>
-          <p className="text-muted-foreground mt-1 text-sm lg:text-base">{kunden.length} Kunden gesamt</p>
+          <p className="text-muted-foreground mt-1 text-sm lg:text-base">
+            {kunden.length} Kunden gesamt · <span className="text-primary font-medium">{aktivCount} aktiv</span> · {archivCount} archiviert
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
@@ -202,17 +220,24 @@ const KundenModulPage = () => {
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={() => setStatusFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!statusFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`} data-testid="status-filter-alle">Alle Status</button>
         <button
-          onClick={() => setStatusFilter(statusFilter === "anfragen" ? "" : "anfragen")}
+          onClick={() => setStatusFilter("aktiv")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === "aktiv" ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+          data-testid="status-filter-aktiv"
+        >
+          <span className={`w-2 h-2 rounded-full ${statusFilter === "aktiv" ? "bg-white" : "bg-primary"}`} />
+          Aktiv ({aktivCount})
+        </button>
+        <button
+          onClick={() => setStatusFilter(statusFilter === "anfragen" ? "aktiv" : "anfragen")}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === "anfragen" ? "bg-amber-500 text-white shadow-sm" : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200"}`}
           data-testid="status-filter-anfragen"
         >
           <span className="w-2 h-2 rounded-full bg-amber-600" />
           Anfragen ({anfragenCount})
         </button>
-        {KUNDEN_STATUSES.map(st => (
-          <button key={st} onClick={() => setStatusFilter(statusFilter === st ? "" : st)}
+        {KUNDEN_STATUSES.filter(st => !ARCHIV_STATES.includes(st)).map(st => (
+          <button key={st} onClick={() => setStatusFilter(statusFilter === st ? "aktiv" : st)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
             data-testid={`status-filter-${st}`}
           >
@@ -220,7 +245,20 @@ const KundenModulPage = () => {
             {st} ({statusCounts[st] || 0})
           </button>
         ))}
+        <button
+          onClick={() => setStatusFilter(statusFilter === "archiv" ? "aktiv" : "archiv")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === "archiv" ? "bg-gray-600 text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          data-testid="status-filter-archiv"
+        >
+          <span className="w-2 h-2 rounded-full bg-gray-500" />
+          Archiv ({archivCount})
+        </button>
       </div>
+      {search.trim() && statusFilter && (
+        <div className="text-xs text-muted-foreground -mt-2 mb-3">
+          ℹ️ Suche aktiv – auch archivierte Kunden werden durchsucht.
+        </div>
+      )}
 
       {/* Liste */}
       {loading ? (

@@ -202,10 +202,11 @@ const DashboardPage = () => {
         </Link>
         </HelpTip>
         <HelpTip id="dashboard.stat-kunden" block>
-        <Link to="/module/kunden" className="block" data-testid="stat-link-kunden">
+        <Link to="/module/kunden?filter=aktiv" className="block" data-testid="stat-link-kunden">
           <StatCard
-            title="Kunden"
-            value={stats?.customers_count || 0}
+            title="Kunden aktiv"
+            value={stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}
+            subtitle={stats?.kunden_aktiv?.archiviert ? `+${stats.kunden_aktiv.archiviert} archiviert` : null}
             icon={Users}
           />
         </Link>
