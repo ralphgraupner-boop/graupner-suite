@@ -192,7 +192,7 @@ const DashboardPage = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
         <HelpTip id="dashboard.stat-anfragen" block>
-        <Link to="/module/kontakt" className="block" data-testid="stat-link-anfragen">
+        <Link to="/module/kunden?filter=anfragen" className="block" data-testid="stat-link-anfragen">
           <StatCard
             title="Anfragen"
             value={stats?.anfragen?.total || 0}

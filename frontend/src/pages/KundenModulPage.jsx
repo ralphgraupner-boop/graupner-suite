@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
@@ -33,6 +33,15 @@ const KundenModulPage = () => {
   const [showKontaktImport, setShowKontaktImport] = useState(false);
   const [migrationDialog, setMigrationDialog] = useState(null); // {preview: {...}, executing: bool}
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // URL-Parameter ?filter=anfragen -> Status-Filter "anfragen" aktivieren
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const f = params.get("filter");
+    if (f === "anfragen") setStatusFilter("anfragen");
+    else if (f) setStatusFilter(f);
+  }, [location.search]);
 
   useEffect(() => { loadKunden(); }, []);
 
@@ -108,22 +117,30 @@ const KundenModulPage = () => {
 
   const statusOrder = { "Neu": 0, "Anfrage": 1, "Interessent": 2, "Kunde": 3, "In Bearbeitung": 4, "Abgeschlossen": 5, "Archiv": 6 };
 
-  const filtered = kunden.filter(c =>
-    (((c.vorname || c.nachname) ? `${c.vorname || ''} ${c.nachname || ''}`.trim() : (c.name || '')).toLowerCase().includes(search.toLowerCase()) ||
-    (c.email || "").toLowerCase().includes(search.toLowerCase()) ||
-    (c.firma || "").toLowerCase().includes(search.toLowerCase()) ||
-    (c.nachricht || "").toLowerCase().includes(search.toLowerCase())) &&
-    (!categoryFilter || (c.categories || []).includes(categoryFilter)) &&
-    (!statusFilter || (c.status || c.kontakt_status || "Anfrage") === statusFilter)
-  ).sort((a, b) => {
-    const sa = statusOrder[a.status || a.kontakt_status || "Anfrage"] ?? 9;
-    const sb = statusOrder[b.status || b.kontakt_status || "Anfrage"] ?? 9;
+  // kontakt_status hat Vorrang (konsistent mit Dashboard-Backend)
+  const effStatus = (c) => c.kontakt_status || c.status || "Anfrage";
+  const ANFRAGE_STATES = ["Anfrage", "Neu", "In Bearbeitung", "in_bearbeitung"];
+
+  const filtered = kunden.filter(c => {
+    const s = effStatus(c);
+    const searchMatch = (((c.vorname || c.nachname) ? `${c.vorname || ''} ${c.nachname || ''}`.trim() : (c.name || '')).toLowerCase().includes(search.toLowerCase()) ||
+      (c.email || "").toLowerCase().includes(search.toLowerCase()) ||
+      (c.firma || "").toLowerCase().includes(search.toLowerCase()) ||
+      (c.nachricht || "").toLowerCase().includes(search.toLowerCase()));
+    const catMatch = !categoryFilter || (c.categories || []).includes(categoryFilter);
+    const statusMatch = !statusFilter
+      || (statusFilter === "anfragen" ? ANFRAGE_STATES.includes(s) : s === statusFilter);
+    return searchMatch && catMatch && statusMatch;
+  }).sort((a, b) => {
+    const sa = statusOrder[effStatus(a)] ?? 9;
+    const sb = statusOrder[effStatus(b)] ?? 9;
     if (sa !== sb) return sa - sb;
     return (b.created_at || "").localeCompare(a.created_at || "");
   });
 
   const statusCounts = {};
-  KUNDEN_STATUSES.forEach(s => { statusCounts[s] = kunden.filter(k => (k.status || k.kontakt_status || "Anfrage") === s).length; });
+  KUNDEN_STATUSES.forEach(s => { statusCounts[s] = kunden.filter(k => effStatus(k) === s).length; });
+  const anfragenCount = kunden.filter(k => ANFRAGE_STATES.includes(effStatus(k))).length;
 
   return (
     <div data-testid="kunden-modul-page">
@@ -184,10 +201,20 @@ const KundenModulPage = () => {
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={() => setStatusFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!statusFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>Alle Status</button>
+        <button onClick={() => setStatusFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!statusFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`} data-testid="status-filter-alle">Alle Status</button>
+        <button
+          onClick={() => setStatusFilter(statusFilter === "anfragen" ? "" : "anfragen")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === "anfragen" ? "bg-amber-500 text-white shadow-sm" : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200"}`}
+          data-testid="status-filter-anfragen"
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-600" />
+          Anfragen ({anfragenCount})
+        </button>
         {KUNDEN_STATUSES.map(st => (
           <button key={st} onClick={() => setStatusFilter(statusFilter === st ? "" : st)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+            data-testid={`status-filter-${st}`}
+          >
             <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[st]?.dot?.replace(" animate-pulse", "") || "bg-gray-400"}`} />
             {st} ({statusCounts[st] || 0})
           </button>
