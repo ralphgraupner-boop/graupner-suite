@@ -231,7 +231,9 @@ async def create_kunde(data: dict, user=Depends(get_current_user)):
         "objekt_plz": data.get("objekt_plz", ""),
         "objekt_ort": data.get("objekt_ort", ""),
         "customer_type": data.get("customer_type", "Privat"),
-        "status": data.get("status", "Anfrage"),
+        # Default: manuell angelegter Eintrag ist ein Kunde (Quelle = manuelle Eingabe)
+        "status": data.get("status", "Kunde"),
+        "kontakt_status": data.get("kontakt_status", "Kunde"),
         "categories": data.get("categories", []),
         "notes": data.get("notes", ""),
         "nachricht": data.get("nachricht", ""),
@@ -311,11 +313,12 @@ async def import_vcf_kunde(file: UploadFile = File(...), force: bool = False, us
                 },
             )
 
-    # Create via module
+    # Create via module (VCF-Import: Bestandskunden, keine Anfragen)
     item = {
         "id": str(uuid4()),
         **data,
-        "status": "Neu",
+        "status": "Kunde",
+        "kontakt_status": "Kunde",
         "categories": [],
         "photos": [],
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -425,7 +428,9 @@ async def import_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
         "ort": ort,
         "address": address,
         "customer_type": kontakt.get("customer_type", "Privat"),
-        "status": "Neu",
+        # Uebernahme aus Kontakt-Modul = bewusste Kunden-Klassifikation
+        "status": "Kunde",
+        "kontakt_status": "Kunde",
         "categories": kontakt.get("categories", []),
         "notes": kontakt.get("notes", ""),
         "photos": [],
@@ -472,3 +477,81 @@ async def detect_anrede_bulk(user=Depends(get_current_user)):
         "samples_updated": samples_updated,
         "samples_unclear": samples_unclear,
     }
+
+
+# ==================== KONTAKT-STATUS-MIGRATION (einmalig, 23.04.2026) ====================
+# Hintergrund: Historisch wurden zwei Felder parallel gepflegt: 'status' (Legacy) und 'kontakt_status'.
+# Ab sofort ist kontakt_status die Wahrheit. Diese Migration:
+#   - Webhook-Eintraege (kontakt_status gesetzt) bleiben wie sie sind
+#   - Leere kontakt_status -> aus 'source' ableiten:
+#       source=webhook/kontaktformular -> "Neu"
+#       sonst (Import, manuell) -> "Kunde"
+
+_MIGR_WEBHOOK_SOURCES = {"webhook", "kontaktformular", "anfragen_fetcher"}
+
+
+def _determine_new_kontakt_status(doc: dict) -> str:
+    current = (doc.get("kontakt_status") or "").strip()
+    if current:
+        return current  # nicht anfassen
+    source = (doc.get("source") or "").strip().lower()
+    if source in _MIGR_WEBHOOK_SOURCES:
+        return "Neu"
+    legacy = (doc.get("status") or "").strip()
+    if legacy in ("Neu", "Anfrage", "In Bearbeitung", "in_bearbeitung"):
+        # Ohne klare Quelle, aber als Anfrage markiert -> bleibt Anfrage
+        return "Neu" if legacy in ("Neu", "Anfrage") else "In Bearbeitung"
+    return "Kunde"  # Default: Bestandskunde
+
+
+@router.get("/modules/kunden/migrate-kontakt-status")
+async def preview_kontakt_status_migration(user=Depends(get_current_user)):
+    """Dry-Run: zeigt was geaendert wuerde, ohne zu schreiben."""
+    kunden = await db.module_kunden.find({}, {"_id": 0}).to_list(10000)
+    changes = []
+    keep = 0
+    counts_new = {"Neu": 0, "In Bearbeitung": 0, "Kunde": 0, "Interessent": 0, "Archiv": 0}
+    for k in kunden:
+        current = (k.get("kontakt_status") or "").strip()
+        new = _determine_new_kontakt_status(k)
+        counts_new[new] = counts_new.get(new, 0) + 1
+        if current == new:
+            keep += 1
+            continue
+        name = (k.get("name") or f"{k.get('vorname','')} {k.get('nachname','')}".strip()
+                or k.get("firma") or "(ohne Namen)")
+        changes.append({
+            "id": k["id"],
+            "name": name,
+            "source": k.get("source", ""),
+            "legacy_status": k.get("status", ""),
+            "kontakt_status_old": current,
+            "kontakt_status_new": new,
+        })
+    return {
+        "total_kunden": len(kunden),
+        "unchanged": keep,
+        "to_change": len(changes),
+        "final_distribution": counts_new,
+        "changes": changes,
+    }
+
+
+@router.post("/modules/kunden/migrate-kontakt-status")
+async def execute_kontakt_status_migration(user=Depends(get_current_user)):
+    """Fuehrt Migration aus: schreibt kontakt_status fuer alle Faelle wo es noetig ist."""
+    kunden = await db.module_kunden.find({}, {"_id": 0}).to_list(10000)
+    now = datetime.now(timezone.utc).isoformat()
+    updated = 0
+    for k in kunden:
+        current = (k.get("kontakt_status") or "").strip()
+        new = _determine_new_kontakt_status(k)
+        if current == new:
+            continue
+        await db.module_kunden.update_one(
+            {"id": k["id"]},
+            {"$set": {"kontakt_status": new, "updated_at": now}},
+        )
+        updated += 1
+    logger.info(f"Kontakt-Status-Migration ausgefuehrt: {updated} Eintraege aktualisiert")
+    return {"updated": updated, "total": len(kunden), "timestamp": now}
