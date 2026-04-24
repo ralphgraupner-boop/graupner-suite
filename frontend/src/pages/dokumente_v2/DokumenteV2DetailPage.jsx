@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   ArrowLeft, Save, Plus, Trash2, ArrowUp, ArrowDown, Hash,
-  User, FileDown, AlertCircle, Search, GitBranch, ExternalLink,
+  User, FileDown, AlertCircle, Search, GitBranch, ExternalLink, Share2,
 } from "lucide-react";
 
 const TYPE_LABEL = {
@@ -198,6 +198,18 @@ export function DokumenteV2DetailPage() {
     }
   };
 
+  const togglePortalV4 = async () => {
+    if (!dok) return;
+    const next = !dok.portal_v4_freigegeben;
+    try {
+      const res = await api.patch(`/dokumente-v2/admin/dokumente/${id}/portal-v4-freigabe`, null, { params: { freigegeben: next } });
+      setDok(res.data);
+      toast.success(next ? "Im Portal v4 freigegeben" : "Freigabe entfernt");
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    }
+  };
+
   const searchKunden = async () => {
     try {
       const res = await api.get("/dokumente-v2/admin/kunden-suche", { params: { q: kundenQ } });
@@ -326,6 +338,29 @@ export function DokumenteV2DetailPage() {
           )}
         </div>
       )}
+
+      {/* Portal v4 Freigabe (Sandbox) */}
+      <div className={`border rounded-xl p-3 flex flex-wrap items-center gap-3 ${dok.portal_v4_freigegeben ? "bg-amber-50 border-amber-300" : "bg-muted/30"}`} data-testid="dok-v2-portal-v4-freigabe">
+        <Share2 className={`w-4 h-4 ${dok.portal_v4_freigegeben ? "text-amber-600" : "text-muted-foreground"}`} />
+        <div className="flex-1 min-w-[200px]">
+          <div className="text-sm font-medium">
+            Kundenportal v4 (Sandbox)
+            {dok.portal_v4_freigegeben && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500 text-white tracking-wider">SICHTBAR</span>}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {dok.portal_v4_freigegeben
+              ? `Dokument ist für den Kunden im Portal v4 sichtbar${dok.portal_v4_freigegeben_at ? ` · seit ${new Date(dok.portal_v4_freigegeben_at).toLocaleString("de-DE")}` : ""}`
+              : "Nur Admin sieht dieses Dokument. Gib es für den Kunden frei, damit er es im Portal v4 abrufen kann."}
+          </div>
+        </div>
+        <button
+          onClick={togglePortalV4}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${dok.portal_v4_freigegeben ? "bg-amber-500 text-white hover:bg-amber-600" : "border hover:bg-muted"}`}
+          data-testid="dok-v2-portal-v4-toggle"
+        >
+          {dok.portal_v4_freigegeben ? "Freigabe entfernen" : "Für Kunde freigeben"}
+        </button>
+      </div>
 
       {/* Kunde */}
       <div className="border rounded-xl bg-card p-4 space-y-3">

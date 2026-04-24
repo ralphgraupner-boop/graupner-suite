@@ -30,6 +30,10 @@ import { PortalV3AdminPage } from "@/pages/portal_v3/PortalV3AdminPage";
 import { PortalV3DetailPage } from "@/pages/portal_v3/PortalV3DetailPage";
 import { PortalV3LoginPage } from "@/pages/portal_v3/PortalV3LoginPage";
 import { PortalV3CustomerPage } from "@/pages/portal_v3/PortalV3CustomerPage";
+import { PortalV4AdminPage } from "@/pages/portal_v4/PortalV4AdminPage";
+import { PortalV4DetailPage } from "@/pages/portal_v4/PortalV4DetailPage";
+import { PortalV4LoginPage } from "@/pages/portal_v4/PortalV4LoginPage";
+import { PortalV4CustomerPage } from "@/pages/portal_v4/PortalV4CustomerPage";
 import { HandyZugangPage } from "@/pages/handy_zugang/HandyZugangPage";
 import { WissenPage } from "@/pages/wissen/WissenPage";
 import { DokumenteV2Page } from "@/pages/dokumente_v2/DokumenteV2Page";
@@ -75,6 +79,10 @@ function App() {
           <Route path="/portal-v3/login" element={<PortalV3LoginPage />} />
           <Route path="/portal-v3/login/:token" element={<PortalV3LoginPage />} />
           <Route path="/portal-v3/app" element={<PortalV3CustomerPage />} />
+          {/* Kundenportal v4 (oeffentlich, Test mit Dokumente-Anbindung) */}
+          <Route path="/portal-v4/login" element={<PortalV4LoginPage />} />
+          <Route path="/portal-v4/login/:token" element={<PortalV4LoginPage />} />
+          <Route path="/portal-v4/app" element={<PortalV4CustomerPage />} />
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLogin={login} />} />
           ) : (
@@ -106,6 +114,8 @@ function App() {
               <Route path="/portal-v2/detail/:id" element={<MainLayout onLogout={logout}><PortalV2DetailPage /></MainLayout>} />
               <Route path="/portal-v3" element={<MainLayout onLogout={logout}><PortalV3AdminPage /></MainLayout>} />
               <Route path="/portal-v3/detail/:id" element={<MainLayout onLogout={logout}><PortalV3DetailPage /></MainLayout>} />
+              <Route path="/portal-v4" element={<MainLayout onLogout={logout}><PortalV4AdminPage /></MainLayout>} />
+              <Route path="/portal-v4/detail/:id" element={<MainLayout onLogout={logout}><PortalV4DetailPage /></MainLayout>} />
               <Route path="/handy-zugang" element={<MainLayout onLogout={logout}><HandyZugangPage /></MainLayout>} />
               <Route path="/wissen" element={<MainLayout onLogout={logout}><WissenPage /></MainLayout>} />
               <Route path="/dokumente-v2" element={<MainLayout onLogout={logout}><DokumenteV2Page /></MainLayout>} />

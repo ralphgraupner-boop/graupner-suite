@@ -58,6 +58,8 @@ class DokumentUpdate(BaseModel):
     vortext: Optional[str] = None
     schlusstext: Optional[str] = None
     positions: Optional[List[Position]] = None
+    # Portal v4 (Sandbox): Freigabe zum Anzeigen im Kundenportal
+    portal_v4_freigegeben: Optional[bool] = None
 
 
 class Dokument(BaseModel):
@@ -89,6 +91,9 @@ class Dokument(BaseModel):
     canceled_at: Optional[str] = None
     canceled_by: Optional[str] = None
     cancel_reason: Optional[str] = None
+
+    # Portal v4 (Sandbox): Freigabe zum Anzeigen im Kundenportal
+    portal_v4_freigegeben: bool = False
 
 
 # ============== SETTINGS ==============

@@ -15,6 +15,7 @@ const allNavItems = [
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"], variant: "deprecated" },
   { path: "/portal-v2", icon: Users, label: "Kundenportal", roles: ["admin"], variant: "new" },
   { path: "/portal-v3", icon: Users, label: "Kundenportal (Test)", roles: ["admin"], variant: "sandbox" },
+  { path: "/portal-v4", icon: Users, label: "Kundenportal v4 (Dokumente)", roles: ["admin"], variant: "sandbox" },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"] },
   { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"] },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },

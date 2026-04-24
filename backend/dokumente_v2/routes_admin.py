@@ -253,6 +253,28 @@ async def pdf_dokument(doc_id: str, user=Depends(get_current_user)):
     )
 
 
+# ============== PORTAL V4 FREIGABE (Sandbox-Anbindung) ==============
+
+@router.patch("/dokumente/{doc_id}/portal-v4-freigabe")
+async def toggle_portal_v4_freigabe(doc_id: str, freigegeben: bool, user=Depends(get_current_user)):
+    """Schaltet die Sichtbarkeit des Dokuments im Kundenportal v4 (Sandbox) um."""
+    doc = await db.dokumente_v2.find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Nicht gefunden")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.dokumente_v2.update_one(
+        {"id": doc_id},
+        {"$set": {
+            "portal_v4_freigegeben": bool(freigegeben),
+            "portal_v4_freigegeben_at": now if freigegeben else None,
+            "portal_v4_freigegeben_by": (user or {}).get("username") or "unknown" if freigegeben else None,
+            "updated_at": now,
+        }},
+    )
+    logger.info(f"Dokumente v2 Portal-v4-Freigabe={freigegeben} fuer {doc_id}")
+    return await get_dokument(doc_id, user)
+
+
 # ============== CONVERT (State-Machine: Angebot -> AB -> Rechnung, Rechnung -> Gutschrift) ==============
 
 # Erlaubte Uebergaenge: source -> {allowed target_types}
