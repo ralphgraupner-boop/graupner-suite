@@ -13,9 +13,21 @@ router = APIRouter()
 async def create_backup_data():
     """Erstellt Backup-Daten und gibt ZIP-Bytes zurück"""
     try:
-        selected = ["anfragen", "customers", "quotes", "orders", "invoices", 
-                   "articles", "settings", "email_vorlagen", "text_templates", 
-                   "leistungsbloecke", "diverses", "users", "email_inbox"]
+        # Auto-Backup (24.04.2026): alle aktiven + Legacy-Collections
+        selected = [
+            # Kern
+            "module_kunden", "module_artikel", "module_dokumente", "module_textvorlagen",
+            "module_kontakt", "einsaetze", "mitarbeiter", "anfragen", "settings", "users",
+            # Dokumente v2
+            "dokumente_v2", "dokumente_v2_counters", "dokumente_v2_counter_log", "dokumente_v2_settings",
+            # Portal v2/v3/v4
+            "portal2_accounts", "portal2_messages", "portal2_uploads", "portal2_settings",
+            "portal3_accounts", "portal3_messages", "portal3_uploads", "portal3_settings",
+            "portal4_accounts", "portal4_messages", "portal4_uploads", "portal4_settings",
+            # Legacy
+            "customers", "quotes", "orders", "invoices", "articles", "rechnungen_v2",
+            "email_vorlagen", "text_templates", "leistungsbloecke", "diverses", "email_inbox",
+        ]
         
         zip_buffer = io.BytesIO()
         

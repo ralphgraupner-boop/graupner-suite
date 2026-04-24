@@ -13,20 +13,50 @@ router = APIRouter()
 
 @router.get("/backup/collections")
 async def get_available_collections(user=Depends(get_current_user)):
-    """Liste aller verfügbaren Collections für Backup"""
+    """Liste aller verfügbaren Collections für Backup (inkl. v2/v4-Module, 24.04.2026)"""
     collections = [
-        {"id": "anfragen", "name": "Anfragen", "icon": "📋"},
-        {"id": "customers", "name": "Kunden", "icon": "👥"},
-        {"id": "quotes", "name": "Angebote", "icon": "📄"},
-        {"id": "orders", "name": "Aufträge", "icon": "📦"},
-        {"id": "invoices", "name": "Rechnungen", "icon": "💰"},
-        {"id": "articles", "name": "Artikel", "icon": "🛠️"},
-        {"id": "settings", "name": "Einstellungen", "icon": "⚙️"},
-        {"id": "email_vorlagen", "name": "E-Mail Vorlagen", "icon": "✉️"},
-        {"id": "text_templates", "name": "Textvorlagen", "icon": "📝"},
-        {"id": "leistungsbloecke", "name": "Leistungsblöcke", "icon": "📊"},
-        {"id": "diverses", "name": "Diverses/Info", "icon": "ℹ️"},
-        {"id": "users", "name": "Benutzer", "icon": "👤"},
+        # === Aktuell in Nutzung ===
+        {"id": "module_kunden", "name": "Kunden (Haupt)", "icon": "👥", "group": "kern"},
+        {"id": "module_artikel", "name": "Artikel & Leistungen", "icon": "🛠️", "group": "kern"},
+        {"id": "module_dokumente", "name": "Dokumente (Legacy)", "icon": "📄", "group": "kern"},
+        {"id": "module_textvorlagen", "name": "Textvorlagen", "icon": "📝", "group": "kern"},
+        {"id": "module_kontakt", "name": "Kontakte (Legacy)", "icon": "📇", "group": "kern"},
+        {"id": "einsaetze", "name": "Einsätze", "icon": "🔧", "group": "kern"},
+        {"id": "mitarbeiter", "name": "Mitarbeiter", "icon": "👷", "group": "kern"},
+        {"id": "anfragen", "name": "Anfragen (Legacy)", "icon": "📋", "group": "kern"},
+        {"id": "settings", "name": "Einstellungen", "icon": "⚙️", "group": "kern"},
+        {"id": "users", "name": "Benutzer", "icon": "🔑", "group": "kern"},
+        # === Dokumente v2 Modul ===
+        {"id": "dokumente_v2", "name": "Dokumente v2", "icon": "📑", "group": "dokumente_v2"},
+        {"id": "dokumente_v2_counters", "name": "Dokumente v2 Nummernzähler", "icon": "🔢", "group": "dokumente_v2"},
+        {"id": "dokumente_v2_counter_log", "name": "Dokumente v2 GoBD-Audit", "icon": "📊", "group": "dokumente_v2"},
+        {"id": "dokumente_v2_settings", "name": "Dokumente v2 Einstellungen", "icon": "⚙️", "group": "dokumente_v2"},
+        # === Kundenportal v2 (LIVE) ===
+        {"id": "portal2_accounts", "name": "Kundenportal v2 Accounts", "icon": "🔐", "group": "portal_v2"},
+        {"id": "portal2_messages", "name": "Kundenportal v2 Nachrichten", "icon": "💬", "group": "portal_v2"},
+        {"id": "portal2_uploads", "name": "Kundenportal v2 Uploads", "icon": "📎", "group": "portal_v2"},
+        {"id": "portal2_settings", "name": "Kundenportal v2 Einstellungen", "icon": "⚙️", "group": "portal_v2"},
+        # === Kundenportal v3 (Sandbox) ===
+        {"id": "portal3_accounts", "name": "Kundenportal v3 Accounts", "icon": "🔐", "group": "portal_v3"},
+        {"id": "portal3_messages", "name": "Kundenportal v3 Nachrichten", "icon": "💬", "group": "portal_v3"},
+        {"id": "portal3_uploads", "name": "Kundenportal v3 Uploads", "icon": "📎", "group": "portal_v3"},
+        {"id": "portal3_settings", "name": "Kundenportal v3 Einstellungen", "icon": "⚙️", "group": "portal_v3"},
+        # === Kundenportal v4 (Sandbox mit Dokumente-Anbindung) ===
+        {"id": "portal4_accounts", "name": "Kundenportal v4 Accounts", "icon": "🔐", "group": "portal_v4"},
+        {"id": "portal4_messages", "name": "Kundenportal v4 Nachrichten", "icon": "💬", "group": "portal_v4"},
+        {"id": "portal4_uploads", "name": "Kundenportal v4 Uploads", "icon": "📎", "group": "portal_v4"},
+        {"id": "portal4_settings", "name": "Kundenportal v4 Einstellungen", "icon": "⚙️", "group": "portal_v4"},
+        # === Legacy ===
+        {"id": "customers", "name": "Kunden (Alt)", "icon": "👥", "group": "legacy"},
+        {"id": "quotes", "name": "Angebote (Alt)", "icon": "📄", "group": "legacy"},
+        {"id": "orders", "name": "Aufträge (Alt)", "icon": "📦", "group": "legacy"},
+        {"id": "invoices", "name": "Rechnungen (Alt)", "icon": "💰", "group": "legacy"},
+        {"id": "articles", "name": "Artikel (Alt)", "icon": "🛠️", "group": "legacy"},
+        {"id": "rechnungen_v2", "name": "Rechnungen v2 (Test)", "icon": "🧾", "group": "legacy"},
+        {"id": "email_vorlagen", "name": "E-Mail Vorlagen", "icon": "✉️", "group": "legacy"},
+        {"id": "text_templates", "name": "Textvorlagen (Alt)", "icon": "📝", "group": "legacy"},
+        {"id": "leistungsbloecke", "name": "Leistungsblöcke", "icon": "📊", "group": "legacy"},
+        {"id": "diverses", "name": "Diverses/Info", "icon": "ℹ️", "group": "legacy"},
     ]
     
     # Zähle Einträge pro Collection
@@ -54,10 +84,23 @@ async def export_backup(
     try:
         # Parse collections parameter
         if not collections:
-            # Default: alle wichtigen Collections
-            selected = ["anfragen", "customers", "quotes", "orders", "invoices", 
-                       "articles", "settings", "email_vorlagen", "text_templates", 
-                       "leistungsbloecke", "diverses"]
+            # Default: ALLE aktiven + Legacy-Collections (24.04.2026)
+            selected = [
+                # Kern
+                "module_kunden", "module_artikel", "module_dokumente", "module_textvorlagen",
+                "module_kontakt", "einsaetze", "mitarbeiter", "anfragen", "settings", "users",
+                # Dokumente v2
+                "dokumente_v2", "dokumente_v2_counters", "dokumente_v2_counter_log", "dokumente_v2_settings",
+                # Portal v2 (LIVE)
+                "portal2_accounts", "portal2_messages", "portal2_uploads", "portal2_settings",
+                # Portal v3 (Sandbox)
+                "portal3_accounts", "portal3_messages", "portal3_uploads", "portal3_settings",
+                # Portal v4 (Sandbox)
+                "portal4_accounts", "portal4_messages", "portal4_uploads", "portal4_settings",
+                # Legacy
+                "customers", "quotes", "orders", "invoices", "articles", "rechnungen_v2",
+                "email_vorlagen", "text_templates", "leistungsbloecke", "diverses",
+            ]
         else:
             selected = [c.strip() for c in collections.split(",")]
         
@@ -224,7 +267,11 @@ async def get_backup_stats(user=Depends(get_current_user)):
         total_docs = 0
         collections_info = []
         
-        important_collections = ["anfragen", "customers", "quotes", "orders", "invoices", "articles"]
+        important_collections = [
+            "module_kunden", "module_artikel", "module_dokumente",
+            "einsaetze", "dokumente_v2",
+            "portal2_accounts", "portal4_accounts",
+        ]
         
         for coll_name in important_collections:
             count = await db[coll_name].count_documents({})

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 
@@ -9,18 +9,18 @@ const allNavItems = [
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
-  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated" },
+  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/dokumente-v2", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "new" },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
-  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"], variant: "deprecated" },
+  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/portal-v2", icon: Users, label: "Kundenportal", roles: ["admin"], variant: "new" },
-  { path: "/portal-v3", icon: Users, label: "Kundenportal (Test)", roles: ["admin"], variant: "sandbox" },
-  { path: "/portal-v4", icon: Users, label: "Kundenportal v4 (Dokumente)", roles: ["admin"], variant: "sandbox" },
+  { path: "/portal-v3", icon: Users, label: "Kundenportal (Test)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
+  { path: "/portal-v4", icon: Users, label: "Kundenportal v4 (Dokumente)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"] },
   { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"] },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
-  { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"] },
-  { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2" },
+  { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"], hideByDefault: true },
+  { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2", hideByDefault: true },
   { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"], featureFlag: "email_module_enabled" },
   { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
 ];
@@ -37,9 +37,14 @@ const getFilteredNavItems = () => {
   const role = getUserRole();
   let flags = {};
   try { flags = JSON.parse(localStorage.getItem("feature_flags") || "{}"); } catch { /* ignore */ }
+  // Aufgeräumt-Modus: blendet standardmäßig alle Module mit hideByDefault=true aus.
+  // Aktivieren über localStorage.setItem("show_legacy_modules", "1") oder Einstellungen.
+  let showLegacy = false;
+  try { showLegacy = localStorage.getItem("show_legacy_modules") === "1"; } catch { /* ignore */ }
   return allNavItems.filter(item => {
     if (!item.roles.includes(role)) return false;
     if (item.featureFlag && !flags[item.featureFlag]) return false;
+    if (item.hideByDefault && !showLegacy) return false;
     return true;
   });
 };
@@ -210,7 +215,26 @@ const Sidebar = ({ onLogout }) => {
           );
         })}
       </nav>
-      <div className="p-4 border-t">
+      <div className="p-4 border-t space-y-1">
+        <button
+          onClick={() => {
+            try {
+              const cur = localStorage.getItem("show_legacy_modules") === "1";
+              localStorage.setItem("show_legacy_modules", cur ? "0" : "1");
+              window.location.reload();
+            } catch { /* ignore */ }
+          }}
+          data-testid="btn-toggle-legacy"
+          className="flex items-center gap-3 px-4 py-2 w-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm transition-smooth"
+          title="Alt-Module (Dokumente alt, Kundenportale alt, Sandbox v3/v4) ein-/ausblenden"
+        >
+          <Eye className="w-4 h-4" />
+          <span>
+            {typeof window !== "undefined" && window.localStorage?.getItem("show_legacy_modules") === "1"
+              ? "Alt-Module ausblenden"
+              : "Alt-Module einblenden"}
+          </span>
+        </button>
         <button
           onClick={handleLogoutClick}
           data-testid="btn-logout"
