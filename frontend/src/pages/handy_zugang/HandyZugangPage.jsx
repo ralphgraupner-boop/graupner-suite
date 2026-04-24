@@ -13,7 +13,7 @@ export function HandyZugangPage() {
 
   const urls = {
     suite: "https://code-import-flow-1.emergent.host",
-    portal: "https://code-import-flow-1.emergent.host/portal-v2",
+    portal: "https://code-import-flow-1.emergent.host/portal-v4",
     monteur: "https://code-import-flow-1.emergent.host/monteur",
   };
 
