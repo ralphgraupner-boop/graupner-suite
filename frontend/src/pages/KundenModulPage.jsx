@@ -278,7 +278,7 @@ const KundenModulPage = () => {
                     </div>
                   )}
                   <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => navigate(`/module/projekte?kunde_id=${kunde.id}`)} className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700" title="Projekte dieses Kunden" data-testid={`btn-projekte-${kunde.id}`}><Folder className="w-4 h-4" /></button>
+                    <button onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700" title="Projekte dieses Kunden" data-testid={`btn-projekte-${kunde.id}`}><Folder className="w-4 h-4" /></button>
                     <button onClick={() => { setEditKunde(kunde); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>
                     <button onClick={() => handleDelete(kunde.id)} className={`p-2 rounded-sm transition-colors ${confirmDeleteId === kunde.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10'}`}>
                       {confirmDeleteId === kunde.id ? <span className="text-xs font-bold">?</span> : <Trash2 className="w-4 h-4" />}
@@ -409,7 +409,7 @@ const KundenModulPage = () => {
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                       <Button size="sm" onClick={() => { setEditKunde(kunde); setShowModal(true); }}><Edit className="w-4 h-4" /> Bearbeiten</Button>
-                      <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => navigate(`/module/projekte?kunde_id=${kunde.id}`)} data-testid={`btn-detail-projekte-${kunde.id}`}><Folder className="w-4 h-4" /> Projekte / Neu</Button>
+                      <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} data-testid={`btn-detail-projekte-${kunde.id}`}><Folder className="w-4 h-4" /> Projekte / Neu</Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/quotes/new?customer=${kunde.id}`)}><FileText className="w-4 h-4" /> Angebot erstellen</Button>
                       <button
                         onClick={async () => {

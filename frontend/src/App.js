@@ -43,6 +43,7 @@ import { DokumenteV2DetailPage } from "@/pages/dokumente_v2/DokumenteV2DetailPag
 import { DuplikateModulPage } from "@/pages/DuplikateModulPage";
 import { ProjekteListe } from "@/pages/projekte/ProjekteListe";
 import { ProjektDetail } from "@/pages/projekte/ProjektDetail";
+import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
 
@@ -130,6 +131,7 @@ function App() {
               <Route path="/dokumente-v2/:id" element={<MainLayout onLogout={logout}><DokumenteV2DetailPage /></MainLayout>} />
               <Route path="/module/duplikate" element={<MainLayout onLogout={logout}><DuplikateModulPage /></MainLayout>} />
               <Route path="/module/projekte" element={<MainLayout onLogout={logout}><ProjekteListe /></MainLayout>} />
+              <Route path="/module/projekte/werkbank/:kunde_id" element={<MainLayout onLogout={logout}><ProjektWerkbank /></MainLayout>} />
               <Route path="/module/projekte/:id" element={<MainLayout onLogout={logout}><ProjektDetail /></MainLayout>} />
               <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterModulPage /></MainLayout>} />
               <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzeModulPage /></MainLayout>} />

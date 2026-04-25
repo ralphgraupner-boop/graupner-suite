@@ -327,3 +327,31 @@ async def preview_from_kunde(kunde_id: str, user=Depends(get_current_user)):
                      "url": p.get("url") or p.get("path") or ""} for p in photos[:6]],
     }
 
+
+# ===================== Werkbank =====================
+
+
+@router.get("/werkbank/{kunde_id}")
+async def werkbank(kunde_id: str, user=Depends(get_current_user)):
+    """Liefert Kunde + alle seine Projekte in einem Aufruf fuer die Werkbank-Ansicht."""
+    k = await _kunde_or_404(kunde_id)
+    projekte = await db.module_projekte.find(
+        {"kunde_id": kunde_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(2000)
+    # Photos / Nachricht / Kategorien des Kunden – fuer "aus Anfrage anlegen"-Button
+    has_anfrage_daten = bool(
+        (k.get("nachricht") or "").strip()
+        or (k.get("kategorien") or [])
+        or (k.get("photos") or [])
+    )
+    return {
+        "kunde": k,
+        "projekte": projekte,
+        "stats": {
+            "projekte_total": len(projekte),
+            "projekte_aktiv": sum(1 for p in projekte if p.get("status") != "Archiv"),
+        },
+        "has_anfrage_daten": has_anfrage_daten,
+    }
+
+

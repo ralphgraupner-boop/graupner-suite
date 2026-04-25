@@ -114,7 +114,7 @@ const ProjekteListe = () => {
           {filtered.map(p => (
             <Card
               key={p.id}
-              onClick={() => navigate(`/module/projekte/${p.id}`)}
+              onClick={() => navigate(`/module/projekte/werkbank/${p.kunde_id}`)}
               className="p-4 hover:shadow-md transition-shadow cursor-pointer"
               data-testid={`projekt-row-${p.id}`}
             >
