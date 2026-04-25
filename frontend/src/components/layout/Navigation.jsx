@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 

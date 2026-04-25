@@ -54,6 +54,9 @@ async def get_available_collections(user=Depends(get_current_user)):
         {"id": "module_duplikate_settings", "name": "Duplikate-Modul Einstellungen", "icon": "⚙️", "group": "module_duplikate"},
         {"id": "duplikate_ignored", "name": "Duplikate Ignoriert", "icon": "🙈", "group": "module_duplikate"},
         {"id": "duplikate_merge_log", "name": "Duplikate Merge-Log", "icon": "📑", "group": "module_duplikate"},
+        # === Projekte-Modul ===
+        {"id": "module_projekte", "name": "Projekte", "icon": "🗂️", "group": "module_projekte"},
+        {"id": "module_projekte_settings", "name": "Projekte-Modul Einstellungen", "icon": "⚙️", "group": "module_projekte"},
         # === Legacy ===
         {"id": "customers", "name": "Kunden (Alt)", "icon": "👥", "group": "legacy"},
         {"id": "quotes", "name": "Angebote (Alt)", "icon": "📄", "group": "legacy"},
@@ -109,6 +112,8 @@ async def export_backup(
                 "monteur_app_settings", "monteur_app_notizen", "monteur_app_fotos",
                 # Duplikate-Modul
                 "module_duplikate_settings", "duplikate_ignored", "duplikate_merge_log",
+                # Projekte-Modul
+                "module_projekte", "module_projekte_settings",
                 # Legacy
                 "customers", "quotes", "orders", "invoices", "articles", "rechnungen_v2",
                 "email_vorlagen", "text_templates", "leistungsbloecke", "diverses",
