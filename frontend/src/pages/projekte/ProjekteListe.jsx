@@ -40,7 +40,16 @@ const ProjekteListe = () => {
 
   useEffect(() => { load(); }, []);
 
+  // Wenn ?kunde_id=… in URL: automatisch Neu-Dialog öffnen + Liste auf diesen Kunden filtern
+  useEffect(() => {
+    if (presetKundeId) {
+      setShowNew(true);
+    }
+  }, [presetKundeId]);
+
   const filtered = projekte.filter(p => {
+    // Wenn presetKundeId in URL: zeige nur Projekte dieses Kunden
+    if (presetKundeId && p.kunde_id !== presetKundeId) return false;
     if (statusFilter === "aktiv" && p.status === "Archiv") return false;
     if (statusFilter !== "aktiv" && statusFilter !== "" && p.status !== statusFilter) return false;
     if (search) {
