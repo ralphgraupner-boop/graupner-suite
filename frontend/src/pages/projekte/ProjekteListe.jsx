@@ -178,12 +178,13 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
     })();
   }, []);
 
-  const filteredKunden = kundeQuery
+  const filteredKunden = (kundeQuery
     ? kunden.filter(k => {
         const name = (k.name || `${k.vorname || ""} ${k.nachname || ""}`).toLowerCase();
         return name.includes(kundeQuery.toLowerCase()) || (k.email || "").toLowerCase().includes(kundeQuery.toLowerCase());
-      }).slice(0, 8)
-    : [];
+      })
+    : kunden
+  ).slice(0, 12);
 
   const selectedKunde = kunden.find(k => k.id === kundeId);
 
