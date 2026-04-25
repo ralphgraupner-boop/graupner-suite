@@ -245,9 +245,15 @@ async def create_from_kunde(kunde_id: str, payload: FromKundePayload = FromKunde
 
     Uebernimmt: Adresse, Kategorie (erste aus 'kategorien'), Beschreibung (aus 'nachricht'),
     optional Bilder aus 'photos' (vom Webhook hochgeladen).
+    Bilder werden NUR uebernommen, wenn dies das ERSTE Projekt fuer diesen Kunden ist
+    (sonst wuerden sie bei jedem 2./3. Projekt unnoetig erneut kopiert).
     """
     k = await _kunde_or_404(kunde_id)
     now = datetime.now(timezone.utc).isoformat()
+
+    # Existieren schon Projekte fuer diesen Kunden?
+    existing_count = await db.module_projekte.count_documents({"kunde_id": kunde_id})
+    is_first_projekt = existing_count == 0
 
     # Kategorie ableiten: erste aus Liste, sonst Sonstiges
     kategorien_liste = k.get("kategorien") or []
@@ -267,8 +273,9 @@ async def create_from_kunde(kunde_id: str, payload: FromKundePayload = FromKunde
         titel = f"Anfrage {kategorie}" if kategorien_liste else "Neues Projekt"
 
     # Bilder uebernehmen (Kopie der photos-Eintraege als bilder)
+    # Nur beim ERSTEN Projekt eines Kunden – weitere Projekte starten ohne Bilder.
     bilder = []
-    if payload.bilder_uebernehmen:
+    if payload.bilder_uebernehmen and is_first_projekt:
         for p in (k.get("photos") or []):
             url = p.get("url") or p.get("path") or ""
             if not url:

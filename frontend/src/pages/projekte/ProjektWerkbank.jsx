@@ -50,11 +50,16 @@ const ProjektWerkbank = () => {
   useEffect(() => { load(); }, [kunde_id]);
 
   const createFromAnfrage = async () => {
-    if (!window.confirm("Soll aus den Anfrage-Daten dieses Kunden ein neues Projekt erstellt werden?\nAdresse, Beschreibung, Kategorie und Bilder werden automatisch übernommen.")) return;
+    const isFirst = (data?.projekte?.length || 0) === 0;
+    const msg = isFirst
+      ? "Soll aus den Anfrage-Daten dieses Kunden ein neues Projekt erstellt werden?\nAdresse, Beschreibung, Kategorie und Bilder werden automatisch übernommen."
+      : "Soll ein weiteres Projekt aus den Anfrage-Daten erstellt werden?\nAdresse, Beschreibung und Kategorie werden übernommen.\n(Bilder werden NICHT erneut übernommen, da sie schon im 1. Projekt sind.)";
+    if (!window.confirm(msg)) return;
     setCreating(true);
     try {
       const res = await api.post(`/module-projekte/from-kunde/${kunde_id}`, { bilder_uebernehmen: true });
-      toast.success(`Projekt "${res.data.titel}" angelegt${res.data.bilder?.length ? ` (${res.data.bilder.length} Bilder übernommen)` : ""}`);
+      const bilderHinweis = res.data.bilder?.length ? ` (${res.data.bilder.length} Bilder übernommen)` : "";
+      toast.success(`Projekt "${res.data.titel}" angelegt${bilderHinweis}`);
       load();
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
@@ -361,17 +366,22 @@ const BilderGrid = ({ bilder, onDelete }) => {
         <div key={kat}>
           <div className="text-xs font-medium text-slate-600 capitalize mb-1">{kat} ({groups[kat].length})</div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {groups[kat].map(b => (
+            {groups[kat].map(b => {
+              const safeUrl = (b.url || "").startsWith("http") || (b.url || "").startsWith("/uploads")
+                ? b.url
+                : `/${(b.url || "").replace(/^\/+/, "")}`;
+              return (
               <div key={b.id} className="border rounded overflow-hidden bg-white group relative">
-                <a href={b.url} target="_blank" rel="noopener noreferrer">
-                  <img src={b.url} alt={b.filename} className="w-full h-20 object-cover" />
+                <a href={safeUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <img src={safeUrl} alt={b.filename} className="w-full h-20 object-cover" />
                 </a>
-                <button onClick={() => onDelete(b.id)} className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-red-600 opacity-0 group-hover:opacity-100" title="Löschen">
+                <button onClick={(e) => { e.stopPropagation(); onDelete(b.id); }} className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-red-600 opacity-0 group-hover:opacity-100" title="Löschen">
                   <X className="w-3 h-3" />
                 </button>
                 {b.beschreibung && <div className="text-[10px] text-slate-600 px-1 py-0.5 truncate">{b.beschreibung}</div>}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
