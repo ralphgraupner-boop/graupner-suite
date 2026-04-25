@@ -46,6 +46,8 @@ from portal_v4 import router as portal_v4_router
 from monteur_app import router as monteur_app_router
 from module_duplikate import router as module_duplikate_router
 from module_projekte import router as module_projekte_router
+from module_portal_v2_backup import router as module_portal_v2_backup_router
+from module_portal_v2_backup.routes import start_auto_backup_task
 from dokumente_v2 import router as dokumente_v2_router
 
 # Create the main app
@@ -106,6 +108,7 @@ app.include_router(monteur_app_router)  # Monteur-App (mobile), prefix /api/mont
 app.include_router(dokumente_v2_router)  # Dokumente v2 – Modul-First, prefix /api/dokumente-v2
 app.include_router(module_duplikate_router)  # Duplikate-Erkennung & Merge, prefix /api/module-duplikate
 app.include_router(module_projekte_router)   # Projekte (Akten/Vorgaenge), prefix /api/module-projekte
+app.include_router(module_portal_v2_backup_router)  # Portal-v2-Sicherungen, prefix /api/module-portal-v2-backup
 
 @app.on_event("startup")
 async def startup_event():
@@ -122,6 +125,11 @@ async def startup_event():
         await auto_sync_kontakt_status_on_startup()
     except Exception as e:
         logger.warning(f"Auto-Sync kontakt_status import: {e}")
+    # Portal-v2-Backup: taeglicher Auto-Snapshot (Background-Task)
+    try:
+        start_auto_backup_task()
+    except Exception as e:
+        logger.warning(f"Portal-v2-Backup Auto-Task: {e}")
     # IMAP polling background task - TEMPORAERE DEAKTIVIERT (User-Wunsch)
     # Um wieder zu aktivieren: naechste Zeile einkommentieren
     import asyncio

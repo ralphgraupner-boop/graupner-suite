@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { subscribeToPush, unsubscribeFromPush, ensureVapidKey } from "@/lib/push";
 import { PLACEHOLDERS } from "@/components/TextTemplateSelect";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { PortalV2BackupPanel } from "@/components/PortalV2BackupPanel";
 import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
 import { DocumentTemplatesPanel } from "@/components/DocumentTemplatesPanel";
 import { HilfeTab } from "@/components/HilfeTab";
@@ -2315,6 +2316,9 @@ const BackupTab = () => {
     <div className="space-y-6">
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
+
+      {/* Portal v2 Sicherungen (eigenes Modul) */}
+      <PortalV2BackupPanel />
 
       {/* Info Card */}
       <Card className="p-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">

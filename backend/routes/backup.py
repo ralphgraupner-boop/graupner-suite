@@ -57,6 +57,8 @@ async def get_available_collections(user=Depends(get_current_user)):
         # === Projekte-Modul ===
         {"id": "module_projekte", "name": "Projekte", "icon": "🗂️", "group": "module_projekte"},
         {"id": "module_projekte_settings", "name": "Projekte-Modul Einstellungen", "icon": "⚙️", "group": "module_projekte"},
+        # === Portal-v2-Backup-Modul ===
+        {"id": "portal_v2_backups", "name": "Portal v2 Sicherungen", "icon": "🛡️", "group": "module_portal_v2_backup"},
         # === Legacy ===
         {"id": "customers", "name": "Kunden (Alt)", "icon": "👥", "group": "legacy"},
         {"id": "quotes", "name": "Angebote (Alt)", "icon": "📄", "group": "legacy"},
@@ -114,6 +116,8 @@ async def export_backup(
                 "module_duplikate_settings", "duplikate_ignored", "duplikate_merge_log",
                 # Projekte-Modul
                 "module_projekte", "module_projekte_settings",
+                # Portal-v2-Backup
+                "portal_v2_backups",
                 # Legacy
                 "customers", "quotes", "orders", "invoices", "articles", "rechnungen_v2",
                 "email_vorlagen", "text_templates", "leistungsbloecke", "diverses",
