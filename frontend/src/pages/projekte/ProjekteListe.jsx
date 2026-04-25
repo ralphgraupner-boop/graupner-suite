@@ -166,6 +166,8 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
   const [beschreibung, setBeschreibung] = useState("");
   const [kategorie, setKategorie] = useState("Sonstiges");
   const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState(null); // {kunde_name, photos_count, nachricht, kategorien}
+  const [bilderUebernehmen, setBilderUebernehmen] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -178,6 +180,19 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
     })();
   }, []);
 
+  // Wenn Kunde gewählt: Vorschau aus Anfrage holen
+  useEffect(() => {
+    if (!kundeId) { setPreview(null); return; }
+    (async () => {
+      try {
+        const res = await api.get(`/module-projekte/from-kunde/${kundeId}/preview`);
+        setPreview(res.data);
+      } catch (err) {
+        setPreview(null);
+      }
+    })();
+  }, [kundeId]);
+
   const filteredKunden = (kundeQuery
     ? kunden.filter(k => {
         const name = (k.name || `${k.vorname || ""} ${k.nachname || ""}`).toLowerCase();
@@ -187,6 +202,7 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
   ).slice(0, 12);
 
   const selectedKunde = kunden.find(k => k.id === kundeId);
+  const hasAnfrageDaten = preview && (preview.nachricht || preview.photos_count > 0 || preview.kategorien?.length);
 
   const submit = async () => {
     if (!kundeId) return toast.error("Bitte einen Kunden auswählen");
@@ -208,6 +224,23 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
     }
   };
 
+  const submitFromKunde = async () => {
+    if (!kundeId) return toast.error("Bitte einen Kunden auswählen");
+    setSaving(true);
+    try {
+      const res = await api.post(`/module-projekte/from-kunde/${kundeId}`, {
+        titel: titel.trim() || null,
+        bilder_uebernehmen: bilderUebernehmen,
+      });
+      toast.success(`Projekt aus Anfrage erstellt${res.data.bilder?.length ? ` (${res.data.bilder.length} Bilder übernommen)` : ""}`);
+      onCreated(res.data);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Modal isOpen={true} onClose={onClose} title="Neues Projekt anlegen" size="lg">
       <div className="p-4 space-y-4">
@@ -217,13 +250,13 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
             <div className="flex items-center gap-2 p-2 border rounded bg-emerald-50" data-testid="selected-kunde">
               <UserIcon className="w-4 h-4 text-emerald-600" />
               <span className="flex-1 text-sm">{selectedKunde.name || `${selectedKunde.vorname || ""} ${selectedKunde.nachname || ""}`.trim()}</span>
-              <button onClick={() => { setKundeId(""); setKundeQuery(""); }} className="text-xs text-primary hover:underline">Ändern</button>
+              <button onClick={() => { setKundeId(""); setKundeQuery(""); setPreview(null); }} className="text-xs text-primary hover:underline">Ändern</button>
             </div>
           ) : (
             <>
               <Input value={kundeQuery} onChange={(e) => setKundeQuery(e.target.value)} placeholder="Name oder E-Mail eingeben…" data-testid="input-kunde-search" />
               {filteredKunden.length > 0 && (
-                <div className="mt-1 border rounded max-h-40 overflow-y-auto">
+                <div className="mt-1 border rounded max-h-52 overflow-y-auto">
                   {filteredKunden.map(k => (
                     <button
                       key={k.id}
@@ -240,6 +273,34 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
             </>
           )}
         </div>
+
+        {/* Anfrage-Vorschau, falls Kunde Anfrage-Daten hat */}
+        {selectedKunde && hasAnfrageDaten && (
+          <div className="p-3 border-2 border-emerald-300 bg-emerald-50 rounded space-y-2" data-testid="anfrage-preview">
+            <div className="text-sm font-semibold text-emerald-900 flex items-center gap-2">
+              ✨ Daten aus Kundenanfrage übernehmen
+            </div>
+            <div className="text-xs text-emerald-800 space-y-1">
+              {preview.adresse && <div>📍 {preview.adresse}</div>}
+              {preview.kategorien?.length > 0 && <div>🏷️ Kategorien: {preview.kategorien.join(", ")}</div>}
+              {preview.nachricht && <div>💬 Nachricht: <span className="italic">"{preview.nachricht.slice(0, 120)}{preview.nachricht.length > 120 ? "…" : ""}"</span></div>}
+              {preview.photos_count > 0 && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span>📷 <strong>{preview.photos_count} Bild(er)</strong> aus dem Kontaktformular</span>
+                  <label className="flex items-center gap-1 text-xs">
+                    <input type="checkbox" checked={bilderUebernehmen} onChange={(e) => setBilderUebernehmen(e.target.checked)} data-testid="checkbox-bilder-uebernehmen" />
+                    übernehmen
+                  </label>
+                </div>
+              )}
+            </div>
+            <Button size="sm" onClick={submitFromKunde} disabled={saving} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" data-testid="btn-from-kunde">
+              {saving ? "Erstelle…" : "→ Projekt aus dieser Anfrage erstellen"}
+            </Button>
+            <div className="text-xs text-emerald-700 text-center">— oder unten manuell ausfüllen —</div>
+          </div>
+        )}
+
         <div>
           <label className="text-sm font-medium block mb-1">Titel *</label>
           <Input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="z.B. Innentür Wohnzimmer reparieren" data-testid="input-projekt-titel" />
@@ -256,7 +317,7 @@ const NewProjektDialog = ({ onClose, onCreated, presetKundeId }) => {
         </div>
         <div className="flex items-center justify-between pt-3 border-t">
           <Button variant="outline" onClick={onClose} disabled={saving}>Abbrechen</Button>
-          <Button onClick={submit} disabled={saving} data-testid="btn-submit-projekt">{saving ? "Speichern…" : "Projekt anlegen"}</Button>
+          <Button onClick={submit} disabled={saving} data-testid="btn-submit-projekt">{saving ? "Speichern…" : "Leeres Projekt anlegen"}</Button>
         </div>
       </div>
     </Modal>
