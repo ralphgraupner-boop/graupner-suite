@@ -8,6 +8,7 @@ const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
   { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new" },
+  { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], variant: "new" },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated", hideByDefault: true },
