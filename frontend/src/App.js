@@ -43,6 +43,7 @@ import { DokumenteV2Page } from "@/pages/dokumente_v2/DokumenteV2Page";
 import { DokumenteV2DetailPage } from "@/pages/dokumente_v2/DokumenteV2DetailPage";
 import { DuplikateModulPage } from "@/pages/DuplikateModulPage";
 import { ProjekteListe } from "@/pages/projekte/ProjekteListe";
+import ModuleAufgabenPage from "@/pages/aufgaben/ModuleAufgabenPage";
 import { ProjektDetail } from "@/pages/projekte/ProjektDetail";
 import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
@@ -132,6 +133,7 @@ function App() {
               <Route path="/dokumente-v2" element={<MainLayout onLogout={logout}><DokumenteV2Page /></MainLayout>} />
               <Route path="/dokumente-v2/:id" element={<MainLayout onLogout={logout}><DokumenteV2DetailPage /></MainLayout>} />
               <Route path="/module/duplikate" element={<MainLayout onLogout={logout}><DuplikateModulPage /></MainLayout>} />
+              <Route path="/module/aufgaben" element={<MainLayout onLogout={logout}><ModuleAufgabenPage /></MainLayout>} />
               <Route path="/module/projekte" element={<MainLayout onLogout={logout}><ProjekteListe /></MainLayout>} />
               <Route path="/module/projekte/werkbank/:kunde_id" element={<MainLayout onLogout={logout}><ProjektWerkbank /></MainLayout>} />
               <Route path="/module/projekte/:id" element={<MainLayout onLogout={logout}><ProjektDetail /></MainLayout>} />
