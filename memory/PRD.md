@@ -8,13 +8,16 @@
 
 ---
 
-## 🚦 Stand: 26.04.2026 Nacht
+## 🚦 Stand: 26.04.2026 spät
 
 - Portal v2: LIVE, TABU
-- Dokumente v2 Phase 1+2+3+4: ✅ komplett (49/49 Tests grün)
-- `/portals` Bugs aufgeräumt (Sidebar, Aktiv-Toggle, Textvorlagen sichtbar, Script-Error gefixt)
-- DB ist absichtlich leer/wenige Datensätze – User testet live
-- **Nächste Priorität:** Module-First Workflow für `module_aufgaben` → `module_termine` → Google-Kalender-Anbindung
+- Dokumente v2 Phase 1+2+3+4: ✅ komplett
+- `/portals` Bugs aufgeräumt (Sidebar, Aktiv-Toggle, Textvorlagen, Script-Error)
+- **`module_aufgaben` ✅ fertig + getestet (21/21)** – Liste/Filter/CRUD/Status/Stats
+- **`module_termine` ✅ fertig + getestet (24/24)** – mit GO-Workflow + Datenmaske `/enrich/{id}`
+- Sidebar-Badge zeigt live `wartet_auf_go`-Count
+- DB ist absichtlich leer / minimal — User testet live
+- **Nächste Priorität:** `module_google_kalender` Anbindung (manueller "GO"-Klick → Sync)
 
 ---
 
@@ -59,9 +62,9 @@ Komplettes Sub-System `/app/backend/portal_v2/`, `/app/frontend/src/pages/portal
 | `portal_klon` | 1:1 Sandbox-Kopie von `/portals` | ✅ |
 | `portals` (legacy) | Aktiv genutztes Kundenportal | ✅ (User-Präferenz) |
 | `einsaetze` | Kern-Einsatzmodul (Termine als Felder) | ✅ |
-| **`module_aufgaben`** | Interne Aufgaben (Auto waschen, Werkzeugpflege) | ❌ **TODO** |
-| **`module_arbeitsanweisungen`** | Ausführungstexte/Arbeitsanweisungen | ❌ TODO (oder über Textvorlagen) |
-| **`module_termine`** | Termine isoliert mit Status-Workflow | ❌ **TODO** |
+| **`module_aufgaben`** | Interne Aufgaben (Auto waschen, Werkzeugpflege) | ✅ **NEU 26.04.2026** |
+| **`module_termine`** | Termine mit GO-Workflow + Datenmaske `/enrich` | ✅ **NEU 26.04.2026** |
+| `module_arbeitsanweisungen` | Ausführungstexte/Arbeitsanweisungen | ❌ TODO (oder über Textvorlagen) |
 | **`module_google_kalender`** | API-Sync mit Bestätigungs-Dialog ("GO") | ❌ **TODO** |
 
 ---
