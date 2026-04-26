@@ -625,3 +625,47 @@ async def portals_unread_count(user=Depends(get_current_user)):
     ).limit(5)
     items = [doc async for doc in cursor]
     return {"count": count, "items": items}
+
+
+# ===================== Klon-spezifische öffentliche Endpoints =====================
+# Diese ersetzen die im Original entfernten /portal/* fuer den Klon-Datei-Download.
+# Werden vom Frontend-Klon (PortalsKlonPage) aufgerufen.
+
+@router.get("/portal-klon/file/{file_id}")
+async def klon_download_file(file_id: str, auth: str = ""):
+    record = await db.portal_klon_files.find_one({"id": file_id, "is_deleted": False})
+    if not record:
+        raise HTTPException(404, "Datei nicht gefunden")
+    data, ct = get_object(record["storage_path"])
+    return Response(
+        content=data,
+        media_type=record.get("content_type", ct),
+        headers={"Content-Disposition": f'inline; filename="{record.get("original_filename", "file")}"'}
+    )
+
+
+# Klon nutzt eigene Settings (Begruessung/Hinweise/Logo)
+DEFAULT_KLON_PORTAL_SETTINGS = {
+    "begruessung": "Wir Tischlerei Graupner begrüßen Sie herzlich in Ihrem Kundenportal.",
+    "hinweise": "Sie können Bilder hochladen und Hinweise eintragen.",
+    "absende_text": "Ich habe alles eingetragen und sende es jetzt ab",
+    "fertig_text": "Vielen Dank! Wir haben Ihre Nachricht erhalten.",
+    "logo_url": "",
+    "zeige_praesenz_bilder": True,
+    "praesenz_bilder": [],
+}
+
+
+@router.get("/portal-klon-settings")
+async def get_klon_portal_settings():
+    settings = await db.portal_klon_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return DEFAULT_KLON_PORTAL_SETTINGS
+    return {**DEFAULT_KLON_PORTAL_SETTINGS, **settings}
+
+
+@router.put("/portal-klon-settings")
+async def update_klon_portal_settings(payload: dict, user=Depends(get_current_user)):
+    payload.pop("_id", None)
+    await db.portal_klon_settings.update_one({}, {"$set": payload}, upsert=True)
+    return await get_klon_portal_settings()

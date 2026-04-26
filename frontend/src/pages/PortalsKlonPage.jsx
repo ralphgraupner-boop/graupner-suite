@@ -789,7 +789,7 @@ const FileCard = ({ file, onDelete }) => {
 
   useEffect(() => {
     if (file.content_type?.startsWith("image/")) {
-      api.get(`/portal/file/${file.id}`, { responseType: "blob" })
+      api.get(`/portal-klon/file/${file.id}`, { responseType: "blob" })
         .then(res => setPreviewUrl(URL.createObjectURL(res.data)))
         .catch(() => {});
     }
@@ -797,7 +797,7 @@ const FileCard = ({ file, onDelete }) => {
   }, [file.id, file.content_type]);
 
   const openFile = () => {
-    const url = `${API}/portal/file/${file.id}`;
+    const url = `${API}/portal-klon/file/${file.id}`;
     window.open(url, "_blank");
   };
 
