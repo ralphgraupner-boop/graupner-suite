@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Users, Plus, Pencil, Trash2, Settings as SettingsIcon, Power, Mail, Download, Send, CheckCircle2 } from "lucide-react";
-import { PortalV2KlonImportDialog } from "@/pages/portal_v2/PortalV2KlonImportDialog";
+import { PortalV2KlonImportDialog } from "@/pages/portal_v2_klon/PortalV2KlonImportDialog";
 
 /**
  * Kundenportal (Klon) – Admin-Übersicht (Phase 1: Gerüst + CRUD)
