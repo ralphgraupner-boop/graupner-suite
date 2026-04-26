@@ -821,7 +821,11 @@ async def public_download_file(file_id: str, auth: str = ""):
     record = await db.portal_files.find_one({"id": file_id, "is_deleted": False})
     if not record:
         raise HTTPException(404, "Datei nicht gefunden")
-    data, ct = get_object(record["storage_path"])
+    try:
+        data, ct = get_object(record["storage_path"])
+    except Exception as e:
+        logger.warning(f"portal/file: storage error for {file_id}: {e}")
+        raise HTTPException(404, "Datei im Storage nicht mehr verfügbar")
     return Response(
         content=data,
         media_type=record.get("content_type", ct),

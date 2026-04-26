@@ -262,10 +262,16 @@ const PortalsPage = () => {
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleActive(portal); }}
-                    className="p-2 hover:bg-muted rounded-sm"
-                    title={portal.active ? "Deaktivieren" : "Aktivieren"}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                      portal.active
+                        ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                        : "bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200"
+                    }`}
+                    title={portal.active ? "Klick: Portal deaktivieren" : "Klick: Portal aktivieren"}
+                    data-testid={`btn-toggle-active-${portal.id}`}
                   >
-                    {portal.active ? <ToggleRight className="w-4 h-4 text-green-600" /> : <ToggleLeft className="w-4 h-4" />}
+                    {portal.active ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                    {portal.active ? "Aktiv" : "Inaktiv"}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); deletePortal(portal.id); }}
@@ -458,7 +464,6 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
   const [sending, setSending] = useState(false);
   const [vorlagen, setVorlagen] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     api.get(`/portals/${portal.id}/files`).catch(() => {});
@@ -502,7 +507,6 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
       .replace(/\{datum\}/g, today);
     setMsgText(text);
     setSearchTerm(vorlage.title || "");
-    setShowResults(false);
   };
 
   const [showPreview, setShowPreview] = useState(false);
@@ -576,9 +580,18 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
           <button onClick={onCopyLink} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted" data-testid="btn-copy-portal-link">
             <Copy className="w-3.5 h-3.5" /> Link kopieren
           </button>
-          <button onClick={onToggle} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted">
-            {portal.active ? <ToggleRight className="w-3.5 h-3.5 text-green-600" /> : <ToggleLeft className="w-3.5 h-3.5" />}
-            {portal.active ? "Deaktivieren" : "Aktivieren"}
+          <button
+            onClick={onToggle}
+            className={`flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm font-medium transition-colors ${
+              portal.active
+                ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                : "bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200"
+            }`}
+            title={portal.active ? "Klick: Portal deaktivieren" : "Klick: Portal aktivieren"}
+            data-testid="btn-toggle-active-detail"
+          >
+            {portal.active ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+            {portal.active ? "Aktiv" : "Inaktiv"}
           </button>
         </div>
       </div>
@@ -637,29 +650,38 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
           Nachricht an Kunden senden
         </h3>
         <div className="space-y-3">
-          <div className="relative">
-            <label className="block text-sm font-medium mb-1">Textbaustein wählen</label>
-            <div className="relative">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium">
+                Textbaustein wählen <span className="text-xs text-muted-foreground font-normal">({vorlagen.length} Vorlagen verfügbar)</span>
+              </label>
+              {vorlagen.length === 0 && (
+                <a href="/module/textvorlagen" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                  + Vorlage anlegen
+                </a>
+              )}
+            </div>
+            <div className="relative mb-2">
               <input
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setShowResults(true); }}
-                onFocus={() => setShowResults(true)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full border rounded-sm p-2 text-sm pr-8"
-                placeholder="Vorlage suchen... z.B. Bilder"
+                placeholder={vorlagen.length === 0 ? "Keine Vorlagen für 'Kundenportal' angelegt – über Modul Textvorlagen anlegen" : "Vorlage suchen oder unten direkt klicken..."}
                 data-testid="portal-vorlage-search"
+                disabled={vorlagen.length === 0}
               />
               <Search className="w-4 h-4 text-muted-foreground absolute right-2.5 top-2.5" />
             </div>
-            {showResults && (
-              <div className="absolute z-10 mt-1 w-full bg-background border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid="portal-vorlage-results">
+            {vorlagen.length > 0 && (
+              <div className="border rounded-sm bg-muted/20 max-h-48 overflow-y-auto" data-testid="portal-vorlage-results">
                 {filtered.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground">Keine Vorlagen gefunden</p>
+                  <p className="p-3 text-sm text-muted-foreground">Keine passende Vorlage zu "{searchTerm}"</p>
                 ) : (
                   filtered.map((v) => (
                     <button
                       key={v.id}
                       onClick={() => applyVorlage(v)}
-                      className="w-full text-left p-3 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
+                      className="w-full text-left p-2.5 hover:bg-primary/5 border-b last:border-b-0 transition-colors"
                       data-testid={`portal-vorlage-${v.id}`}
                     >
                       <p className="text-sm font-medium">{v.title}</p>
@@ -789,8 +811,13 @@ const FileCard = ({ file, onDelete }) => {
 
   useEffect(() => {
     if (file.content_type?.startsWith("image/")) {
-      api.get(`/portal/file/${file.id}`, { responseType: "blob" })
-        .then(res => setPreviewUrl(URL.createObjectURL(res.data)))
+      // validateStatus: () => true verhindert axios "responseText on blob"-Fehler bei 500
+      api.get(`/portal/file/${file.id}`, { responseType: "blob", validateStatus: () => true })
+        .then(res => {
+          if (res.status >= 200 && res.status < 300 && res.data instanceof Blob && res.data.type.startsWith("image/")) {
+            setPreviewUrl(URL.createObjectURL(res.data));
+          }
+        })
         .catch(() => {});
     }
     return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
