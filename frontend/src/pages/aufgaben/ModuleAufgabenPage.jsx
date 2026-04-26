@@ -165,6 +165,7 @@ export default function ModuleAufgabenPage() {
         <button
           onClick={() => setFilterKategorie("")}
           className={`px-2 py-1 rounded-sm border ${!filterKategorie ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          data-testid="filter-kategorie-alle"
         >
           Alle
         </button>

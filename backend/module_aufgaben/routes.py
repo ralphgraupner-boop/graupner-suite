@@ -198,6 +198,8 @@ async def update_aufgabe(aufgabe_id: str, payload: AufgabeUpdate, user=Depends(g
 
     data = {k: v for k, v in payload.model_dump().items() if v is not None}
     _validate_enums(data)
+    if "titel" in data and not data["titel"].strip():
+        raise HTTPException(400, "Titel darf nicht leer sein")
 
     update = {"updated_at": datetime.now(timezone.utc).isoformat()}
     for field in ("titel", "beschreibung", "kategorie", "prioritaet",

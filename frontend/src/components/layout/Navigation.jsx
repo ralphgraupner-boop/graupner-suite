@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 
@@ -10,6 +10,7 @@ const allNavItems = [
   { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new" },
   { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], variant: "new" },
   { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
+  { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"], variant: "new" },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated", hideByDefault: true },
@@ -61,7 +62,7 @@ const Sidebar = ({ onLogout }) => {
   const username = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "null"); return typeof u === "object" ? u.username : u; } catch { return ""; } })();
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0 });
+  const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0 });
   const prevEmailRef = useRef(0);
 
   // Poll fuer ungelesene E-Mails und Portal-Aktivitaeten
@@ -76,14 +77,19 @@ const Sidebar = ({ onLogout }) => {
 
     const fetchCounts = async () => {
       try {
-        const calls = [api.get("/portals/unread-count").catch(() => ({ data: { count: 0 } }))];
+        const calls = [
+          api.get("/portals/unread-count").catch(() => ({ data: { count: 0 } })),
+          api.get("/module-termine/wartet-auf-go").catch(() => ({ data: { count: 0 } })),
+        ];
         if (emailModuleEnabled) {
           calls.unshift(api.get("/imap/inbox/stats").catch(() => ({ data: { unread: 0 } })));
         }
         const results = await Promise.all(calls);
         if (cancelled) return;
         const emailCount = emailModuleEnabled ? (results[0].data?.unread || 0) : 0;
-        const portalCount = emailModuleEnabled ? (results[1].data?.count || 0) : (results[0].data?.count || 0);
+        const portalIdx = emailModuleEnabled ? 1 : 0;
+        const portalCount = results[portalIdx].data?.count || 0;
+        const terminGoCount = results[portalIdx + 1].data?.count || 0;
         // Sound bei neuer Mail spielen (nur wenn Anzahl gestiegen)
         if (emailModuleEnabled && emailCount > prevEmailRef.current && prevEmailRef.current !== 0) {
           try {
@@ -93,7 +99,7 @@ const Sidebar = ({ onLogout }) => {
           } catch { /* ignore */ }
         }
         prevEmailRef.current = emailCount;
-        setUnreadCounts({ email: emailCount, portal: portalCount });
+        setUnreadCounts({ email: emailCount, portal: portalCount, termine_go: terminGoCount });
       } catch { /* ignore */ }
     };
     fetchCounts();
@@ -166,7 +172,11 @@ const Sidebar = ({ onLogout }) => {
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map(({ path, icon: Icon, label, variant }) => {
-          const badgeCount = path === "/email" ? unreadCounts.email : (path === "/portals" ? unreadCounts.portal : 0);
+          const badgeCount = path === "/email"
+            ? unreadCounts.email
+            : (path === "/portals"
+                ? unreadCounts.portal
+                : (path === "/module/termine" ? unreadCounts.termine_go : 0));
           const isActive = location.pathname.startsWith(path);
           const hasBadge = badgeCount > 0 && !isActive;
           const helpKey = `nav.${path.split("/").filter(Boolean).pop()}`;
