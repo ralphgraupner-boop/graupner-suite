@@ -22,6 +22,7 @@ from routes.dashboard import router as dashboard_router
 from routes.text_templates import router as text_templates_router
 from routes.leistungsbloecke import router as leistungsbloecke_router
 from routes.portal import router as portal_router
+from routes.portal_klon import router as portal_klon_router
 from routes.einsaetze import router as einsaetze_router
 from routes.document_templates import router as document_templates_router
 from routes.imap import router as imap_router
@@ -43,7 +44,6 @@ from routes.rechnungen_v2 import router as rechnungen_v2_router
 from portal_v2 import router as portal_v2_router
 from portal_v3 import router as portal_v3_router
 from portal_v4 import router as portal_v4_router
-from portal_v2_klon import router as portal_v2_klon_router
 from monteur_app import router as monteur_app_router
 from module_duplikate import router as module_duplikate_router
 from module_projekte import router as module_projekte_router
@@ -75,6 +75,7 @@ api_router.include_router(dashboard_router)
 api_router.include_router(text_templates_router)
 api_router.include_router(leistungsbloecke_router)
 api_router.include_router(portal_router)
+api_router.include_router(portal_klon_router)  # Kundenportale Arbeitskopie (Klon von /portals)
 api_router.include_router(einsaetze_router)
 api_router.include_router(document_templates_router)
 api_router.include_router(imap_router)
@@ -105,7 +106,6 @@ app.include_router(rechnungen_v2_router)  # v2-Modul mit eigenem prefix /api/v2
 app.include_router(portal_v2_router)  # Kundenportal v2 – Modul-First, prefix /api/portal-v2
 app.include_router(portal_v3_router)  # Kundenportal v3 (Test/Performance-Sandbox), prefix /api/portal-v3
 app.include_router(portal_v4_router)  # Kundenportal v4 (Dokumente-Anbindung-Sandbox), prefix /api/portal-v4
-app.include_router(portal_v2_klon_router)  # Kundenportal v2 KLON – Arbeitskopie, prefix /api/portal-v2-klon
 app.include_router(monteur_app_router)  # Monteur-App (mobile), prefix /api/monteur
 app.include_router(dokumente_v2_router)  # Dokumente v2 – Modul-First, prefix /api/dokumente-v2
 app.include_router(module_duplikate_router)  # Duplikate-Erkennung & Merge, prefix /api/module-duplikate

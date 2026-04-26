@@ -15,7 +15,7 @@ const allNavItems = [
   { path: "/dokumente-v2", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "new" },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"], variant: "deprecated", hideByDefault: true },
-  { path: "/portal-v2-klon", icon: Globe, label: "Kundenportal (Arbeitskopie)", roles: ["admin"], variant: "new" },
+  { path: "/portals-klon", icon: Globe, label: "Kundenportale (Arbeitskopie)", roles: ["admin"], variant: "new" },
   { path: "/portal-v2", icon: Users, label: "Kundenportal (alt)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/portal-v3", icon: Users, label: "Kundenportal (Test)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
   { path: "/portal-v4", icon: Users, label: "Kundenportal", roles: ["admin"], variant: "new" },

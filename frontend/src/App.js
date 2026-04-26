@@ -17,6 +17,7 @@ import { DokumenteModulPage } from "@/pages/DokumenteModulPage";
 import { TextvorlagenModulPage } from "@/pages/TextvorlagenModulPage";
 import { KundenModulPage } from "@/pages/KundenModulPage";
 import { PortalsPage } from "@/pages/PortalsPage";
+import PortalsKlonPage from "@/pages/PortalsKlonPage";
 import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
 import { MitarbeiterModulPage } from "@/pages/MitarbeiterModulPage";
@@ -26,10 +27,6 @@ import { PortalV2AdminPage } from "@/pages/portal_v2/PortalV2AdminPage";
 import { PortalV2DetailPage } from "@/pages/portal_v2/PortalV2DetailPage";
 import { PortalV2LoginPage } from "@/pages/portal_v2/PortalV2LoginPage";
 import { PortalV2CustomerPage } from "@/pages/portal_v2/PortalV2CustomerPage";
-import { PortalV2KlonAdminPage } from "@/pages/portal_v2_klon/PortalV2KlonAdminPage";
-import { PortalV2KlonDetailPage } from "@/pages/portal_v2_klon/PortalV2KlonDetailPage";
-import { PortalV2KlonLoginPage } from "@/pages/portal_v2_klon/PortalV2KlonLoginPage";
-import { PortalV2KlonCustomerPage } from "@/pages/portal_v2_klon/PortalV2KlonCustomerPage";
 import { PortalV3AdminPage } from "@/pages/portal_v3/PortalV3AdminPage";
 import { PortalV3DetailPage } from "@/pages/portal_v3/PortalV3DetailPage";
 import { PortalV3LoginPage } from "@/pages/portal_v3/PortalV3LoginPage";
@@ -85,9 +82,6 @@ function App() {
           <Route path="/portal-v2/login" element={<PortalV2LoginPage />} />
           <Route path="/portal-v2/login/:token" element={<PortalV2LoginPage />} />
           <Route path="/portal-v2/app" element={<PortalV2CustomerPage />} />
-          <Route path="/portal-v2-klon/login" element={<PortalV2KlonLoginPage />} />
-          <Route path="/portal-v2-klon/login/:token" element={<PortalV2KlonLoginPage />} />
-          <Route path="/portal-v2-klon/app" element={<PortalV2KlonCustomerPage />} />
           {/* Kundenportal v3 (oeffentlich, Test) */}
           <Route path="/portal-v3/login" element={<PortalV3LoginPage />} />
           <Route path="/portal-v3/login/:token" element={<PortalV3LoginPage />} />
@@ -120,13 +114,12 @@ function App() {
               {/* E-Mail & Einstellungen */}
               <Route path="/email" element={<MainLayout onLogout={logout}><EmailPage /></MainLayout>} />
               <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
+              <Route path="/portals-klon" element={<MainLayout onLogout={logout}><PortalsKlonPage /></MainLayout>} />
               <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
               <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
               <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
               <Route path="/portal-v2" element={<MainLayout onLogout={logout}><PortalV2AdminPage /></MainLayout>} />
               <Route path="/portal-v2/detail/:id" element={<MainLayout onLogout={logout}><PortalV2DetailPage /></MainLayout>} />
-              <Route path="/portal-v2-klon" element={<MainLayout onLogout={logout}><PortalV2KlonAdminPage /></MainLayout>} />
-              <Route path="/portal-v2-klon/detail/:id" element={<MainLayout onLogout={logout}><PortalV2KlonDetailPage /></MainLayout>} />
               <Route path="/portal-v3" element={<MainLayout onLogout={logout}><PortalV3AdminPage /></MainLayout>} />
               <Route path="/portal-v3/detail/:id" element={<MainLayout onLogout={logout}><PortalV3DetailPage /></MainLayout>} />
               <Route path="/portal-v4" element={<MainLayout onLogout={logout}><PortalV4AdminPage /></MainLayout>} />
