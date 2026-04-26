@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 
-const PortalsPage = () => {
+const PortalsKlonPage = () => {
   const location = useLocation();
   const [portals, setPortals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -830,4 +830,5 @@ const FileCard = ({ file, onDelete }) => {
   );
 };
 
-export { PortalsPage };
+export { PortalsKlonPage };
+export default PortalsKlonPage;
