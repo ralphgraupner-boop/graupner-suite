@@ -36,6 +36,9 @@ class AufgabeCreate(BaseModel):
     zugewiesen_an: str = ""  # username, leer = nicht zugewiesen
     faellig_am: str = ""  # ISO-Date, leer = ohne Frist
     wiederholung: str = "einmalig"
+    # Datenmaske-Verknüpfungen (alle optional)
+    kunde_id: str = ""
+    projekt_id: str = ""
 
 
 class AufgabeUpdate(BaseModel):
@@ -47,6 +50,8 @@ class AufgabeUpdate(BaseModel):
     faellig_am: Optional[str] = None
     wiederholung: Optional[str] = None
     status: Optional[str] = None
+    kunde_id: Optional[str] = None
+    projekt_id: Optional[str] = None
 
 
 class StatusUpdate(BaseModel):
@@ -134,6 +139,8 @@ async def list_aufgaben(
     status: str = "",
     kategorie: str = "",
     zugewiesen_an: str = "",
+    kunde_id: str = "",
+    projekt_id: str = "",
     user=Depends(get_current_user),
 ):
     await _require_enabled()
@@ -144,6 +151,10 @@ async def list_aufgaben(
         query["kategorie"] = kategorie
     if zugewiesen_an:
         query["zugewiesen_an"] = zugewiesen_an
+    if kunde_id:
+        query["kunde_id"] = kunde_id
+    if projekt_id:
+        query["projekt_id"] = projekt_id
 
     items = await db.module_aufgaben.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
     return items
@@ -176,6 +187,8 @@ async def create_aufgabe(payload: AufgabeCreate, user=Depends(get_current_user))
         "zugewiesen_an": (data.get("zugewiesen_an") or "").strip(),
         "faellig_am": (data.get("faellig_am") or "").strip(),
         "wiederholung": data["wiederholung"],
+        "kunde_id": (data.get("kunde_id") or "").strip(),
+        "projekt_id": (data.get("projekt_id") or "").strip(),
         "status": "offen",
         "erledigt_am": None,
         "erledigt_von": None,
@@ -203,7 +216,8 @@ async def update_aufgabe(aufgabe_id: str, payload: AufgabeUpdate, user=Depends(g
 
     update = {"updated_at": datetime.now(timezone.utc).isoformat()}
     for field in ("titel", "beschreibung", "kategorie", "prioritaet",
-                  "zugewiesen_an", "faellig_am", "wiederholung", "status"):
+                  "zugewiesen_an", "faellig_am", "wiederholung", "status",
+                  "kunde_id", "projekt_id"):
         if field in data:
             value = data[field]
             update[field] = value.strip() if isinstance(value, str) else value

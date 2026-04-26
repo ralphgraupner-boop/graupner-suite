@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import { AufgabenPanel } from "@/components/AufgabenPanel";
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 const KATEGORIEN = ["Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"];
@@ -118,6 +119,11 @@ const ProjektWerkbank = () => {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Aufgaben (Kunden-Ebene) */}
+      <div className="mb-4">
+        <AufgabenPanel kunde_id={kunde_id} title="Aufgaben für diesen Kunden" defaultCollapsed={true} compact={true} />
       </div>
 
       {/* === Projekte === */}
@@ -339,6 +345,9 @@ const ProjektKarte = ({ projekt, kundeId, onChanged }) => {
               <BilderGrid bilder={bilder} onDelete={deleteBild} />
             )}
           </div>
+
+          {/* Aufgaben (Datenmaske aus module_aufgaben gefiltert auf dieses Projekt) */}
+          <AufgabenPanel projekt_id={data.id} title="Aufgaben für dieses Projekt" defaultCollapsed={true} compact={true} />
 
           <div className="flex items-center justify-between pt-3 border-t">
             <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-600 hover:bg-red-50" data-testid={`btn-delete-${data.id}`}>

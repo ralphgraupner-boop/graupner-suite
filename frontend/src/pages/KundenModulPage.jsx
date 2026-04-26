@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { CATEGORIES } from "@/lib/constants";
+import { AufgabenPanel } from "@/components/AufgabenPanel";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -405,6 +406,11 @@ const KundenModulPage = () => {
                         </div>
                       );
                     })()}
+
+                    {/* Aufgaben (Datenmaske aus module_aufgaben gefiltert auf diesen Kunden) */}
+                    <div className="mt-4 pt-4 border-t">
+                      <AufgabenPanel kunde_id={kunde.id} title="Aufgaben für diesen Kunden" />
+                    </div>
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
