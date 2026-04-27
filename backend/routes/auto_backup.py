@@ -13,7 +13,8 @@ router = APIRouter()
 async def create_backup_data():
     """Erstellt Backup-Daten und gibt ZIP-Bytes zurück"""
     try:
-        # Auto-Backup (24.04.2026): alle aktiven + Legacy-Collections
+        # Auto-Backup: alle aktiven + Legacy-Collections
+        # WICHTIG: Bei jedem neuen module_* IMMER hier ergänzen!
         selected = [
             # Kern
             "module_kunden", "module_artikel", "module_dokumente", "module_textvorlagen",
@@ -24,9 +25,21 @@ async def create_backup_data():
             "portal2_accounts", "portal2_messages", "portal2_uploads", "portal2_settings",
             "portal3_accounts", "portal3_messages", "portal3_uploads", "portal3_settings",
             "portal4_accounts", "portal4_messages", "portal4_uploads", "portal4_settings",
+            # Portal-Backup-Modul (Snapshots)
+            "module_portal_v2_backup_snapshots", "module_portal_v2_backup_settings",
+            # NEU 26.04.2026 – Projekte/Aufgaben/Termine/Duplikate/Monteur-App
+            "module_projekte", "module_projekte_settings",
+            "module_aufgaben", "module_aufgaben_settings",
+            "module_termine", "module_termine_settings",
+            "module_duplikate", "module_duplikate_settings",
+            "monteur_app_settings", "monteur_app_notizen", "monteur_app_fotos",
+            "monteur_app_todos", "monteur_app_feedback",
+            # Portal-Klon (Sandbox, separat)
+            "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
             # Legacy
             "customers", "quotes", "orders", "invoices", "articles", "rechnungen_v2",
             "email_vorlagen", "text_templates", "leistungsbloecke", "diverses", "email_inbox",
+            "portal_files", "portals", "portal_messages",
         ]
         
         zip_buffer = io.BytesIO()
@@ -148,9 +161,11 @@ async def send_backup_email(backup_data: bytes, total_docs: int):
         )
         
         logger.info(f"✅ Backup-E-Mail gesendet an service24@tischlerei-graupner.de")
+        return True
         
     except Exception as e:
         logger.error(f"❌ Fehler beim Versand der Backup-E-Mail: {e}")
+        return False
 
 
 async def daily_backup_task():
@@ -213,3 +228,19 @@ async def get_auto_backup_status():
     except Exception as e:
         logger.error(f"Fehler beim Abrufen des Auto-Backup-Status: {e}")
         return {"enabled": False, "status": "error"}
+
+
+@router.post("/backup/auto/trigger")
+async def trigger_manual_backup():
+    """Löst sofort ein Backup aus und versendet es per E-Mail (Test)."""
+    logger.info("🛡️ Manueller Backup-Test ausgelöst")
+    backup_data, total_docs = await create_backup_data()
+    if not backup_data:
+        return {"ok": False, "message": "Backup-Erstellung fehlgeschlagen"}
+    sent = await send_backup_email(backup_data, total_docs)
+    return {
+        "ok": bool(sent),
+        "total_docs": total_docs,
+        "size_kb": round(len(backup_data) / 1024, 1),
+        "message": "Backup erstellt und Mail gesendet" if sent else "Backup erstellt, aber Mailversand fehlgeschlagen",
+    }
