@@ -4,6 +4,8 @@ import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, Fil
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
+import { AufgabenPanel } from "@/components/AufgabenPanel";
+import { TerminePanel } from "@/components/TerminePanel";
 
 const PortalsKlonPage = () => {
   const location = useLocation();
@@ -588,6 +590,14 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
         <code className="text-xs truncate flex-1">{getPortalUrl(portal)}</code>
         <button onClick={onCopyLink} className="text-xs text-primary hover:underline flex-shrink-0">Kopieren</button>
       </div>
+
+      {/* Aufgaben + Termine zum Kunden (Datenmaske) */}
+      {portal.customer_id && (
+        <div className="mb-6 space-y-2" data-testid="portal-klon-context-panels">
+          <AufgabenPanel kunde_id={portal.customer_id} title={`Aufgaben für ${portal.customer_name || "diesen Kunden"}`} defaultCollapsed={true} compact={true} />
+          <TerminePanel kunde_id={portal.customer_id} title={`Termine für ${portal.customer_name || "diesen Kunden"}`} defaultCollapsed={true} compact={true} />
+        </div>
+      )}
 
       {/* Kundenmitteilungen */}
       {notes.length > 0 && (
