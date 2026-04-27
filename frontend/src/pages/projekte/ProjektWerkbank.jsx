@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
+import { TerminePanel } from "@/components/TerminePanel";
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 const KATEGORIEN = ["Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"];
@@ -121,9 +122,10 @@ const ProjektWerkbank = () => {
         </div>
       </div>
 
-      {/* Aufgaben (Kunden-Ebene) */}
-      <div className="mb-4">
+      {/* Aufgaben + Termine (Kunden-Ebene) */}
+      <div className="mb-4 space-y-2">
         <AufgabenPanel kunde_id={kunde_id} title="Aufgaben für diesen Kunden" defaultCollapsed={true} compact={true} />
+        <TerminePanel kunde_id={kunde_id} title="Termine für diesen Kunden" defaultCollapsed={true} compact={true} />
       </div>
 
       {/* === Projekte === */}
@@ -346,8 +348,11 @@ const ProjektKarte = ({ projekt, kundeId, onChanged }) => {
             )}
           </div>
 
-          {/* Aufgaben (Datenmaske aus module_aufgaben gefiltert auf dieses Projekt) */}
-          <AufgabenPanel projekt_id={data.id} title="Aufgaben für dieses Projekt" defaultCollapsed={true} compact={true} />
+          {/* Aufgaben + Termine für dieses Projekt */}
+          <div className="space-y-2">
+            <AufgabenPanel projekt_id={data.id} title="Aufgaben für dieses Projekt" defaultCollapsed={true} compact={true} />
+            <TerminePanel projekt_id={data.id} title="Termine für dieses Projekt" defaultCollapsed={true} compact={true} />
+          </div>
 
           <div className="flex items-center justify-between pt-3 border-t">
             <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-600 hover:bg-red-50" data-testid={`btn-delete-${data.id}`}>

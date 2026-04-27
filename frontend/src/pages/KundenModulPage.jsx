@@ -6,6 +6,7 @@ import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common
 import { api } from "@/lib/api";
 import { CATEGORIES } from "@/lib/constants";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
+import { TerminePanel } from "@/components/TerminePanel";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -408,8 +409,9 @@ const KundenModulPage = () => {
                     })()}
 
                     {/* Aufgaben (Datenmaske aus module_aufgaben gefiltert auf diesen Kunden) */}
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="mt-4 pt-4 border-t space-y-2">
                       <AufgabenPanel kunde_id={kunde.id} title="Aufgaben für diesen Kunden" />
+                      <TerminePanel kunde_id={kunde.id} title="Termine für diesen Kunden" />
                     </div>
 
                     {/* Aktionen */}
