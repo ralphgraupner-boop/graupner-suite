@@ -34,6 +34,8 @@ async def create_backup_data():
             "module_duplikate", "module_duplikate_settings",
             "monteur_app_settings", "monteur_app_notizen", "monteur_app_fotos",
             "monteur_app_todos", "monteur_app_feedback",
+            # NEU 27.04.2026 – User-Prefs (Sidebar-Reihenfolge)
+            "module_user_prefs",
             # Portal-Klon (Sandbox, separat)
             "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
             # Legacy
