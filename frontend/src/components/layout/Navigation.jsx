@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, GripVertical, ArrowUpDown, RotateCcw, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 
@@ -57,13 +57,98 @@ const getFilteredNavItems = () => {
 
 const Sidebar = ({ onLogout }) => {
   const location = useLocation();
-  const navItems = getFilteredNavItems();
+  const baseNavItems = getFilteredNavItems();
   const role = getUserRole();
   const username = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "null"); return typeof u === "object" ? u.username : u; } catch { return ""; } })();
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0 });
   const prevEmailRef = useRef(0);
+
+  // ----- Sidebar-Reihenfolge (per User in DB gespeichert) -----
+  const [sortMode, setSortMode] = useState(false);
+  const [customOrder, setCustomOrder] = useState([]);  // Pfade in gewünschter Reihenfolge
+  const [draggedPath, setDraggedPath] = useState(null);
+  const [dragOverPath, setDragOverPath] = useState(null);
+
+  // Initial-Load der User-Prefs
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/module-user-prefs/me`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (Array.isArray(data.sidebar_order)) setCustomOrder(data.sidebar_order);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Sortierte Sidebar-Items (custom_order zuerst, Rest in Original-Reihenfolge ans Ende)
+  const navItems = (() => {
+    if (!customOrder.length) return baseNavItems;
+    const byPath = new Map(baseNavItems.map(i => [i.path, i]));
+    const ordered = customOrder.map(p => byPath.get(p)).filter(Boolean);
+    const orderedSet = new Set(ordered.map(i => i.path));
+    const rest = baseNavItems.filter(i => !orderedSet.has(i.path));
+    return [...ordered, ...rest];
+  })();
+
+  const persistOrder = async (newOrder) => {
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/module-user-prefs/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+        body: JSON.stringify({ sidebar_order: newOrder }),
+      });
+    } catch { /* ignore – UI bleibt trotzdem aktuell */ }
+  };
+
+  const handleDragStart = (path) => (e) => {
+    if (!sortMode) return;
+    setDraggedPath(path);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (path) => (e) => {
+    if (!sortMode || !draggedPath) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverPath(path);
+  };
+  const handleDragLeave = () => setDragOverPath(null);
+  const handleDrop = (targetPath) => (e) => {
+    if (!sortMode || !draggedPath) return;
+    e.preventDefault();
+    if (draggedPath === targetPath) { setDraggedPath(null); setDragOverPath(null); return; }
+    const order = navItems.map(i => i.path);
+    const fromIdx = order.indexOf(draggedPath);
+    const toIdx = order.indexOf(targetPath);
+    if (fromIdx === -1 || toIdx === -1) return;
+    order.splice(fromIdx, 1);
+    order.splice(toIdx, 0, draggedPath);
+    setCustomOrder(order);
+    setDraggedPath(null);
+    setDragOverPath(null);
+    persistOrder(order);
+  };
+
+  const resetOrder = async () => {
+    if (!window.confirm("Standard-Reihenfolge wiederherstellen?")) return;
+    setCustomOrder([]);
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/module-user-prefs/me`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+      });
+    } catch { /* ignore */ }
+  };
+  // ----- Ende Sidebar-Reihenfolge -----
 
   // Poll fuer ungelesene E-Mails und Portal-Aktivitaeten
   useEffect(() => {
@@ -162,11 +247,39 @@ const Sidebar = ({ onLogout }) => {
     <>
       <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-card border-r flex-col z-30">
       <div className="p-6 border-b">
-        <h1 className="text-2xl font-bold text-primary">Graupner Suite</h1>
-        <p className="text-sm text-muted-foreground mt-1">Tischlerei-Software</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-primary">Graupner Suite</h1>
+            <p className="text-sm text-muted-foreground mt-1">Tischlerei-Software</p>
+          </div>
+          <button
+            onClick={() => setSortMode(s => !s)}
+            className={`p-1.5 rounded-sm border transition-colors flex-shrink-0 ${
+              sortMode
+                ? "bg-emerald-100 border-emerald-300 text-emerald-700"
+                : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            title={sortMode ? "Sortieren beenden" : "Reihenfolge ändern"}
+            data-testid="btn-sidebar-sort-toggle"
+          >
+            {sortMode ? <Check className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
+          </button>
+        </div>
         {role === "buchhaltung" && (
           <div className="mt-2 text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-sm font-medium" data-testid="role-badge">
             Buchhaltung – {username}
+          </div>
+        )}
+        {sortMode && (
+          <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-sm text-xs text-emerald-900" data-testid="sort-mode-hint">
+            <strong>Sortier-Modus aktiv.</strong> Einträge per Drag &amp; Drop verschieben.
+            <button
+              onClick={resetOrder}
+              className="mt-1 flex items-center gap-1 text-emerald-700 hover:text-emerald-900 underline"
+              data-testid="btn-sidebar-sort-reset"
+            >
+              <RotateCcw className="w-3 h-3" /> Standard wiederherstellen
+            </button>
           </div>
         )}
       </div>
@@ -184,7 +297,27 @@ const Sidebar = ({ onLogout }) => {
           const isNew = variant === "new";
           const isSandbox = variant === "sandbox";
           return (
-            <HelpTip key={path} id={helpKey} placement="right" block>
+            <div
+              key={path}
+              draggable={sortMode}
+              onDragStart={handleDragStart(path)}
+              onDragOver={handleDragOver(path)}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop(path)}
+              className={`${sortMode ? "cursor-move" : ""} ${dragOverPath === path && draggedPath !== path ? "ring-2 ring-emerald-400 rounded-sm" : ""} ${draggedPath === path ? "opacity-40" : ""}`}
+              data-testid={`nav-row-${path.slice(1)}`}
+            >
+            <HelpTip id={helpKey} placement="right" block>
+              {sortMode ? (
+                <div
+                  data-testid={`nav-${path.slice(1)}`}
+                  className={`relative flex items-center gap-3 px-4 py-3 rounded-sm bg-muted/40 border border-dashed border-muted-foreground/30 select-none`}
+                >
+                  <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <Icon className="w-5 h-5 text-foreground/70 flex-shrink-0" />
+                  <span className="font-medium text-foreground/80">{label}</span>
+                </div>
+              ) : (
               <Link
                 to={path}
                 data-testid={`nav-${path.slice(1)}`}
@@ -226,7 +359,9 @@ const Sidebar = ({ onLogout }) => {
                   <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />
                 )}
               </Link>
+              )}
             </HelpTip>
+            </div>
           );
         })}
       </nav>

@@ -49,6 +49,7 @@ from module_duplikate import router as module_duplikate_router
 from module_projekte import router as module_projekte_router
 from module_aufgaben.routes import router as module_aufgaben_router
 from module_termine.routes import router as module_termine_router
+from module_user_prefs.routes import router as module_user_prefs_router
 from module_portal_v2_backup import router as module_portal_v2_backup_router
 from module_portal_v2_backup.routes import start_auto_backup_task
 from dokumente_v2 import router as dokumente_v2_router
@@ -114,6 +115,7 @@ app.include_router(module_duplikate_router)  # Duplikate-Erkennung & Merge, pref
 app.include_router(module_projekte_router)   # Projekte (Akten/Vorgaenge), prefix /api/module-projekte
 app.include_router(module_aufgaben_router, prefix="/api/module-aufgaben", tags=["Aufgaben"])  # Interne Aufgaben (Auto, Werkzeug, Lager)
 app.include_router(module_termine_router, prefix="/api/module-termine", tags=["Termine"])  # Termine mit GO-Workflow & Datenmaske
+app.include_router(module_user_prefs_router, prefix="/api/module-user-prefs", tags=["UserPrefs"])  # UI-Präferenzen pro User
 app.include_router(module_portal_v2_backup_router)  # Portal-v2-Sicherungen, prefix /api/module-portal-v2-backup
 
 @app.on_event("startup")
