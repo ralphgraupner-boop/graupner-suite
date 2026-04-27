@@ -5,6 +5,7 @@ import {
   Calendar, Plus, Trash2, X, ChevronDown, ChevronUp, MapPin, Clock,
   AlertTriangle, CheckCircle2, XCircle, HardHat,
 } from "lucide-react";
+import { TerminSendDialog } from "@/components/TerminSendDialog";
 
 const STATUS = {
   wartet_auf_go: { cls: "bg-amber-50 text-amber-800 border-amber-200", icon: AlertTriangle, label: "Wartet auf GO" },
@@ -36,6 +37,7 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [showCreate, setShowCreate] = useState(false);
+  const [sendingTermin, setSendingTermin] = useState(null);
   const [mitarbeiter, setMitarbeiter] = useState([]);
 
   const params = {};
@@ -65,7 +67,8 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
     if (!window.confirm(`Termin "${t.titel}" am ${fmtDateTime(t.start)} bestätigen (GO)?`)) return;
     try {
       await api.patch(`/module-termine/${t.id}/go`);
-      toast.success("Termin bestätigt – wartet auf Kalender-Sync");
+      toast.success("Termin bestätigt – jetzt Empfänger wählen und ICS senden");
+      setSendingTermin(t);  // Empfänger-Dialog öffnen
       load();
     } catch (err) { toast.error(err?.response?.data?.detail || "GO fehlgeschlagen"); }
   };
@@ -173,6 +176,16 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
                           GO
                         </button>
                       )}
+                      {(t.status === "bestaetigt" || t.status === "im_kalender") && (
+                        <button
+                          onClick={() => setSendingTermin(t)}
+                          className="text-xs px-2 py-0.5 border border-blue-300 text-blue-700 rounded-sm hover:bg-blue-50"
+                          title="ICS-Mail (erneut) senden"
+                          data-testid={`panel-termin-send-${t.id}`}
+                        >
+                          📧
+                        </button>
+                      )}
                       {t.status !== "abgesagt" && t.status !== "im_kalender" && (
                         <button
                           onClick={() => onCancel(t)}
@@ -206,6 +219,14 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
           mitarbeiter={mitarbeiter}
           onClose={() => setShowCreate(false)}
           onSaved={() => { setShowCreate(false); load(); }}
+        />
+      )}
+
+      {sendingTermin && (
+        <TerminSendDialog
+          termin_id={sendingTermin.id}
+          onClose={() => setSendingTermin(null)}
+          onSent={() => { setSendingTermin(null); load(); }}
         />
       )}
     </div>

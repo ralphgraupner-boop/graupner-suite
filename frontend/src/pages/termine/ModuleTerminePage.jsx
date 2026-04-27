@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { TerminSendDialog } from "@/components/TerminSendDialog";
 import {
   Calendar, Plus, Trash2, X, MapPin, User as UserIcon, Folder, Briefcase, HardHat,
   CheckCircle2, Clock, RefreshCw, Filter, AlertTriangle, ChevronRight, XCircle,
@@ -41,6 +42,7 @@ export default function ModuleTerminePage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
   const [enriched, setEnriched] = useState(null);
+  const [sendingTermin, setSendingTermin] = useState(null);
 
   // Stammdaten für Auswahl
   const [kunden, setKunden] = useState([]);
@@ -82,11 +84,12 @@ export default function ModuleTerminePage() {
     if (!window.confirm(
       `"${t.titel}" am ${fmtDate(t.start)} bestätigen?\n\n` +
       `Status wechselt von "Wartet auf GO" → "Bestätigt".\n` +
-      `(Sobald Google Kalender konfiguriert ist, wird der Termin automatisch synchronisiert.)`
+      `Im Anschluss kannst du wählen, an wen die ICS-Mail geschickt wird.`
     )) return;
     try {
       await api.patch(`/module-termine/${t.id}/go`);
-      toast.success("Termin bestätigt – bereit für Kalender-Sync");
+      toast.success("Termin bestätigt – jetzt Empfänger wählen");
+      setSendingTermin(t);  // Empfänger-Dialog öffnen
       load();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "GO fehlgeschlagen");
@@ -252,6 +255,15 @@ export default function ModuleTerminePage() {
                         ✓ GO
                       </button>
                     )}
+                    {(t.status === "bestaetigt" || t.status === "im_kalender") && (
+                      <button
+                        onClick={() => setSendingTermin(t)}
+                        className="px-3 py-1.5 border border-blue-300 text-blue-700 rounded-sm text-xs hover:bg-blue-50 flex items-center justify-center gap-1"
+                        data-testid={`btn-send-${t.id}`}
+                      >
+                        📧 ICS senden
+                      </button>
+                    )}
                     {t.status === "abgesagt" && (
                       <button
                         onClick={() => onGo(t)}
@@ -308,6 +320,14 @@ export default function ModuleTerminePage() {
       )}
 
       {enriched && <EnrichedView data={enriched} onClose={() => setEnriched(null)} />}
+
+      {sendingTermin && (
+        <TerminSendDialog
+          termin_id={sendingTermin.id}
+          onClose={() => setSendingTermin(null)}
+          onSent={() => { setSendingTermin(null); load(); }}
+        />
+      )}
     </div>
   );
 }

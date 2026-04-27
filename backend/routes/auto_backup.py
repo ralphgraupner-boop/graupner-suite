@@ -36,6 +36,9 @@ async def create_backup_data():
             "monteur_app_todos", "monteur_app_feedback",
             # NEU 27.04.2026 – User-Prefs (Sidebar-Reihenfolge)
             "module_user_prefs",
+            # NEU 27.04.2026 – Kalender-Export (ICS-Mail, Audit, Feed-Tokens)
+            "module_kalender_export_log",
+            "module_kalender_feed_tokens",
             # Portal-Klon (Sandbox, separat)
             "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
             # Legacy
