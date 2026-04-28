@@ -6,7 +6,7 @@ from uuid import uuid4
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "allgemein"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "allgemein"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht"]
 
 PLACEHOLDERS = [
@@ -196,6 +196,51 @@ async def seed_kundenportal_vorlagen(user=Depends(get_current_user)):
         "inserted": inserted,
         "skipped": skipped,
         "total": len(STANDARD_PORTAL_VORLAGEN),
+        "details": results,
+    }
+
+
+STANDARD_AUFGABEN_VORLAGEN = [
+    {"title": "Aufmaß vor Ort", "content": "Aufmaß beim Kunden durchführen. Fotos machen, Skizze anfertigen, alle Maße notieren (Höhe, Breite, Tiefe, Besonderheiten).", "doc_type": "aufgabe", "text_type": "titel"},
+    {"title": "Fotos Bestand machen", "content": "Vor Beginn der Arbeiten Bestandsfotos aller betroffenen Bereiche machen. Nahaufnahmen von Details und Übersichtsfotos.", "doc_type": "aufgabe", "text_type": "titel"},
+    {"title": "Werkzeug prüfen/zusammenstellen", "content": "Werkzeugkiste auf Vollständigkeit prüfen. Akkus geladen? Verbrauchsmaterial (Schrauben, Dübel, Silikon) ausreichend?", "doc_type": "aufgabe", "text_type": "titel"},
+    {"title": "Materiallieferung annehmen", "content": "Lieferung auf Vollständigkeit und Beschädigungen prüfen. Lieferschein abzeichnen. Ware ordentlich einlagern.", "doc_type": "aufgabe", "text_type": "titel"},
+    {"title": "Rechnung stellen", "content": "Nach Abschluss der Arbeiten Rechnung erstellen. Arbeitszeit, Material und ggf. Fahrtkosten erfassen.", "doc_type": "aufgabe", "text_type": "titel"},
+]
+
+
+@router.post("/modules/textvorlagen/seed-aufgaben")
+async def seed_aufgaben_vorlagen(user=Depends(get_current_user)):
+    """Legt Standard-Aufgaben-Vorlagen an, falls noch nicht vorhanden (idempotent)."""
+    await ensure_modul_registered()
+    inserted = 0
+    skipped = 0
+    results = []
+    for v in STANDARD_AUFGABEN_VORLAGEN:
+        existing = await db.module_textvorlagen.find_one({
+            "title": v["title"],
+            "doc_type": v["doc_type"],
+        })
+        if existing:
+            skipped += 1
+            results.append({"title": v["title"], "status": "existiert bereits"})
+            continue
+        item = {
+            "id": str(uuid4()),
+            "title": v["title"],
+            "content": v["content"],
+            "doc_type": v["doc_type"],
+            "text_type": v["text_type"],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.module_textvorlagen.insert_one(item)
+        inserted += 1
+        results.append({"title": v["title"], "status": "neu angelegt"})
+    return {
+        "inserted": inserted,
+        "skipped": skipped,
+        "total": len(STANDARD_AUFGABEN_VORLAGEN),
         "details": results,
     }
 

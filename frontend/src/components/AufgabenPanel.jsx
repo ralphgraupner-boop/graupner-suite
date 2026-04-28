@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   Briefcase, Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, ChevronDown, ChevronUp,
 } from "lucide-react";
+import { VorlagenPicker } from "@/components/VorlagenPicker";
 
 const STATUS_STYLES = {
   offen: { cls: "bg-amber-50 text-amber-800 border-amber-200", icon: AlertCircle, label: "Offen" },
@@ -225,7 +226,19 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
         </div>
         <div className="p-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Titel *</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium">Titel *</label>
+              <VorlagenPicker
+                doc_type="aufgabe"
+                label="Vorlage"
+                compact
+                onSelect={({ title, content }) => setData(d => ({
+                  ...d,
+                  titel: title,
+                  beschreibung: d.beschreibung || (content || "").replace(/<[^>]*>/g, ""),
+                }))}
+              />
+            </div>
             <input
               value={data.titel}
               onChange={(e) => upd("titel", e.target.value)}

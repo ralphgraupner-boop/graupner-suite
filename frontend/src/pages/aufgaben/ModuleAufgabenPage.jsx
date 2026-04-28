@@ -5,6 +5,7 @@ import {
   Wrench, Car, Package, Briefcase, Building2, MoreHorizontal,
   Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter,
 } from "lucide-react";
+import { VorlagenPicker } from "@/components/VorlagenPicker";
 
 const KATEGORIE_LABELS = {
   auto: "Auto / Fahrzeug",
@@ -330,7 +331,19 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
 
         <div className="p-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Titel *</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium">Titel *</label>
+              <VorlagenPicker
+                doc_type="aufgabe"
+                label="Vorlage"
+                compact
+                onSelect={({ title, content }) => setData(d => ({
+                  ...d,
+                  titel: title,
+                  beschreibung: d.beschreibung || (content || "").replace(/<[^>]*>/g, ""),
+                }))}
+              />
+            </div>
             <input
               value={data.titel}
               onChange={(e) => upd("titel", e.target.value)}
