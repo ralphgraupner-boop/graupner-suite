@@ -49,55 +49,62 @@ export const VorlagenPicker = ({ doc_type = "aufgabe", onSelect, label = "Vorlag
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full min-w-[260px] bg-background border rounded-sm shadow-lg max-h-64 overflow-y-auto" data-testid="vorlagen-list">
-          <div className="flex items-center justify-between p-2 border-b bg-muted/30 sticky top-0">
-            <span className="text-xs font-medium">Aus Vorlage wählen</span>
-            <button onClick={() => setOpen(false)} className="p-0.5 hover:bg-muted rounded-sm">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          {loading ? (
-            <p className="p-3 text-xs text-muted-foreground text-center">Lade…</p>
-          ) : vorlagen.length === 0 ? (
-            <div className="p-3 text-xs text-muted-foreground text-center">
-              Keine Vorlagen angelegt.
-              <a href="/module/textvorlagen" target="_blank" rel="noopener noreferrer" className="block mt-1 text-primary hover:underline">
-                + Vorlage anlegen
-              </a>
+        <>
+          {/* Backdrop damit Klick außerhalb schließt */}
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 z-40 mt-1 w-[min(90vw,520px)] bg-background border rounded-md shadow-2xl max-h-[70vh] overflow-y-auto"
+            data-testid="vorlagen-list"
+          >
+            <div className="flex items-center justify-between p-3 border-b bg-muted/40 sticky top-0 z-10">
+              <span className="text-sm font-semibold">Aus Vorlage wählen</span>
+              <button onClick={() => setOpen(false)} className="p-1 hover:bg-muted rounded-sm" aria-label="Schließen">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          ) : (
-            <>
-              {vorlagen.map(v => (
-                <button
-                  key={v.id}
-                  onClick={() => pick(v)}
-                  className="w-full text-left p-2 hover:bg-primary/5 border-b last:border-b-0"
-                  data-testid={`vorlage-${v.id}`}
-                >
-                  <div className="flex items-start gap-1">
-                    <Check className="w-3 h-3 text-primary mt-0.5 opacity-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{v.title}</div>
-                      {v.content && (
-                        <div className="text-[11px] text-muted-foreground truncate">
-                          {(v.content || "").replace(/<[^>]*>/g, "").slice(0, 60)}
-                        </div>
-                      )}
+            {loading ? (
+              <p className="p-4 text-sm text-muted-foreground text-center">Lade…</p>
+            ) : vorlagen.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground text-center">
+                Keine Vorlagen angelegt.
+                <a href="/module/textvorlagen" target="_blank" rel="noopener noreferrer" className="block mt-2 text-primary hover:underline">
+                  + Vorlage anlegen
+                </a>
+              </div>
+            ) : (
+              <>
+                {vorlagen.map(v => (
+                  <button
+                    key={v.id}
+                    onClick={() => pick(v)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-primary/5 border-b last:border-b-0 transition-colors"
+                    data-testid={`vorlage-${v.id}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold">{v.title}</div>
+                        {v.content && (
+                          <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                            {(v.content || "").replace(/<[^>]*>/g, "").slice(0, 180)}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
-              <a
-                href="/module/textvorlagen"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-2 text-xs text-primary hover:bg-primary/5 border-t text-center"
-              >
-                + Neue Vorlage anlegen / bearbeiten
-              </a>
-            </>
-          )}
-        </div>
+                  </button>
+                ))}
+                <a
+                  href="/module/textvorlagen"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-3 text-sm text-primary hover:bg-primary/5 border-t text-center font-medium"
+                >
+                  + Neue Vorlage anlegen / bearbeiten
+                </a>
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

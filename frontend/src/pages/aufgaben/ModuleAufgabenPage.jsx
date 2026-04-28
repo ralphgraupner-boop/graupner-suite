@@ -321,7 +321,7 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="aufgabe-dialog">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">{isEdit ? "Aufgabe bearbeiten" : "Neue Aufgabe"}</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm" data-testid="btn-dialog-close">

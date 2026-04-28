@@ -211,6 +211,16 @@ User hat explizit gefordert: bei jeder neuen Funktion **automatisch** einen Eint
 
 ---
 
+## 📝 Session 2026-04-28 Änderungen
+
+- **VorlagenPicker UI vergrößert** (User-Feedback "fenster ist zu klein"):
+  - Dropdown: `w-[min(90vw,520px)]`, `max-h-[70vh]`, rechtsbündig mit Backdrop-Close.
+  - Einträge: Titel `text-sm font-semibold`, Beschreibung 2-zeilig (180 Zeichen statt 60, line-clamp-2).
+  - Aufgaben-Dialog (`ModuleAufgabenPage.jsx`) & Quick-Create-Dialog (`AufgabenPanel.jsx`): `max-w-md/lg` → `max-w-2xl` (672px).
+- **Offen**: VorlagenPicker in Termine-Dialog (doc_type="termin") einbauen – auf User-Freigabe wartend.
+
+---
+
 ## ⚠️ User-Wahrnehmungen / Sensitivitäten
 
 - User merkt SOFORT, wenn das Programm-Verhalten nicht zu seiner mentalen Vorstellung passt. Beispiele:
