@@ -105,3 +105,144 @@ async def status(user=Depends(get_current_user)):
         "server_time_utc": now_utc.isoformat(),
         "server_time_hamburg": now_hamburg.strftime("%H:%M (Hamburg)"),
     }
+
+
+# ==================== KONSISTENZ-CHECK ====================
+
+@router.get("/consistency")
+async def consistency_check(user=Depends(get_current_user)):
+    """
+    Findet Datenmüll und Waisen-Referenzen.
+    Prüft alle bekannten Querverweise gegen module_kunden / module_projekte.
+    """
+    issues: list[dict] = []
+
+    # Gültige IDs einsammeln
+    valid_kunde_ids = set()
+    async for k in db.module_kunden.find({}, {"_id": 0, "id": 1}):
+        if k.get("id"):
+            valid_kunde_ids.add(k["id"])
+
+    valid_projekt_ids = set()
+    async for p in db.module_projekte.find({}, {"_id": 0, "id": 1}):
+        if p.get("id"):
+            valid_projekt_ids.add(p["id"])
+
+    # Check 1: Legacy customers Collection
+    legacy_count = await db.customers.count_documents({})
+    if legacy_count > 0:
+        issues.append({
+            "severity": "warn",
+            "type": "legacy_collection",
+            "title": "Legacy 'customers' Collection vorhanden",
+            "message": f"{legacy_count} alte Datensätze in db.customers (sollte leer sein nach Migration zu module_kunden).",
+            "fix_hint": "Aufräum-Aktion: Daten in module_kunden vorhanden? Dann customers entfernen.",
+        })
+
+    # Check 2: einsaetze.kunde_id zeigt auf existierenden Kunden?
+    orphan_einsaetze = []
+    async for e in db.einsaetze.find({}, {"_id": 0, "id": 1, "kunde_id": 1, "kunde_name": 1, "objekt_strasse": 1}):
+        kid = e.get("kunde_id")
+        if kid and kid not in valid_kunde_ids:
+            orphan_einsaetze.append({
+                "id": e.get("id"),
+                "kunde_id_referenced": kid,
+                "kunde_name_snapshot": e.get("kunde_name", ""),
+                "objekt": e.get("objekt_strasse", ""),
+            })
+    if orphan_einsaetze:
+        issues.append({
+            "severity": "error",
+            "type": "orphan_einsaetze",
+            "title": f"{len(orphan_einsaetze)} Einsätze ohne gültigen Kunden",
+            "message": "Diese Einsätze referenzieren auf Kunden, die nicht (mehr) in module_kunden existieren. Auf dem Handy erscheinen sie als '(kein Kunde)'.",
+            "fix_hint": "Einsätze auf passende module_kunden-IDs neu zuweisen oder löschen.",
+            "details": orphan_einsaetze[:10],
+            "count": len(orphan_einsaetze),
+        })
+
+    # Check 3: module_projekte.kunde_id
+    orphan_projekte = []
+    async for p in db.module_projekte.find({}, {"_id": 0, "id": 1, "kunde_id": 1, "titel": 1}):
+        kid = p.get("kunde_id")
+        if kid and kid not in valid_kunde_ids:
+            orphan_projekte.append({"id": p.get("id"), "titel": p.get("titel", ""), "kunde_id_referenced": kid})
+    if orphan_projekte:
+        issues.append({
+            "severity": "error",
+            "type": "orphan_projekte",
+            "title": f"{len(orphan_projekte)} Projekte ohne gültigen Kunden",
+            "message": "Projekte verweisen auf nicht-existente Kunden in module_kunden.",
+            "details": orphan_projekte[:10],
+            "count": len(orphan_projekte),
+        })
+
+    # Check 4: module_aufgaben.kunde_id / projekt_id
+    orphan_aufgaben = []
+    async for a in db.module_aufgaben.find({}, {"_id": 0, "id": 1, "titel": 1, "kunde_id": 1, "projekt_id": 1}):
+        ki = a.get("kunde_id")
+        pi = a.get("projekt_id")
+        bad = []
+        if ki and ki not in valid_kunde_ids:
+            bad.append(f"kunde_id={ki[:8]}…")
+        if pi and pi not in valid_projekt_ids:
+            bad.append(f"projekt_id={pi[:8]}…")
+        if bad:
+            orphan_aufgaben.append({"id": a.get("id"), "titel": a.get("titel", ""), "broken_refs": bad})
+    if orphan_aufgaben:
+        issues.append({
+            "severity": "warn",
+            "type": "orphan_aufgaben",
+            "title": f"{len(orphan_aufgaben)} Aufgaben mit defekten Referenzen",
+            "message": "Aufgaben hängen an gelöschten Kunden oder Projekten.",
+            "details": orphan_aufgaben[:10],
+            "count": len(orphan_aufgaben),
+        })
+
+    # Check 5: module_termine.kunde_id / projekt_id
+    orphan_termine = []
+    async for t in db.module_termine.find({}, {"_id": 0, "id": 1, "titel": 1, "kunde_id": 1, "projekt_id": 1}):
+        ki = t.get("kunde_id")
+        pi = t.get("projekt_id")
+        bad = []
+        if ki and ki not in valid_kunde_ids:
+            bad.append(f"kunde_id={ki[:8]}…")
+        if pi and pi not in valid_projekt_ids:
+            bad.append(f"projekt_id={pi[:8]}…")
+        if bad:
+            orphan_termine.append({"id": t.get("id"), "titel": t.get("titel", ""), "broken_refs": bad})
+    if orphan_termine:
+        issues.append({
+            "severity": "warn",
+            "type": "orphan_termine",
+            "title": f"{len(orphan_termine)} Termine mit defekten Referenzen",
+            "message": "Termine hängen an gelöschten Kunden oder Projekten.",
+            "details": orphan_termine[:10],
+            "count": len(orphan_termine),
+        })
+
+    # Check 6: quotes.customer_id
+    orphan_quotes = []
+    async for q in db.quotes.find({}, {"_id": 0, "id": 1, "quote_number": 1, "customer_id": 1, "customer_name": 1}):
+        cid = q.get("customer_id")
+        if cid and cid not in valid_kunde_ids:
+            orphan_quotes.append({"id": q.get("id"), "quote_number": q.get("quote_number", ""), "customer_name_snapshot": q.get("customer_name", "")})
+    if orphan_quotes:
+        issues.append({
+            "severity": "warn",
+            "type": "orphan_quotes",
+            "title": f"{len(orphan_quotes)} Angebote ohne gültigen Kunden",
+            "message": "Angebote referenzieren auf nicht-existente module_kunden-IDs.",
+            "details": orphan_quotes[:10],
+            "count": len(orphan_quotes),
+        })
+
+    return {
+        "ok": len(issues) == 0,
+        "issues_count": len(issues),
+        "errors_count": sum(1 for i in issues if i["severity"] == "error"),
+        "warnings_count": sum(1 for i in issues if i["severity"] == "warn"),
+        "issues": issues,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+    }
+

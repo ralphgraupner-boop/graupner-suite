@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, CheckCircle2, AlertTriangle, Database, Clock, X } from "lucide-react";
+import { Activity, CheckCircle2, AlertTriangle, Database, Clock, X, ShieldAlert } from "lucide-react";
 import { api } from "@/lib/api";
 
 /**
@@ -23,6 +23,7 @@ const detectEnvFromHost = () => {
 
 export const HealthBanner = () => {
   const [data, setData] = useState(null);
+  const [consistency, setConsistency] = useState(null);
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(() => sessionStorage.getItem("health_banner_hidden") === "1");
   const env = detectEnvFromHost();
@@ -30,6 +31,7 @@ export const HealthBanner = () => {
   useEffect(() => {
     let mounted = true;
     api.get("/module-health/status").then(r => { if (mounted) setData(r.data); }).catch(() => {});
+    api.get("/module-health/consistency").then(r => { if (mounted) setConsistency(r.data); }).catch(() => {});
     return () => { mounted = false; };
   }, []);
 
@@ -154,6 +156,51 @@ export const HealthBanner = () => {
                       </span>
                     </div>
                   </div>
+                  {consistency && (
+                    <div className="border-t pt-3">
+                      <div className="font-semibold mb-2 flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4" /> Konsistenz-Check
+                      </div>
+                      {consistency.ok ? (
+                        <div className="flex items-center gap-2 text-emerald-700">
+                          <CheckCircle2 className="w-4 h-4" /> Alle Daten konsistent
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">
+                            {consistency.errors_count} Fehler · {consistency.warnings_count} Warnung{consistency.warnings_count === 1 ? "" : "en"}
+                          </p>
+                          {consistency.issues.map((i, idx) => (
+                            <div
+                              key={idx}
+                              className={`border rounded-sm p-2 ${i.severity === "error" ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}
+                            >
+                              <div className="text-sm font-semibold">{i.title}</div>
+                              <div className="text-xs mt-0.5">{i.message}</div>
+                              {i.fix_hint && (
+                                <div className="text-xs mt-1 italic opacity-80">→ {i.fix_hint}</div>
+                              )}
+                              {i.details && i.details.length > 0 && (
+                                <details className="mt-1">
+                                  <summary className="text-xs cursor-pointer opacity-70 hover:opacity-100">
+                                    {i.count > i.details.length ? `${i.details.length} von ${i.count} anzeigen` : `${i.details.length} Eintrag${i.details.length === 1 ? "" : "e"}`}
+                                  </summary>
+                                  <ul className="text-[11px] mt-1 space-y-0.5 font-mono">
+                                    {i.details.map((d, di) => (
+                                      <li key={di} className="truncate">
+                                        {d.titel || d.kunde_name_snapshot || d.customer_name_snapshot || d.objekt || d.quote_number || d.id?.slice(0, 8)}
+                                        {d.broken_refs && ` (${d.broken_refs.join(", ")})`}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </details>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
