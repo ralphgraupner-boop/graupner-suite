@@ -41,7 +41,8 @@ async def preview(kunde_id: str, user=Depends(get_current_user)):
         raise HTTPException(404, "Kunde nicht gefunden")
     summary = count_summary(data)
     summary["dateien"] = len(file_refs)
-    summary["kunde_name"] = data["kunde"].get("name", "")
+    k = data["kunde"]
+    summary["kunde_name"] = k.get("name") or f"{k.get('vorname','')} {k.get('nachname','')}".strip() or k.get("email", "")
     return summary
 
 
@@ -53,7 +54,12 @@ async def _build_zip_for_kunde(kunde_id: str) -> tuple[bytes, str]:
     if not data.get("kunde"):
         raise HTTPException(404, "Kunde nicht gefunden")
 
-    kunde_name = data["kunde"].get("nachname") or data["kunde"].get("name") or kunde_id
+    kunde_name = (
+        data["kunde"].get("nachname")
+        or data["kunde"].get("name")
+        or f"{data['kunde'].get('vorname','')}_{data['kunde'].get('nachname','')}".strip("_")
+        or kunde_id
+    )
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     zip_name = f"export-{_safe_filename(kunde_name)}-{today}.zip"
 
@@ -128,7 +134,7 @@ async def export_alle_kunden(user=Depends(get_current_user)):
     total_files = 0
     kunden_count = 0
     with zipfile.ZipFile(out_buf, "w", zipfile.ZIP_DEFLATED) as outer:
-        async for c in db.customers.find({}, {"_id": 0, "id": 1, "name": 1, "nachname": 1}):
+        async for c in db.module_kunden.find({}, {"_id": 0, "id": 1, "name": 1, "nachname": 1}):
             try:
                 zip_bytes, zip_name = await _build_zip_for_kunde(c["id"])
                 outer.writestr(zip_name, zip_bytes)
@@ -249,22 +255,22 @@ async def import_zip(
 
     id_map: dict = {}
 
-    # 1. Kunde
+    # 1. Kunde — schreibt in module_kunden (Hauptquelle); customers_legacy optional
     old_kunde_id = kunde.get("id")
     if mode == "new_ids":
         new_kunde_id = _new_id()
         kunde["id"] = new_kunde_id
         id_map[old_kunde_id] = new_kunde_id
         # Anti-Duplikat-Check (best-effort, kein blocker)
-        existing = await db.customers.find_one(
-            {"name": kunde.get("name"), "email": kunde.get("email")},
+        existing = await db.module_kunden.find_one(
+            {"email": kunde.get("email")},
             {"_id": 0, "id": 1},
         ) if kunde.get("email") else None
         if existing:
             kunde["name"] = (kunde.get("name", "") + " (Import)").strip()
         kunde["created_at"] = datetime.now(timezone.utc).isoformat()
         kunde["imported_at"] = datetime.now(timezone.utc).isoformat()
-    await db.customers.insert_one(dict(kunde))
+    await db.module_kunden.insert_one(dict(kunde))
 
     # 2. Projekte
     projekte = load("projekte.json") or []

@@ -67,7 +67,7 @@ export const HealthBanner = () => {
           <>
             <span className="opacity-60">·</span>
             <span title="Kunden / Projekte / Aufgaben / Termine / Angebote">
-              K {c.customers ?? "—"} · P {c.module_projekte ?? "—"} · A {c.module_aufgaben ?? "—"} · T {c.module_termine ?? "—"} · Q {c.quotes ?? "—"}
+              K {c.module_kunden ?? "—"} · P {c.module_projekte ?? "—"} · A {c.module_aufgaben ?? "—"} · T {c.module_termine ?? "—"} · Q {c.quotes ?? "—"}
             </span>
           </>
         )}

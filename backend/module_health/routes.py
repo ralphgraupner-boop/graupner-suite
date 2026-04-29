@@ -58,12 +58,17 @@ def _detect_environment() -> dict:
 @router.get("/status")
 async def status(user=Depends(get_current_user)):
     counts = {}
-    for col in ["customers", "module_projekte", "module_aufgaben", "module_termine",
+    for col in ["module_kunden", "module_projekte", "module_aufgaben", "module_termine",
                 "anfragen", "einsaetze", "quotes", "rechnungen_v2"]:
         try:
             counts[col] = await db[col].count_documents({})
         except Exception:
             counts[col] = -1
+    # Legacy-Hinweis: customers (alte Demo-Daten)
+    try:
+        counts["customers_legacy"] = await db.customers.count_documents({})
+    except Exception:
+        counts["customers_legacy"] = -1
 
     # Letztes erfolgreiches Backup
     last_backup = None

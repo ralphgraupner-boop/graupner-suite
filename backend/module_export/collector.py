@@ -68,11 +68,10 @@ async def collect_kunde(kunde_id: str) -> Tuple[Dict, List[Tuple[str, str]]]:
     data: Dict = {}
     file_refs: List[Tuple[str, str]] = []
 
-    # 1. Kunde (customers)
-    kunde = _strip(await db.customers.find_one({"id": kunde_id}))
+    # 1. Kunde (module_kunden ist die Hauptquelle, customers nur Legacy)
+    kunde = _strip(await db.module_kunden.find_one({"id": kunde_id}))
     if not kunde:
-        # ggf. module_kunden Variante mit gleicher ID
-        kunde = _strip(await db.module_kunden.find_one({"id": kunde_id}))
+        kunde = _strip(await db.customers.find_one({"id": kunde_id}))
     data["kunde"] = kunde or {}
 
     # Kunde-Foto-Refs
@@ -81,10 +80,10 @@ async def collect_kunde(kunde_id: str) -> Tuple[Dict, List[Tuple[str, str]]]:
             if isinstance(ph, dict) and ph.get("url"):
                 file_refs.append((ph["url"], f"files/kunde/{ph.get('filename') or ph['url'].rsplit('/',1)[-1]}"))
 
-    # module_kunden zusätzlich (kann separater Eintrag sein)
-    mk = _strip(await db.module_kunden.find_one({"id": kunde_id}))
-    if mk and mk != kunde:
-        data["module_kunden"] = mk
+    # zusätzlich legacy customers eintrag, falls vorhanden
+    legacy = _strip(await db.customers.find_one({"id": kunde_id}))
+    if legacy and legacy != kunde:
+        data["customers_legacy"] = legacy
 
     # 2. Projekte
     projekte = [_strip(p) async for p in db.module_projekte.find({"kunde_id": kunde_id})]
