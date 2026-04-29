@@ -49,6 +49,7 @@ import { ProjektDetail } from "@/pages/projekte/ProjektDetail";
 import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
+import { HealthBanner } from "@/components/HealthBanner";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -56,7 +57,10 @@ const MainLayout = ({ children, onLogout }) => {
       <Sidebar onLogout={onLogout} />
       <MobileNav onLogout={onLogout} />
       <HelpToggle />
-      <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0 px-4 lg:px-8 py-4 lg:py-8">{children}</main>
+      <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0">
+        <HealthBanner />
+        <div className="px-4 lg:px-8 py-4 lg:py-8">{children}</div>
+      </main>
     </div>
   );
 };

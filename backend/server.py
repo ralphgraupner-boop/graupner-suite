@@ -52,6 +52,7 @@ from module_termine.routes import router as module_termine_router
 from module_kalender_export.routes import router as module_kalender_export_router
 from module_user_prefs.routes import router as module_user_prefs_router
 from module_export.routes import router as module_export_router
+from module_health import router as module_health_router
 from module_portal_v2_backup import router as module_portal_v2_backup_router
 from module_portal_v2_backup.routes import start_auto_backup_task
 from dokumente_v2 import router as dokumente_v2_router
@@ -120,6 +121,7 @@ app.include_router(module_termine_router, prefix="/api/module-termine", tags=["T
 app.include_router(module_kalender_export_router, prefix="/api/module-kalender-export", tags=["Kalender-Export"])  # ICS-Mail + Monteur-Feed
 app.include_router(module_user_prefs_router, prefix="/api/module-user-prefs", tags=["UserPrefs"])  # UI-Präferenzen pro User
 app.include_router(module_export_router, prefix="/api/module-export", tags=["Export"])  # Kunden-Export/Import als ZIP
+app.include_router(module_health_router, prefix="/api/module-health", tags=["Health"])  # Status/Version/Umgebungs-Check
 app.include_router(module_portal_v2_backup_router)  # Portal-v2-Sicherungen, prefix /api/module-portal-v2-backup
 
 @app.on_event("startup")
