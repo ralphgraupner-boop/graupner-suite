@@ -11,8 +11,16 @@ router = APIRouter()
 
 
 async def create_backup_data():
-    """Erstellt Backup-Daten und gibt ZIP-Bytes zurück"""
+    """Erstellt Backup-Daten und gibt ZIP-Bytes zurück.
+
+    Enthält JSON aller Collections + alle Bilder/PDFs aus dem Object-Storage,
+    indem die Logik aus module_export wiederverwendet wird.
+    """
     try:
+        # Kompletter Datenbestand pro Kunde inkl. Files (über module_export)
+        from module_export.collector import collect_kunde
+        from utils.storage import get_object
+
         # Auto-Backup: alle aktiven + Legacy-Collections
         # WICHTIG: Bei jedem neuen module_* IMMER hier ergänzen!
         selected = [
@@ -41,8 +49,9 @@ async def create_backup_data():
             "module_kalender_feed_tokens",
             # NEU 29.04.2026 – Export/Import-Audit
             "module_export_log",
-            # NEU 29.04.2026 – Konsistenz-Audit
+            # NEU 29.04.2026 – Konsistenz-Audit + Backup-Log
             "module_health_audit",
+            "auto_backup_log",
             # Portal-Klon (Sandbox, separat)
             "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
             # Legacy
@@ -95,6 +104,34 @@ Wiederherstellung:
 WICHTIG: Bei "Replace" werden bestehende Daten ÜBERSCHRIEBEN!
 """
             zip_file.writestr("README.txt", readme)
+
+            # ZUSÄTZLICH: Pro-Kunde Komplett-Export inkl. Bilder im Unterordner kunden/
+            files_added = 0
+            kunden_count = 0
+            seen_storage_paths: set[str] = set()
+            try:
+                async for c in db.module_kunden.find({}, {"_id": 0, "id": 1}):
+                    try:
+                        data, file_refs = await collect_kunde(c["id"])
+                        if not data.get("kunde"):
+                            continue
+                        kunden_count += 1
+                        # Files (Bilder/PDFs) aus Object-Storage holen
+                        for storage_path, label in file_refs:
+                            if storage_path in seen_storage_paths:
+                                continue
+                            seen_storage_paths.add(storage_path)
+                            try:
+                                content, _ct = get_object(storage_path)
+                                zip_file.writestr(f"kunden/{c['id']}/{label}", content)
+                                files_added += 1
+                            except Exception as fe:  # noqa: BLE001
+                                logger.warning(f"Auto-Backup: file {storage_path} skipped: {fe}")
+                    except Exception as ke:  # noqa: BLE001
+                        logger.warning(f"Auto-Backup: kunde {c.get('id')} skipped: {ke}")
+                logger.info(f"Auto-Backup: {kunden_count} Kunden, {files_added} Dateien gepackt")
+            except Exception as fe:  # noqa: BLE001
+                logger.error(f"Auto-Backup: Datei-Export fehlgeschlagen: {fe}")
         
         zip_buffer.seek(0)
         logger.info(f"✅ Automatisches Backup erstellt: {total_docs} Einträge")
@@ -169,7 +206,7 @@ async def send_backup_email(backup_data: bytes, total_docs: int):
             attachments=attachments
         )
         
-        logger.info(f"✅ Backup-E-Mail gesendet an service24@tischlerei-graupner.de")
+        logger.info("✅ Backup-E-Mail gesendet an service24@tischlerei-graupner.de")
         return True
         
     except Exception as e:
@@ -197,19 +234,68 @@ async def daily_backup_task():
             
             # Backup erstellen
             logger.info("🛡️ Starte automatisches tägliches Backup...")
-            backup_data, total_docs = await create_backup_data()
-            
-            if backup_data:
-                # Backup per E-Mail senden
-                await send_backup_email(backup_data, total_docs)
-                logger.info(f"✅ Automatisches Backup abgeschlossen: {total_docs} Einträge gesichert")
-            else:
-                logger.error("❌ Automatisches Backup fehlgeschlagen")
+            await _run_backup_with_log(trigger="schedule")
             
         except Exception as e:
             logger.error(f"❌ Fehler im täglichen Backup-Task: {e}")
+            try:
+                await db.auto_backup_log.insert_one({
+                    "id": str(__import__("uuid").uuid4()),
+                    "status": "error",
+                    "error": str(e),
+                    "trigger": "schedule",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                })
+            except Exception:
+                pass
             # Warte 1 Stunde bei Fehler
             await asyncio.sleep(3600)
+
+
+async def _run_backup_with_log(trigger: str = "manual"):
+    """Erstellt Backup, sendet Mail und schreibt einen auto_backup_log-Eintrag (success/error)."""
+    import uuid
+    started = datetime.now(timezone.utc)
+    log_entry = {
+        "id": str(uuid.uuid4()),
+        "trigger": trigger,
+        "started_at": started.isoformat(),
+    }
+    try:
+        backup_data, total_docs = await create_backup_data()
+        if not backup_data:
+            log_entry.update({
+                "status": "error",
+                "error": "Backup-Erstellung fehlgeschlagen (None)",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            await db.auto_backup_log.insert_one(log_entry)
+            return False, 0, 0
+        sent = await send_backup_email(backup_data, total_docs)
+        log_entry.update({
+            "status": "success" if sent else "warn",
+            "total_docs": total_docs,
+            "size_kb": round(len(backup_data) / 1024, 1),
+            "mail_sent": bool(sent),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        await db.auto_backup_log.insert_one(log_entry)
+        # Aufräumen: nur die letzten 30 Logs behalten
+        try:
+            cursor = db.auto_backup_log.find({}, {"_id": 0, "id": 1, "created_at": 1}).sort("created_at", -1)
+            ids_to_keep = [d["id"] async for d in cursor.limit(30)]
+            await db.auto_backup_log.delete_many({"id": {"$nin": ids_to_keep}})
+        except Exception:
+            pass
+        return True, total_docs, len(backup_data)
+    except Exception as e:  # noqa: BLE001
+        log_entry.update({
+            "status": "error",
+            "error": str(e),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        await db.auto_backup_log.insert_one(log_entry)
+        return False, 0, 0
 
 
 @router.get("/backup/auto/status")
@@ -243,13 +329,19 @@ async def get_auto_backup_status():
 async def trigger_manual_backup():
     """Löst sofort ein Backup aus und versendet es per E-Mail (Test)."""
     logger.info("🛡️ Manueller Backup-Test ausgelöst")
-    backup_data, total_docs = await create_backup_data()
-    if not backup_data:
-        return {"ok": False, "message": "Backup-Erstellung fehlgeschlagen"}
-    sent = await send_backup_email(backup_data, total_docs)
+    ok, total_docs, size_bytes = await _run_backup_with_log(trigger="manual")
     return {
-        "ok": bool(sent),
+        "ok": ok,
         "total_docs": total_docs,
-        "size_kb": round(len(backup_data) / 1024, 1),
-        "message": "Backup erstellt und Mail gesendet" if sent else "Backup erstellt, aber Mailversand fehlgeschlagen",
+        "size_kb": round(size_bytes / 1024, 1) if size_bytes else 0,
+        "message": "Backup erstellt und Mail gesendet" if ok else "Backup fehlgeschlagen — siehe /api/backup/auto/log",
     }
+
+
+@router.get("/backup/auto/log")
+async def get_backup_log(limit: int = 30):
+    """Gibt die letzten Backup-Versuche aus auto_backup_log."""
+    items = []
+    async for d in db.auto_backup_log.find({}, {"_id": 0}).sort("created_at", -1).limit(limit):
+        items.append(d)
+    return items
