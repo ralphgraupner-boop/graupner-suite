@@ -7,6 +7,8 @@ import { api } from "@/lib/api";
 import { CATEGORIES } from "@/lib/constants";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
+import { KundeExportButton } from "@/components/KundeExportButton";
+import { KundeImportButton } from "@/components/KundeImportButton";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -174,6 +176,7 @@ const KundenModulPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
+          <KundeImportButton onImported={loadKunden} />
           <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import-kunden-modul">
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF importieren"}</span>
@@ -419,6 +422,7 @@ const KundenModulPage = () => {
                       <Button size="sm" onClick={() => { setEditKunde(kunde); setShowModal(true); }}><Edit className="w-4 h-4" /> Bearbeiten</Button>
                       <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} data-testid={`btn-detail-projekte-${kunde.id}`}><Folder className="w-4 h-4" /> Projekte / Neu</Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/quotes/new?customer=${kunde.id}`)}><FileText className="w-4 h-4" /> Angebot erstellen</Button>
+                      <KundeExportButton kunde_id={kunde.id} kunde_name={kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim()} />
                       <button
                         onClick={async () => {
                           try {

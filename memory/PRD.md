@@ -211,6 +211,30 @@ User hat explizit gefordert: bei jeder neuen Funktion **automatisch** einen Eint
 
 ---
 
+## 📝 Session 2026-04-29 Änderungen
+
+### Bearbeiten in Kunden/Projekten/Portalen
+- **AufgabenPanel** & **TerminePanel**: Pencil-Icon → öffnet bestehenden Dialog im Edit-Modus (PUT statt POST). Status-Feld im Aufgaben-Edit ergänzt. Datetime-Konvertierung im Termin-Edit. Beide Quick-Dialoge auf `max-w-2xl` vergrößert.
+- Hot-Reload-Glitch: Pencil-Import nachgezogen.
+
+### NEU: module_export – Kunden-ZIP-Export & Re-Import
+- Backend: `/app/backend/module_export/` (Module-First, eigenes Prefix `/api/module-export`)
+  - `GET /preview/{kunde_id}` — Übersicht: Projekte/Aufgaben/Termine/Einsätze/Quotes/Rechnungen/Portale/Uploads/Aktivität/Monteur/Files
+  - `GET /kunde/{kunde_id}/zip` — komplettes ZIP (manifest.json + JSON je Datentyp + `files/`-Ordner mit Originaldateien aus Object-Storage)
+  - `GET /alle/zip` — sammelt alle Kunden in einem Master-ZIP (Backup-Use-Case)
+  - `POST /import` — ZIP wieder einlesen, Modi `new_ids` (Default, sicher) oder `overwrite`
+  - `GET /log` — Audit-Log (`module_export_log`)
+- Frontend:
+  - `KundeExportButton.jsx` — Preview-Dialog + ZIP-Download im Kunden-Detail
+  - `KundeImportButton.jsx` — ZIP-Upload + Modus-Auswahl + Ergebnis-Report, oben in Kundenliste
+- Auto-Backup: `module_export_log` aufgenommen
+- Tests via curl: Round-Trip (Export → Import mit `new_ids` → Cleanup) erfolgreich
+
+### Offen / Verifizierung
+- Cascade-Delete (Baustein 1) noch nicht implementiert — User muss erst Export-Funktion live testen, dann entscheiden wir ob wir Hard-Delete mit Vorab-Export-Pflicht oder Soft-Delete machen.
+
+---
+
 ## 📝 Session 2026-04-28 Änderungen
 
 - **VorlagenPicker UI vergrößert** (User-Feedback "fenster ist zu klein"):
