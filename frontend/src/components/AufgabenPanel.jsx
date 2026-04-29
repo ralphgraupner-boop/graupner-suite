@@ -29,6 +29,7 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [mitarbeiter, setMitarbeiter] = useState([]);
 
   const params = {};
@@ -160,6 +161,14 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
                       <option value="erledigt">Erledigt</option>
                     </select>
                     <button
+                      onClick={() => setEditing(a)}
+                      className="p-1 text-muted-foreground hover:bg-muted rounded-sm"
+                      title="Bearbeiten"
+                      data-testid={`panel-edit-${a.id}`}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
                       onClick={() => remove(a)}
                       className="p-1 text-red-500 hover:bg-red-50 rounded-sm"
                       title="Löschen"
@@ -175,30 +184,33 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
         </div>
       )}
 
-      {showCreate && (
-        <QuickCreateDialog
+      {(showCreate || editing) && (
+        <QuickAufgabeDialog
+          existing={editing}
           kunde_id={kunde_id}
           projekt_id={projekt_id}
           mitarbeiter={mitarbeiter}
-          onClose={() => setShowCreate(false)}
-          onSaved={() => { setShowCreate(false); load(); }}
+          onClose={() => { setShowCreate(false); setEditing(null); }}
+          onSaved={() => { setShowCreate(false); setEditing(null); load(); }}
         />
       )}
     </div>
   );
 };
 
-const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
+const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
+  const isEdit = !!existing;
   const [data, setData] = useState({
-    titel: "",
-    beschreibung: "",
-    kategorie: "sonstige",
-    prioritaet: "normal",
-    zugewiesen_an: "",
-    faellig_am: "",
-    wiederholung: "einmalig",
-    kunde_id,
-    projekt_id,
+    titel: existing?.titel || "",
+    beschreibung: existing?.beschreibung || "",
+    kategorie: existing?.kategorie || "sonstige",
+    prioritaet: existing?.prioritaet || "normal",
+    zugewiesen_an: existing?.zugewiesen_an || "",
+    faellig_am: existing?.faellig_am || "",
+    wiederholung: existing?.wiederholung || "einmalig",
+    status: existing?.status || "offen",
+    kunde_id: existing?.kunde_id || kunde_id,
+    projekt_id: existing?.projekt_id || projekt_id,
   });
   const [saving, setSaving] = useState(false);
   const upd = (k, v) => setData(d => ({ ...d, [k]: v }));
@@ -207,8 +219,14 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
     if (!data.titel.trim()) { toast.error("Titel erforderlich"); return; }
     setSaving(true);
     try {
-      await api.post("/module-aufgaben", data);
-      toast.success("Aufgabe angelegt");
+      if (isEdit) {
+        await api.put(`/module-aufgaben/${existing.id}`, data);
+        toast.success("Aufgabe aktualisiert");
+      } else {
+        const { status: _ignored, ...createData } = data;
+        await api.post("/module-aufgaben", createData);
+        toast.success("Aufgabe angelegt");
+      }
       onSaved();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Speichern fehlgeschlagen");
@@ -221,7 +239,7 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="aufgabe-quick-dialog">
       <div className="bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-base font-semibold">Neue Aufgabe</h2>
+          <h2 className="text-base font-semibold">{isEdit ? "Aufgabe bearbeiten" : "Neue Aufgabe"}</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-3">
@@ -297,6 +315,21 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
               ))}
             </select>
           </div>
+          {isEdit && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select
+                value={data.status}
+                onChange={(e) => upd("status", e.target.value)}
+                className="w-full border rounded-sm p-2 text-sm"
+                data-testid="quick-select-status"
+              >
+                <option value="offen">Offen</option>
+                <option value="in_arbeit">In Arbeit</option>
+                <option value="erledigt">Erledigt</option>
+              </select>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Diese Aufgabe wird {kunde_id ? "diesem Kunden" : "diesem Projekt"} zugeordnet und erscheint überall, wo die Aufgaben dieses {kunde_id ? "Kunden" : "Projekts"} angezeigt werden.
           </p>
@@ -309,7 +342,7 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
             className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
             data-testid="quick-btn-save"
           >
-            {saving ? "Speichere…" : "Anlegen"}
+            {saving ? "Speichere…" : isEdit ? "Speichern" : "Anlegen"}
           </button>
         </div>
       </div>

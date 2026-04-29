@@ -37,6 +37,7 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [sendingTermin, setSendingTermin] = useState(null);
   const [mitarbeiter, setMitarbeiter] = useState([]);
 
@@ -186,6 +187,14 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
                           📧
                         </button>
                       )}
+                      <button
+                        onClick={() => setEditing(t)}
+                        className="p-1 text-muted-foreground hover:bg-muted rounded-sm"
+                        title="Bearbeiten"
+                        data-testid={`panel-termin-edit-${t.id}`}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
                       {t.status !== "abgesagt" && t.status !== "im_kalender" && (
                         <button
                           onClick={() => onCancel(t)}
@@ -212,13 +221,14 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
         </div>
       )}
 
-      {showCreate && (
-        <QuickCreateDialog
+      {(showCreate || editing) && (
+        <QuickTerminDialog
+          existing={editing}
           kunde_id={kunde_id}
           projekt_id={projekt_id}
           mitarbeiter={mitarbeiter}
-          onClose={() => setShowCreate(false)}
-          onSaved={() => { setShowCreate(false); load(); }}
+          onClose={() => { setShowCreate(false); setEditing(null); }}
+          onSaved={() => { setShowCreate(false); setEditing(null); load(); }}
         />
       )}
 
@@ -233,17 +243,28 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
   );
 };
 
-const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
+const toLocalInput = (s) => {
+  if (!s) return "";
+  // Backend liefert ISO; datetime-local braucht "YYYY-MM-DDTHH:MM"
+  try {
+    const d = new Date(s);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch { return s.slice(0, 16); }
+};
+
+const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
+  const isEdit = !!existing;
   const [data, setData] = useState({
-    titel: "",
-    typ: "ausfuehrung",
-    start: "",
-    ende: "",
-    ort: "",
-    beschreibung: "",
-    monteur_username: "",
-    kunde_id,
-    projekt_id,
+    titel: existing?.titel || "",
+    typ: existing?.typ || "ausfuehrung",
+    start: toLocalInput(existing?.start) || "",
+    ende: toLocalInput(existing?.ende) || "",
+    ort: existing?.ort || "",
+    beschreibung: existing?.beschreibung || "",
+    monteur_username: existing?.monteur_username || "",
+    kunde_id: existing?.kunde_id || kunde_id,
+    projekt_id: existing?.projekt_id || projekt_id,
   });
   const [saving, setSaving] = useState(false);
   const upd = (k, v) => setData(d => ({ ...d, [k]: v }));
@@ -253,8 +274,13 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
     if (!data.start.trim()) { toast.error("Startzeit erforderlich"); return; }
     setSaving(true);
     try {
-      await api.post("/module-termine", data);
-      toast.success("Termin angelegt – wartet auf GO");
+      if (isEdit) {
+        await api.put(`/module-termine/${existing.id}`, data);
+        toast.success("Termin aktualisiert");
+      } else {
+        await api.post("/module-termine", data);
+        toast.success("Termin angelegt – wartet auf GO");
+      }
       onSaved();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Speichern fehlgeschlagen");
@@ -265,9 +291,9 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="termin-quick-dialog">
-      <div className="bg-background rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-base font-semibold">Neuer Termin</h2>
+          <h2 className="text-base font-semibold">{isEdit ? "Termin bearbeiten" : "Neuer Termin"}</h2>
           <button onClick={onClose} className="p-1 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
         </div>
         <div className="p-4 space-y-3">
@@ -352,7 +378,9 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Termin wird {kunde_id ? "diesem Kunden" : "diesem Projekt"} zugeordnet und erscheint hier sowie im Termine-Modul. Status: „Wartet auf GO" – muss von dir per GO bestätigt werden.
+            {isEdit
+              ? "Änderungen werden sofort gespeichert. Bei Datums-/Empfänger-Änderungen ggf. ICS-Mail erneut senden."
+              : `Termin wird ${kunde_id ? "diesem Kunden" : "diesem Projekt"} zugeordnet und erscheint hier sowie im Termine-Modul. Status: „Wartet auf GO" – muss von dir per GO bestätigt werden.`}
           </p>
         </div>
         <div className="p-4 border-t flex justify-end gap-2">
@@ -363,7 +391,7 @@ const QuickCreateDialog = ({ kunde_id, projekt_id, mitarbeiter, onClose, onSaved
             className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
             data-testid="quick-termin-save"
           >
-            {saving ? "Speichere…" : "Anlegen"}
+            {saving ? "Speichere…" : isEdit ? "Speichern" : "Anlegen"}
           </button>
         </div>
       </div>
