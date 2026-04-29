@@ -47,13 +47,13 @@ export const HealthBanner = () => {
   };
   const cls = colorClasses[env.color] || colorClasses.slate;
   const dot = dotClasses[env.color] || dotClasses.slate;
-  const total = data?.data_total;
+  const c = data?.data_counts || {};
   const ver = data?.version?.version || "—";
 
   return (
     <>
       <div
-        className={`border-b ${cls} px-4 py-1.5 flex items-center gap-3 text-xs cursor-pointer select-none`}
+        className={`border-b ${cls} px-4 py-1.5 flex items-center gap-3 text-xs cursor-pointer select-none flex-wrap`}
         onClick={() => setOpen(true)}
         data-testid="health-banner"
       >
@@ -63,10 +63,12 @@ export const HealthBanner = () => {
         <span className="flex items-center gap-1">
           <Database className="w-3 h-3" /> {data?.environment?.db_name || "…"}
         </span>
-        {total !== undefined && (
+        {data && (
           <>
             <span className="opacity-60">·</span>
-            <span>{total} Datensätze</span>
+            <span title="Kunden / Projekte / Aufgaben / Termine / Angebote">
+              K {c.customers ?? "—"} · P {c.module_projekte ?? "—"} · A {c.module_aufgaben ?? "—"} · T {c.module_termine ?? "—"} · Q {c.quotes ?? "—"}
+            </span>
           </>
         )}
         <span className="opacity-60">·</span>
