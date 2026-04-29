@@ -9,6 +9,7 @@ import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
 import { KundeExportButton } from "@/components/KundeExportButton";
 import { KundeImportButton } from "@/components/KundeImportButton";
+import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -35,6 +36,7 @@ const KundenModulPage = () => {
   const [vcfUploading, setVcfUploading] = useState(false);
   const [vcfDuplicateDialog, setVcfDuplicateDialog] = useState(null);
   const [showKontaktImport, setShowKontaktImport] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -177,6 +179,7 @@ const KundenModulPage = () => {
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
           <KundeImportButton onImported={loadKunden} />
+          <KundenMultiExportButton selectedIds={Array.from(selectedIds)} totalCount={kunden.length} />
           <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`} data-testid="btn-vcf-import-kunden-modul">
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF importieren"}</span>
@@ -253,13 +256,56 @@ const KundenModulPage = () => {
       ) : filtered.length === 0 ? (
         <Card className="p-8 text-center"><Users className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-40" /><p className="text-muted-foreground">{search ? "Keine Ergebnisse" : "Erstellen Sie Ihren ersten Kunden"}</p></Card>
       ) : (
-        <div className="flex flex-col gap-2">
+        <>
+          {/* Auswahl-Leiste */}
+          <div className="flex items-center justify-between gap-3 mb-3 px-1">
+            <div className="flex items-center gap-3 text-sm">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={filtered.length > 0 && filtered.every(k => selectedIds.has(k.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(new Set(filtered.map(k => k.id)));
+                    else setSelectedIds(new Set());
+                  }}
+                  className="w-4 h-4 cursor-pointer"
+                  data-testid="chk-export-select-all"
+                />
+                <span>{selectedIds.size > 0 ? `${selectedIds.size} ausgewählt` : "Alle markieren"}</span>
+              </label>
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                >
+                  Auswahl löschen
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
           {filtered.map(kunde => {
             const isExpanded = expandedId === kunde.id;
             const displayName = (kunde.vorname || kunde.nachname) ? `${kunde.vorname || ''} ${kunde.nachname || ''}`.trim() : kunde.name;
             return (
               <Card key={kunde.id} className={`transition-all cursor-pointer overflow-hidden border-l-4 ${STATUS_COLORS[kunde.status || kunde.kontakt_status || "Anfrage"]?.border || ""} ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md'}`} data-testid={`kunden-modul-${kunde.id}`}>
                 <div className="flex items-center gap-4 p-3 lg:p-4" onClick={() => setExpandedId(isExpanded ? null : kunde.id)}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(kunde.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setSelectedIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(kunde.id)) next.delete(kunde.id); else next.add(kunde.id);
+                        return next;
+                      });
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 cursor-pointer flex-shrink-0"
+                    title="Für Sammel-Export markieren"
+                    data-testid={`chk-export-${kunde.id}`}
+                  />
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[kunde.status || kunde.kontakt_status || "Anfrage"]?.dot || "bg-gray-400"}`} />
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isExpanded ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
                     {kunde.vorname?.charAt(0)?.toUpperCase() || kunde.nachname?.charAt(0)?.toUpperCase() || "?"}
@@ -477,6 +523,7 @@ const KundenModulPage = () => {
             );
           })}
         </div>
+        </>
       )}
 
       {/* Create/Edit Modal */}

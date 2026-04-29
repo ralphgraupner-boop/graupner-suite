@@ -148,6 +148,46 @@ async def export_alle_kunden(user=Depends(get_current_user)):
     return StreamingResponse(io.BytesIO(out_buf.read()), media_type="application/zip", headers=headers)
 
 
+# ==================== EXPORT MEHRERE KUNDEN (MULTI-SELECT) ====================
+
+from pydantic import BaseModel  # noqa: E402
+
+
+class MultiSelectRequest(BaseModel):
+    kunde_ids: list[str]
+
+
+@router.post("/multi/zip")
+async def export_multi_kunden(req: MultiSelectRequest, user=Depends(get_current_user)):
+    user_state["user"] = user
+    if not req.kunde_ids:
+        raise HTTPException(400, "kunde_ids leer")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M")
+    out_buf = io.BytesIO()
+    success = 0
+    failed: list[str] = []
+    with zipfile.ZipFile(out_buf, "w", zipfile.ZIP_DEFLATED) as outer:
+        for kid in req.kunde_ids:
+            try:
+                zip_bytes, zip_name = await _build_zip_for_kunde(kid)
+                outer.writestr(zip_name, zip_bytes)
+                success += 1
+            except Exception as e:  # noqa: BLE001
+                failed.append(f"{kid}: {e}")
+                logger.warning(f"export-multi: Kunde {kid} fehlgeschlagen: {e}")
+        outer.writestr("export-manifest.json", json.dumps({
+            "schema_version": SCHEMA_VERSION,
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "kunden_requested": len(req.kunde_ids),
+            "kunden_success": success,
+            "failed": failed,
+        }, indent=2, ensure_ascii=False))
+    out_buf.seek(0)
+    headers = {"Content-Disposition": f'attachment; filename="graupner-suite-{success}-kunden-{today}.zip"'}
+    return StreamingResponse(io.BytesIO(out_buf.read()), media_type="application/zip", headers=headers)
+
+
+
 # ==================== IMPORT ====================
 
 class ImportResult(dict):

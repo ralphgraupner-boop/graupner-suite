@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download, Loader2, FileArchive } from "lucide-react";
 import { toast } from "sonner";
 import { api, API as API_BASE } from "@/lib/api";
+import { saveBlobWithPicker } from "@/lib/saveBlob";
 
 /**
  * Export-Button für einen einzelnen Kunden.
@@ -40,11 +41,14 @@ export const KundeExportButton = ({ kunde_id, kunde_name = "" }) => {
       const cd = res.headers.get("Content-Disposition") || "";
       const m = cd.match(/filename="([^"]+)"/);
       const filename = m ? m[1] : `export-${kunde_id}.zip`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`Export gestartet: ${filename}`);
+      const result = await saveBlobWithPicker(blob, filename);
+      if (result.aborted) {
+        toast.info("Speichern abgebrochen");
+      } else if (result.picked) {
+        toast.success("Export gespeichert");
+      } else {
+        toast.success(`Heruntergeladen: ${filename}`);
+      }
       setOpen(false);
     } catch (err) {
       toast.error(`Download fehlgeschlagen: ${err.message}`);
