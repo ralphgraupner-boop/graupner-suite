@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
-  Briefcase, Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, ChevronDown, ChevronUp,
+  Briefcase, Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, ChevronDown, ChevronUp, Pencil,
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 

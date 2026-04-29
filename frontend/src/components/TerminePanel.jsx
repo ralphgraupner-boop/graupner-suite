@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
-  Calendar, Plus, Trash2, X, ChevronDown, ChevronUp, MapPin, Clock,
+  Calendar, Plus, Trash2, X, ChevronDown, ChevronUp, MapPin, Clock, Pencil,
   AlertTriangle, CheckCircle2, XCircle, HardHat,
 } from "lucide-react";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
