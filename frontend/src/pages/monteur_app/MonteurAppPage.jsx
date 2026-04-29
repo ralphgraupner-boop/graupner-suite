@@ -7,6 +7,7 @@ import {
   Briefcase, Clock, AlertTriangle, CheckCircle2, Folder,
 } from "lucide-react";
 import { useVersionCheck } from "./useVersionCheck";
+import { MonteurHealthBadge } from "@/components/MonteurHealthBadge";
 
 const STATUS_LABEL = {
   aktiv: "Aktiv",
@@ -161,6 +162,7 @@ export function MonteurAppPage() {
 
   return (
     <div className="max-w-3xl mx-auto" data-testid="monteur-app-page">
+      <MonteurHealthBadge onRefresh={load} />
       {outdated && (
         <div className="sticky top-0 z-30 bg-amber-500 text-white rounded-xl shadow-lg px-4 py-3 mb-4 flex items-center gap-3" data-testid="update-banner-list">
           <RefreshCw className="w-5 h-5 flex-shrink-0" />

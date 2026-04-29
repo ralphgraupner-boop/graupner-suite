@@ -211,6 +211,33 @@ User hat explizit gefordert: bei jeder neuen Funktion **automatisch** einen Eint
 
 ---
 
+## 📝 Session 2026-04-29 (Folge-Updates)
+
+### Health-Check + Banner (module_health)
+- Backend `/app/backend/module_health/` (read-only Datenmaske):
+  - `GET /api/module-health/status` — Version, Umgebung, Counts, Backup-Status, Server-Zeit
+- Frontend:
+  - `HealthBanner.jsx` — orange/rot je nach Umgebung, kompakt unter Header
+  - `MonteurHealthBadge.jsx` — Mobile-Version mit **Hard-Refresh-Button** (Service-Worker + Cache-Clear)
+- Banner zeigt: K8/P6/A3/T0/Q1 (statt verwirrender "20 Datensätze"-Summe)
+
+### Daten-Konsistenz-Bug entdeckt + behoben
+- Es gibt ZWEI Kunden-Collections: `customers` (6 Demo-Daten, alt) und `module_kunden` (8 echte Kunden, neu)
+- **NULL Überlappung** der IDs — alle Refs (Projekte/Aufgaben/Termine/Einsätze) zeigen auf `module_kunden`
+- Bisheriger Bug: `module_export.collector` und `/alle/zip` hatten `customers` zuerst → würde 6 Demo-Daten exportieren statt der echten 8
+- **Fix**: Reihenfolge umgedreht, `/alle/zip` iteriert über `module_kunden`, Import schreibt in `module_kunden`
+- Health-Endpoint zeigt `module_kunden` als Hauptzahl, `customers_legacy` zur Info
+
+### Folge-Bug aufgefallen (TODO)
+- Monteur-App zeigt Einsätze mit "(kein Kunde)" — die `einsaetze.kunde_id` zeigt auf alte `customers`-IDs.
+  Optionen: alte einsaetze auf `module_kunden` neu mappen, oder customers-Legacy aufräumen.
+
+### Entscheidung: KEINE DB-Trennung jetzt
+- User-Feedback: Live wird noch nicht produktiv genutzt → DB-Trennung verschoben
+- Stattdessen: Health-Banner als sichtbarer Schutz gegen "andere Kunden gesehen"-Cache-Probleme
+
+---
+
 ## 📝 Session 2026-04-29 Änderungen
 
 ### Bearbeiten in Kunden/Projekten/Portalen
