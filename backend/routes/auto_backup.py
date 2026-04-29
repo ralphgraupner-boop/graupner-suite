@@ -41,6 +41,8 @@ async def create_backup_data():
             "module_kalender_feed_tokens",
             # NEU 29.04.2026 – Export/Import-Audit
             "module_export_log",
+            # NEU 29.04.2026 – Konsistenz-Audit
+            "module_health_audit",
             # Portal-Klon (Sandbox, separat)
             "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
             # Legacy

@@ -246,3 +246,99 @@ async def consistency_check(user=Depends(get_current_user)):
         "checked_at": datetime.now(timezone.utc).isoformat(),
     }
 
+
+# ==================== CLEANUP ====================
+
+from pydantic import BaseModel  # noqa: E402
+
+
+class CleanupRequest(BaseModel):
+    action: str  # "delete" | "reassign"
+    ids: list[str]  # zu bearbeitende Eintrags-IDs
+    target_kunde_id: str | None = None  # für reassign
+
+    
+COL_BY_TYPE = {
+    "orphan_projekte": ("module_projekte", "kunde_id"),
+    "orphan_aufgaben": ("module_aufgaben", "kunde_id"),
+    "orphan_termine": ("module_termine", "kunde_id"),
+    "orphan_quotes": ("quotes", "customer_id"),
+    "orphan_einsaetze": ("einsaetze", "kunde_id"),
+}
+
+
+@router.post("/cleanup/{issue_type}")
+async def cleanup_issue(issue_type: str, req: CleanupRequest, user=Depends(get_current_user)):
+    """
+    Behebt ein konkretes Konsistenz-Problem.
+    issue_type = legacy_collection | orphan_projekte | orphan_aufgaben | orphan_termine | orphan_quotes | orphan_einsaetze
+    action = delete | reassign
+    """
+    audit = {
+        "type": issue_type,
+        "action": req.action,
+        "user": getattr(user, "username", None),
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # Legacy Customers: nur Delete erlaubt, alle 6
+    if issue_type == "legacy_collection":
+        if req.action != "delete":
+            raise HTTPException(400, "Für Legacy-Customers ist nur 'delete' erlaubt")
+        # Sicherheitsprüfung: nur löschen wenn keine Refs auf customers-IDs (außer zu cleanenden) existieren
+        result = await db.customers.delete_many({})
+        audit["deleted"] = result.deleted_count
+        await db.module_health_audit.insert_one(audit)
+        return {"ok": True, "deleted": result.deleted_count}
+
+    # Orphan-Typen
+    cfg = COL_BY_TYPE.get(issue_type)
+    if not cfg:
+        raise HTTPException(400, f"Unbekannter issue_type: {issue_type}")
+    col_name, ref_field = cfg
+    col = db[col_name]
+
+    if not req.ids:
+        raise HTTPException(400, "Keine IDs angegeben")
+
+    if req.action == "delete":
+        result = await col.delete_many({"id": {"$in": req.ids}})
+        audit["deleted"] = result.deleted_count
+        audit["ids"] = req.ids
+        await db.module_health_audit.insert_one(audit)
+        return {"ok": True, "deleted": result.deleted_count}
+
+    if req.action == "reassign":
+        if not req.target_kunde_id:
+            raise HTTPException(400, "target_kunde_id erforderlich bei reassign")
+        # Zielkunde existiert?
+        target = await db.module_kunden.find_one({"id": req.target_kunde_id}, {"_id": 0})
+        if not target:
+            raise HTTPException(404, "Ziel-Kunde nicht gefunden")
+        # Snapshot-Felder ggf. mit-aktualisieren
+        update_doc = {ref_field: req.target_kunde_id}
+        snapshot_name = target.get("name") or f"{target.get('vorname','')} {target.get('nachname','')}".strip()
+        if col_name == "einsaetze":
+            update_doc["kunde_name"] = snapshot_name
+        elif col_name == "quotes":
+            update_doc["customer_name"] = snapshot_name
+        elif col_name == "module_projekte":
+            update_doc["kunde_name"] = snapshot_name
+
+        result = await col.update_many({"id": {"$in": req.ids}}, {"$set": update_doc})
+        audit["reassigned"] = result.modified_count
+        audit["target"] = req.target_kunde_id
+        audit["ids"] = req.ids
+        await db.module_health_audit.insert_one(audit)
+        return {"ok": True, "reassigned": result.modified_count, "target_name": snapshot_name}
+
+    raise HTTPException(400, f"Unbekannte action: {req.action}")
+
+
+@router.get("/audit")
+async def cleanup_audit(limit: int = 50, user=Depends(get_current_user)):
+    items = []
+    async for d in db.module_health_audit.find({}, {"_id": 0}).sort("at", -1).limit(limit):
+        items.append(d)
+    return items
+

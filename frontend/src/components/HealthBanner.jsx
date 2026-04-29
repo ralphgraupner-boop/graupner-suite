@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Activity, CheckCircle2, AlertTriangle, Database, Clock, X, ShieldAlert } from "lucide-react";
+import { Activity, CheckCircle2, AlertTriangle, Database, Clock, X, ShieldAlert, Wrench } from "lucide-react";
 import { api } from "@/lib/api";
+import { CleanupDialog } from "./CleanupDialog";
 
 /**
  * Status-Banner direkt unter dem Header.
@@ -25,8 +26,13 @@ export const HealthBanner = () => {
   const [data, setData] = useState(null);
   const [consistency, setConsistency] = useState(null);
   const [open, setOpen] = useState(false);
+  const [cleanupIssue, setCleanupIssue] = useState(null);
   const [hidden, setHidden] = useState(() => sessionStorage.getItem("health_banner_hidden") === "1");
   const env = detectEnvFromHost();
+
+  const reloadConsistency = () => {
+    api.get("/module-health/consistency").then(r => setConsistency(r.data)).catch(() => {});
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -175,11 +181,22 @@ export const HealthBanner = () => {
                               key={idx}
                               className={`border rounded-sm p-2 ${i.severity === "error" ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}
                             >
-                              <div className="text-sm font-semibold">{i.title}</div>
-                              <div className="text-xs mt-0.5">{i.message}</div>
-                              {i.fix_hint && (
-                                <div className="text-xs mt-1 italic opacity-80">→ {i.fix_hint}</div>
-                              )}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-semibold">{i.title}</div>
+                                  <div className="text-xs mt-0.5">{i.message}</div>
+                                  {i.fix_hint && (
+                                    <div className="text-xs mt-1 italic opacity-80">→ {i.fix_hint}</div>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => setCleanupIssue(i)}
+                                  className="text-xs px-2 py-1 bg-background border rounded-sm hover:bg-muted inline-flex items-center gap-1 flex-shrink-0"
+                                  data-testid={`btn-fix-${i.type}`}
+                                >
+                                  <Wrench className="w-3 h-3" /> Beheben
+                                </button>
+                              </div>
                               {i.details && i.details.length > 0 && (
                                 <details className="mt-1">
                                   <summary className="text-xs cursor-pointer opacity-70 hover:opacity-100">
@@ -209,6 +226,14 @@ export const HealthBanner = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {cleanupIssue && (
+        <CleanupDialog
+          issue={cleanupIssue}
+          onClose={() => setCleanupIssue(null)}
+          onDone={() => { setCleanupIssue(null); reloadConsistency(); }}
+        />
       )}
     </>
   );
