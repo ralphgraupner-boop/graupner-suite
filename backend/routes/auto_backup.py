@@ -52,6 +52,8 @@ async def create_backup_data():
             # NEU 29.04.2026 – Konsistenz-Audit + Backup-Log
             "module_health_audit",
             "auto_backup_log",
+            # NEU 29.04.2026 – Lösch-Audit
+            "module_kunde_delete_log",
             # Portal-Klon (Sandbox, separat)
             "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
             # Legacy
@@ -147,6 +149,22 @@ async def send_backup_email(backup_data: bytes, total_docs: int):
     """Sendet Backup per E-Mail"""
     try:
         from utils import send_email
+
+        # Konsistenz-Status mitsenden
+        consistency_summary = ""
+        try:
+            from module_health.routes import consistency_check
+            # Direkt aufrufen ohne Auth – wir sind serverseitig
+            class _U:
+                username = "auto-backup"
+            cdata = await consistency_check(user=_U())
+            if cdata.get("ok"):
+                consistency_summary = '<div style="background:#e8f5e9;border-left:4px solid #2e7d32;padding:12px;margin:16px 0;border-radius:6px;color:#2e7d32;"><strong>✓ Konsistenz-Check: Alle Daten sauber</strong></div>'
+            else:
+                items = "".join(f'<li>{i["title"]}</li>' for i in (cdata.get("issues") or []))
+                consistency_summary = f'<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:12px;margin:16px 0;border-radius:6px;color:#856404;"><strong>⚠ Konsistenz-Hinweise: {cdata.get("errors_count",0)} Fehler · {cdata.get("warnings_count",0)} Warnungen</strong><ul style="margin:6px 0 0 20px;">{items}</ul></div>'
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Konsistenz-Check für Backup-Mail fehlgeschlagen: {e}")
         
         filename = f"Graupner_AutoBackup_{datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M')}.zip"
         
@@ -159,6 +177,7 @@ async def send_backup_email(backup_data: bytes, total_docs: int):
     <div style="background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 16px; margin: 20px 0; border-radius: 8px;">
         <p style="margin: 0; color: #2e7d32; font-weight: 600;">✅ Ihr tägliches Backup wurde erfolgreich erstellt!</p>
     </div>
+    {consistency_summary}
     
     <p>Backup-Details:</p>
     <ul style="margin: 20px 0;">

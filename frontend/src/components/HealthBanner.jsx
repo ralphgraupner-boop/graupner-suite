@@ -38,7 +38,13 @@ export const HealthBanner = () => {
     let mounted = true;
     api.get("/module-health/status").then(r => { if (mounted) setData(r.data); }).catch(() => {});
     api.get("/module-health/consistency").then(r => { if (mounted) setConsistency(r.data); }).catch(() => {});
-    return () => { mounted = false; };
+
+    // Auto-Refresh: nach jeder Lösch-/Cleanup-Aktion einen Recheck triggern.
+    // Dispatch über window-Events macht die Kopplung lose: jede Page kann nach einer Mutation
+    // einfach `window.dispatchEvent(new CustomEvent('graupner:data-changed'))` feuern.
+    const handler = () => { if (mounted) { api.get("/module-health/consistency").then(r => setConsistency(r.data)).catch(() => {}); } };
+    window.addEventListener("graupner:data-changed", handler);
+    return () => { mounted = false; window.removeEventListener("graupner:data-changed", handler); };
   }, []);
 
   if (hidden) return null;

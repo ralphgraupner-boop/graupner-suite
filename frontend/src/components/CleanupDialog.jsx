@@ -56,6 +56,7 @@ export const CleanupDialog = ({ issue, onClose, onDone }) => {
       toast.error(err?.response?.data?.detail || "Aktion fehlgeschlagen");
     } finally {
       setBusy(false);
+      try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* ignore */ }
     }
   };
 

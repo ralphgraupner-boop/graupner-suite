@@ -211,6 +211,26 @@ User hat explizit gefordert: bei jeder neuen Funktion **automatisch** einen Eint
 
 ---
 
+## 📝 Session 2026-04-30 Änderungen
+
+### NEU: module_kunde_delete – Sicheres Cascade-Löschen
+- Backend `/app/backend/module_kunde_delete/` (Module-First):
+  - `POST /api/module-kunde-delete/execute/{kunde_id}` – erstellt **vor** dem Lösch ein Komplett-ZIP, sendet optional Mail mit ZIP an `service24@tischlerei-graupner.de`, löscht dann alle Refs in einer Aktion (Cascade über Projekte/Aufgaben/Termine/Einsätze/Quotes/Rechnungen/Portale/Monteur), gibt ZIP an Frontend zurück
+  - `GET /log` – Audit-Log (`module_kunde_delete_log`, im Auto-Backup)
+- Frontend:
+  - `KundeDeleteDialog.jsx` – Vorschau-Counts, Begründungs-Feld, Mail-Checkbox, **Namen-Bestätigung** (muss exakt eingetippt werden)
+  - Alter Lösch-Button in Kundenliste durch sichere Variante ersetzt (kein 2-Klick-Trick mehr)
+
+### NEU: Auto-Konsistenz-Check nach Mutationen
+- `HealthBanner` lauscht auf `window.dispatchEvent(new CustomEvent("graupner:data-changed"))`
+- `KundeDeleteDialog` und `CleanupDialog` feuern dieses Event nach Abschluss
+- Banner lädt sofort die Konsistenz neu, ohne F5
+
+### Backup-Mail mit Konsistenz-Status (f)
+- Tägliche Backup-Mail enthält jetzt am Anfang einen grünen "Alle Daten sauber"-Block oder einen gelben "X Fehler · Y Warnungen"-Hinweis
+
+---
+
 ## 📝 Session 2026-04-29 (Folge-Updates)
 
 ### Health-Check + Banner (module_health)

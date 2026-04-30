@@ -10,6 +10,7 @@ import { TerminePanel } from "@/components/TerminePanel";
 import { KundeExportButton } from "@/components/KundeExportButton";
 import { KundeImportButton } from "@/components/KundeImportButton";
 import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
+import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -37,6 +38,7 @@ const KundenModulPage = () => {
   const [vcfDuplicateDialog, setVcfDuplicateDialog] = useState(null);
   const [showKontaktImport, setShowKontaktImport] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [deleteKunde, setDeleteKunde] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,14 +59,8 @@ const KundenModulPage = () => {
     finally { setLoading(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (confirmDeleteId !== id) { setConfirmDeleteId(id); setTimeout(() => setConfirmDeleteId(null), 3000); return; }
-    try {
-      await api.delete(`/modules/kunden/data/${id}`);
-      toast.success("Kunde geloescht");
-      setConfirmDeleteId(null);
-      loadKunden();
-    } catch { toast.error("Fehler"); }
+  const handleDelete = (kunde) => {
+    setDeleteKunde(kunde);
   };
 
   const handleDeleteFile = async (kundeId, fileIndex, fileName) => {
@@ -331,8 +327,8 @@ const KundenModulPage = () => {
                   <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700" title="Projekte dieses Kunden" data-testid={`btn-projekte-${kunde.id}`}><Folder className="w-4 h-4" /></button>
                     <button onClick={() => { setEditKunde(kunde); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(kunde.id)} className={`p-2 rounded-sm transition-colors ${confirmDeleteId === kunde.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10'}`}>
-                      {confirmDeleteId === kunde.id ? <span className="text-xs font-bold">?</span> : <Trash2 className="w-4 h-4" />}
+                    <button onClick={() => handleDelete(kunde)} className="p-2 rounded-sm hover:bg-destructive/10 text-red-600" title="Kunde sicher löschen (mit Vorab-Backup)" data-testid={`btn-kunde-delete-${kunde.id}`}>
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                   <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -541,6 +537,15 @@ const KundenModulPage = () => {
           onOpen={(id) => { setVcfDuplicateDialog(null); setEditKunde(kunden.find(k => k.id === id)); setShowModal(true); }}
           onForce={vcfDuplicateDialog.retry}
           loading={vcfUploading}
+        />
+      )}
+
+      {deleteKunde && (
+        <KundeDeleteDialog
+          kunde_id={deleteKunde.id}
+          kunde_name={deleteKunde.name || `${deleteKunde.vorname || ""} ${deleteKunde.nachname || ""}`.trim() || deleteKunde.email}
+          onClose={() => setDeleteKunde(null)}
+          onDeleted={() => { setDeleteKunde(null); loadKunden(); }}
         />
       )}
     </div>
