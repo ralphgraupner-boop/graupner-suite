@@ -51,11 +51,13 @@ export const HealthBanner = () => {
 
   const colorClasses = {
     red: "bg-red-50 border-red-300 text-red-900",
+    blue: "bg-blue-50 border-blue-300 text-blue-900",
     amber: "bg-amber-50 border-amber-300 text-amber-900",
     slate: "bg-slate-50 border-slate-300 text-slate-900",
   };
   const dotClasses = {
     red: "bg-red-500",
+    blue: "bg-blue-500",
     amber: "bg-amber-500",
     slate: "bg-slate-500",
   };

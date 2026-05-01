@@ -4,12 +4,44 @@ import axios from "axios";
 import { Button, Input, Card } from "@/components/common";
 import { api, API } from "@/lib/api";
 
+const detectLoginEnv = () => {
+  if (typeof window === "undefined") return { kind: "unknown", label: "Unbekannt", style: "slate" };
+  const h = window.location.hostname;
+  if (h.includes("preview") || h.includes("emergentagent.com")) {
+    return { kind: "preview", label: "PREVIEW · TEST-UMGEBUNG", style: "blue" };
+  }
+  if (h.includes("emergent.host") || h.includes("graupner") || h === "localhost") {
+    return { kind: "live", label: "LIVE · PRODUKTIV", style: "red" };
+  }
+  return { kind: "unknown", label: h, style: "slate" };
+};
+
+const ENV_STYLES = {
+  blue: {
+    banner: "bg-blue-50 border-blue-400 text-blue-900",
+    dot: "bg-blue-500",
+    btn: "!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-600",
+  },
+  red: {
+    banner: "bg-red-50 border-red-400 text-red-900",
+    dot: "bg-red-500",
+    btn: "", // bleibt Standard
+  },
+  slate: {
+    banner: "bg-slate-50 border-slate-400 text-slate-900",
+    dot: "bg-slate-500",
+    btn: "",
+  },
+};
+
 const LoginPage = ({ onLogin }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("Tischlerei Graupner");
   const [loading, setLoading] = useState(false);
+  const env = detectLoginEnv();
+  const envStyle = ENV_STYLES[env.style] || ENV_STYLES.slate;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,6 +78,10 @@ const LoginPage = ({ onLogin }) => {
       </div>
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8 bg-background">
         <Card className="w-full max-w-md p-6 lg:p-8">
+          <div className={`mb-4 px-3 py-2 border rounded-md flex items-center gap-2 text-xs font-bold ${envStyle.banner}`} data-testid="login-env-banner">
+            <span className={`w-2 h-2 rounded-full ${envStyle.dot} animate-pulse`} />
+            {env.label}
+          </div>
           <div className="text-center mb-6 lg:mb-8">
             <h1 className="text-2xl lg:text-3xl font-bold text-primary">
               {isRegister ? "Registrieren" : "Anmelden"}
@@ -93,10 +129,10 @@ const LoginPage = ({ onLogin }) => {
             <Button
               type="submit"
               data-testid="btn-login"
-              className="w-full"
+              className={`w-full ${envStyle.btn}`}
               disabled={loading}
             >
-              {loading ? "Laden..." : isRegister ? "Registrieren" : "Anmelden"}
+              {loading ? "Laden..." : isRegister ? "Registrieren" : `Anmelden${env.kind === "preview" ? " (Preview)" : env.kind === "live" ? " (Live)" : ""}`}
             </Button>
           </form>
           <div className="mt-6 text-center">

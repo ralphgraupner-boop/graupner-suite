@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 const detectEnv = () => {
   if (typeof window === "undefined") return { kind: "unknown", color: "slate", short: "?" };
   const h = window.location.hostname;
-  if (h.includes("preview") || h.includes("emergentagent.com")) return { kind: "preview", color: "amber", short: "PREVIEW" };
+  if (h.includes("preview") || h.includes("emergentagent.com")) return { kind: "preview", color: "blue", short: "PREVIEW" };
   if (h.includes("emergent.host")) return { kind: "live", color: "red", short: "LIVE" };
   return { kind: "local", color: "slate", short: "LOCAL" };
 };
@@ -49,6 +49,7 @@ export const MonteurHealthBadge = ({ onRefresh }) => {
 
   const colorMap = {
     red: { bg: "bg-red-50", border: "border-red-300", text: "text-red-900", dot: "bg-red-500" },
+    blue: { bg: "bg-blue-50", border: "border-blue-300", text: "text-blue-900", dot: "bg-blue-500" },
     amber: { bg: "bg-amber-50", border: "border-amber-300", text: "text-amber-900", dot: "bg-amber-500" },
     slate: { bg: "bg-slate-50", border: "border-slate-300", text: "text-slate-900", dot: "bg-slate-500" },
   };
