@@ -3,6 +3,9 @@ import { useLocation, Link } from "react-router-dom";
 import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, GripVertical, ArrowUpDown, RotateCcw, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
+import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
+
+const APP_ENV = detectAppEnv();
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
@@ -248,8 +251,15 @@ const Sidebar = ({ onLogout }) => {
       <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-card border-r flex-col z-30">
       <div className="p-6 border-b">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-primary">Graupner Suite</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-primary">Graupner Suite</h1>
+              {APP_ENV.kind !== "unknown" && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-bold tracking-wider ${ENV_BADGE_CLASSES[APP_ENV.color]}`} data-testid="sidebar-env-badge">
+                  {APP_ENV.short}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">Tischlerei-Software</p>
           </div>
           <button
@@ -521,7 +531,14 @@ const MobileNav = ({ onLogout }) => {
   return (
     <>
       <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b flex items-center justify-between px-4 z-30">
-        <h1 className="text-lg font-bold text-primary">Graupner Suite</h1>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <h1 className="text-lg font-bold text-primary">Graupner Suite</h1>
+          {APP_ENV.kind !== "unknown" && (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-sm font-bold tracking-wider ${ENV_BADGE_CLASSES[APP_ENV.color]}`} data-testid="mobile-env-badge">
+              {APP_ENV.short}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {role === "buchhaltung" && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-sm font-medium">Buchhaltung</span>}
           <button onClick={() => setMoreOpen(!moreOpen)} className="p-2 hover:bg-muted rounded-sm" data-testid="btn-mobile-menu">

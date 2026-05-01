@@ -50,6 +50,7 @@ import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
 import { HealthBanner } from "@/components/HealthBanner";
+import { detectAppEnv } from "@/lib/env";
 
 const MainLayout = ({ children, onLogout }) => {
   return (
@@ -69,6 +70,14 @@ function App() {
   const { login, logout, isAuthenticated } = useAuth();
   const role = getUserRole();
   const defaultPage = "/dashboard";
+
+  // Tab-Titel und Favicon-Hinweis je Umgebung
+  useEffect(() => {
+    const env = detectAppEnv();
+    if (env.kind === "preview") document.title = "🔵 Graupner Suite (PREVIEW)";
+    else if (env.kind === "live") document.title = "🔴 Graupner Suite";
+    else document.title = "Graupner Suite";
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
