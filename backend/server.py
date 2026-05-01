@@ -54,6 +54,7 @@ from module_user_prefs.routes import router as module_user_prefs_router
 from module_export.routes import router as module_export_router
 from module_health import router as module_health_router
 from module_kunde_delete import router as module_kunde_delete_router
+from module_mail_inbox import router as module_mail_inbox_router
 from module_portal_v2_backup import router as module_portal_v2_backup_router
 from module_portal_v2_backup.routes import start_auto_backup_task
 from dokumente_v2 import router as dokumente_v2_router
@@ -124,6 +125,7 @@ app.include_router(module_user_prefs_router, prefix="/api/module-user-prefs", ta
 app.include_router(module_export_router, prefix="/api/module-export", tags=["Export"])  # Kunden-Export/Import als ZIP
 app.include_router(module_health_router, prefix="/api/module-health", tags=["Health"])  # Status/Version/Umgebungs-Check
 app.include_router(module_kunde_delete_router, prefix="/api/module-kunde-delete", tags=["KundeDelete"])  # Cascade-Delete mit Vorab-Export
+app.include_router(module_mail_inbox_router, prefix="/api/module-mail-inbox", tags=["MailInbox"])  # Jimdo-Anfragen → Kundenvorschlag
 app.include_router(module_portal_v2_backup_router)  # Portal-v2-Sicherungen, prefix /api/module-portal-v2-backup
 
 @app.on_event("startup")

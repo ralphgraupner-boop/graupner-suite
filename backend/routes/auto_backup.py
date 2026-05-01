@@ -54,6 +54,8 @@ async def create_backup_data():
             "auto_backup_log",
             # NEU 29.04.2026 – Lösch-Audit
             "module_kunde_delete_log",
+            # NEU 01.05.2026 – Jimdo-Mail-Inbox
+            "module_mail_inbox",
             # Portal-Klon (Sandbox, separat)
             "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
             # Legacy
