@@ -16,6 +16,7 @@ import { ArtikelModulPage } from "@/pages/ArtikelModulPage";
 import { DokumenteModulPage } from "@/pages/DokumenteModulPage";
 import { TextvorlagenModulPage } from "@/pages/TextvorlagenModulPage";
 import { KundenModulPage } from "@/pages/KundenModulPage";
+import ModuleMailInboxPage from "@/pages/mail_inbox/ModuleMailInboxPage";
 import { PortalsPage } from "@/pages/PortalsPage";
 import PortalsKlonPage from "@/pages/PortalsKlonPage";
 import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
@@ -115,6 +116,7 @@ function App() {
               {/* Module */}
               <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />
               <Route path="/module/kunden" element={<MainLayout onLogout={logout}><KundenModulPage /></MainLayout>} />
+              <Route path="/module/mail-inbox" element={<MainLayout onLogout={logout}><ModuleMailInboxPage /></MainLayout>} />
               <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
               <Route path="/module/dokumente" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
               <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />

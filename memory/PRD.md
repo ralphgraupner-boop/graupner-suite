@@ -211,6 +211,32 @@ User hat explizit gefordert: bei jeder neuen Funktion **automatisch** einen Eint
 
 ---
 
+## 📝 Session 2026-05-01 Änderungen
+
+### Umgebungs-Erkennung deutlich erweitert (Verwechslungsschutz)
+- Preview = **Blau**, Live = **Rot** (war: Preview = Orange)
+- Im Tab-Titel: 🔵 Graupner Suite (PREVIEW) / 🔴 Graupner Suite — sichtbar in Tab-Bar, Bookmarks, Phone-Switcher
+- Sidebar-Header zeigt **PREVIEW**-Badge neben "Graupner Suite"
+- Mobile-Header zeigt **PREVIEW**-Badge neben Titel
+- Login-Seite: blauer Banner + blauer Button "Anmelden (Preview)"
+- Health-Banner + Monteur-Badge: blau
+
+### NEU: module_mail_inbox – Kontaktformular-Anfragen aus Postfach
+- Backend `/app/backend/module_mail_inbox/`:
+  - Multi-Format-Parser (`parser.py`):
+    - **Format A** = neues Jimdo-Formular (Frau Herr / Name / Telefonnummer / Nachricht / E-Mail)
+    - **Format B** = altes Webformular (alles in einer Zeile, Vor+Nachname aus Subject)
+  - `POST /api/module-mail-inbox/scan?weeks=6&max_count=30` — IMAP scan in INBOX + Filter-Ordner "INBOX.anfrage von"
+  - `GET /list?status=vorschlag|übernommen|ignoriert|all`
+  - `POST /accept/{id}` — legt Kunde in module_kunden an mit Anliegen + Quell-URL + imported_from_mail_id
+  - `POST /reject/{id}` — markiert ignoriert
+- Frontend: `/module/mail-inbox` (Sidebar "Mail-Anfragen")
+- Auto-Backup: `module_mail_inbox` aufgenommen
+- **Regex-only**, kein LLM (Format ist deterministisch)
+- Erfolgreich getestet: 12 echte Anfragen aus 6 Wochen sauber extrahiert (Vor-/Nachname, Telefon, E-Mail, Nachricht)
+
+---
+
 ## 📝 Session 2026-04-30 Änderungen
 
 ### NEU: module_kunde_delete – Sicheres Cascade-Löschen

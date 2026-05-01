@@ -1,37 +1,27 @@
 """
-Regex-Parser für Jimdo-Kontaktformular-Mails.
+Multi-Format-Parser für Kontaktformular-Mails.
 
-Beispiel-Format (deterministisch, kommt immer von no-reply@jimdo.com):
+Format A: NEUES Jimdo-Formular (über no-reply@jimdo.com)
+    Frau Herr: Lawless
+    Name: Jacqueline
+    Telefonnummer: 0176...
+    Nachricht: ...
+    E-Mail (optional): ...@...
 
-    Hallo, du hast eine Nachricht über deine Jimdo-Seite
-    https://www.tischlerei-graupner.de/.../ erhalten:
+Format B: ALTES Webformular (kommt direkt vom Kunden, alles in einer Zeile)
+    Es gibt eine neue Anfrage.HerrKlaus-Konrad Meyer Adresse:...HamburgEmail:...Telefon:...Anfrage: Betrifft:... Nachricht:...
+    Vor- und Nachname werden zusätzlich aus Subject "Anfrage von X Y." gewonnen.
 
-    Frau Herr: Lawless          <-- Nachname
-    Name: Jacqueline            <-- Vorname
-    Telefonnummer: 017634670479
-
-    Nachricht: Hallo, ...
-    [mehrzeilig]
-
-    E-Mail (optional): jlawless42@gmail.com
-    Nutzer hat die Datenschutzerklärung akzeptiert.
-
-Hinweis: Jimdo dreht Vorname/Nachname (Feld "Frau Herr:" enthält Nachname,
-Feld "Name:" enthält Vorname). Wir mappen das hier korrekt.
+Parser-Output ist bei beiden gleich:
+{anrede, vorname, nachname, telefon, email, nachricht, source_url, format}
 """
 import re
-
 
 URL_PATTERN = re.compile(r"https?://[^\s]*tischlerei-graupner\.de/[^\s]*", re.IGNORECASE)
 
 
-def parse_jimdo_anfrage(body: str) -> dict:
-    """Liefert {anrede, vorname, nachname, telefon, email, nachricht, source_url}.
-    Felder die nicht erkannt werden bleiben leer.
-    """
-    body = (body or "").replace("\r\n", "\n").replace("\r", "\n")
-
-    out = {
+def _empty():
+    return {
         "anrede": "",
         "vorname": "",
         "nachname": "",
@@ -39,48 +29,113 @@ def parse_jimdo_anfrage(body: str) -> dict:
         "email": "",
         "nachricht": "",
         "source_url": "",
+        "format": "",
     }
 
-    # Quell-URL
+
+def _parse_jimdo(body: str) -> dict:
+    """Format A – neues Jimdo-Formular mit Zeilenumbrüchen."""
+    out = _empty()
+    out["format"] = "jimdo"
+
     m = URL_PATTERN.search(body)
     if m:
         out["source_url"] = m.group(0).rstrip(".,;:")
 
-    # Nachname (steht bei Jimdo paradoxerweise in "Frau Herr:")
-    m = re.search(r"^\s*Frau\s*Herr\s*:\s*([^\n]+?)\s*$", body, re.IGNORECASE | re.MULTILINE)
+    # Nachname (in "Frau Herr:")
+    m = re.search(r"^\s*Frau\s*Herr\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
         raw = m.group(1).strip()
-        # Manche Nutzer geben "Herr Mustermann" oder "Frau Mustermann" ein
-        anrede_match = re.match(r"^(Herr|Frau)\s+(.+)$", raw, re.IGNORECASE)
-        if anrede_match:
-            out["anrede"] = anrede_match.group(1).capitalize()
-            out["nachname"] = anrede_match.group(2).strip()
+        ar = re.match(r"^(Herr|Frau)\s+(.+)$", raw, re.I)
+        if ar:
+            out["anrede"] = ar.group(1).capitalize()
+            out["nachname"] = ar.group(2).strip()
         else:
             out["nachname"] = raw
 
-    # Vorname (steht bei Jimdo in "Name:")
-    m = re.search(r"^\s*Name\s*:\s*([^\n]+?)\s*$", body, re.IGNORECASE | re.MULTILINE)
+    # Vorname (in "Name:")
+    m = re.search(r"^\s*Name\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
         out["vorname"] = m.group(1).strip()
 
     # Telefon
-    m = re.search(r"^\s*Telefonnummer\s*:\s*([^\n]+?)\s*$", body, re.IGNORECASE | re.MULTILINE)
+    m = re.search(r"^\s*Telefonnummer\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
         out["telefon"] = m.group(1).strip()
 
     # E-Mail (optional)
-    m = re.search(r"E-?Mail[^:]*:\s*([^\s\n]+@[^\s\n]+)", body, re.IGNORECASE)
+    m = re.search(r"E-?Mail[^:]*:\s*([\w.+-]+@[\w.-]+\.\w{2,})", body, re.I)
     if m:
         out["email"] = m.group(1).strip().rstrip(".,;:)")
 
-    # Nachricht – greife alles zwischen "Nachricht:" und "E-Mail" oder
-    # "Nutzer hat die Datenschutzerklärung" oder Body-Ende.
+    # Nachricht
     m = re.search(
         r"Nachricht\s*:\s*(.+?)(?=\n\s*E-?Mail[^:]*:|\n\s*Nutzer\s+hat\s+die\s+Datenschutz|\Z)",
-        body,
-        re.IGNORECASE | re.DOTALL,
+        body, re.I | re.S,
     )
     if m:
         out["nachricht"] = m.group(1).strip()
 
     return out
+
+
+def _parse_alt(body: str, subject: str = "", from_email: str = "") -> dict:
+    """Format B – altes Webformular, alles in einer Zeile."""
+    out = _empty()
+    out["format"] = "alt"
+
+    # Vor- und Nachname aus Subject "Anfrage von Vor Nachname."
+    m = re.search(r"Anfrage\s+von\s+(.+?)\.?\s*$", subject or "", re.I)
+    if m:
+        full_name = m.group(1).strip().rstrip(".")
+        # Doppel-Vornamen wie "Klaus-Konrad Meyer" abdecken
+        parts = full_name.rsplit(" ", 1)
+        if len(parts) == 2:
+            out["vorname"] = parts[0].strip()
+            out["nachname"] = parts[1].strip()
+        else:
+            out["nachname"] = full_name
+
+    # Anrede aus Body ("HerrXxx" oder "FrauXxx" direkt nach "Anfrage.")
+    m = re.search(r"Es\s+gibt\s+eine\s+neue\s+Anfrage\.?\s*(Herr|Frau)", body, re.I)
+    if m:
+        out["anrede"] = m.group(1).capitalize()
+
+    # E-Mail: aus Body extrahieren — TLD MUSS klein sein, sonst wird "deTelefon" mitgegriffen
+    m = re.search(r"Email\s*:\s*([\w.+-]+@[\w.-]+?\.[a-z]{2,4})(?=[A-Z]|\s|$)", body)
+    if m:
+        out["email"] = m.group(1).strip()
+    elif from_email and "@" in from_email:
+        out["email"] = from_email.strip()
+
+    # Telefon (bis "Anfrage:" oder Zeilenende)
+    m = re.search(r"Telefon\s*:\s*([\d\s+/().-]+?)(?=\s*Anfrage:|\s*$)", body, re.I)
+    if m:
+        out["telefon"] = m.group(1).strip()
+
+    # Nachricht (ab "Nachricht:")
+    m = re.search(r"Nachricht\s*:\s*(.+)$", body, re.I | re.S)
+    if m:
+        out["nachricht"] = m.group(1).strip().rstrip(".")
+
+    # Optional auch "Betrifft:" mit übernehmen, vor die Nachricht
+    m = re.search(r"Anfrage:\s*Betrifft:\s*([^.]+?)\s+Nachricht:", body, re.I)
+    if m and out["nachricht"]:
+        out["nachricht"] = f"Betrifft: {m.group(1).strip()}\n\n{out['nachricht']}"
+
+    return out
+
+
+def parse_anfrage(body: str, subject: str = "", from_email: str = "") -> dict:
+    """Auto-Erkennung welches Format vorliegt."""
+    body = (body or "").replace("\r\n", "\n").replace("\r", "\n")
+    if "Frau Herr:" in body and "Telefonnummer:" in body:
+        return _parse_jimdo(body)
+    if "Es gibt eine neue Anfrage" in body or re.search(r"Anfrage\s+von\s+", subject or "", re.I):
+        return _parse_alt(body, subject, from_email)
+    # Default: probiere Jimdo (kein Treffer = leere Felder)
+    return _parse_jimdo(body)
+
+
+# Rückwärtskompatibilität (Alias)
+parse_jimdo_anfrage = parse_anfrage

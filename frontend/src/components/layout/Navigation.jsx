@@ -10,6 +10,7 @@ const APP_ENV = detectAppEnv();
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
+  { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"], variant: "new" },
   { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new" },
   { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], variant: "new" },
   { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },

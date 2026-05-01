@@ -21,16 +21,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from database import db, logger
 from routes.auth import get_current_user
 from routes.anfragen_fetcher import _extract_body
-from .parser import parse_jimdo_anfrage
+from .parser import parse_anfrage
 
 router = APIRouter()
 
-# Strenger Filter: nur Kontaktformular-Mails (NICHT die SEO-Reports von radar@seo.jimdo.com)
+# Strenger Filter: nur Kontaktformular-Mails
 JIMDO_FROM_PATTERN = re.compile(r"no-reply@jimdo\.com", re.IGNORECASE)
 SUBJECT_DOMAIN = "tischlerei-graupner.de"
+ALT_SUBJECT_PATTERN = re.compile(r"Anfrage\s+von\s+", re.IGNORECASE)
 
 # Postfächer in denen wir suchen (Inbox UND der Filter-Ordner für Anfragen)
-SEARCH_FOLDERS = ["INBOX", "INBOX.anfrage von"]
+SEARCH_FOLDERS = ["INBOX", '"INBOX.anfrage von"']
 
 
 def _decode(s: str | None) -> str:
@@ -77,12 +78,12 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                 logger.warning(f"mail-inbox: Ordner {folder} nicht selektierbar: {fe}")
                 continue
 
-            # Suche: Mails von no-reply@jimdo.com (Kontaktformular) seit X Wochen
+            # Suche: Mails mit "Anfrage" im Subject oder von Jimdo, seit X Wochen
             try:
                 typ, data = imap.search(
                     None,
                     f'(SINCE "{since_str}")',
-                    '(FROM "no-reply@jimdo.com")',
+                    '(OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von"))',
                 )
             except imaplib.IMAP4.error:
                 continue
@@ -105,12 +106,16 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                     msg = email.message_from_bytes(raw[0][1])
 
                     from_name, from_email = parseaddr(msg.get("From", ""))
-                    if not JIMDO_FROM_PATTERN.search(from_email or ""):
+                    subject = _decode(msg.get("Subject", ""))
+
+                    # Erkennung: Jimdo-Format ODER altes "Anfrage von"-Subject
+                    is_jimdo = bool(JIMDO_FROM_PATTERN.search(from_email or ""))
+                    is_alt = bool(ALT_SUBJECT_PATTERN.search(subject or ""))
+                    if not (is_jimdo or is_alt):
                         skipped += 1
                         continue
-
-                    subject = _decode(msg.get("Subject", ""))
-                    if SUBJECT_DOMAIN not in subject.lower():
+                    # Wenn Jimdo, muss tischlerei-graupner.de im Subject sein
+                    if is_jimdo and SUBJECT_DOMAIN not in subject.lower():
                         skipped += 1
                         continue
 
@@ -125,7 +130,7 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                         continue
 
                     body = _extract_body(msg)
-                    parsed = parse_jimdo_anfrage(body)
+                    parsed = parse_anfrage(body, subject=subject, from_email=from_email)
 
                     reply_to = ""
                     rt_raw = msg.get("Reply-To") or ""
@@ -134,6 +139,8 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
 
                     if not parsed.get("email") and reply_to and "@" in reply_to:
                         parsed["email"] = reply_to
+                    if not parsed.get("email") and from_email and "@" in from_email and "jimdo.com" not in from_email.lower():
+                        parsed["email"] = from_email
 
                     received_at_iso = ""
                     d = msg.get("Date")
