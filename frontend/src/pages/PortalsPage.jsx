@@ -105,6 +105,21 @@ const PortalsPage = () => {
     }
   };
 
+  const sendInvite = async (portal) => {
+    if (!portal.customer_email) {
+      toast.error("Keine E-Mail-Adresse hinterlegt – bitte am Kunden ergänzen.");
+      return;
+    }
+    if (!window.confirm(`Einladung an ${portal.customer_email} senden?`)) return;
+    const portalUrl = `${window.location.origin}/portal/${portal.token}`;
+    try {
+      await api.post(`/portals/${portal.id}/send-email`, { portal_url: portalUrl });
+      toast.success(`Einladung an ${portal.customer_email} gesendet`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "E-Mail-Versand fehlgeschlagen – SMTP-Konfiguration prüfen");
+    }
+  };
+
   const copyLink = (portal) => {
     const url = `${window.location.origin}/portal/${portal.token}`;
     navigator.clipboard.writeText(url).catch(() => {});
@@ -197,6 +212,7 @@ const PortalsPage = () => {
           onDeleteFile={deleteFile}
           onToggle={() => toggleActive(selectedPortal)}
           onCopyLink={() => copyLink(selectedPortal)}
+          onSendInvite={() => sendInvite(selectedPortal)}
           getPortalUrl={getPortalUrl}
         />
       ) : (
@@ -336,7 +352,7 @@ const CreatePortalDialog = ({ customers, onClose, onCreated }) => {
           await api.post(`/portals/${res.data.id}/send-email`, { portal_url: portalUrl });
           toast.success("Portal erstellt! E-Mail mit Zugangsdaten an Kunden gesendet.");
         } catch (emailErr) {
-          toast.success("Portal erstellt! E-Mail konnte nicht gesendet werden – Link wurde kopiert.");
+          toast.warning("Portal erstellt, aber E-Mail konnte nicht gesendet werden. Link wurde in die Zwischenablage kopiert. Tipp: Im Portal-Detail kannst du die Einladung erneut auslösen.");
         }
       } else {
         toast.success("Portal erstellt! Link wurde kopiert.");
@@ -457,7 +473,7 @@ const CreatePortalDialog = ({ customers, onClose, onCreated }) => {
 };
 
 
-const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle, onCopyLink, getPortalUrl }) => {
+const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle, onCopyLink, onSendInvite, getPortalUrl }) => {
   const customerFiles = files.filter(f => f.uploaded_by === "customer");
   const businessFiles = files.filter(f => f.uploaded_by === "business");
   const [notes, setNotes] = useState([]);
@@ -578,7 +594,17 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {portal.customer_email && (
+            <button
+              onClick={onSendInvite}
+              className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
+              title={`Einladung per E-Mail an ${portal.customer_email} senden`}
+              data-testid="btn-send-portal-invite"
+            >
+              <Send className="w-3.5 h-3.5" /> Einladung senden
+            </button>
+          )}
           <button onClick={onCopyLink} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted" data-testid="btn-copy-portal-link">
             <Copy className="w-3.5 h-3.5" /> Link kopieren
           </button>
