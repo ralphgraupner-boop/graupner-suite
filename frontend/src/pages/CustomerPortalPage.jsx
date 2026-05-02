@@ -238,7 +238,7 @@ const CustomerPortalPage = () => {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Header with Logo */}
       <header className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-10 w-auto object-contain" />
@@ -255,7 +255,9 @@ const CustomerPortalPage = () => {
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
+        {/* LINKE SPALTE (2/3) – Hauptinhalt */}
+        <div className="lg:col-span-2 space-y-6 min-w-0">
         {/* Begrüßung / Hinweise */}
         {(settings?.begruessung || settings?.hinweise) && (
           <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-primary" data-testid="portal-greeting">
@@ -592,7 +594,11 @@ const CustomerPortalPage = () => {
             </div>
           )}
         </section>
+        </div>
+        {/* /LINKE SPALTE */}
 
+        {/* RECHTE SPALTE (1/3) – Bilder + Dokumente, sticky auf Desktop */}
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         {/* Customer's uploaded images */}
         {customerFiles.length > 0 && (
           <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-slate-400" data-testid="portal-customer-files">
@@ -601,13 +607,13 @@ const CustomerPortalPage = () => {
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-600">
                   <User className="w-4 h-4" />
                 </span>
-                Ihre hochgeladenen Bilder ({customerFiles.length})
+                Ihre Bilder ({customerFiles.length})
               </h2>
               <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
                 Von Ihnen
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3">
               {customerFiles.map(f => (
                 <PortalFilePreview key={f.id} file={f} />
               ))}
@@ -623,10 +629,10 @@ const CustomerPortalPage = () => {
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-700">
                   <Wrench className="w-4 h-4" />
                 </span>
-                Dokumente von Tischlerei Graupner ({businessFiles.length})
+                Von uns ({businessFiles.length})
               </h2>
               <span className="text-[11px] font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">
-                Von uns
+                Tischlerei
               </span>
             </div>
             <div className="space-y-2">
@@ -654,7 +660,12 @@ const CustomerPortalPage = () => {
             </div>
           </section>
         )}
+        </aside>
+        {/* /RECHTE SPALTE */}
+      </div>
 
+      {/* Bereich UNTERHALB des Grids – volle Breite */}
+      <div className="max-w-6xl mx-auto px-4 pb-6 space-y-6">
         {/* Error Display (global) */}
         {error && authenticated && (
           <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3" data-testid="portal-global-error">
