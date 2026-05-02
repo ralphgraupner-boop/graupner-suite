@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink } from "lucide-react";
+import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
@@ -77,6 +77,28 @@ const ModuleMailInboxPage = () => {
     }
   };
 
+  const deleteEntry = async (entry) => {
+    if (!window.confirm("Diesen Eintrag endgültig löschen? Bei späteren Scans wird er nicht erneut importiert.")) return;
+    try {
+      await api.delete(`/module-mail-inbox/${entry.id}`);
+      toast.success("Eintrag gelöscht");
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
+    }
+  };
+
+  const deleteAllSpam = async () => {
+    if (!window.confirm("Alle Spam-Verdacht-Einträge ENDGÜLTIG löschen? Diese Aktion ist nicht umkehrbar.")) return;
+    try {
+      const r = await api.post(`/module-mail-inbox/delete-all-spam`);
+      toast.success(`${r.data.deleted} Einträge gelöscht`);
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler");
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="module-mail-inbox-page">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -111,13 +133,24 @@ const ModuleMailInboxPage = () => {
           </button>
         ))}
         {statusFilter === "spam_verdacht" && items.length > 0 && (
-          <button
-            onClick={rejectAllSpam}
-            className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-red-600 text-white rounded-sm hover:bg-red-700"
-            data-testid="btn-reject-all-spam"
-          >
-            <X className="w-3.5 h-3.5" /> Alle ignorieren
-          </button>
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={rejectAllSpam}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-600 text-white rounded-sm hover:bg-slate-700"
+              data-testid="btn-reject-all-spam"
+              title="Alle als ignoriert markieren (bleiben zur Kontrolle in der DB)"
+            >
+              <X className="w-3.5 h-3.5" /> Alle ignorieren
+            </button>
+            <button
+              onClick={deleteAllSpam}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-red-600 text-white rounded-sm hover:bg-red-700"
+              data-testid="btn-delete-all-spam"
+              title="Alle endgültig aus der Datenbank löschen"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Alle löschen
+            </button>
+          </div>
         )}
       </div>
 
@@ -151,7 +184,7 @@ const ModuleMailInboxPage = () => {
                     </p>
                   </div>
                   {e.status === "vorschlag" && (
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex gap-2 flex-shrink-0 flex-wrap">
                       <button
                         onClick={() => accept(e)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-sm hover:bg-emerald-700"
@@ -163,8 +196,29 @@ const ModuleMailInboxPage = () => {
                         onClick={() => reject(e)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-sm hover:bg-muted"
                         data-testid={`btn-reject-${e.id}`}
+                        title="Ignorieren (bleibt zur Kontrolle in der DB)"
                       >
                         <X className="w-3.5 h-3.5" /> Ignorieren
+                      </button>
+                      <button
+                        onClick={() => deleteEntry(e)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-red-200 text-red-700 rounded-sm hover:bg-red-50"
+                        data-testid={`btn-delete-${e.id}`}
+                        title="Endgültig löschen (wird bei neuen Scans nicht erneut importiert)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Löschen
+                      </button>
+                    </div>
+                  )}
+                  {e.status !== "vorschlag" && e.status !== "übernommen" && (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => deleteEntry(e)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-red-200 text-red-700 rounded-sm hover:bg-red-50"
+                        data-testid={`btn-delete-${e.id}`}
+                        title="Endgültig löschen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Löschen
                       </button>
                     </div>
                   )}

@@ -130,6 +130,7 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
 
                     message_id = (msg.get("Message-ID") or "").strip()
 
+                    # 1) Duplikatsprüfung in Haupt-Collection (egal welcher Status)
                     exists = await db.module_mail_inbox.find_one(
                         {"message_id": message_id} if message_id else {"email_uid": f"{folder}/{uid.decode()}"},
                         {"_id": 0, "id": 1},
@@ -137,6 +138,15 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                     if exists:
                         dup += 1
                         continue
+
+                    # 2) Tombstone-Check: wurde diese Mail früher schon explizit gelöscht?
+                    if message_id:
+                        tomb = await db.module_mail_inbox_deleted.find_one(
+                            {"message_id": message_id}, {"_id": 0, "message_id": 1},
+                        )
+                        if tomb:
+                            dup += 1
+                            continue
 
                     body = _extract_body(msg)
                     parsed = parse_anfrage(body, subject=subject, from_email=from_email)
@@ -284,3 +294,49 @@ async def reject_all_spam(user=Depends(get_current_user)):
         }},
     )
     return {"ok": True, "rejected": r.modified_count}
+
+
+
+async def _tombstone(entry: dict, user) -> None:
+    """Legt einen Tombstone an, damit die Mail beim nächsten Scan
+    nicht erneut importiert wird."""
+    mid = (entry or {}).get("message_id") or ""
+    if not mid:
+        return
+    await db.module_mail_inbox_deleted.update_one(
+        {"message_id": mid},
+        {"$set": {
+            "message_id": mid,
+            "subject": entry.get("subject", ""),
+            "from_email": entry.get("from_email", ""),
+            "deleted_at": datetime.now(timezone.utc).isoformat(),
+            "deleted_by": getattr(user, "username", None),
+        }},
+        upsert=True,
+    )
+
+
+@router.delete("/{entry_id}")
+async def delete_entry(entry_id: str, user=Depends(get_current_user)):
+    """Endgültig löschen: Eintrag raus aus Haupt-Collection, Message-ID
+    bleibt als Tombstone erhalten (verhindert Re-Import beim nächsten Scan)."""
+    entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    if entry.get("status") == "übernommen":
+        raise HTTPException(400, "Übernommene Einträge können nicht gelöscht werden – stattdessen den Kunden löschen.")
+    await _tombstone(entry, user)
+    await db.module_mail_inbox.delete_one({"id": entry_id})
+    return {"ok": True, "deleted": 1}
+
+
+@router.post("/delete-all-spam")
+async def delete_all_spam(user=Depends(get_current_user)):
+    """Alle Einträge mit Status 'spam_verdacht' endgültig löschen.
+    Tombstones werden pro Message-ID angelegt."""
+    deleted = 0
+    async for e in db.module_mail_inbox.find({"status": "spam_verdacht"}, {"_id": 0}):
+        await _tombstone(e, user)
+        await db.module_mail_inbox.delete_one({"id": e["id"]})
+        deleted += 1
+    return {"ok": True, "deleted": deleted}
