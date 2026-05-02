@@ -626,7 +626,18 @@ async def admin_upload_file(
             anrede = _build_anrede_brief(cust_name)
             settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
             company = settings.get("company_name", "Tischlerei Graupner")
-            link = portal_url or f"/portal/{portal.get('token', '')}"
+            # Sicheren Portal-Link bauen: Token IMMER aus Portal-DB
+            real_token = portal.get("token", "")
+            origin = ""
+            if portal_url:
+                try:
+                    from urllib.parse import urlsplit
+                    sp = urlsplit(portal_url)
+                    if sp.scheme and sp.netloc:
+                        origin = f"{sp.scheme}://{sp.netloc}"
+                except Exception:
+                    origin = ""
+            link = f"{origin}/portal/{real_token}" if origin else f"/portal/{real_token}"
             html = f"""
             <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#1f2937;line-height:1.55;">
               <h2 style="color:#1a5632;margin:0 0 12px 0;">Neues Dokument in Ihrem Kundenportal</h2>
@@ -897,10 +908,21 @@ async def add_admin_note(portal_id: str, body: dict, user=Depends(get_current_us
         portal_enriched.pop("_id", None)
         cust_mail = (portal_enriched.get("customer_email") or "").strip()
         if cust_mail:
-            portal_url = body.get("portal_url") or ""
-            if not portal_url:
-                # Fallback: aus Token + Konfiguration zusammenbauen, wenn Frontend keine URL mitschickt
-                portal_url = f"/portal/{portal.get('token', '')}"
+            # Sicheren Portal-Link bauen: Origin aus body übernehmen,
+            # Token IMMER aus Portal-DB (verhindert falsche Test-/Manipulations-Tokens).
+            real_token = portal.get("token", "")
+            origin = ""
+            url_in = (body.get("portal_url") or "").strip()
+            if url_in:
+                # Beispiel: "https://app.example.de/portal/abc" -> origin "https://app.example.de"
+                try:
+                    from urllib.parse import urlsplit
+                    sp = urlsplit(url_in)
+                    if sp.scheme and sp.netloc:
+                        origin = f"{sp.scheme}://{sp.netloc}"
+                except Exception:
+                    origin = ""
+            portal_url = f"{origin}/portal/{real_token}" if origin else f"/portal/{real_token}"
             cust_name = portal_enriched.get("customer_name", "Kunde")
             anrede = _build_anrede_brief(cust_name)
             settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
