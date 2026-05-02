@@ -26,7 +26,7 @@ const allNavItems = [
   { path: "/portal-v3", icon: Users, label: "Kundenportal (Test)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
   { path: "/portal-v4", icon: Users, label: "Kundenportal v4 (Sandbox)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
   { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
-  { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"], hideByDefault: true },
+  { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"] },
   { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"], hideByDefault: true },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"], hideByDefault: true },
