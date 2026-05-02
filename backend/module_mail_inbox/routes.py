@@ -81,24 +81,18 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                 logger.warning(f"mail-inbox: Ordner {folder} nicht selektierbar: {fe}")
                 continue
 
-            # Suche: Mails mit "Anfrage" im Subject, "Nachricht über" im Subject
-            # oder von Jimdo, seit X Wochen.
+            # Suche: Mails mit "Anfrage" im Subject, Jimdo-Absender,
+            # oder "tischlerei-graupner" im Subject (fängt neue Jimdo-Betreffe
+            # wie "Nachricht über https://www.tischlerei-graupner.de/...").
+            # WICHTIG: nur ASCII-Tokens (imaplib unterstützt keine Umlaute in search).
             try:
                 typ, data = imap.search(
                     None,
                     f'(SINCE "{since_str}")',
-                    '(OR (OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von")) (SUBJECT "Nachricht \xc3\xbcber"))',
+                    '(OR (OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von")) (SUBJECT "tischlerei-graupner"))',
                 )
             except imaplib.IMAP4.error:
-                # Fallback ohne Umlaut (manche IMAP-Server lehnen non-ASCII ohne CHARSET ab)
-                try:
-                    typ, data = imap.search(
-                        None,
-                        f'(SINCE "{since_str}")',
-                        '(OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von"))',
-                    )
-                except imaplib.IMAP4.error:
-                    continue
+                continue
             if typ != "OK" or not data or not data[0]:
                 continue
 
