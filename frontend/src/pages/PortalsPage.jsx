@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare, Download, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { compressImageIfNeeded } from "@/lib/imageCompress";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
@@ -134,8 +135,10 @@ const PortalsPage = () => {
   };
 
   const uploadBusinessFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const original = e.target.files[0];
+    if (!original) return;
+    // Vor dem Upload komprimieren – spart Bandbreite und Speicher
+    const file = await compressImageIfNeeded(original);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("description", file.name);

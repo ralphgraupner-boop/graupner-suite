@@ -7,6 +7,7 @@ import {
   ClipboardList, HardHat, CheckCircle2, Circle, Smile, Meh, Frown, RefreshCw,
 } from "lucide-react";
 import { useVersionCheck } from "./useVersionCheck";
+import { compressImageIfNeeded } from "@/lib/imageCompress";
 
 const PHASE_LABEL = {
   besichtigung: "Besichtigung",
@@ -86,10 +87,12 @@ export function MonteurEinsatzDetailPage() {
   };
 
   const uploadFoto = async (ev) => {
-    const file = ev.target.files?.[0];
-    if (!file) return;
+    const original = ev.target.files?.[0];
+    if (!original) return;
     setUploadingFoto(true);
     try {
+      // Vor dem Upload komprimieren – schont Mobilfunk-Volumen
+      const file = await compressImageIfNeeded(original);
       const fd = new FormData();
       fd.append("einsatz_id", id);
       fd.append("phase", activePhase);

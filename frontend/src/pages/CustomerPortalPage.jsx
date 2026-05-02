@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3, Wrench, Clock, User, LogOut, Eye } from "lucide-react";
 import axios from "axios";
+import { compressImageIfNeeded } from "@/lib/imageCompress";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 const MAX_IMAGES_PER_UPLOAD = 5;
@@ -80,7 +81,9 @@ const CustomerPortalPage = () => {
     setUploadSuccess(false);
     setError("");
     try {
-      for (const file of selectedFiles) {
+      for (const original of selectedFiles) {
+        // Vor dem Upload komprimieren – spart Mobilfunk-Volumen
+        const file = await compressImageIfNeeded(original);
         const formData = new FormData();
         formData.append("file", file);
         formData.append("password", password);
