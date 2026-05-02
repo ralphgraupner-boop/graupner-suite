@@ -677,12 +677,27 @@ async def verify_portal(token: str, body: dict):
         cust = await db.module_kunden.find_one({"id": portal["customer_id"]}, {"_id": 0})
         if cust:
             cust_name = (cust.get("vorname", "") + " " + cust.get("nachname", "")).strip() or cust.get("name", "")
+            # Privatadresse zusammensetzen (Strasse Hausnummer, PLZ Ort)
+            strasse = (cust.get("strasse") or "").strip()
+            hausnr = (cust.get("hausnummer") or "").strip()
+            plz = (cust.get("plz") or "").strip()
+            ort = (cust.get("ort") or "").strip()
+            line1 = f"{strasse} {hausnr}".strip()
+            line2 = f"{plz} {ort}".strip()
+            address = ", ".join(p for p in [line1, line2] if p) or (cust.get("address") or "").strip()
+            # Objekt-/Baustellenadresse zusätzlich, wenn abweichend
+            obj_strasse = (cust.get("objekt_strasse") or "").strip()
+            obj_plz = (cust.get("objekt_plz") or "").strip()
+            obj_ort = (cust.get("objekt_ort") or "").strip()
+            obj_line = ", ".join(p for p in [obj_strasse, f"{obj_plz} {obj_ort}".strip()] if p)
+            object_address = obj_line if obj_line and obj_line != address else ""
             customer_data = {
                 "name": cust_name,
                 "email": cust.get("email", ""),
-                "phone": cust.get("phone", ""),
-                "address": cust.get("address", ""),
-                "notes": cust.get("notes", ""),
+                "phone": cust.get("phone") or cust.get("telefon", ""),
+                "address": address,
+                "object_address": object_address,
+                "notes": cust.get("anliegen") or cust.get("nachricht") or cust.get("notes", ""),
                 "anrede": cust.get("anrede", ""),
                 "firma": cust.get("firma", ""),
             }
@@ -706,6 +721,13 @@ async def verify_portal(token: str, body: dict):
                 "status": einsatz.get("status", ""),
             }
 
+    # Notizen sortieren: neueste zuerst (für UI-Anzeige im Portal)
+    def _sort_notes(notes):
+        try:
+            return sorted(notes or [], key=lambda n: n.get("created_at", ""), reverse=True)
+        except Exception:
+            return notes or []
+
     return {
         "valid": True,
         "portal_id": portal.get("id"),
@@ -713,8 +735,8 @@ async def verify_portal(token: str, body: dict):
         "description": portal.get("description", ""),
         "expires_at": portal.get("expires_at"),
         "customer_data": customer_data,
-        "customer_notes": portal.get("customer_notes", []),
-        "admin_notes": portal.get("admin_notes", []),
+        "customer_notes": _sort_notes(portal.get("customer_notes", [])),
+        "admin_notes": _sort_notes(portal.get("admin_notes", [])),
         "einsatz_data": einsatz_data,
     }
 

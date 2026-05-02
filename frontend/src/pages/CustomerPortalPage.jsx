@@ -258,7 +258,23 @@ const CustomerPortalPage = () => {
               {customerData.address && (
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                  <span>{customerData.address}</span>
+                  <div>
+                    <span>{customerData.address}</span>
+                    {customerData.object_address && (
+                      <div className="mt-1 text-xs text-slate-500">
+                        Objektadresse: <span className="text-slate-700">{customerData.object_address}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {!customerData.address && customerData.object_address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span>{customerData.object_address}</span>
+                    <div className="text-xs text-slate-500">Objektadresse</div>
+                  </div>
                 </div>
               )}
               {customerData.phone && (
