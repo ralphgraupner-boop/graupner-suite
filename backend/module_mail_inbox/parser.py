@@ -42,21 +42,37 @@ def _parse_jimdo(body: str) -> dict:
     if m:
         out["source_url"] = m.group(0).rstrip(".,;:")
 
-    # Nachname (in "Frau Herr:")
+    # Anrede + optional Nachname (in "Frau Herr:")
+    # Varianten:
+    #   "Frau Herr: Herr"                 -> Anrede="Herr", Nachname leer
+    #   "Frau Herr: Herr Mustermann"      -> Anrede="Herr", Nachname="Mustermann"
+    #   "Frau Herr: Mustermann"           -> Nachname="Mustermann"
     m = re.search(r"^\s*Frau\s*Herr\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
         raw = m.group(1).strip()
-        ar = re.match(r"^(Herr|Frau)\s+(.+)$", raw, re.I)
-        if ar:
-            out["anrede"] = ar.group(1).capitalize()
-            out["nachname"] = ar.group(2).strip()
+        # Nur "Herr" oder "Frau" -> reine Anrede
+        only_salutation = re.match(r"^(Herr|Frau)\s*$", raw, re.I)
+        with_name = re.match(r"^(Herr|Frau)\s+(.+)$", raw, re.I)
+        if only_salutation:
+            out["anrede"] = only_salutation.group(1).capitalize()
+        elif with_name:
+            out["anrede"] = with_name.group(1).capitalize()
+            out["nachname"] = with_name.group(2).strip()
         else:
             out["nachname"] = raw
 
-    # Vorname (in "Name:")
+    # Vorname + ggf. Nachname (in "Name:")
+    # Wenn mehrere Wörter vorhanden: erstes = Vorname, Rest = Nachname
+    # (nur setzen, wenn noch kein Nachname aus "Frau Herr:" kam).
     m = re.search(r"^\s*Name\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
-        out["vorname"] = m.group(1).strip()
+        raw_name = m.group(1).strip()
+        parts = raw_name.split()
+        if len(parts) >= 2 and not out["nachname"]:
+            out["vorname"] = parts[0]
+            out["nachname"] = " ".join(parts[1:])
+        else:
+            out["vorname"] = raw_name
 
     # Telefon
     m = re.search(r"^\s*Telefonnummer\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
