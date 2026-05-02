@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
+import { VorlagenPicker } from "@/components/VorlagenPicker";
 import {
   Calendar, Plus, Trash2, X, MapPin, User as UserIcon, Folder, Briefcase, HardHat,
   CheckCircle2, Clock, RefreshCw, Filter, AlertTriangle, ChevronRight, XCircle,
@@ -386,7 +387,19 @@ const TerminDialog = ({ termin, kunden, projekte, aufgaben, mitarbeiter, onClose
 
         <div className="p-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Titel *</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium">Titel *</label>
+              <VorlagenPicker
+                doc_type="aufgabe"
+                label="Vorlage"
+                compact
+                onSelect={({ title, content }) => setData(d => ({
+                  ...d,
+                  titel: title,
+                  beschreibung: d.beschreibung || (content || "").replace(/<[^>]*>/g, ""),
+                }))}
+              />
+            </div>
             <input
               value={data.titel}
               onChange={(e) => upd("titel", e.target.value)}
