@@ -184,7 +184,7 @@ async def _build_portal_email_html(
       <h2 style="color:#1a5632;margin:0 0 16px 0;">Ihr Kundenportal bei {company}</h2>
 
       <p>{anrede},</p>
-      <p>wir freuen uns, Sie als Kunde bei der {company} begruessen zu duerfen. Fuer Ihre Anfrage haben wir ein persoenliches, sicheres Kundenportal eingerichtet.</p>
+      <p>wir freuen uns, Sie als Kunde bei der {company} begrüßen zu dürfen. Für Ihre Anfrage haben wir ein persönliches, sicheres Kundenportal eingerichtet.</p>
 
       {anliegen_block}
 
@@ -196,25 +196,25 @@ async def _build_portal_email_html(
         <p style="margin:0;font-size:14px;"><strong>Passwort:</strong> <code style="background:#fff;padding:4px 10px;border-radius:4px;border:1px solid #cbd5e1;font-size:15px;">{password}</code></p>
       </div>
 
-      <h3 style="color:#1a5632;font-size:16px;margin:24px 0 8px 0;">&#128203; So funktioniert das Portal - Schritt fuer Schritt:</h3>
+      <h3 style="color:#1a5632;font-size:16px;margin:24px 0 8px 0;">&#128203; So funktioniert das Portal &ndash; Schritt für Schritt:</h3>
       <ol style="padding-left:20px;margin:0 0 16px 0;">
         <li style="margin-bottom:6px;">Klicken Sie oben auf den <strong>Link</strong>. Sie werden zum Portal weitergeleitet.</li>
-        <li style="margin-bottom:6px;">Geben Sie das <strong>Passwort</strong> ein und klicken auf &quot;Anmelden&quot;.</li>
-        <li style="margin-bottom:6px;">Laden Sie gewuenschte <strong>Fotos hoch</strong> (z.B. vom Fenster, Tueren, dem betroffenen Raum) - einfach per Klick oder Drag &amp; Drop.</li>
-        <li style="margin-bottom:6px;">Bei Rueckfragen koennen Sie uns direkt <strong>eine Nachricht schreiben</strong>.</li>
-        <li>Wenn alles hochgeladen ist, klicken Sie auf <strong>&quot;Absenden&quot;</strong> - wir erhalten automatisch Bescheid.</li>
+        <li style="margin-bottom:6px;">Geben Sie das <strong>Passwort</strong> ein und klicken auf &bdquo;Anmelden&ldquo;.</li>
+        <li style="margin-bottom:6px;">Laden Sie gewünschte <strong>Fotos hoch</strong> (z.&nbsp;B. vom Fenster, Türen, dem betroffenen Raum) &ndash; einfach per Klick oder Drag &amp; Drop.</li>
+        <li style="margin-bottom:6px;">Bei Rückfragen können Sie uns direkt <strong>eine Nachricht schreiben</strong>.</li>
+        <li>Wenn alles hochgeladen ist, klicken Sie auf <strong>&bdquo;Absenden&ldquo;</strong> &ndash; wir erhalten automatisch Bescheid.</li>
       </ol>
 
       <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;padding:12px 16px;margin:20px 0;font-size:13px;color:#065f46;">
-        &#128274; <strong>Datenschutz:</strong> Das Portal ist verschluesselt (HTTPS) und nur mit Ihrem Passwort zugaenglich.
+        &#128274; <strong>Datenschutz:</strong> Das Portal ist verschlüsselt (HTTPS) und nur mit Ihrem Passwort zugänglich.
       </div>
 
-      <p style="font-size:13px;color:#64748b;">Das Portal ist gueltig bis <strong>{expires}</strong>.</p>
+      <p style="font-size:13px;color:#64748b;">Das Portal ist gültig bis <strong>{expires}</strong>.</p>
 
       {f'<p style="font-size:13px;color:#475569;">Bei Fragen erreichen Sie uns unter {contact_line}.</p>' if contact_line else ''}
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px 0;"/>
-      <p style="margin:0;font-size:13px;color:#475569;">Mit freundlichen Gruessen<br/>Ihr Team der <strong>{company}</strong></p>
+      <p style="margin:0;font-size:13px;color:#475569;">Mit freundlichen Grüßen<br/>Ihr Team der <strong>{company}</strong></p>
     </div>
     """
     subject = f"Ihr Kundenportal bei {company}"
