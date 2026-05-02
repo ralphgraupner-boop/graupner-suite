@@ -224,6 +224,10 @@ async def import_zip(
     """
     mode=new_ids   → vergibt komplett neue UUIDs, alter Kunde bleibt unberührt (Default)
     mode=overwrite → behält IDs, überschreibt vorhandene Datensätze (gefährlich!)
+
+    Akzeptiert sowohl Einzel-Kunden-ZIPs (mit `manifest.json`) als auch
+    Sammel-ZIPs aus „Alle exportieren" / „Multi-Export" (mit `export-manifest.json`),
+    in denen jeder Kunde als eigener ZIP enthalten ist.
     """
     if not file.filename.lower().endswith(".zip"):
         raise HTTPException(400, "Nur .zip Dateien erlaubt")
@@ -231,6 +235,60 @@ async def import_zip(
     if not raw:
         raise HTTPException(400, "Leere Datei")
 
+    try:
+        zf_outer = zipfile.ZipFile(io.BytesIO(raw))
+    except zipfile.BadZipFile:
+        raise HTTPException(400, "Beschädigtes ZIP")
+
+    outer_names = set(zf_outer.namelist())
+
+    # === Variante A: Sammel-ZIP („Alle"/„Multi") mit verschachtelten Kunden-ZIPs
+    if "export-manifest.json" in outer_names and "manifest.json" not in outer_names:
+        inner_zip_names = sorted(n for n in outer_names if n.lower().endswith(".zip") and "/" not in n.strip("/"))
+        if not inner_zip_names:
+            raise HTTPException(400, "Sammel-ZIP enthält keine Kunden-ZIPs.")
+        results: list[dict] = []
+        success = 0
+        failed: list[dict] = []
+        for inner_name in inner_zip_names:
+            inner_bytes = zf_outer.read(inner_name)
+            try:
+                r = await _import_single_kunde_zip(inner_bytes, mode=mode, user=user)
+                r["source_file"] = inner_name
+                results.append(r)
+                success += 1
+            except HTTPException as e:  # noqa: PERF203
+                failed.append({"file": inner_name, "error": e.detail})
+            except Exception as e:  # noqa: BLE001
+                failed.append({"file": inner_name, "error": str(e)})
+
+        await db.module_export_log.insert_one({
+            "id": _new_id(),
+            "action": "import_bulk",
+            "result": {
+                "kunden_total": len(inner_zip_names),
+                "kunden_success": success,
+                "kunden_failed": len(failed),
+                "failed_details": failed[:20],  # nur erste 20 für DB-Größe
+            },
+            "user": getattr(user, "username", None),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        return {
+            "bulk": True,
+            "kunden_total": len(inner_zip_names),
+            "kunden_success": success,
+            "kunden_failed": len(failed),
+            "failed": failed,
+            "details": results,
+        }
+
+    # === Variante B: Einzel-Kunden-ZIP
+    return await _import_single_kunde_zip(raw, mode=mode, user=user)
+
+
+async def _import_single_kunde_zip(raw: bytes, mode: str, user) -> dict:
+    """Importiert einen einzelnen Kunden-ZIP (mit manifest.json)."""
     try:
         zf = zipfile.ZipFile(io.BytesIO(raw))
     except zipfile.BadZipFile:
