@@ -476,7 +476,11 @@ const CustomerPortalPage = () => {
                 <>
                   <Image className="w-10 h-10 text-slate-300 mb-2" />
                   <span className="text-sm text-slate-500">Tippen um Bilder auszuwählen</span>
-                  <span className="text-xs text-slate-400 mt-1">Max. {MAX_IMAGES_PER_UPLOAD} pro Upload · JPG, PNG, WebP, HEIC · Wird automatisch komprimiert</span>
+                  <span className="text-xs text-slate-400 mt-1">Max. {MAX_IMAGES_PER_UPLOAD} pro Upload · JPG, PNG, WebP, HEIC</span>
+                  <span className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Bilder werden vor dem Upload verkleinert – schont Ihr Datenvolumen
+                  </span>
                 </>
               )}
               <input
