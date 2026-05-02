@@ -193,10 +193,11 @@ const CustomerPortalPage = () => {
 
   // Authenticated Portal View
   const customerCount = files.filter(f => f.uploaded_by === "customer").length;
+  // Sortierung: neueste Nachricht oben (reverse chronological)
   const dialogChronological = [
     ...customerNotes.map(n => ({ ...n, side: "customer" })),
     ...adminNotes.map(n => ({ ...n, side: "admin" })),
-  ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">

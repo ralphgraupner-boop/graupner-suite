@@ -646,7 +646,7 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
             Kundenmitteilungen ({notes.length})
           </h3>
           <div className="space-y-2">
-            {notes.map(note => (
+            {[...notes].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(note => (
               <div key={note.id} className="border rounded-sm p-3 bg-background">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded ${noteTypeColors[note.type] || "text-gray-700 bg-gray-50"}`}>
@@ -669,7 +669,7 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
             Ihre Nachrichten ({adminNotes.length})
           </h3>
           <div className="space-y-2">
-            {adminNotes.map(note => (
+            {[...adminNotes].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(note => (
               <div key={note.id} className="border border-emerald-200 rounded-sm p-3 bg-emerald-50/50">
                 <span className="text-xs text-muted-foreground">{new Date(note.created_at).toLocaleString("de-DE")}</span>
                 <p className="text-sm whitespace-pre-wrap mt-1">{note.text}</p>
