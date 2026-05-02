@@ -4,6 +4,8 @@ import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from email.header import Header
+from email.utils import formataddr
 from database import SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, logger, db
 
 
@@ -113,16 +115,22 @@ async def _get_imap_settings_for_sent():
 def send_email(to_email: str, subject: str, body_html: str, attachments: list = None, smtp_config: dict = None, imap_settings: dict = None):
     """Send email via SMTP with optional attachments.
     Wenn imap_settings mitgegeben werden, wird eine Kopie der Mail in den Gesendet-Ordner hochgeladen.
+
+    Wichtig: Subject und Body werden UTF-8 codiert, damit Umlaute korrekt
+    übertragen werden (sonst werden ä/ö/ü/ß durch '?' ersetzt).
     """
     cfg = smtp_config or {
         "server": SMTP_SERVER, "port": SMTP_PORT,
         "user": SMTP_USER, "password": SMTP_PASSWORD, "from_addr": SMTP_FROM
     }
     msg = MIMEMultipart()
-    msg["From"] = cfg["from_addr"]
+    # From-Header: falls "Name <addr>" Format, formataddr nutzt UTF-8 wenn nötig
+    msg["From"] = formataddr(("Tischlerei Graupner", cfg["from_addr"])) if cfg.get("from_addr") and "@" in cfg["from_addr"] and "<" not in cfg["from_addr"] else cfg["from_addr"]
     msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body_html, "html"))
+    # Subject UTF-8-codieren, damit Umlaute durchkommen (RFC 2047)
+    msg["Subject"] = Header(subject, "utf-8")
+    # Body explizit als UTF-8 deklarieren
+    msg.attach(MIMEText(body_html, "html", _charset="utf-8"))
 
     if attachments:
         for att in attachments:
@@ -132,7 +140,8 @@ def send_email(to_email: str, subject: str, body_html: str, attachments: list = 
 
     with smtplib.SMTP_SSL(cfg["server"], cfg["port"]) as server:
         server.login(cfg["user"], cfg["password"])
-        server.sendmail(cfg["from_addr"], to_email, msg.as_string())
+        # Bytes mit explizitem UTF-8 senden, damit auch der HTML-Body sauber bleibt
+        server.sendmail(cfg["from_addr"], to_email, msg.as_bytes())
 
     logger.info(f"Email sent to {to_email}: {subject}")
 
