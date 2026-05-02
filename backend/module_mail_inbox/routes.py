@@ -22,6 +22,7 @@ from database import db, logger
 from routes.auth import get_current_user
 from routes.anfragen_fetcher import _extract_body
 from .parser import parse_anfrage
+from .spam_filter import evaluate_spam
 
 router = APIRouter()
 
@@ -142,6 +143,10 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                     if not parsed.get("email") and from_email and "@" in from_email and "jimdo.com" not in from_email.lower():
                         parsed["email"] = from_email
 
+                    # Spam-Bewertung
+                    spam = evaluate_spam(parsed, body_excerpt=body, from_email=from_email)
+                    initial_status = "spam_verdacht" if spam["is_spam"] else "vorschlag"
+
                     received_at_iso = ""
                     d = msg.get("Date")
                     if d:
@@ -162,7 +167,8 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                         "received_at": received_at_iso,
                         "body_excerpt": (body or "")[:2000],
                         "parsed": parsed,
-                        "status": "vorschlag",
+                        "spam": spam,
+                        "status": initial_status,
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     }
                     await db.module_mail_inbox.insert_one(entry)
@@ -255,3 +261,18 @@ async def reject(entry_id: str, user=Depends(get_current_user)):
     if r.matched_count == 0:
         raise HTTPException(404, "Eintrag nicht gefunden")
     return {"ok": True}
+
+
+@router.post("/reject-all-spam")
+async def reject_all_spam(user=Depends(get_current_user)):
+    """Massen-Ignorieren: alle Einträge mit Status 'spam_verdacht' auf 'ignoriert' setzen."""
+    r = await db.module_mail_inbox.update_many(
+        {"status": "spam_verdacht"},
+        {"$set": {
+            "status": "ignoriert",
+            "user_action_at": datetime.now(timezone.utc).isoformat(),
+            "user_action_by": getattr(user, "username", None),
+            "auto_rejected_as_spam": True,
+        }},
+    )
+    return {"ok": True, "rejected": r.modified_count}

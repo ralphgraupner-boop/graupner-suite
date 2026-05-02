@@ -7,6 +7,7 @@ const STATUS_LABELS = {
   vorschlag: { label: "Offen", color: "bg-blue-100 text-blue-800" },
   übernommen: { label: "Übernommen", color: "bg-emerald-100 text-emerald-800" },
   ignoriert: { label: "Ignoriert", color: "bg-slate-100 text-slate-600" },
+  spam_verdacht: { label: "Spam-Verdacht", color: "bg-red-100 text-red-800" },
 };
 
 const ModuleMailInboxPage = () => {
@@ -65,6 +66,17 @@ const ModuleMailInboxPage = () => {
     }
   };
 
+  const rejectAllSpam = async () => {
+    if (!window.confirm("Alle Spam-Verdacht-Einträge ignorieren?")) return;
+    try {
+      const r = await api.post(`/module-mail-inbox/reject-all-spam`);
+      toast.success(`${r.data.rejected} Einträge ignoriert`);
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler");
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="module-mail-inbox-page">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -87,8 +99,8 @@ const ModuleMailInboxPage = () => {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b">
-        {[["vorschlag", "Offen"], ["übernommen", "Übernommen"], ["ignoriert", "Ignoriert"], ["all", "Alle"]].map(([k, label]) => (
+      <div className="flex flex-wrap gap-2 border-b items-center">
+        {[["vorschlag", "Offen"], ["spam_verdacht", "Spam-Verdacht"], ["übernommen", "Übernommen"], ["ignoriert", "Ignoriert"], ["all", "Alle"]].map(([k, label]) => (
           <button
             key={k}
             onClick={() => setStatusFilter(k)}
@@ -98,6 +110,15 @@ const ModuleMailInboxPage = () => {
             {label}
           </button>
         ))}
+        {statusFilter === "spam_verdacht" && items.length > 0 && (
+          <button
+            onClick={rejectAllSpam}
+            className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-red-600 text-white rounded-sm hover:bg-red-700"
+            data-testid="btn-reject-all-spam"
+          >
+            <X className="w-3.5 h-3.5" /> Alle ignorieren
+          </button>
+        )}
       </div>
 
       {loading ? (
