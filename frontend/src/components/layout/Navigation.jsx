@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
@@ -345,7 +345,7 @@ const Sidebar = ({ onLogout }) => {
           const isNew = variant === "new";
           const isSandbox = variant === "sandbox";
           return (
-            <React.Fragment key={path}>
+            <Fragment key={path}>
             <div
               draggable={sortMode}
               onDragStart={handleDragStart(path)}
@@ -439,7 +439,7 @@ const Sidebar = ({ onLogout }) => {
                 })}
               </div>
             )}
-            </React.Fragment>
+            </Fragment>
           );
         })}
       </nav>
@@ -696,4 +696,3 @@ const MobileNav = ({ onLogout }) => {
 };
 
 export { Sidebar, MobileNav, getUserRole };
-serRole };
