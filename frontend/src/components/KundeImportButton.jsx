@@ -26,7 +26,18 @@ export const KundeImportButton = ({ onImported }) => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(r.data);
-      toast.success(`Import erfolgreich: ${r.data.kunde_name}`);
+      if (r.data?.bulk) {
+        const total = r.data.kunden_total || 0;
+        const ok = r.data.kunden_success || 0;
+        const fail = r.data.kunden_failed || 0;
+        if (fail === 0) {
+          toast.success(`${ok}/${total} Kunden importiert · 0 Fehler`);
+        } else {
+          toast.warning(`${ok}/${total} Kunden importiert · ${fail} Fehler – Details siehe Dialog`);
+        }
+      } else {
+        toast.success(`Import erfolgreich: ${r.data.kunde_name}`);
+      }
       onImported?.();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Import fehlgeschlagen");
@@ -52,7 +63,9 @@ export const KundeImportButton = ({ onImported }) => {
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <FileArchive className="w-5 h-5" /> Kunde aus ZIP importieren
               </h2>
-              <p className="text-xs text-muted-foreground mt-1">Nur Graupner-Suite-Exporte mit gültiger manifest.json</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Akzeptiert Einzel-Kunden-ZIPs <em>und</em> Sammel-ZIPs aus „Alle exportieren".
+              </p>
             </div>
             <div className="p-4 space-y-4">
               {!result ? (
@@ -106,6 +119,29 @@ export const KundeImportButton = ({ onImported }) => {
                     <span>Importierte Daten werden zur Datenbank hinzugefügt – nichts wird gelöscht. Beim Modus „Neue IDs" gibt es keine Konflikte.</span>
                   </div>
                 </>
+              ) : result.bulk ? (
+                <div className="text-sm space-y-2" data-testid="import-bulk-result">
+                  <p className={`font-medium ${result.kunden_failed > 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                    {result.kunden_failed > 0 ? "⚠ Bulk-Import abgeschlossen (mit Fehlern)" : "✓ Bulk-Import erfolgreich"}
+                  </p>
+                  <ul className="bg-muted/30 rounded-sm p-3 border space-y-1">
+                    <li className="flex justify-between"><span>Kunden insgesamt</span><span className="font-semibold">{result.kunden_total}</span></li>
+                    <li className="flex justify-between text-emerald-700"><span>Erfolgreich</span><span className="font-semibold">{result.kunden_success}</span></li>
+                    <li className="flex justify-between text-red-700"><span>Fehler</span><span className="font-semibold">{result.kunden_failed}</span></li>
+                  </ul>
+                  {result.kunden_failed > 0 && Array.isArray(result.failed) && (
+                    <details className="bg-red-50 border border-red-200 rounded-sm p-2" open>
+                      <summary className="text-xs font-medium text-red-800 cursor-pointer">Fehler-Details ({result.failed.length})</summary>
+                      <ul className="mt-2 space-y-1 text-xs text-red-900 max-h-40 overflow-y-auto">
+                        {result.failed.map((f, i) => (
+                          <li key={i} className="border-b border-red-100 pb-1">
+                            <span className="font-mono">{f.file}</span>: {f.error}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
               ) : (
                 <div className="text-sm space-y-2">
                   <p className="font-medium text-emerald-700">✓ Import erfolgreich</p>
