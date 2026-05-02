@@ -11,15 +11,15 @@ const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
   { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"], variant: "new" },
-  { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new" },
+  { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new", hideByDefault: true },
   { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], variant: "new" },
   { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
   { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"], variant: "new" },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
-  { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"] },
+  { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"], hideByDefault: true },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/dokumente-v2", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "new" },
-  { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"] },
+  { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"], hideByDefault: true },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
   { path: "/portals-klon", icon: Globe, label: "Kundenportale (Arbeitskopie)", roles: ["admin"], variant: "new" },
   { path: "/portal-v2", icon: Users, label: "Kundenportal (alt)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
@@ -27,7 +27,7 @@ const allNavItems = [
   { path: "/portal-v4", icon: Users, label: "Kundenportal v4 (Sandbox)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
   { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"] },
-  { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"] },
+  { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"], hideByDefault: true },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"], hideByDefault: true },
   { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2", hideByDefault: true },
@@ -341,17 +341,17 @@ const Sidebar = ({ onLogout }) => {
               {sortMode ? (
                 <div
                   data-testid={`nav-${path.slice(1)}`}
-                  className={`relative flex items-center gap-3 px-4 py-3 rounded-sm bg-muted/40 border border-dashed border-muted-foreground/30 select-none`}
+                  className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-sm bg-muted/40 border border-dashed border-muted-foreground/30 select-none`}
                 >
-                  <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <Icon className="w-5 h-5 text-foreground/70 flex-shrink-0" />
-                  <span className="font-medium text-foreground/80">{label}</span>
+                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <Icon className="w-4 h-4 text-foreground/70 flex-shrink-0" />
+                  <span className="text-foreground/80">{label}</span>
                 </div>
               ) : (
               <Link
                 to={path}
                 data-testid={`nav-${path.slice(1)}`}
-                className={`relative flex items-center gap-3 px-4 py-3 rounded-sm transition-smooth ${
+                className={`relative flex items-center gap-2.5 px-3 py-2 text-sm rounded-sm transition-smooth ${
                   isActive
                     ? (isNew
                         ? "bg-emerald-100 text-emerald-800 border-l-4 border-emerald-600 shadow-sm"
@@ -368,14 +368,14 @@ const Sidebar = ({ onLogout }) => {
                 }`}
               >
                 <div className="relative shrink-0">
-                  <Icon className={`w-5 h-5 ${hasBadge ? "text-red-600" : isNew ? "text-emerald-600" : ""}`} />
+                  <Icon className={`w-4 h-4 ${hasBadge ? "text-red-600" : isNew ? "text-emerald-600" : ""}`} />
                   {hasBadge && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold animate-pulse ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold animate-pulse ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </div>
-                <span className={`font-medium ${hasBadge ? "text-red-700" : ""}`}>{label}</span>
+                <span className={`${hasBadge ? "text-red-700 font-medium" : ""}`}>{label}</span>
                 {isNew && !isActive && (
                   <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 text-white tracking-wider">NEU</span>
                 )}
