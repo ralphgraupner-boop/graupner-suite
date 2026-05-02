@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, GripVertical, ArrowUpDown, RotateCcw, Check } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
@@ -11,28 +11,28 @@ const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
   { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"], variant: "new" },
-  { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new", hideByDefault: true },
+  { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new", parentPath: "/settings" },
   { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], variant: "new" },
   { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
   { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"], variant: "new" },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
-  { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"], hideByDefault: true },
+  { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"], parentPath: "/settings" },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/dokumente-v2", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "new" },
-  { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"], hideByDefault: true },
+  { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"], parentPath: "/settings" },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
   { path: "/portals-klon", icon: Globe, label: "Kundenportale (Arbeitskopie)", roles: ["admin"], variant: "new" },
   { path: "/portal-v2", icon: Users, label: "Kundenportal (alt)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/portal-v3", icon: Users, label: "Kundenportal (Test)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
   { path: "/portal-v4", icon: Users, label: "Kundenportal v4 (Sandbox)", roles: ["admin"], variant: "sandbox", hideByDefault: true },
   { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
-  { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"] },
-  { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"], hideByDefault: true },
+  { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"], parentPath: "/settings" },
+  { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"], parentPath: "/settings" },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"], hideByDefault: true },
   { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2", hideByDefault: true },
   { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"], featureFlag: "email_module_enabled" },
-  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"] },
+  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"], hasChildren: true },
 ];
 
 const getUserRole = () => {
@@ -59,15 +59,31 @@ const getFilteredNavItems = () => {
   });
 };
 
+/** Kinder-Items (parentPath gesetzt) werden aus der Top-Liste herausgefiltert
+ *  und stattdessen als Kinder unter ihrem Parent angezeigt. */
+const getChildren = (allItems, parentPath) => allItems.filter(i => i.parentPath === parentPath);
+
 const Sidebar = ({ onLogout }) => {
   const location = useLocation();
-  const baseNavItems = getFilteredNavItems();
+  const allFilteredItems = getFilteredNavItems();
+  const baseNavItems = allFilteredItems.filter(i => !i.parentPath); // ohne Kinder-Einträge
   const role = getUserRole();
   const username = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "null"); return typeof u === "object" ? u.username : u; } catch { return ""; } })();
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0 });
   const prevEmailRef = useRef(0);
+  const [openedParents, setOpenedParents] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("nav_opened_parents") || "[]")); } catch { return new Set(); }
+  });
+  const toggleParent = (path) => {
+    setOpenedParents(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path); else next.add(path);
+      try { localStorage.setItem("nav_opened_parents", JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   // ----- Sidebar-Reihenfolge (per User in DB gespeichert) -----
   const [sortMode, setSortMode] = useState(false);
@@ -314,7 +330,9 @@ const Sidebar = ({ onLogout }) => {
         )}
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ path, icon: Icon, label, variant }) => {
+        {navItems.map(({ path, icon: Icon, label, variant, hasChildren }) => {
+          const children = hasChildren ? getChildren(allFilteredItems, path) : [];
+          const isOpen = openedParents.has(path);
           const badgeCount = path === "/email"
             ? unreadCounts.email
             : (path === "/portals"
@@ -327,8 +345,8 @@ const Sidebar = ({ onLogout }) => {
           const isNew = variant === "new";
           const isSandbox = variant === "sandbox";
           return (
+            <React.Fragment key={path}>
             <div
-              key={path}
               draggable={sortMode}
               onDragStart={handleDragStart(path)}
               onDragOver={handleDragOver(path)}
@@ -388,10 +406,40 @@ const Sidebar = ({ onLogout }) => {
                 {hasBadge && !isNew && !isDeprecated && !isSandbox && (
                   <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />
                 )}
+                {hasChildren && children.length > 0 && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleParent(path); }}
+                    className="ml-auto p-0.5 hover:bg-black/5 rounded-sm"
+                    data-testid={`btn-toggle-${path.slice(1)}`}
+                    aria-label={isOpen ? "Zuklappen" : "Aufklappen"}
+                  >
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                )}
               </Link>
               )}
             </HelpTip>
             </div>
+            {hasChildren && isOpen && children.length > 0 && (
+              <div className="ml-6 mt-0.5 space-y-0.5 border-l border-border pl-2" data-testid={`children-${path.slice(1)}`}>
+                {children.map((c) => {
+                  const CIcon = c.icon;
+                  const cActive = location.pathname.startsWith(c.path);
+                  return (
+                    <Link
+                      key={c.path}
+                      to={c.path}
+                      className={`flex items-center gap-2 px-2 py-1.5 text-xs rounded-sm transition-smooth ${cActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                      data-testid={`nav-child-${c.path.slice(1)}`}
+                    >
+                      <CIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="truncate">{c.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+            </React.Fragment>
           );
         })}
       </nav>
@@ -648,3 +696,4 @@ const MobileNav = ({ onLogout }) => {
 };
 
 export { Sidebar, MobileNav, getUserRole };
+serRole };
