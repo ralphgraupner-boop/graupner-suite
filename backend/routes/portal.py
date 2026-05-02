@@ -569,6 +569,8 @@ async def admin_upload_file(
     portal_id: str,
     file: UploadFile = File(...),
     description: str = Form(""),
+    notify_customer: bool = Form(False),
+    portal_url: str = Form(""),
     user=Depends(get_current_user)
 ):
     portal = await db.portals.find_one({"id": portal_id})
@@ -597,6 +599,43 @@ async def admin_upload_file(
     }
     await db.portal_files.insert_one(file_doc)
     file_doc.pop("_id", None)
+
+    # Optional: Kunde per Mail informieren
+    notified = False
+    if notify_customer:
+        portal_enriched = await _enrich_portal_with_kunde(dict(portal))
+        portal_enriched.pop("_id", None)
+        cust_mail = (portal_enriched.get("customer_email") or "").strip()
+        if cust_mail:
+            cust_name = portal_enriched.get("customer_name", "Kunde")
+            anrede = _build_anrede_brief(cust_name)
+            settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+            company = settings.get("company_name", "Tischlerei Graupner")
+            link = portal_url or f"/portal/{portal.get('token', '')}"
+            html = f"""
+            <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#1f2937;line-height:1.55;">
+              <h2 style="color:#1a5632;margin:0 0 12px 0;">Neues Dokument in Ihrem Kundenportal</h2>
+              <p>{anrede},</p>
+              <p>wir haben für Sie ein Dokument im Kundenportal hinterlegt: <strong>{file.filename}</strong></p>
+              <p style="margin:20px 0;">
+                <a href="{link}" style="background:#1a5632;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;">Portal öffnen</a>
+              </p>
+              <p style="font-size:13px;color:#475569;">Ihr Login-Passwort haben Sie bereits per E-Mail erhalten.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0 12px 0;"/>
+              <p style="margin:0;font-size:13px;color:#475569;">Mit freundlichen Grüßen<br/>Ihr Team der <strong>{company}</strong></p>
+            </div>
+            """
+            try:
+                send_email(
+                    to_email=cust_mail,
+                    subject=f"Neues Dokument in Ihrem Kundenportal · {company}",
+                    body_html=html,
+                )
+                notified = True
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Notify-customer (upload) failed: {e}")
+
+    file_doc["notified"] = notified
     return file_doc
 
 
@@ -806,7 +845,12 @@ async def public_add_note(token: str, body: dict):
 
 @router.post("/portals/{portal_id}/admin-notes")
 async def add_admin_note(portal_id: str, body: dict, user=Depends(get_current_user)):
-    """Admin sendet Nachricht an Kunden über das Portal"""
+    """Admin sendet Nachricht an Kunden über das Portal.
+
+    body.notify_customer (optional, default False):
+      Wenn True, wird zusätzlich eine kurze E-Mail an den Kunden
+      geschickt, dass im Portal eine neue Nachricht von uns liegt.
+    """
     portal = await db.portals.find_one({"id": portal_id})
     if not portal:
         raise HTTPException(404, "Portal nicht gefunden")
@@ -828,7 +872,48 @@ async def add_admin_note(portal_id: str, body: dict, user=Depends(get_current_us
             "$set": {"admin_has_new_content": True, "last_admin_send_at": datetime.now(timezone.utc).isoformat()},
         }
     )
-    return note
+
+    # Optional: Kunden per Mail informieren
+    notify_customer = bool(body.get("notify_customer"))
+    notified = False
+    if notify_customer:
+        # Live-Lookup für Mail-Adresse (Datenmasken)
+        portal_enriched = await _enrich_portal_with_kunde(dict(portal))
+        portal_enriched.pop("_id", None)
+        cust_mail = (portal_enriched.get("customer_email") or "").strip()
+        if cust_mail:
+            portal_url = body.get("portal_url") or ""
+            if not portal_url:
+                # Fallback: aus Token + Konfiguration zusammenbauen, wenn Frontend keine URL mitschickt
+                portal_url = f"/portal/{portal.get('token', '')}"
+            cust_name = portal_enriched.get("customer_name", "Kunde")
+            anrede = _build_anrede_brief(cust_name)
+            settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+            company = settings.get("company_name", "Tischlerei Graupner")
+            html = f"""
+            <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#1f2937;line-height:1.55;">
+              <h2 style="color:#1a5632;margin:0 0 12px 0;">Neue Nachricht in Ihrem Kundenportal</h2>
+              <p>{anrede},</p>
+              <p>wir haben Ihnen eine neue Nachricht in Ihrem persönlichen Kundenportal hinterlegt.</p>
+              <p style="margin:20px 0;">
+                <a href="{portal_url}" style="background:#1a5632;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;">Portal öffnen</a>
+              </p>
+              <p style="font-size:13px;color:#475569;">Ihr Login-Passwort haben Sie bereits per E-Mail erhalten.</p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0 12px 0;"/>
+              <p style="margin:0;font-size:13px;color:#475569;">Mit freundlichen Grüßen<br/>Ihr Team der <strong>{company}</strong></p>
+            </div>
+            """
+            try:
+                send_email(
+                    to_email=cust_mail,
+                    subject=f"Neue Nachricht in Ihrem Kundenportal · {company}",
+                    body_html=html,
+                )
+                notified = True
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"Notify-customer (note) failed: {e}")
+
+    return {**note, "notified": notified}
 
 
 @router.get("/portals/{portal_id}/admin-notes")

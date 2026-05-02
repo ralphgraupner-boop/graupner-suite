@@ -134,7 +134,7 @@ const PortalsPage = () => {
     }
   };
 
-  const uploadBusinessFile = async (e) => {
+  const uploadBusinessFile = async (e, opts = {}) => {
     const original = e.target.files[0];
     if (!original) return;
     // Vor dem Upload komprimieren – spart Bandbreite und Speicher
@@ -142,11 +142,20 @@ const PortalsPage = () => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("description", file.name);
+    if (opts.notify_customer) {
+      formData.append("notify_customer", "true");
+      formData.append("portal_url", `${window.location.origin}/portal/${selectedPortal.token}`);
+    }
     try {
-      await api.post(`/portals/${selectedPortal.id}/upload`, formData, {
+      const res = await api.post(`/portals/${selectedPortal.id}/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
-      toast.success("Datei hochgeladen");
+      if (opts.notify_customer) {
+        if (res.data?.notified) toast.success("Datei hochgeladen · Kunde per E-Mail benachrichtigt");
+        else toast.warning("Datei hochgeladen · E-Mail-Benachrichtigung fehlgeschlagen");
+      } else {
+        toast.success("Datei hochgeladen");
+      }
       loadFiles(selectedPortal.id);
     } catch (e) {
       toast.error("Upload fehlgeschlagen");
@@ -532,6 +541,8 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
 
   const [showPreview, setShowPreview] = useState(false);
   const [editableEmail, setEditableEmail] = useState("");
+  const [notifyCustomer, setNotifyCustomer] = useState(false);
+  const [notifyOnUpload, setNotifyOnUpload] = useState(false);
 
   useEffect(() => {
     if (showPreview) setEditableEmail(portal.customer_email || "");
@@ -555,12 +566,20 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
         portal.customer_email = newEmail; // lokal updaten
         emailUpdated = true;
       }
-      const note = await api.post(`/portals/${portal.id}/admin-notes`, { text: msgText });
+      const portalUrl = `${window.location.origin}/portal/${portal.token}`;
+      const note = await api.post(`/portals/${portal.id}/admin-notes`, {
+        text: msgText,
+        notify_customer: notifyCustomer,
+        portal_url: portalUrl,
+      });
       setAdminNotes(prev => [...prev, note.data]);
       setMsgText("");
       setSearchTerm("");
       setShowPreview(false);
-      toast.success(emailUpdated ? "Nachricht gesendet · E-Mail-Adresse aktualisiert" : "Nachricht an Kunden gesendet");
+      const notified = note.data?.notified;
+      let suffix = "";
+      if (notifyCustomer) suffix = notified ? " · Kunde per E-Mail benachrichtigt" : " · E-Mail-Versand fehlgeschlagen";
+      toast.success((emailUpdated ? "Nachricht gesendet · E-Mail-Adresse aktualisiert" : "Nachricht an Kunden gesendet") + suffix);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Fehler beim Senden");
     }
@@ -779,9 +798,23 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
                 )}
               </div>
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-sm text-sm whitespace-pre-wrap">{msgText}</div>
-              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                <strong>Hinweis:</strong> Diese Nachricht erscheint sofort im Kundenportal und der Kunde erhält eine Benachrichtigung.
-              </div>
+              <label className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-sm cursor-pointer hover:bg-blue-100 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={notifyCustomer}
+                  onChange={(e) => setNotifyCustomer(e.target.checked)}
+                  className="mt-0.5"
+                  data-testid="checkbox-notify-customer"
+                />
+                <div className="text-sm">
+                  <div className="font-medium text-blue-900">Kunde per E-Mail benachrichtigen</div>
+                  <div className="text-xs text-blue-700 mt-0.5">
+                    {notifyCustomer
+                      ? `Eine Mail mit Portal-Link geht an: ${editableEmail || portal.customer_email || "(keine Adresse)"}`
+                      : "Standard: Nachricht erscheint nur im Portal, ohne E-Mail."}
+                  </div>
+                </div>
+              </label>
             </div>
             <div className="p-4 border-t flex justify-end gap-2">
               <button onClick={() => setShowPreview(false)} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Zurück</button>
@@ -819,13 +852,26 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
             <FileText className="w-4 h-4" />
             Ihre Dokumente ({businessFiles.length})
           </h3>
+          <label className="flex items-start gap-2 mb-2 p-2 bg-blue-50 border border-blue-200 rounded-sm cursor-pointer hover:bg-blue-100 text-xs">
+            <input
+              type="checkbox"
+              checked={notifyOnUpload}
+              onChange={(e) => setNotifyOnUpload(e.target.checked)}
+              className="mt-0.5"
+              data-testid="checkbox-notify-on-upload"
+            />
+            <div>
+              <div className="font-medium text-blue-900">Kunde per E-Mail benachrichtigen</div>
+              <div className="text-blue-700">Sendet eine kurze Mail mit Portal-Link an {portal.customer_email || "(keine Adresse)"}.</div>
+            </div>
+          </label>
           <label
             className="flex items-center gap-2 px-3 py-2 border-2 border-dashed rounded-sm cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground mb-3"
             data-testid="btn-upload-business-file"
           >
             <Upload className="w-4 h-4" />
             Dokument hochladen (PDF, Bild)
-            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={onUpload} />
+            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={(e) => onUpload(e, { notify_customer: notifyOnUpload })} />
           </label>
           {businessFiles.length === 0 ? (
             <Card className="p-6 text-center text-muted-foreground text-sm">
