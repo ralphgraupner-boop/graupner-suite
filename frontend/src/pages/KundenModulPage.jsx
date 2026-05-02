@@ -214,14 +214,6 @@ const KundenModulPage = () => {
           <span className={`w-2 h-2 rounded-full ${statusFilter === "aktiv" ? "bg-white" : "bg-primary"}`} />
           Aktiv ({aktivCount})
         </button>
-        <button
-          onClick={() => setStatusFilter(statusFilter === "anfragen" ? "aktiv" : "anfragen")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === "anfragen" ? "bg-amber-500 text-white shadow-sm" : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200"}`}
-          data-testid="status-filter-anfragen"
-        >
-          <span className="w-2 h-2 rounded-full bg-amber-600" />
-          Anfragen ({anfragenCount})
-        </button>
         {KUNDEN_STATUSES.filter(st => !ARCHIV_STATES.includes(st)).map(st => (
           <button key={st} onClick={() => setStatusFilter(statusFilter === st ? "aktiv" : st)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
