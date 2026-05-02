@@ -595,11 +595,18 @@ const CustomerPortalPage = () => {
 
         {/* Customer's uploaded images */}
         {customerFiles.length > 0 && (
-          <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-customer-files">
-            <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <Image className="w-5 h-5 text-slate-500" />
-              Ihre hochgeladenen Bilder ({customerFiles.length})
-            </h2>
+          <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-slate-400" data-testid="portal-customer-files">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-600">
+                  <User className="w-4 h-4" />
+                </span>
+                Ihre hochgeladenen Bilder ({customerFiles.length})
+              </h2>
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                Von Ihnen
+              </span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {customerFiles.map(f => (
                 <PortalFilePreview key={f.id} file={f} />
@@ -610,11 +617,18 @@ const CustomerPortalPage = () => {
 
         {/* Business documents */}
         {businessFiles.length > 0 && (
-          <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-business-files">
-            <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" />
-              Dokumente von Tischlerei Graupner ({businessFiles.length})
-            </h2>
+          <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-emerald-600" data-testid="portal-business-files">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-700">
+                  <Wrench className="w-4 h-4" />
+                </span>
+                Dokumente von Tischlerei Graupner ({businessFiles.length})
+              </h2>
+              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">
+                Von uns
+              </span>
+            </div>
             <div className="space-y-2">
               {businessFiles.map(f => (
                 <a
@@ -622,19 +636,19 @@ const CustomerPortalPage = () => {
                   href={`${API}/portal/file/${f.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-3 p-3 border border-emerald-100 bg-emerald-50/40 rounded-lg hover:bg-emerald-50 transition-colors"
                   data-testid={`business-file-${f.id}`}
                 >
                   {f.content_type?.startsWith("image/") ? (
-                    <Image className="w-5 h-5 text-blue-500" />
+                    <Image className="w-5 h-5 text-emerald-600" />
                   ) : (
-                    <FileText className="w-5 h-5 text-red-500" />
+                    <FileText className="w-5 h-5 text-emerald-600" />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{f.original_filename}</p>
                     <p className="text-xs text-slate-400">{new Date(f.created_at).toLocaleDateString("de-DE")}</p>
                   </div>
-                  <Download className="w-4 h-4 text-slate-400" />
+                  <Download className="w-4 h-4 text-emerald-600" />
                 </a>
               ))}
             </div>
