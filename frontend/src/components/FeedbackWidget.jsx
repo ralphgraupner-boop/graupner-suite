@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { StickyNote, X, Plus, Loader2, Bug, Lightbulb, CheckSquare, Sparkles, Trash2 } from "lucide-react";
+import { StickyNote, X, Plus, Loader2, Bug, Lightbulb, CheckSquare, Sparkles, Trash2, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
@@ -26,6 +26,8 @@ const FeedbackWidget = () => {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [badge, setBadge] = useState(0);
+  const [archivedCount, setArchivedCount] = useState(0);
+  const [includeArchived, setIncludeArchived] = useState(false);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("offen");
   const [quickTitle, setQuickTitle] = useState("");
@@ -38,6 +40,7 @@ const FeedbackWidget = () => {
     try {
       const r = await api.get("/module-feedback/count");
       setBadge(r.data?.total_open || 0);
+      setArchivedCount(r.data?.archived || 0);
     } catch { /* ignore */ }
   }, []);
 
@@ -45,14 +48,15 @@ const FeedbackWidget = () => {
     setLoading(true);
     try {
       const status = tab === "alle" ? "alle" : tab;
-      const r = await api.get(`/module-feedback/list?status=${status}`);
+      const inc = includeArchived ? "&include_archived=true" : "";
+      const r = await api.get(`/module-feedback/list?status=${status}${inc}`);
       setItems(r.data || []);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Laden fehlgeschlagen");
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, [tab, includeArchived]);
 
   useEffect(() => {
     loadBadge();
@@ -221,7 +225,7 @@ const FeedbackWidget = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b px-2">
+            <div className="flex border-b px-2 items-center">
               {TABS.map((t) => (
                 <button
                   key={t.key}
@@ -232,6 +236,16 @@ const FeedbackWidget = () => {
                   {t.label}
                 </button>
               ))}
+              {(tab === "erledigt" || tab === "alle") && archivedCount > 0 && (
+                <button
+                  onClick={() => setIncludeArchived((v) => !v)}
+                  className={`ml-auto mr-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-sm border transition-colors ${includeArchived ? "bg-slate-800 text-white border-transparent" : "border-border text-muted-foreground hover:bg-muted"}`}
+                  data-testid="btn-feedback-archive-toggle"
+                  title={`${archivedCount} Einträge sind älter als 30 Tage und ausgeblendet`}
+                >
+                  <Archive className="w-3 h-3" /> Archiv ({archivedCount})
+                </button>
+              )}
             </div>
 
             {/* Liste */}

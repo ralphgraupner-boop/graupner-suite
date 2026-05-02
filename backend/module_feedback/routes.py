@@ -16,7 +16,7 @@ Dokument-Struktur:
 }
 """
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,6 +30,11 @@ router = APIRouter()
 ALLOWED_TYP = {"bug", "feature", "idee", "test"}
 ALLOWED_STATUS = {"offen", "in_arbeit", "erledigt"}
 ALLOWED_PRIO = {"hoch", "normal", "niedrig"}
+
+# Erledigte Einträge werden nach 30 Tagen automatisch aus der Standard-Liste
+# ausgeblendet. Sie bleiben in der DB erhalten und können mit
+# `include_archived=true` weiterhin abgerufen werden.
+ARCHIVE_DAYS = 30
 
 
 class FeedbackCreate(BaseModel):
@@ -57,7 +62,13 @@ def _validate_enum(value: str | None, allowed: set[str], field: str) -> None:
 
 
 @router.get("/list")
-async def list_items(status: str = "alle", typ: str = "alle", limit: int = 200, user=Depends(get_current_user)):
+async def list_items(
+    status: str = "alle",
+    typ: str = "alle",
+    limit: int = 200,
+    include_archived: bool = False,
+    user=Depends(get_current_user),
+):
     q: dict = {}
     if status != "alle":
         _validate_enum(status, ALLOWED_STATUS, "status")
@@ -65,6 +76,16 @@ async def list_items(status: str = "alle", typ: str = "alle", limit: int = 200, 
     if typ != "alle":
         _validate_enum(typ, ALLOWED_TYP, "typ")
         q["typ"] = typ
+
+    # Archiv-Filter: erledigte Einträge älter als 30 Tage standardmäßig ausblenden.
+    if not include_archived:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=ARCHIVE_DAYS)).isoformat()
+        q["$or"] = [
+            {"status": {"$ne": "erledigt"}},
+            {"done_at": {"$gte": cutoff}},
+            {"done_at": None},
+        ]
+
     items: list[dict] = []
     cursor = db.module_feedback.find(q, {"_id": 0}).sort([("status", 1), ("prio", 1), ("created_at", -1)]).limit(limit)
     async for d in cursor:
@@ -74,10 +95,22 @@ async def list_items(status: str = "alle", typ: str = "alle", limit: int = 200, 
 
 @router.get("/count")
 async def count_open(user=Depends(get_current_user)):
-    """Schneller Zähler für das Badge im Floating-Widget."""
+    """Schneller Zähler für das Badge im Floating-Widget.
+    Berücksichtigt nur noch nicht erledigte Einträge (also ohne Archiv-Bezug)."""
     offen = await db.module_feedback.count_documents({"status": "offen"})
     in_arbeit = await db.module_feedback.count_documents({"status": "in_arbeit"})
-    return {"offen": offen, "in_arbeit": in_arbeit, "total_open": offen + in_arbeit}
+    # Wie viele erledigte sind aktuell sichtbar (letzte 30 Tage)?
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=ARCHIVE_DAYS)).isoformat()
+    archived = await db.module_feedback.count_documents({
+        "status": "erledigt",
+        "done_at": {"$lt": cutoff},
+    })
+    return {
+        "offen": offen,
+        "in_arbeit": in_arbeit,
+        "total_open": offen + in_arbeit,
+        "archived": archived,
+    }
 
 
 @router.post("")
