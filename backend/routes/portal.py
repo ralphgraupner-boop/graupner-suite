@@ -193,7 +193,10 @@ async def _build_portal_email_html(
         <p style="margin:0 0 8px 0;font-size:14px;"><strong>Link zum Portal:</strong><br/>
           <a href="{portal_url}" style="color:#1a5632;word-break:break-all;">{portal_url}</a>
         </p>
-        <p style="margin:0;font-size:14px;"><strong>Passwort:</strong> <code style="background:#fff;padding:4px 10px;border-radius:4px;border:1px solid #cbd5e1;font-size:15px;">{password}</code></p>
+        <p style="margin:0;font-size:14px;"><strong>Passwort:</strong>
+          <code style="display:inline-block;background:#fff;padding:8px 14px;border-radius:4px;border:1px solid #cbd5e1;font-size:18px;font-family:'Courier New',Consolas,monospace;letter-spacing:1px;color:#0f172a;font-weight:700;">{password}</code>
+        </p>
+        <p style="margin:6px 0 0 0;font-size:11px;color:#64748b;">Tipp: Bitte das Passwort sorgfältig kopieren oder eintippen – auf Groß-/Kleinschreibung achten.</p>
       </div>
 
       <h3 style="color:#1a5632;font-size:16px;margin:24px 0 8px 0;">&#128203; So funktioniert das Portal &ndash; Schritt für Schritt:</h3>
@@ -229,6 +232,18 @@ IMAGE_JPEG_QUALITY = 80
 
 def hash_password(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
+
+
+# Zeichen-Pool ohne missverständliche Zeichen (0/O, 1/l/I, S/5)
+_PW_ALPHABET = "ABCDEFGHJKLMNPQRTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+
+
+def gen_portal_password(length: int = 10) -> str:
+    """Erzeugt ein leicht ablesbares Portal-Passwort.
+    Verzichtet bewusst auf Zeichen, die in Mails leicht verwechselt werden:
+    0/O, 1/l/I/i, S/5.
+    """
+    return "".join(secrets.choice(_PW_ALPHABET) for _ in range(length))
 
 
 def compress_image(data: bytes, content_type: str) -> tuple:
@@ -351,7 +366,7 @@ async def create_portal_from_customer(customer_id: str, body: dict, user=Depends
     if existing:
         raise HTTPException(400, "Für diesen Kunden existiert bereits ein Kundenportal.")
 
-    password = body.get("password", "") or secrets.token_urlsafe(8)
+    password = body.get("password", "") or gen_portal_password()
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
 
@@ -400,7 +415,7 @@ async def create_portal(body: dict, user=Depends(get_current_user)):
     weeks = body.get("weeks", 8)
     password = body.get("password", "")
     if not password:
-        password = secrets.token_urlsafe(8)
+        password = gen_portal_password()
 
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
@@ -468,7 +483,7 @@ async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(g
         logger.info(f"Customer auto-created from Kontakt: {customer_name}")
 
     # Generate password
-    password = body.get("password", "") or secrets.token_urlsafe(8)
+    password = body.get("password", "") or gen_portal_password()
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
 
