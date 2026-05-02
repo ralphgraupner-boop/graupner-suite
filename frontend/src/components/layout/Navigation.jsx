@@ -98,7 +98,26 @@ const Sidebar = ({ onLogout }) => {
     const ordered = customOrder.map(p => byPath.get(p)).filter(Boolean);
     const orderedSet = new Set(ordered.map(i => i.path));
     const rest = baseNavItems.filter(i => !orderedSet.has(i.path));
-    return [...ordered, ...rest];
+    // Neue Items (rest) werden direkt nach ihrem natürlichen Vorgänger in baseNavItems
+    // eingefügt, statt ganz unten zu landen. So sieht der User sie sofort.
+    if (rest.length === 0) return ordered;
+    const out = [...ordered];
+    for (const newItem of rest) {
+      const origIdx = baseNavItems.findIndex(i => i.path === newItem.path);
+      // Finde den nächsten Nachbarn aus baseNavItems der schon in out ist
+      let inserted = false;
+      for (let k = origIdx - 1; k >= 0; k--) {
+        const prevPath = baseNavItems[k].path;
+        const pos = out.findIndex(i => i.path === prevPath);
+        if (pos !== -1) {
+          out.splice(pos + 1, 0, newItem);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) out.unshift(newItem);
+    }
+    return out;
   })();
 
   const persistOrder = async (newOrder) => {

@@ -14,7 +14,7 @@ const detectEnvFromHost = () => {
   if (typeof window === "undefined") return { kind: "unknown", label: "?" };
   const h = window.location.hostname;
   if (h.includes("preview") || h.includes("emergentagent.com")) {
-    return { kind: "preview", label: "PREVIEW · TEST-UMGEBUNG", color: "amber" };
+    return { kind: "preview", label: "PREVIEW · TEST-UMGEBUNG", color: "blue" };
   }
   if (h.includes("emergent.host") || h.includes("graupner") || h === "localhost") {
     return { kind: "live", label: "LIVE · PRODUKTIV", color: "red" };
