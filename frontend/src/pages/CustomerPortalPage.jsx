@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3, Wrench, Clock, User, LogOut, Eye } from "lucide-react";
+import { Upload, Image, FileText, Lock, CheckCircle, AlertTriangle, Download, MapPin, Phone, Mail, Send, Calendar, MessageSquare, Edit3, Wrench, Clock, User, LogOut, Eye, X } from "lucide-react";
 import axios from "axios";
 import { compressImageIfNeeded } from "@/lib/imageCompress";
 
@@ -29,6 +29,8 @@ const CustomerPortalPage = () => {
   const [absendenText, setAbsendenText] = useState("");
   const [absending, setAbsending] = useState(false);
   const [absendenDone, setAbsendenDone] = useState(false);
+  // Auswahl-Vorschau vor dem Upload (Kunde kann Doubletten löschen)
+  const [pending, setPending] = useState([]); // [{file, previewUrl}]
 
   useEffect(() => {
     // Settings can be loaded without auth
@@ -63,27 +65,57 @@ const CustomerPortalPage = () => {
     }
   };
 
-  const handleUpload = async (e) => {
+  const handleUpload = (e) => {
     const selectedFiles = Array.from(e.target.files || []);
+    e.target.value = "";
     if (selectedFiles.length === 0) return;
-    if (selectedFiles.length > MAX_IMAGES_PER_UPLOAD) {
-      setError(`Maximal ${MAX_IMAGES_PER_UPLOAD} Bilder pro Upload erlaubt. Bitte wählen Sie nicht mehr als ${MAX_IMAGES_PER_UPLOAD} Bilder auf einmal.`);
-      e.target.value = "";
+    if (pending.length + selectedFiles.length > MAX_IMAGES_PER_UPLOAD) {
+      setError(`Maximal ${MAX_IMAGES_PER_UPLOAD} Bilder pro Upload erlaubt. Aktuell ausgewählt: ${pending.length}.`);
       return;
     }
     const customerCount = files.filter(f => f.uploaded_by === "customer").length;
-    if (customerCount + selectedFiles.length > MAX_IMAGES_PER_PORTAL) {
-      setError(`Pro Portal sind maximal ${MAX_IMAGES_PER_PORTAL} Bilder erlaubt. Aktuell: ${customerCount}. Bitte wählen Sie weniger oder wenden Sie sich an uns.`);
-      e.target.value = "";
+    if (customerCount + pending.length + selectedFiles.length > MAX_IMAGES_PER_PORTAL) {
+      setError(`Pro Portal sind maximal ${MAX_IMAGES_PER_PORTAL} Bilder erlaubt. Bereits hochgeladen: ${customerCount}.`);
       return;
     }
+    setError("");
+    // Doubletten in der Auswahl per (name+size) erkennen
+    const seen = new Set(pending.map(p => `${p.file.name}_${p.file.size}`));
+    const newOnes = [];
+    for (const f of selectedFiles) {
+      const key = `${f.name}_${f.size}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      newOnes.push({
+        id: `${key}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+        file: f,
+        previewUrl: URL.createObjectURL(f),
+      });
+    }
+    setPending(prev => [...prev, ...newOnes]);
+  };
+
+  const removePending = (id) => {
+    setPending(prev => {
+      const found = prev.find(p => p.id === id);
+      if (found) URL.revokeObjectURL(found.previewUrl);
+      return prev.filter(p => p.id !== id);
+    });
+  };
+
+  const clearPending = () => {
+    pending.forEach(p => URL.revokeObjectURL(p.previewUrl));
+    setPending([]);
+  };
+
+  const submitPending = async () => {
+    if (pending.length === 0) return;
     setUploading(true);
     setUploadSuccess(false);
     setError("");
     try {
-      for (const original of selectedFiles) {
-        // Vor dem Upload komprimieren – spart Mobilfunk-Volumen
-        const file = await compressImageIfNeeded(original);
+      for (const p of pending) {
+        const file = await compressImageIfNeeded(p.file);
         const formData = new FormData();
         formData.append("file", file);
         formData.append("password", password);
@@ -92,6 +124,7 @@ const CustomerPortalPage = () => {
       }
       setUploadSuccess(true);
       setDescription("");
+      clearPending();
       loadFiles();
       setTimeout(() => setUploadSuccess(false), 3000);
     } catch (e) {
@@ -99,7 +132,6 @@ const CustomerPortalPage = () => {
       setError(msg);
     } finally {
       setUploading(false);
-      e.target.value = "";
     }
   };
 
@@ -477,6 +509,7 @@ const CustomerPortalPage = () => {
                   <Image className="w-10 h-10 text-slate-300 mb-2" />
                   <span className="text-sm text-slate-500">Tippen um Bilder auszuwählen</span>
                   <span className="text-xs text-slate-400 mt-1">Max. {MAX_IMAGES_PER_UPLOAD} pro Upload · JPG, PNG, WebP, HEIC</span>
+                  <span className="text-[11px] text-slate-500 mt-1">Sie sehen erst eine Vorschau und können dann hochladen</span>
                   <span className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
                     Bilder werden vor dem Upload verkleinert – schont Ihr Datenvolumen
@@ -494,6 +527,64 @@ const CustomerPortalPage = () => {
               />
             </label>
           </div>
+          {pending.length > 0 && (
+            <div className="mt-4 border border-slate-200 rounded-xl p-3 bg-slate-50" data-testid="portal-pending-list">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">
+                  Ausgewählte Bilder ({pending.length})
+                </span>
+                <button
+                  onClick={clearPending}
+                  disabled={uploading}
+                  className="text-xs text-slate-500 hover:text-red-600 underline disabled:opacity-50"
+                  data-testid="portal-clear-pending"
+                >
+                  Alle entfernen
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {pending.map(p => (
+                  <div key={p.id} className="relative group" data-testid={`pending-${p.id}`}>
+                    <img
+                      src={p.previewUrl}
+                      alt={p.file.name}
+                      className="w-full h-20 object-cover rounded-md border border-slate-200"
+                    />
+                    <button
+                      onClick={() => removePending(p.id)}
+                      disabled={uploading}
+                      className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-red-700 disabled:opacity-50"
+                      title="Bild entfernen"
+                      data-testid={`pending-remove-${p.id}`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate rounded-b-md">
+                      {(p.file.size / 1024).toFixed(0)} KB
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={submitPending}
+                disabled={uploading || pending.length === 0}
+                className="mt-3 w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                data-testid="portal-submit-upload"
+              >
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Wird hochgeladen…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    {pending.length === 1 ? "Bild hochladen" : `${pending.length} Bilder hochladen`}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
           {uploadSuccess && (
             <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-3 mt-3" data-testid="upload-success">
               <CheckCircle className="w-4 h-4" />
