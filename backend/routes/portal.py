@@ -21,6 +21,93 @@ except Exception as _e:
 
 router = APIRouter()
 
+
+# ---------------------------------------------------------------------------
+# Datenmasken-Helper: Portal nutzt module_kunden als Single Source of Truth.
+# Cache-Felder customer_name/customer_email werden bei jedem Lesezugriff aus
+# dem Kunden synchronisiert. Wenn der Kunde gelöscht wurde, bleibt der Cache
+# erhalten, wird aber als "(Kunde gelöscht)" markiert.
+# ---------------------------------------------------------------------------
+
+async def _enrich_portal_with_kunde(portal: dict) -> dict:
+    """Schreibt aktuelle Kundendaten in das Portal-Dict (in-place + Rückgabe).
+    Hat keinen Effekt für Anfrage-Portale ohne customer_id."""
+    if not portal:
+        return portal
+    cid = portal.get("customer_id")
+    if not cid:
+        return portal
+    kunde = await db.module_kunden.find_one(
+        {"id": cid},
+        {"_id": 0, "id": 1, "vorname": 1, "nachname": 1, "name": 1, "email": 1},
+    )
+    if not kunde:
+        # Verwaister Kunde – Cache markieren, damit es im UI sichtbar ist
+        old_name = portal.get("customer_name") or "Unbekannter Kunde"
+        if not old_name.endswith("(Kunde gelöscht)"):
+            portal["customer_name"] = f"{old_name} (Kunde gelöscht)"
+        portal["customer_deleted"] = True
+        return portal
+    fresh_name = ((kunde.get("vorname", "") + " " + kunde.get("nachname", "")).strip()
+                  or kunde.get("name", "")).strip() or portal.get("customer_name", "")
+    fresh_email = (kunde.get("email") or "").strip()
+    portal["customer_name"] = fresh_name
+    if fresh_email:
+        portal["customer_email"] = fresh_email
+    portal["customer_deleted"] = False
+    return portal
+
+
+async def _enrich_portals_bulk(portals: list[dict]) -> list[dict]:
+    """Effiziente Variante für Listen: alle Kunden in einer Query holen."""
+    if not portals:
+        return portals
+    cids = list({p.get("customer_id") for p in portals if p.get("customer_id")})
+    if not cids:
+        return portals
+    kunden_map: dict = {}
+    async for k in db.module_kunden.find(
+        {"id": {"$in": cids}},
+        {"_id": 0, "id": 1, "vorname": 1, "nachname": 1, "name": 1, "email": 1},
+    ):
+        kunden_map[k["id"]] = k
+    for p in portals:
+        cid = p.get("customer_id")
+        if not cid:
+            continue
+        k = kunden_map.get(cid)
+        if not k:
+            old_name = p.get("customer_name") or "Unbekannter Kunde"
+            if not old_name.endswith("(Kunde gelöscht)"):
+                p["customer_name"] = f"{old_name} (Kunde gelöscht)"
+            p["customer_deleted"] = True
+            continue
+        fresh_name = ((k.get("vorname", "") + " " + k.get("nachname", "")).strip()
+                      or k.get("name", "")).strip() or p.get("customer_name", "")
+        fresh_email = (k.get("email") or "").strip()
+        p["customer_name"] = fresh_name
+        if fresh_email:
+            p["customer_email"] = fresh_email
+        p["customer_deleted"] = False
+    return portals
+
+
+async def _sync_portal_cache_back(portal_id: str, customer_name: str, customer_email: str) -> None:
+    """Schreibt den Live-Lookup-Wert zurück in die portals-Collection.
+    Spart eine 2nd Query bei Such-Filtern, hält Liste schnell sortierbar.
+    Best-effort – ein Fehler bricht die Anfrage nicht ab."""
+    try:
+        await db.portals.update_one(
+            {"id": portal_id},
+            {"$set": {
+                "customer_name": customer_name,
+                "customer_email": customer_email,
+            }},
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Cache-Sync für Portal {portal_id} fehlgeschlagen: {e}")
+
+
 ALLOWED_IMAGE_TYPES = {
     "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
     "image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence",
@@ -221,6 +308,11 @@ async def _check_rate_limit_or_lock(portal: dict) -> bool:
 @router.get("/portals")
 async def list_portals(user=Depends(get_current_user)):
     portals = await db.portals.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    # Datenmasken: Kundendaten live aus module_kunden überschreiben + Cache zurückschreiben
+    portals = await _enrich_portals_bulk(portals)
+    for p in portals:
+        if p.get("customer_id") and not p.get("customer_deleted"):
+            await _sync_portal_cache_back(p["id"], p.get("customer_name", ""), p.get("customer_email", ""))
     return portals
 
 
@@ -237,6 +329,8 @@ async def lookup_portal(email: str = "", customer_id: str = "", anfrage_id: str 
     if not query["$or"]:
         return None
     portal = await db.portals.find_one(query, {"_id": 0, "password_hash": 0})
+    if portal:
+        portal = await _enrich_portal_with_kunde(portal)
     return portal
 
 
@@ -518,6 +612,9 @@ async def send_portal_email(portal_id: str, body: dict, user=Depends(get_current
     if not portal:
         raise HTTPException(404, "Portal nicht gefunden")
 
+    # Datenmasken: vor dem Versand aktuelle E-Mail/Name aus module_kunden übernehmen
+    portal = await _enrich_portal_with_kunde(portal)
+
     customer_email = portal.get("customer_email", "")
     if not customer_email:
         raise HTTPException(400, "Keine E-Mail-Adresse vorhanden")
@@ -543,6 +640,14 @@ async def send_portal_email(portal_id: str, body: dict, user=Depends(get_current
             to_email=customer_email,
             subject=subject,
             body_html=html,
+        )
+        # Cache zurückschreiben + Versand-Audit
+        if portal.get("customer_id") and not portal.get("customer_deleted"):
+            await _sync_portal_cache_back(portal_id, customer_name, customer_email)
+        await db.portals.update_one(
+            {"id": portal_id},
+            {"$set": {"last_email_sent_at": datetime.now(timezone.utc).isoformat(), "last_email_sent_to": customer_email},
+             "$inc": {"email_send_count": 1}},
         )
         return {"message": "E-Mail gesendet", "sent_to": customer_email}
     except Exception as e:
