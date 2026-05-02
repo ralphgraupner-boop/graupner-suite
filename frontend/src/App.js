@@ -51,6 +51,7 @@ import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
 import { HealthBanner } from "@/components/HealthBanner";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import { detectAppEnv } from "@/lib/env";
 
 const MainLayout = ({ children, onLogout }) => {
@@ -59,6 +60,7 @@ const MainLayout = ({ children, onLogout }) => {
       <Sidebar onLogout={onLogout} />
       <MobileNav onLogout={onLogout} />
       <HelpToggle />
+      <FeedbackWidget />
       <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0">
         <HealthBanner />
         <div className="px-4 lg:px-8 py-4 lg:py-8">{children}</div>
