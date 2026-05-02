@@ -130,11 +130,20 @@ def parse_anfrage(body: str, subject: str = "", from_email: str = "") -> dict:
     """Auto-Erkennung welches Format vorliegt."""
     body = (body or "").replace("\r\n", "\n").replace("\r", "\n")
     if "Frau Herr:" in body and "Telefonnummer:" in body:
-        return _parse_jimdo(body)
-    if "Es gibt eine neue Anfrage" in body or re.search(r"Anfrage\s+von\s+", subject or "", re.I):
-        return _parse_alt(body, subject, from_email)
-    # Default: probiere Jimdo (kein Treffer = leere Felder)
-    return _parse_jimdo(body)
+        result = _parse_jimdo(body)
+    elif "Es gibt eine neue Anfrage" in body or re.search(r"Anfrage\s+von\s+", subject or "", re.I):
+        result = _parse_alt(body, subject, from_email)
+    else:
+        # Default: probiere Jimdo (kein Treffer = leere Felder)
+        result = _parse_jimdo(body)
+
+    # Fallback: source_url auch aus dem Subject extrahieren
+    # (z.B. Betreff "Nachricht über https://www.tischlerei-graupner.de/...")
+    if not result.get("source_url") and subject:
+        m = URL_PATTERN.search(subject)
+        if m:
+            result["source_url"] = m.group(0).rstrip(".,;:")
+    return result
 
 
 # Rückwärtskompatibilität (Alias)

@@ -30,6 +30,8 @@ router = APIRouter()
 JIMDO_FROM_PATTERN = re.compile(r"no-reply@jimdo\.com", re.IGNORECASE)
 SUBJECT_DOMAIN = "tischlerei-graupner.de"
 ALT_SUBJECT_PATTERN = re.compile(r"Anfrage\s+von\s+", re.IGNORECASE)
+# Jimdo-Variante: Betreff wie "Nachricht über https://www.tischlerei-graupner.de/..."
+NACHRICHT_UEBER_PATTERN = re.compile(r"Nachricht\s+über\s+https?://", re.IGNORECASE)
 
 # Postfächer in denen wir suchen (Inbox UND der Filter-Ordner für Anfragen)
 SEARCH_FOLDERS = ["INBOX", '"INBOX.anfrage von"']
@@ -79,15 +81,24 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                 logger.warning(f"mail-inbox: Ordner {folder} nicht selektierbar: {fe}")
                 continue
 
-            # Suche: Mails mit "Anfrage" im Subject oder von Jimdo, seit X Wochen
+            # Suche: Mails mit "Anfrage" im Subject, "Nachricht über" im Subject
+            # oder von Jimdo, seit X Wochen.
             try:
                 typ, data = imap.search(
                     None,
                     f'(SINCE "{since_str}")',
-                    '(OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von"))',
+                    '(OR (OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von")) (SUBJECT "Nachricht \xc3\xbcber"))',
                 )
             except imaplib.IMAP4.error:
-                continue
+                # Fallback ohne Umlaut (manche IMAP-Server lehnen non-ASCII ohne CHARSET ab)
+                try:
+                    typ, data = imap.search(
+                        None,
+                        f'(SINCE "{since_str}")',
+                        '(OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von"))',
+                    )
+                except imaplib.IMAP4.error:
+                    continue
             if typ != "OK" or not data or not data[0]:
                 continue
 
@@ -110,12 +121,15 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                     subject = _decode(msg.get("Subject", ""))
 
                     # Erkennung: Jimdo-Format ODER altes "Anfrage von"-Subject
+                    # ODER neuer Jimdo-Betreff "Nachricht über https://..."
                     is_jimdo = bool(JIMDO_FROM_PATTERN.search(from_email or ""))
                     is_alt = bool(ALT_SUBJECT_PATTERN.search(subject or ""))
-                    if not (is_jimdo or is_alt):
+                    is_nachricht_ueber = bool(NACHRICHT_UEBER_PATTERN.search(subject or ""))
+                    if not (is_jimdo or is_alt or is_nachricht_ueber):
                         skipped += 1
                         continue
-                    # Wenn Jimdo, muss tischlerei-graupner.de im Subject sein
+                    # Wenn Jimdo-Absender, muss tischlerei-graupner.de im Subject sein
+                    # ("Nachricht über" erfüllt diese Bedingung bereits).
                     if is_jimdo and SUBJECT_DOMAIN not in subject.lower():
                         skipped += 1
                         continue
