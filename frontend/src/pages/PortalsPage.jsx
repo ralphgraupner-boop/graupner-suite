@@ -660,6 +660,11 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
         </div>
       )}
 
+      {/* 2-Spalten-Layout: Links Schriftwechsel + Composer | Rechts Bilder (sticky) */}
+      <div className="lg:grid lg:grid-cols-3 lg:gap-6">
+        {/* LINKE SPALTE: Nachrichten + Composer */}
+        <div className="lg:col-span-2 space-y-6 min-w-0">
+
       {/* Kundenmitteilungen */}
       {notes.length > 0 && (
         <div className="mb-6" data-testid="portal-customer-notes">
@@ -826,11 +831,13 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      </div>
+      {/* /LINKE SPALTE */}
+        <aside className="space-y-6 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto mt-6 lg:mt-0">
         {/* Kundenbilder */}
         <div>
           <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <Image className="w-4 h-4" />
+            <Image className="w-4 h-4 text-slate-500" />
             Kundenbilder ({customerFiles.length})
           </h3>
           {customerFiles.length === 0 ? (
@@ -849,7 +856,7 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
         {/* Geschäftsdokumente */}
         <div>
           <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4 h-4 text-emerald-600" />
             Ihre Dokumente ({businessFiles.length})
           </h3>
           <label className="flex items-start gap-2 mb-2 p-2 bg-blue-50 border border-blue-200 rounded-sm cursor-pointer hover:bg-blue-100 text-xs">
@@ -885,6 +892,7 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
             </div>
           )}
         </div>
+        </aside>
       </div>
     </div>
   );
