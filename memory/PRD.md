@@ -71,6 +71,12 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 - 🟠 **Regression-Test** via `testing_agent_v3_fork` über alle neuen Module
 
 ### P2
+- 🟡 **Public Contact-API** (Spec liegt bereit unter `/app/memory/PUBLIC_API_SPEC.md`)
+  - Multi-Domain-Support (3+ Quellen)
+  - Cloudflare Turnstile, Rate-Limit, Honeypot
+  - Webhook + Push-Notification
+  - Login-geschützte Doku unter `/api-docs/public`
+  - **Vor Implementierung:** 3 Klärungsfragen (Push-Variante, Auto-Anlage, Duplikat-Verhalten) – siehe Spec
 - 🟡 **Google Drive Backup** Integration (Cascade-Delete-ZIPs in Private Drive)
 - 🟡 **Portal-Import-Filter Bug**: nur „Inaktiv" sichtbar beim Import
 - 🟡 **Admin-Übersicht Monteur-App** (Desktop-Dashboard für Technikeraktivität)

@@ -155,6 +155,7 @@ Wo möchtest du weitermachen?
 | `/app/memory/PRD.md` | Produkt-Anforderungen, ständig aktualisiert |
 | `/app/memory/AGENT_BRIEFING.md` | **DIESES Dokument**, Pflichtlektüre |
 | `/app/memory/test_credentials.md` | Login-Daten für Preview/Live |
+| `/app/memory/PUBLIC_API_SPEC.md` | **Public Contact-API Spezifikation** (kann an Webdesigner verschickt werden) |
 | `/app/backend/routes/portal.py` | Kunden-Portal (heute viel angefasst) |
 | `/app/backend/module_kunden/` | Single Source of Truth |
 | `/app/backend/module_feedback/` | Notizen-Widget Backend |
