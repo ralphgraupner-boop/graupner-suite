@@ -458,13 +458,50 @@ Code-Beispiele:    [HTML/JS] [PHP] [curl]   [Doku-Link]
 
 ---
 
-## ❓ Klärungspunkte (vor Implementierung)
+## ✅ Klärungspunkte (entschieden — 02.05.2026, Ralph Graupner)
 
-| # | Frage | Optionen | Empfehlung |
-|---|---|---|---|
-| **1** | Push-Notification-Variante | **a)** PWA Web-Push **b)** Telegram-Bot **c)** Beides | **c** (PWA + Telegram-Fallback) |
-| **2** | Auto-Kunden-Anlage bei Anfrage | **a)** Manuell wie bisher **b)** Auto wenn Email+Nachname **c)** Pro Key konfigurierbar | **c** (Flexibilität) |
-| **3** | Bei Email-Duplikat (Kunde existiert schon) | **a)** Stille Aktualisierung **b)** Trotzdem als Vorschlag **c)** Pro Key konfigurierbar | **b** (Sicherheit, manuelle Kontrolle) |
+| # | Frage | Entscheidung |
+|---|---|---|
+| **1** | Push-Notification-Variante | **c) Beides parallel** — PWA für Schreibtisch + Telegram für unterwegs (Redundanz) |
+| **2** | Auto-Kunden-Anlage bei Anfrage | **c) Pro API-Key konfigurierbar** — Default: Manuell (sicher) |
+| **3** | Bei Email-Duplikat | **c) Pro Key konfigurierbar** — Default: **a) Stille Aktualisierung** + **TROTZDEM Notification!** |
+
+### 📝 Wichtige Detail-Vorgaben von Ralph
+
+**Zu Frage 1 (Push):**
+- PWA Web-Push für aktive Schreibtisch-Sessions (Sound + Browser-Notification)
+- Telegram-Bot als Always-on-Kanal (auch ohne Browser)
+- **Bonus-Feature:** Telegram-Bot bekommt **Inline-Buttons** im Chat:
+  ```
+  [✅ Übernehmen]  [🚫 Spam]  [✍️ Antworten]
+  ```
+  Klick auf „Übernehmen" → Anfrage wird Kunde (gem. Auto-Anlage-Regel)
+  Klick auf „Spam" → Anfrage wird ignoriert + Tombstone
+  Klick auf „Antworten" → Telegram fragt nach Antworttext, schickt direkt als Mail an Anfrager
+
+**Zu Frage 2 (Auto-Kunde):**
+- Default beim Anlegen eines neuen Keys: **Manuell**
+- Pro Quelle umschaltbar in der Admin-UI
+- Empfohlener Use-Case:
+  - Eigene Domains → Auto-Anlage (Quelle vertraut)
+  - Externe Portale (Houzz, Bauinfo24) → Manuell (mehr Spam-Risiko)
+  - Google Ads → Auto-Anlage (höhere Conversion)
+
+**Zu Frage 3 (Duplikat):**
+- Default: **a) Stille Aktualisierung** — Stammkunden bleiben EINE Karteikarte
+- Vorteil: Bei einem Kunden, der nach 2 Jahren wieder anfragt, sieht Ralph sofort die komplette Historie
+- **🚨 KRITISCH:** Auch bei stiller Aktualisierung muss eine **Notification** ausgelöst werden, sonst werden Anfragen übersehen!
+
+---
+
+## 📌 Zusatzwünsche von Ralph (Roadmap-Erweiterung)
+
+### Phase 3+
+- 📊 **Statistik-Dashboard pro Source**: Anfragen/Tag, Spam-Quote, **Conversion-Rate** (Anfrage → Auftrag)
+- 🎯 **A/B-Test Tracking-Parameter**: `utm_campaign`, `utm_source`, `utm_medium` aus URL automatisch ins `meta`-Feld speichern (für Marketing-Auswertung)
+
+### Phase 4
+- 📎 **Anhänge-Support**: Kunde kann Foto der defekten Tür direkt im Formular mitschicken (multipart/form-data, max. 5 Bilder, 5 MB pro Bild, automatische Kompression wie im Portal)
 
 ---
 
@@ -472,27 +509,32 @@ Code-Beispiele:    [HTML/JS] [PHP] [curl]   [Doku-Link]
 
 ### Phase 1 (MVP)
 - [ ] `module_public_api` Backend (POST-Endpoint)
-- [ ] API-Key-Verwaltung (Admin-UI)
+- [ ] API-Key-Verwaltung (Admin-UI) mit Default „Auto-Kunde: AUS" + „Duplikat: Stille Aktualisierung"
 - [ ] Cloudflare Turnstile Integration
 - [ ] Rate-Limiting + Honeypot
 - [ ] Speichert in `module_mail_inbox` mit `source_type: "public_api"`
+- [ ] **Notification auch bei stiller Aktualisierung** auslösen (kritisch!)
 
-### Phase 2 (Webhook + Push)
+### Phase 2 (Webhook + Push — beides parallel)
 - [ ] Outbound-Webhook mit Retry-Queue
-- [ ] PWA Web-Push für Admin
-- [ ] Telegram-Bot-Integration
+- [ ] **PWA Web-Push** für Admin-Browser (Schreibtisch)
+- [ ] **Telegram-Bot-Integration** mit Inline-Buttons:
+  - [✅ Übernehmen] → Auto-Kunde anlegen / oder Vorschlag erzeugen
+  - [🚫 Spam] → Status "ignoriert" + Tombstone
+  - [✍️ Antworten] → Bot fragt nach Antworttext, sendet als Mail
 - [ ] Webhook-Test-Funktion in UI
 
-### Phase 3 (Komfort)
+### Phase 3 (Komfort + Marketing)
 - [ ] Code-Beispiele direkt in der UI (Copy-Paste)
-- [ ] Statistik-Dashboard pro Key
-- [ ] Auto-Kunde-Anlage (konfigurierbar)
+- [ ] **Statistik-Dashboard pro Source** mit Conversion-Rate (Anfrage → Auftrag)
+- [ ] **UTM-Parameter** aus URL automatisch ins `meta`-Feld speichern
+- [ ] Auto-Kunde-Anlage (konfigurierbar) — UI-Toggle pro Key
 - [ ] Deutsche Doku-Seite unter `/api-docs/public` (Login-geschützt)
 - [ ] OpenAPI/Swagger-Export
 
 ### Phase 4 (Erweiterung)
-- [ ] Datei-Anhänge (multipart/form-data)
-- [ ] Zusätzliche Events (contact.spam, contact.duplicate)
+- [ ] **Datei-Anhänge** (multipart/form-data, max. 5 Bilder × 5 MB, Kompression wie Portal)
+- [ ] Zusätzliche Events (contact.spam, contact.duplicate, contact.converted)
 - [ ] IP-Whitelist pro Key
 - [ ] Custom-Felder pro Source
 
@@ -501,6 +543,7 @@ Code-Beispiele:    [HTML/JS] [PHP] [curl]   [Doku-Link]
 ## 📝 Versions-Verlauf
 
 - **v1.0** — 02.05.2026 — Initialer Entwurf
+- **v1.1** — 02.05.2026 — Ralph-Entscheidungen festgehalten (PWA+Telegram, Pro-Key-Config, Stille Aktualisierung Default), Telegram-Inline-Buttons, UTM-Tracking, Anhänge-Phase ergänzt
 
 ---
 
