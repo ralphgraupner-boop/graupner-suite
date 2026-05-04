@@ -150,14 +150,28 @@ const ImapAccountsCard = () => {
   };
 
   const testForm = async () => {
-    if (!form.server || !form.username || !form.password) {
-      toast.error("Server, Benutzer und Passwort ausfüllen.");
+    if (!form.server || !form.username) {
+      toast.error("Server und Benutzer ausfüllen.");
       return;
     }
     setTestingForm(true);
     try {
-      const r = await api.post("/module-mail-inbox/accounts/test-credentials", form);
-      toast.success(r.data?.message || "Verbindung OK");
+      // Beim Bearbeiten ohne neues Passwort: gespeicherten Account testen
+      if (editing && !form.password) {
+        const r = await api.post(`/module-mail-inbox/accounts/${editing.id}/test`);
+        if (r.data?.ok) {
+          toast.success(r.data.message || "Verbindung OK");
+        } else {
+          toast.error(r.data?.message || "Verbindung fehlgeschlagen");
+        }
+      } else {
+        if (!form.password) {
+          toast.error("Passwort ausfüllen oder gespeichertes Postfach testen.");
+          return;
+        }
+        const r = await api.post("/module-mail-inbox/accounts/test-credentials", form);
+        toast.success(r.data?.message || "Verbindung OK");
+      }
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Test fehlgeschlagen");
     } finally {
