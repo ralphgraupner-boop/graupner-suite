@@ -99,6 +99,8 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 
 ### P3 (Backlog)
 - 🟢 **`module_buchhaltung`**: N26-CSV-Import (Drag&Drop), Auto-Kategorisierung, Cashflow-Dashboard, Verknüpfung mit Kunden/Rechnungen
+- 🟢 **FritzBox-Anrufliste Sync** (TR-064 API, Variante A): Anrufe als neues Sidebar-Modul, Match mit `module_kunden.phone`, „unbekannt"-Anrufe → direkt neuer Kunde anlegbar. Aufwand ~2h. Voraussetzung: FritzBox-Benutzer mit TR-064-Recht. **WICHTIG: Ralph nach Mobile-Pass aktiv vorschlagen!** (Idee von 04.05.2026)
+- 🟢 **Mobile-Pass Phase 2** für weitere Seiten (Mail-Anfragen, Kundendetail expanded, Termine, Aufgaben, Projekte) — in Phase 1 (04.05.2026) erledigt: Feedback-Widget + Kunden-Liste-Karten
 - 🟢 Stundenplan-Kontrolle (Monatliche Timesheet-Übersicht)
 - 🟢 DATEV-Export
 - 🟢 Echte Google Calendar API Sync
