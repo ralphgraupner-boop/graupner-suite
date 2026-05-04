@@ -24,6 +24,8 @@ const ModuleMailInboxPage = () => {
   const [previewSummary, setPreviewSummary] = useState([]);
   const [previewMode, setPreviewMode] = useState("skipped"); // skipped|all
   const [importingUid, setImportingUid] = useState("");
+  const [previewDetail, setPreviewDetail] = useState(null);  // {body, subject, from, ...}
+  const [previewDetailLoading, setPreviewDetailLoading] = useState(false);
 
   // Statistik
   const [stats, setStats] = useState(null);
@@ -163,6 +165,25 @@ const ModuleMailInboxPage = () => {
       setImportingUid("");
     }
   };
+
+  const showPreviewDetail = async (it) => {
+    setPreviewDetail({ _meta: it, loading: true });
+    setPreviewDetailLoading(true);
+    try {
+      const r = await api.post("/module-mail-inbox/mail-detail", {
+        account_id: it.account_id,
+        folder: it.folder,
+        uid: it.uid,
+      });
+      setPreviewDetail({ ...r.data, _meta: it });
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Detail-Anzeige fehlgeschlagen");
+      setPreviewDetail(null);
+    } finally {
+      setPreviewDetailLoading(false);
+    }
+  };
+
 
   return (
     <div className="space-y-6" data-testid="module-mail-inbox-page">
@@ -541,7 +562,16 @@ const ModuleMailInboxPage = () => {
                                   {it.date && <> · {it.date.slice(0, 16).replace("T", " ")}</>}
                                 </div>
                               </div>
-                              <div className="flex-shrink-0">
+                              <div className="flex-shrink-0 flex items-center gap-1">
+                                <button
+                                  onClick={() => showPreviewDetail(it)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-sm border hover:bg-accent"
+                                  title="Mail-Inhalt anzeigen"
+                                  data-testid={`btn-view-${it.uid}`}
+                                >
+                                  <Search className="w-3.5 h-3.5" />
+                                  Anzeigen
+                                </button>
                                 {!it.is_duplicate ? (
                                   <button
                                     onClick={() => importPreviewItem(it)}
@@ -567,6 +597,73 @@ const ModuleMailInboxPage = () => {
             </>
           )}
         </div>
+      </Modal>
+
+      {/* Mail-Detail-Modal (Vorschau anzeigen) */}
+      <Modal
+        isOpen={!!previewDetail}
+        onClose={() => setPreviewDetail(null)}
+        title="Mail-Inhalt"
+        size="lg"
+      >
+        {previewDetailLoading || !previewDetail ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
+            <Loader2 className="w-4 h-4 animate-spin" /> Lade Mail…
+          </div>
+        ) : (
+          <div className="space-y-3 text-sm" data-testid="preview-detail-modal">
+            <div>
+              <div className="text-xs text-muted-foreground">Betreff</div>
+              <div className="font-semibold break-words">{previewDetail.subject || "(kein Betreff)"}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <div className="text-muted-foreground">Von</div>
+                <div className="break-all">{previewDetail.from_email || "—"}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">An</div>
+                <div className="break-all">{previewDetail.to_email || "—"}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Datum</div>
+                <div>{previewDetail.date?.slice(0, 16).replace("T", " ") || "—"}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Postfach</div>
+                <div>{previewDetail.account_label || "—"}</div>
+              </div>
+            </div>
+            <div className="border-t pt-2">
+              <div className="text-xs text-muted-foreground mb-1">Inhalt</div>
+              <pre className="text-xs whitespace-pre-wrap bg-muted/40 rounded-sm p-3 border max-h-[50vh] overflow-auto break-words">
+                {previewDetail.body || "(leer)"}
+              </pre>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              {previewDetail._meta && !previewDetail._meta.is_duplicate && (
+                <button
+                  onClick={async () => {
+                    await importPreviewItem(previewDetail._meta);
+                    setPreviewDetail(null);
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-sm bg-primary text-primary-foreground hover:bg-primary/90"
+                  data-testid="btn-import-from-detail"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Doch importieren
+                </button>
+              )}
+              <button
+                onClick={() => setPreviewDetail(null)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-sm border hover:bg-accent"
+              >
+                <X className="w-3.5 h-3.5" />
+                Schließen
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

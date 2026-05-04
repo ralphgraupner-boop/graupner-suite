@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -11,6 +11,7 @@ import { KundeExportButton } from "@/components/KundeExportButton";
 import { KundeImportButton } from "@/components/KundeImportButton";
 import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
+import MailHistoryModal from "@/components/MailHistoryModal";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -39,6 +40,7 @@ const KundenModulPage = () => {
   const [showKontaktImport, setShowKontaktImport] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteKunde, setDeleteKunde] = useState(null);
+  const [mailHistoryFor, setMailHistoryFor] = useState(null);  // {email, name}
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -457,6 +459,20 @@ const KundenModulPage = () => {
                       <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} data-testid={`btn-detail-projekte-${kunde.id}`}><Folder className="w-4 h-4" /> Projekte / Neu</Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/quotes/new?customer=${kunde.id}`)}><FileText className="w-4 h-4" /> Angebot erstellen</Button>
                       <KundeExportButton kunde_id={kunde.id} kunde_name={kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim()} />
+                      {kunde.email && (
+                        <button
+                          onClick={() => setMailHistoryFor({
+                            email: kunde.email,
+                            name: kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim() || kunde.email,
+                          })}
+                          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors"
+                          data-testid={`btn-mail-history-${kunde.id}`}
+                          title="Alle Mails von/an diesen Kunden aus IMAP anzeigen"
+                        >
+                          <Mail className="w-4 h-4" />
+                          Mailverlauf
+                        </button>
+                      )}
                       <button
                         onClick={async () => {
                           try {
@@ -540,6 +556,13 @@ const KundenModulPage = () => {
           onDeleted={() => { setDeleteKunde(null); loadKunden(); }}
         />
       )}
+
+      <MailHistoryModal
+        isOpen={!!mailHistoryFor}
+        onClose={() => setMailHistoryFor(null)}
+        email={mailHistoryFor?.email || ""}
+        kundeName={mailHistoryFor?.name || ""}
+      />
     </div>
   );
 };
