@@ -130,15 +130,16 @@ const FeedbackWidget = () => {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button — größer auf Mobile, Abstand zur iOS-Bottom-Bar */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform flex items-center justify-center"
+        className="fixed bottom-5 right-4 sm:bottom-4 sm:right-4 z-40 w-14 h-14 sm:w-12 sm:h-12 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 hover:scale-110 transition-transform flex items-center justify-center"
+        style={{ touchAction: "manipulation", marginBottom: "env(safe-area-inset-bottom)" }}
         data-testid="btn-feedback-open"
         title="Notizen / Bugs / Ideen"
         aria-label="Notizen öffnen"
       >
-        <StickyNote className="w-5 h-5" />
+        <StickyNote className="w-6 h-6 sm:w-5 sm:h-5" />
         {badge > 0 && (
           <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold ring-2 ring-background" data-testid="badge-feedback-count">
             {badge > 99 ? "99+" : badge}
@@ -156,13 +157,14 @@ const FeedbackWidget = () => {
             aria-label="Schließen"
             data-testid="feedback-backdrop"
           />
-          {/* Panel */}
+          {/* Panel — auf Mobile fast vollflächig, Safe-Area beachten */}
           <div
             ref={panelRef}
-            className="relative pointer-events-auto w-full sm:w-[420px] max-h-[88vh] sm:max-h-[calc(100vh-32px)] sm:mb-4 sm:mr-4 bg-card border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col"
+            className="relative pointer-events-auto w-full sm:w-[420px] h-[92vh] sm:h-auto sm:max-h-[calc(100vh-32px)] sm:mb-4 sm:mr-4 bg-card border rounded-t-xl sm:rounded-xl shadow-2xl flex flex-col"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             data-testid="feedback-panel"
           >
-            {/* Header */}
+            {/* Header — größerer Schließen-Button */}
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <div className="flex items-center gap-2">
                 <StickyNote className="w-5 h-5 text-primary" />
@@ -170,40 +172,50 @@ const FeedbackWidget = () => {
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="p-1.5 hover:bg-muted rounded-sm"
+                className="p-2 hover:bg-muted rounded-sm min-w-[44px] min-h-[44px] flex items-center justify-center"
+                style={{ touchAction: "manipulation" }}
                 data-testid="btn-feedback-close"
                 aria-label="Schließen"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Quick-Add */}
-            <div className="px-4 py-3 border-b bg-muted/30 space-y-2">
+            {/* Quick-Add — als FORM, damit Enter und Submit korrekt funktionieren */}
+            <form
+              onSubmit={(e) => { e.preventDefault(); if (!submitting && quickTitle.trim()) createItem(); }}
+              className="px-4 py-3 border-b bg-muted/30 space-y-2"
+            >
               <div className="flex gap-2">
                 <input
                   value={quickTitle}
                   onChange={(e) => setQuickTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !submitting) createItem(); }}
                   placeholder="Neuer Eintrag…"
-                  className="flex-1 px-3 py-2 text-sm border rounded-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="flex-1 px-3 py-3 text-base sm:text-sm border rounded-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
                   data-testid="input-feedback-title"
+                  enterKeyHint="send"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="sentences"
                 />
                 <button
-                  onClick={createItem}
+                  type="submit"
                   disabled={submitting || !quickTitle.trim()}
-                  className="px-3 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-40 flex items-center gap-1"
+                  className="px-4 py-3 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 active:scale-95 disabled:opacity-40 flex items-center gap-1 min-w-[48px] min-h-[44px] justify-center"
+                  style={{ touchAction: "manipulation" }}
                   data-testid="btn-feedback-create"
                 >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
                 </button>
               </div>
               <div className="flex gap-1.5 items-center flex-wrap">
                 {Object.entries(TYP_META).map(([k, m]) => (
                   <button
                     key={k}
+                    type="button"
                     onClick={() => setQuickTyp(k)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-sm border transition-colors ${quickTyp === k ? m.color + " border-transparent font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] rounded-sm border transition-colors ${quickTyp === k ? m.color + " border-transparent font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}
+                    style={{ touchAction: "manipulation" }}
                     data-testid={`btn-feedback-typ-${k}`}
                   >
                     <m.icon className="w-3 h-3" /> {m.label}
@@ -213,8 +225,10 @@ const FeedbackWidget = () => {
                 {["hoch", "normal", "niedrig"].map((p) => (
                   <button
                     key={p}
+                    type="button"
                     onClick={() => setQuickPrio(p)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-sm border transition-colors ${quickPrio === p ? "bg-foreground text-background border-transparent font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-[12px] rounded-sm border transition-colors ${quickPrio === p ? "bg-foreground text-background border-transparent font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}
+                    style={{ touchAction: "manipulation" }}
                     data-testid={`btn-feedback-prio-${p}`}
                     title={`Priorität ${p}`}
                   >
@@ -222,15 +236,17 @@ const FeedbackWidget = () => {
                   </button>
                 ))}
               </div>
-            </div>
+            </form>
 
             {/* Tabs */}
             <div className="flex border-b px-2 items-center">
               {TABS.map((t) => (
                 <button
                   key={t.key}
+                  type="button"
                   onClick={() => setTab(t.key)}
-                  className={`px-3 py-2 text-xs border-b-2 transition-colors ${tab === t.key ? "border-primary text-primary font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                  className={`px-3 py-2.5 text-sm sm:text-xs border-b-2 transition-colors ${tab === t.key ? "border-primary text-primary font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                  style={{ touchAction: "manipulation" }}
                   data-testid={`tab-feedback-${t.key}`}
                 >
                   {t.label}
