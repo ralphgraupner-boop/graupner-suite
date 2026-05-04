@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2 } from "lucide-react";
+import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { Modal } from "@/components/common";
 
 const STATUS_LABELS = {
   vorschlag: { label: "Offen", color: "bg-blue-100 text-blue-800" },
@@ -15,6 +16,14 @@ const ModuleMailInboxPage = () => {
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [statusFilter, setStatusFilter] = useState("vorschlag");
+
+  // Übersprungene Mails – Vorschau-Modal
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewItems, setPreviewItems] = useState([]);
+  const [previewSummary, setPreviewSummary] = useState([]);
+  const [previewMode, setPreviewMode] = useState("skipped"); // skipped|all
+  const [importingUid, setImportingUid] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -99,6 +108,46 @@ const ModuleMailInboxPage = () => {
     }
   };
 
+  const openPreview = async () => {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    try {
+      const r = await api.post("/module-mail-inbox/scan-preview?weeks=6&max_count=100");
+      setPreviewItems(r.data?.items || []);
+      setPreviewSummary(r.data?.per_account || []);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Vorschau fehlgeschlagen");
+      setPreviewItems([]);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const importPreviewItem = async (it) => {
+    const key = `${it.account_id}/${it.folder}/${it.uid}`;
+    setImportingUid(key);
+    try {
+      await api.post("/module-mail-inbox/import-mail", {
+        account_id: it.account_id,
+        folder: it.folder,
+        uid: it.uid,
+      });
+      toast.success(`Importiert: ${it.subject?.slice(0, 60) || it.from_email}`);
+      // Lokal als Duplikat markieren, damit Button verschwindet
+      setPreviewItems((prev) => prev.map((x) =>
+        x.account_id === it.account_id && x.folder === it.folder && x.uid === it.uid
+          ? { ...x, is_duplicate: true, duplicate_status: "frisch importiert" }
+          : x
+      ));
+      // Hauptliste neu laden falls Tab "vorschlag" o. "all"
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Import fehlgeschlagen");
+    } finally {
+      setImportingUid("");
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="module-mail-inbox-page">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -110,15 +159,26 @@ const ModuleMailInboxPage = () => {
             Kontaktformular-Anfragen aus deinem service24-Postfach. Letzte 6 Wochen, max. 30 pro Scan.
           </p>
         </div>
-        <button
-          onClick={scan}
-          disabled={scanning}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          data-testid="btn-mail-scan"
-        >
-          {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          Postfach prüfen
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={openPreview}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
+            data-testid="btn-mail-preview"
+            title="Alle Mails der letzten 6 Wochen anschauen – auch übersprungene"
+          >
+            <Search className="w-4 h-4" />
+            Übersprungene anzeigen
+          </button>
+          <button
+            onClick={scan}
+            disabled={scanning}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            data-testid="btn-mail-scan"
+          >
+            {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Postfach prüfen
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 border-b items-center">
@@ -256,6 +316,134 @@ const ModuleMailInboxPage = () => {
           })}
         </div>
       )}
+
+      {/* Preview-Modal: Übersprungene Mails ansehen + manuell importieren */}
+      <Modal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title="Mail-Vorschau (auch Übersprungene)"
+        size="xl"
+      >
+        <div className="space-y-3" data-testid="mail-preview-modal">
+          {previewLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
+              <Loader2 className="w-4 h-4 animate-spin" /> Lade IMAP-Vorschau (kann 10-30 Sek dauern)…
+            </div>
+          ) : (
+            <>
+              {/* Zusammenfassung pro Postfach */}
+              {previewSummary.length > 0 && (
+                <div className="border rounded p-2 bg-muted/30 text-xs space-y-1">
+                  {previewSummary.map((s) => (
+                    <div key={s.account_id} className="flex flex-wrap gap-3">
+                      <span className="font-medium">{s.label}</span>
+                      <span>· gefunden: {s.total}</span>
+                      <span className="text-emerald-700">· passt: {s.matched}</span>
+                      <span className="text-amber-700">· übersprungen: {s.skipped}</span>
+                      <span className="text-muted-foreground">· schon importiert: {s.duplicates}</span>
+                      {s.error && <span className="text-red-700">· {s.error}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2 items-center text-sm border-b pb-2">
+                <button
+                  onClick={() => setPreviewMode("skipped")}
+                  className={`px-3 py-1 rounded-sm ${previewMode === "skipped" ? "bg-amber-100 text-amber-900 font-semibold" : "hover:bg-accent"}`}
+                  data-testid="tab-preview-skipped"
+                >
+                  Nur Übersprungene
+                </button>
+                <button
+                  onClick={() => setPreviewMode("all")}
+                  className={`px-3 py-1 rounded-sm ${previewMode === "all" ? "bg-blue-100 text-blue-900 font-semibold" : "hover:bg-accent"}`}
+                  data-testid="tab-preview-all"
+                >
+                  Alle anzeigen
+                </button>
+                <button
+                  onClick={openPreview}
+                  className="ml-auto px-3 py-1 rounded-sm border hover:bg-accent flex items-center gap-1"
+                  title="Neu laden"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Aktualisieren
+                </button>
+              </div>
+
+              {(() => {
+                const filtered = previewMode === "skipped"
+                  ? previewItems.filter((it) => !it.would_match && !it.is_duplicate)
+                  : previewItems;
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-sm text-muted-foreground py-6 text-center">
+                      {previewMode === "skipped" ? "Keine übersprungenen Mails." : "Keine Mails gefunden."}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-1.5 max-h-[55vh] overflow-auto">
+                    {filtered.map((it) => {
+                      const key = `${it.account_id}/${it.folder}/${it.uid}`;
+                      const isImporting = importingUid === key;
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-start gap-2 border rounded p-2 hover:bg-accent/30"
+                          data-testid={`preview-row-${it.uid}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {it.is_duplicate ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                                  {it.duplicate_status || "Duplikat"}
+                                </span>
+                              ) : it.would_match ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                                  Filter-Treffer
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                                  übersprungen
+                                </span>
+                              )}
+                              <span className="text-[11px] text-muted-foreground">📬 {it.account_label}</span>
+                              {it.skip_reason && !it.is_duplicate && (
+                                <span className="text-[11px] text-muted-foreground italic">· {it.skip_reason}</span>
+                              )}
+                            </div>
+                            <div className="font-medium text-sm mt-1 break-words">{it.subject || "(kein Betreff)"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {it.from_email}
+                              {it.date && <> · {it.date.slice(0, 16).replace("T", " ")}</>}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {!it.is_duplicate ? (
+                              <button
+                                onClick={() => importPreviewItem(it)}
+                                disabled={isImporting}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                                data-testid={`btn-import-${it.uid}`}
+                              >
+                                {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                                Importieren
+                              </button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic px-2">bereits drin</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
