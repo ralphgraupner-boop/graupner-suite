@@ -14,7 +14,17 @@ const EMPTY_FORM = {
   username: "",
   password: "",
   active: true,
+  filter_rules: [],
 };
+
+const FILTER_TYPE_OPTIONS = [
+  { value: "subject_contains", label: "Betreff enthält" },
+  { value: "subject_startswith", label: "Betreff beginnt mit" },
+  { value: "from_contains", label: "Absender enthält" },
+  { value: "from_equals", label: "Absender ist exakt" },
+];
+
+const filterLabel = (t) => FILTER_TYPE_OPTIONS.find((o) => o.value === t)?.label || t;
 
 const ImapAccountsCard = () => {
   const [items, setItems] = useState([]);
@@ -55,6 +65,7 @@ const ImapAccountsCard = () => {
       username: acc.username,
       password: "",  // leer = unverändert lassen
       active: acc.active,
+      filter_rules: Array.isArray(acc.filter_rules) ? acc.filter_rules : [],
     });
     setShowForm(true);
   };
@@ -112,6 +123,7 @@ const ImapAccountsCard = () => {
         username: acc.username,
         password: "",
         active: !acc.active,
+        filter_rules: Array.isArray(acc.filter_rules) ? acc.filter_rules : [],
       });
       toast.success(acc.active ? "Postfach pausiert" : "Postfach aktiviert");
       await load();
@@ -215,6 +227,9 @@ const ImapAccountsCard = () => {
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {acc.username} · {acc.server}:{acc.port}
+                  {Array.isArray(acc.filter_rules) && acc.filter_rules.length > 0 && (
+                    <span className="ml-2">· {acc.filter_rules.length} Filter</span>
+                  )}
                 </div>
                 {acc.last_test_message && (
                   <div className="text-[11px] text-muted-foreground mt-0.5 italic">
@@ -341,6 +356,80 @@ const ImapAccountsCard = () => {
             />
             Postfach aktiv (wird beim Mail-Abruf gescannt)
           </label>
+
+          {/* ── Filter-Regeln ── */}
+          <div className="border-t pt-3 mt-2">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium">
+                Filter-Regeln
+                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                  Mind. eine Regel muss zutreffen, sonst wird die Mail übersprungen.
+                </span>
+              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setForm({
+                  ...form,
+                  filter_rules: [...(form.filter_rules || []), { type: "subject_contains", value: "" }],
+                })}
+                data-testid="btn-add-filter-rule"
+              >
+                <Plus className="w-4 h-4" />
+                Regel hinzufügen
+              </Button>
+            </div>
+            {(!form.filter_rules || form.filter_rules.length === 0) ? (
+              <div className="text-xs text-muted-foreground italic border border-dashed rounded p-3 text-center">
+                Keine Regeln definiert – beim Speichern werden Standard-Regeln (Jimdo, „Anfrage von", „Nachricht über") gesetzt.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {form.filter_rules.map((rule, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <select
+                      value={rule.type}
+                      onChange={(e) => {
+                        const next = [...form.filter_rules];
+                        next[idx] = { ...next[idx], type: e.target.value };
+                        setForm({ ...form, filter_rules: next });
+                      }}
+                      className="h-9 rounded-sm border border-input bg-background px-2 text-sm"
+                      data-testid={`select-filter-type-${idx}`}
+                    >
+                      {FILTER_TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                    <Input
+                      value={rule.value}
+                      onChange={(e) => {
+                        const next = [...form.filter_rules];
+                        next[idx] = { ...next[idx], value: e.target.value };
+                        setForm({ ...form, filter_rules: next });
+                      }}
+                      placeholder="z.B. Anfrage von, no-reply@jimdo.com, Schiebetür"
+                      className="flex-1"
+                      data-testid={`input-filter-value-${idx}`}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const next = form.filter_rules.filter((_, i) => i !== idx);
+                        setForm({ ...form, filter_rules: next });
+                      }}
+                      title="Regel entfernen"
+                      data-testid={`btn-remove-filter-${idx}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center justify-between gap-2 pt-2">
             <Button
               variant="outline"

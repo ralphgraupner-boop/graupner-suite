@@ -23,7 +23,7 @@ from routes.auth import get_current_user
 from routes.anfragen_fetcher import _extract_body
 from .parser import parse_anfrage
 from .spam_filter import evaluate_spam
-from .accounts import get_active_accounts
+from .accounts import get_active_accounts, filter_matches
 
 router = APIRouter()
 
@@ -54,6 +54,45 @@ def _decode(s: str | None) -> str:
         return s
 
 
+def _is_ascii(s: str) -> bool:
+    try:
+        s.encode("ascii")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+def _build_imap_search_args(since_str: str, rules: list) -> tuple:
+    """Baut die IMAP-Search-Argumente aus den Filter-Rules.
+    - imaplib unterstützt keine Umlaute → Rules mit non-ASCII-Werten werden
+      übersprungen (clientseitige Filter fängt sie trotzdem korrekt ab).
+    - Pro Rule wird eine IMAP-Bedingung erzeugt; mehrere werden via OR verknüpft.
+    - Wenn keine ASCII-Rule übrig bleibt, Fallback auf reines SINCE.
+    """
+    parts = []
+    for r in rules or []:
+        t = (r.get("type") or "").strip()
+        v = (r.get("value") or "").strip()
+        if not t or not v or not _is_ascii(v):
+            continue
+        v_safe = v.replace('"', '')
+        if t in ("subject_contains", "subject_startswith"):
+            parts.append(f'(SUBJECT "{v_safe}")')
+        elif t in ("from_contains", "from_equals"):
+            parts.append(f'(FROM "{v_safe}")')
+    base = f'(SINCE "{since_str}")'
+    if not parts:
+        return (base,)
+    if len(parts) == 1:
+        return (base, parts[0])
+    # OR-Verknüpfung mehrerer Bedingungen: IMAP OR ist binär,
+    # daher reduzieren wir nach links: OR a (OR b (OR c d))
+    expr = parts[-1]
+    for p in reversed(parts[:-1]):
+        expr = f"(OR {p} {expr})"
+    return (base, expr)
+
+
 @router.post("/scan")
 async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_user)):
     """Scannt alle aktiven IMAP-Postfächer (aus module_mail_inbox_accounts).
@@ -75,6 +114,7 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
         acc_id = acc["id"]
         acc_label = acc.get("label", "")
         acc_user = acc.get("username", "")
+        acc_rules = acc.get("filter_rules") or []
         a_found, a_skipped, a_dup, a_error = 0, 0, 0, ""
 
         try:
@@ -110,13 +150,14 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                     continue
 
                 try:
-                    typ, data = imap.search(
-                        None,
-                        f'(SINCE "{since_str}")',
-                        '(OR (OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von")) (SUBJECT "tischlerei-graupner"))',
-                    )
+                    search_args = _build_imap_search_args(since_str, acc_rules)
+                    typ, data = imap.search(None, *search_args)
                 except imaplib.IMAP4.error:
-                    continue
+                    # Fallback: nur SINCE, dafür clientseitig filtern
+                    try:
+                        typ, data = imap.search(None, f'(SINCE "{since_str}")')
+                    except imaplib.IMAP4.error:
+                        continue
                 if typ != "OK" or not data or not data[0]:
                     continue
 
@@ -138,13 +179,13 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                         from_name, from_email = parseaddr(msg.get("From", ""))
                         subject = _decode(msg.get("Subject", ""))
 
-                        is_jimdo = bool(JIMDO_FROM_PATTERN.search(from_email or ""))
-                        is_alt = bool(ALT_SUBJECT_PATTERN.search(subject or ""))
-                        is_nachricht_ueber = bool(NACHRICHT_UEBER_PATTERN.search(subject or ""))
-                        if not (is_jimdo or is_alt or is_nachricht_ueber):
+                        # ── Custom-Filter pro Postfach (OR-Logik) ──
+                        if not filter_matches(acc_rules, subject, from_email):
                             a_skipped += 1
                             continue
-                        if is_jimdo and SUBJECT_DOMAIN not in subject.lower():
+                        # Sicherheits-Schranke: Jimdo-Mails MÜSSEN tischlerei-graupner.de
+                        # im Subject enthalten (sonst Spam-Jimdo-Mails durchlassen)
+                        if "no-reply@jimdo.com" in (from_email or "").lower() and SUBJECT_DOMAIN not in (subject or "").lower():
                             a_skipped += 1
                             continue
 

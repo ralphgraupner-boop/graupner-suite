@@ -31,6 +31,45 @@ router = APIRouter()
 
 ACCOUNTS_COLL = "module_mail_inbox_accounts"
 
+# Erlaubte Filter-Typen (UI + Backend)
+FILTER_TYPES = {
+    "subject_contains",   # Betreff enthält (case-insensitive)
+    "subject_startswith", # Betreff beginnt mit
+    "from_contains",      # Absender enthält
+    "from_equals",        # Absender ist exakt
+}
+
+# Default-Regeln für Bestandspostfächer ohne explizite Filter
+DEFAULT_FILTER_RULES = [
+    {"type": "from_contains", "value": "no-reply@jimdo.com"},
+    {"type": "subject_contains", "value": "Anfrage von"},
+    {"type": "subject_contains", "value": "Nachricht über"},
+]
+
+
+def filter_matches(rules: list, subject: str, from_email: str) -> bool:
+    """Prüft, ob mindestens eine Regel auf die Mail passt (OR-Logik).
+    Wenn keine Regeln gesetzt → True zurückgeben heisst Aufrufer entscheidet.
+    Diese Funktion erwartet immer mind. 1 Regel und liefert True bei OR-Match."""
+    if not rules:
+        return False
+    s = (subject or "").lower()
+    f = (from_email or "").lower()
+    for r in rules:
+        t = (r.get("type") or "").strip()
+        v = (r.get("value") or "").strip().lower()
+        if not t or not v:
+            continue
+        if t == "subject_contains" and v in s:
+            return True
+        if t == "subject_startswith" and s.startswith(v):
+            return True
+        if t == "from_contains" and v in f:
+            return True
+        if t == "from_equals" and f == v:
+            return True
+    return False
+
 
 # ───────────────────────────── Verschlüsselung ─────────────────────────────
 def _get_fernet() -> Fernet:
@@ -71,6 +110,11 @@ def _mask_password(raw: str) -> str:
 
 
 # ───────────────────────────── Pydantic-Modelle ────────────────────────────
+class FilterRule(BaseModel):
+    type: str = Field(..., description="subject_contains | subject_startswith | from_contains | from_equals")
+    value: str = Field(..., min_length=1, max_length=200)
+
+
 class AccountIn(BaseModel):
     label: str = Field(..., min_length=1, max_length=100)
     server: str = Field(..., min_length=1, max_length=200)
@@ -78,6 +122,7 @@ class AccountIn(BaseModel):
     username: str = Field(..., min_length=1, max_length=200)
     password: Optional[str] = ""  # leer = keine Änderung beim Update
     active: bool = True
+    filter_rules: list[FilterRule] = Field(default_factory=list)
 
 
 class AccountOut(BaseModel):
@@ -93,9 +138,33 @@ class AccountOut(BaseModel):
     last_test_at: Optional[str] = ""
     last_test_ok: Optional[bool] = None
     last_test_message: Optional[str] = ""
+    filter_rules: list = Field(default_factory=list)
 
 
 # ───────────────────────────── Helfer ──────────────────────────────────────
+def _normalize_rules(raw_rules) -> list | bool:
+    """Validiert und säubert eine Liste von FilterRules.
+    Liefert: List bei Erfolg (auch leer), False bei ungültigem Typ."""
+    if not raw_rules:
+        return []
+    out = []
+    for r in raw_rules:
+        if hasattr(r, "model_dump"):
+            r = r.model_dump()
+        elif hasattr(r, "dict"):
+            r = r.dict()
+        if not isinstance(r, dict):
+            continue
+        t = (r.get("type") or "").strip()
+        v = (r.get("value") or "").strip()
+        if not t or not v:
+            continue
+        if t not in FILTER_TYPES:
+            return False
+        out.append({"type": t, "value": v})
+    return out
+
+
 def _to_out(d: dict) -> dict:
     return {
         "id": d["id"],
@@ -110,6 +179,7 @@ def _to_out(d: dict) -> dict:
         "last_test_at": d.get("last_test_at", ""),
         "last_test_ok": d.get("last_test_ok"),
         "last_test_message": d.get("last_test_message", ""),
+        "filter_rules": d.get("filter_rules") or [],
     }
 
 
@@ -133,6 +203,7 @@ async def _ensure_seed():
         "username": user,
         "password_enc": encrypt_password(password),
         "active": True,
+        "filter_rules": list(DEFAULT_FILTER_RULES),
         "created_at": now,
         "updated_at": now,
         "source": "env_migration",
@@ -140,10 +211,20 @@ async def _ensure_seed():
     logger.info(f"module_mail_inbox: ENV-Postfach '{user}' nach DB migriert.")
 
 
+async def _ensure_filter_rules_present():
+    """Bestandskonten ohne filter_rules-Feld bekommen die Defaults."""
+    async for d in db[ACCOUNTS_COLL].find({"filter_rules": {"$exists": False}}, {"_id": 0, "id": 1}):
+        await db[ACCOUNTS_COLL].update_one(
+            {"id": d["id"]},
+            {"$set": {"filter_rules": list(DEFAULT_FILTER_RULES)}},
+        )
+
+
 async def get_active_accounts() -> list[dict]:
     """Liefert alle aktiven Postfächer (mit entschlüsseltem Passwort).
     Wird vom Scanner verwendet – NICHT direkt an Frontend zurückgeben."""
     await _ensure_seed()
+    await _ensure_filter_rules_present()
     out = []
     async for d in db[ACCOUNTS_COLL].find({"active": True}, {"_id": 0}):
         out.append({
@@ -153,6 +234,7 @@ async def get_active_accounts() -> list[dict]:
             "port": d.get("port", 993),
             "username": d.get("username", ""),
             "password": decrypt_password(d.get("password_enc", "")),
+            "filter_rules": d.get("filter_rules") or list(DEFAULT_FILTER_RULES),
         })
     return out
 
@@ -161,6 +243,7 @@ async def get_active_accounts() -> list[dict]:
 @router.get("/accounts")
 async def list_accounts(user=Depends(get_current_user)):
     await _ensure_seed()
+    await _ensure_filter_rules_present()
     items = []
     async for d in db[ACCOUNTS_COLL].find({}, {"_id": 0}).sort("created_at", 1):
         items.append(_to_out(d))
@@ -172,6 +255,9 @@ async def create_account(body: AccountIn, user=Depends(get_current_user)):
     await _ensure_seed()
     if not body.password:
         raise HTTPException(400, "Passwort ist beim Anlegen Pflicht.")
+    rules = _normalize_rules(body.filter_rules)
+    if rules is False:
+        raise HTTPException(400, "Ungültiger Filter-Typ. Erlaubt: subject_contains, subject_startswith, from_contains, from_equals.")
     now = datetime.now(timezone.utc).isoformat()
     entry = {
         "id": str(uuid.uuid4()),
@@ -181,6 +267,7 @@ async def create_account(body: AccountIn, user=Depends(get_current_user)):
         "username": body.username.strip(),
         "password_enc": encrypt_password(body.password),
         "active": body.active,
+        "filter_rules": rules if rules else list(DEFAULT_FILTER_RULES),
         "created_at": now,
         "updated_at": now,
         "created_by": getattr(user, "username", None),
@@ -194,12 +281,16 @@ async def update_account(account_id: str, body: AccountIn, user=Depends(get_curr
     existing = await db[ACCOUNTS_COLL].find_one({"id": account_id}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Postfach nicht gefunden.")
+    rules = _normalize_rules(body.filter_rules)
+    if rules is False:
+        raise HTTPException(400, "Ungültiger Filter-Typ. Erlaubt: subject_contains, subject_startswith, from_contains, from_equals.")
     update = {
         "label": body.label.strip(),
         "server": body.server.strip(),
         "port": body.port,
         "username": body.username.strip(),
         "active": body.active,
+        "filter_rules": rules if rules else list(DEFAULT_FILTER_RULES),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "updated_by": getattr(user, "username", None),
     }

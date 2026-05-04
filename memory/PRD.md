@@ -47,7 +47,8 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 
 ## Zuletzt abgeschlossen (04.05.2026)
 
-- **`module_mail_inbox` Multi-Postfach**: Beliebig viele IMAP-Postfächer hinterlegbar (eigene Collection `module_mail_inbox_accounts`, Fernet-verschlüsselte Passwörter). ENV-Postfach wird beim ersten Aufruf automatisch als "Hauptpostfach" migriert. Scan iteriert über alle aktiven Postfächer, pro Mail wird `account_id`/`account_label` gespeichert. UI in *Einstellungen → E-Mail*: Anlegen, Bearbeiten, Pause, Test, Löschen. IMAP bleibt read-only — Live + Vorschau können parallel scannen.
+- **`module_mail_inbox` Suchfilter pro Postfach**: 4 Filter-Typen (Betreff enthält/beginnt mit, Absender enthält/ist exakt). OR-Logik (mind. 1 muss zutreffen). UI-Editor im Postfach-Modal mit „+ Regel hinzufügen". Bei leerer Liste werden Default-Rules (Jimdo, „Anfrage von", „Nachricht über") gesetzt – rückwärtskompatibel. IMAP-Server-Search wird dynamisch aus den Rules gebaut (ASCII-only, sonst Fallback auf SINCE). Bestandskonten bekommen Defaults via `_ensure_filter_rules_present`.
+- **`module_mail_inbox` Multi-Postfach**: Beliebig viele IMAP-Postfächer hinterlegbar (eigene Collection `module_mail_inbox_accounts`, Fernet-verschlüsselte Passwörter). ENV-Postfach wird beim ersten Aufruf automatisch als „Hauptpostfach" migriert. Scan iteriert über alle aktiven Postfächer, pro Mail wird `account_id`/`account_label` gespeichert. UI in *Einstellungen → E-Mail*: Anlegen, Bearbeiten, Pause, Test, Löschen. IMAP bleibt read-only — Live + Vorschau können parallel scannen.
 - **Portal-Passwort-Bug**: '5' war noch im Alphabet enthalten. Gefixt in `routes/portal.py` und allen Legacy-Generatoren `portal_v2/v3/v4/auth.py`. 1000-Iter-Test grün.
 
 ## Zuletzt abgeschlossen (02.05.2026)
