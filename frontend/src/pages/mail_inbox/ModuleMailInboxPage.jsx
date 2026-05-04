@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download } from "lucide-react";
+import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Modal } from "@/components/common";
@@ -24,6 +24,22 @@ const ModuleMailInboxPage = () => {
   const [previewSummary, setPreviewSummary] = useState([]);
   const [previewMode, setPreviewMode] = useState("skipped"); // skipped|all
   const [importingUid, setImportingUid] = useState("");
+
+  // Statistik
+  const [stats, setStats] = useState(null);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsDays, setStatsDays] = useState(30);
+
+  const loadStats = async (days = statsDays) => {
+    try {
+      const r = await api.get(`/module-mail-inbox/stats?days=${days}`);
+      setStats(r.data);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Statistik konnte nicht geladen werden");
+    }
+  };
+
+  useEffect(() => { loadStats(statsDays); }, [statsDays]);  // eslint-disable-line
 
   const load = async () => {
     setLoading(true);
@@ -161,6 +177,15 @@ const ModuleMailInboxPage = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           <button
+            onClick={() => setStatsOpen((v) => !v)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
+            data-testid="btn-mail-stats-toggle"
+            title="Statistik nach Postfach anzeigen"
+          >
+            <BarChart3 className="w-4 h-4" />
+            {statsOpen ? "Statistik ausblenden" : "Statistik anzeigen"}
+          </button>
+          <button
             onClick={openPreview}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
             data-testid="btn-mail-preview"
@@ -180,6 +205,87 @@ const ModuleMailInboxPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Statistik-Karte */}
+      {statsOpen && (
+        <div className="border rounded p-4 bg-muted/20 space-y-3" data-testid="mail-stats-card">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              Anfrage-Statistik nach Postfach
+              <span className="text-xs text-muted-foreground font-normal">letzte {statsDays} Tage</span>
+            </h3>
+            <div className="flex gap-1">
+              {[7, 30, 90, 365].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setStatsDays(d)}
+                  className={`px-2.5 py-1 text-xs rounded-sm ${statsDays === d ? "bg-primary text-primary-foreground" : "bg-background border hover:bg-accent"}`}
+                  data-testid={`btn-stats-days-${d}`}
+                >
+                  {d === 365 ? "1 Jahr" : `${d}T`}
+                </button>
+              ))}
+            </div>
+          </div>
+          {!stats ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
+              <Loader2 className="w-4 h-4 animate-spin" /> Lade Statistik…
+            </div>
+          ) : stats.total.total === 0 ? (
+            <div className="text-sm text-muted-foreground py-3 italic">
+              Keine Anfragen im gewählten Zeitraum.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Gesamt-Zusammenfassung */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                <div className="bg-background border rounded p-2">
+                  <div className="text-muted-foreground">Anfragen gesamt</div>
+                  <div className="text-lg font-bold">{stats.total.total}</div>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded p-2">
+                  <div className="text-emerald-800">Übernommen</div>
+                  <div className="text-lg font-bold text-emerald-900">{stats.total.uebernommen}</div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                  <div className="text-blue-800">Offen</div>
+                  <div className="text-lg font-bold text-blue-900">{stats.total.vorschlag}</div>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded p-2">
+                  <div className="text-red-800">Spam/Ignoriert</div>
+                  <div className="text-lg font-bold text-red-900">{stats.total.spam_verdacht + stats.total.ignoriert}</div>
+                </div>
+                <div className="bg-primary/10 border border-primary/30 rounded p-2">
+                  <div className="text-primary">Conversion</div>
+                  <div className="text-lg font-bold text-primary">{stats.total.conversion_pct}%</div>
+                </div>
+              </div>
+
+              {/* Pro Postfach */}
+              <div className="space-y-1.5">
+                <div className="text-xs font-semibold text-muted-foreground mt-2">Pro Postfach</div>
+                {stats.by_account.map((row) => (
+                  <div key={row.label} className="flex flex-wrap items-center gap-3 text-xs bg-background border rounded p-2">
+                    <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="font-medium min-w-[180px]">{row.label}</span>
+                    <span>· {row.total} Anfragen</span>
+                    <span className="text-emerald-700">· {row.uebernommen} übernommen</span>
+                    {row.vorschlag > 0 && <span className="text-blue-700">· {row.vorschlag} offen</span>}
+                    {(row.spam_verdacht + row.ignoriert) > 0 && (
+                      <span className="text-red-700">· {row.spam_verdacht + row.ignoriert} Spam/Ignoriert</span>
+                    )}
+                    {row.manuell_importiert > 0 && (
+                      <span className="text-amber-700">· {row.manuell_importiert} manuell</span>
+                    )}
+                    <span className="ml-auto font-semibold text-primary">{row.conversion_pct}% Conversion</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 border-b items-center">
         {[["vorschlag", "Offen"], ["spam_verdacht", "Spam-Verdacht"], ["übernommen", "Übernommen"], ["ignoriert", "Ignoriert"], ["all", "Alle"]].map(([k, label]) => (

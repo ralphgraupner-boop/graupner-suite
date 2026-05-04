@@ -298,6 +298,62 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
     }
 
 
+@router.get("/stats")
+async def stats(days: int = 30, user=Depends(get_current_user)):
+    """Statistik pro Postfach (account_label):
+    Anzahl Mails der letzten N Tage, aufgeteilt nach Status.
+    Gibt zusätzlich Conversion-Rate (übernommen / gesamt) zurück."""
+    days = max(1, min(days, 365))
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    pipeline = [
+        {"$match": {"created_at": {"$gte": since}}},
+        {"$group": {
+            "_id": {"label": {"$ifNull": ["$account_label", "(unbekannt)"]}},
+            "total": {"$sum": 1},
+            "uebernommen": {"$sum": {"$cond": [{"$eq": ["$status", "übernommen"]}, 1, 0]}},
+            "vorschlag": {"$sum": {"$cond": [{"$eq": ["$status", "vorschlag"]}, 1, 0]}},
+            "ignoriert": {"$sum": {"$cond": [{"$eq": ["$status", "ignoriert"]}, 1, 0]}},
+            "spam_verdacht": {"$sum": {"$cond": [{"$eq": ["$status", "spam_verdacht"]}, 1, 0]}},
+            "manuell_importiert": {"$sum": {"$cond": [{"$eq": ["$manual_import", True]}, 1, 0]}},
+        }},
+        {"$sort": {"total": -1}},
+    ]
+
+    by_account = []
+    grand = {"total": 0, "uebernommen": 0, "vorschlag": 0, "ignoriert": 0, "spam_verdacht": 0, "manuell_importiert": 0}
+    async for d in db.module_mail_inbox.aggregate(pipeline):
+        label = d["_id"].get("label") or "(unbekannt)"
+        total = d.get("total", 0)
+        uebernommen = d.get("uebernommen", 0)
+        conv = round((uebernommen / total) * 100, 1) if total else 0.0
+        item = {
+            "label": label,
+            "total": total,
+            "uebernommen": uebernommen,
+            "vorschlag": d.get("vorschlag", 0),
+            "ignoriert": d.get("ignoriert", 0),
+            "spam_verdacht": d.get("spam_verdacht", 0),
+            "manuell_importiert": d.get("manuell_importiert", 0),
+            "conversion_pct": conv,
+        }
+        by_account.append(item)
+        for k in list(grand.keys()):
+            grand[k] += d.get(k, 0)
+
+    grand_conv = round((grand["uebernommen"] / grand["total"]) * 100, 1) if grand["total"] else 0.0
+    grand["conversion_pct"] = grand_conv
+
+    return {
+        "ok": True,
+        "days": days,
+        "since": since,
+        "total": grand,
+        "by_account": by_account,
+    }
+
+
+
 @router.get("/list")
 async def list_inbox(status: str = "vorschlag", limit: int = 100, user=Depends(get_current_user)):
     if status == "all":
