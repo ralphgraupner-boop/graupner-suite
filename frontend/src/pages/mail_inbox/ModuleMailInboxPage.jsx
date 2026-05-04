@@ -382,61 +382,79 @@ const ModuleMailInboxPage = () => {
                     </div>
                   );
                 }
+                // Gruppieren nach Postfach (account_label)
+                const groups = {};
+                for (const it of filtered) {
+                  const k = it.account_label || "(ohne Postfach)";
+                  if (!groups[k]) groups[k] = [];
+                  groups[k].push(it);
+                }
+                const groupKeys = Object.keys(groups).sort();
                 return (
-                  <div className="space-y-1.5 max-h-[55vh] overflow-auto">
-                    {filtered.map((it) => {
-                      const key = `${it.account_id}/${it.folder}/${it.uid}`;
-                      const isImporting = importingUid === key;
-                      return (
-                        <div
-                          key={key}
-                          className="flex items-start gap-2 border rounded p-2 hover:bg-accent/30"
-                          data-testid={`preview-row-${it.uid}`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {it.is_duplicate ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
-                                  {it.duplicate_status || "Duplikat"}
-                                </span>
-                              ) : it.would_match ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                                  Filter-Treffer
-                                </span>
-                              ) : (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
-                                  übersprungen
-                                </span>
-                              )}
-                              <span className="text-[11px] text-muted-foreground">📬 {it.account_label}</span>
-                              {it.skip_reason && !it.is_duplicate && (
-                                <span className="text-[11px] text-muted-foreground italic">· {it.skip_reason}</span>
-                              )}
-                            </div>
-                            <div className="font-medium text-sm mt-1 break-words">{it.subject || "(kein Betreff)"}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {it.from_email}
-                              {it.date && <> · {it.date.slice(0, 16).replace("T", " ")}</>}
-                            </div>
-                          </div>
-                          <div className="flex-shrink-0">
-                            {!it.is_duplicate ? (
-                              <button
-                                onClick={() => importPreviewItem(it)}
-                                disabled={isImporting}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                                data-testid={`btn-import-${it.uid}`}
-                              >
-                                {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                                Importieren
-                              </button>
-                            ) : (
-                              <span className="text-xs text-muted-foreground italic px-2">bereits drin</span>
-                            )}
-                          </div>
+                  <div className="space-y-4 max-h-[55vh] overflow-auto">
+                    {groupKeys.map((label) => (
+                      <div key={label} className="space-y-1.5">
+                        <div className="sticky top-0 bg-background z-10 py-1 border-b font-semibold text-sm flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-muted-foreground" />
+                          {label}
+                          <span className="text-xs text-muted-foreground font-normal">
+                            ({groups[label].length} Mail{groups[label].length === 1 ? "" : "s"})
+                          </span>
                         </div>
-                      );
-                    })}
+                        {groups[label].map((it) => {
+                          const key = `${it.account_id}/${it.folder}/${it.uid}`;
+                          const isImporting = importingUid === key;
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-start gap-2 border rounded p-2 hover:bg-accent/30"
+                              data-testid={`preview-row-${it.uid}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {it.is_duplicate ? (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                                      {it.duplicate_status || "Duplikat"}
+                                    </span>
+                                  ) : it.would_match ? (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                                      Filter-Treffer
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                                      übersprungen
+                                    </span>
+                                  )}
+                                  {it.skip_reason && !it.is_duplicate && (
+                                    <span className="text-[11px] text-muted-foreground italic">· {it.skip_reason}</span>
+                                  )}
+                                </div>
+                                <div className="font-medium text-sm mt-1 break-words">{it.subject || "(kein Betreff)"}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {it.from_email}
+                                  {it.date && <> · {it.date.slice(0, 16).replace("T", " ")}</>}
+                                </div>
+                              </div>
+                              <div className="flex-shrink-0">
+                                {!it.is_duplicate ? (
+                                  <button
+                                    onClick={() => importPreviewItem(it)}
+                                    disabled={isImporting}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                                    data-testid={`btn-import-${it.uid}`}
+                                  >
+                                    {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                                    Importieren
+                                  </button>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic px-2">bereits drin</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
                 );
               })()}

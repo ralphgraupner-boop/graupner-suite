@@ -85,6 +85,11 @@ const ImapAccountsCard = () => {
       toast.error("Beim Anlegen ist ein Passwort Pflicht.");
       return;
     }
+    const ruleCount = (form.filter_rules || []).filter((r) => r.value && r.value.trim()).length;
+    if (ruleCount > 0 && ruleCount < 2) {
+      toast.error("Bitte mindestens 2 Filter-Regeln pro Postfach definieren.");
+      return;
+    }
     setSaving(true);
     try {
       if (editing) {
@@ -377,7 +382,7 @@ const ImapAccountsCard = () => {
               <label className="block text-sm font-medium">
                 Filter-Regeln
                 <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  Mind. eine Regel muss zutreffen, sonst wird die Mail übersprungen.
+                  Mind. 2 Regeln pro Postfach. ODER-Logik: eine muss zutreffen.
                 </span>
               </label>
               <Button

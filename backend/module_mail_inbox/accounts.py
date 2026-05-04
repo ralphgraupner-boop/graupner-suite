@@ -258,6 +258,9 @@ async def create_account(body: AccountIn, user=Depends(get_current_user)):
     rules = _normalize_rules(body.filter_rules)
     if rules is False:
         raise HTTPException(400, "Ungültiger Filter-Typ. Erlaubt: subject_contains, subject_startswith, from_contains, from_equals.")
+    final_rules = rules if rules else list(DEFAULT_FILTER_RULES)
+    if len(final_rules) < 2:
+        raise HTTPException(400, "Bitte mindestens 2 Filter-Regeln pro Postfach definieren.")
     now = datetime.now(timezone.utc).isoformat()
     entry = {
         "id": str(uuid.uuid4()),
@@ -267,7 +270,7 @@ async def create_account(body: AccountIn, user=Depends(get_current_user)):
         "username": body.username.strip(),
         "password_enc": encrypt_password(body.password),
         "active": body.active,
-        "filter_rules": rules if rules else list(DEFAULT_FILTER_RULES),
+        "filter_rules": final_rules,
         "created_at": now,
         "updated_at": now,
         "created_by": getattr(user, "username", None),
@@ -284,13 +287,16 @@ async def update_account(account_id: str, body: AccountIn, user=Depends(get_curr
     rules = _normalize_rules(body.filter_rules)
     if rules is False:
         raise HTTPException(400, "Ungültiger Filter-Typ. Erlaubt: subject_contains, subject_startswith, from_contains, from_equals.")
+    final_rules = rules if rules else list(DEFAULT_FILTER_RULES)
+    if len(final_rules) < 2:
+        raise HTTPException(400, "Bitte mindestens 2 Filter-Regeln pro Postfach definieren.")
     update = {
         "label": body.label.strip(),
         "server": body.server.strip(),
         "port": body.port,
         "username": body.username.strip(),
         "active": body.active,
-        "filter_rules": rules if rules else list(DEFAULT_FILTER_RULES),
+        "filter_rules": final_rules,
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "updated_by": getattr(user, "username", None),
     }
