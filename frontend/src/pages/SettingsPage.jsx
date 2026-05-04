@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive, HardHat, X, HelpCircle } from "lucide-react";import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { Mail, Save, Bell, BellOff, Plus, Pencil, Trash2, FileText, Building2, Users, Palette, CheckCircle, Key, Send, TestTube, Clock, Wrench, User, Package, Calculator, Eye, EyeOff, RefreshCw, Copy, Shield, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Download, Upload, Database, HardDrive, HardHat, X, HelpCircle, Smartphone } from "lucide-react";import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
 import { subscribeToPush, unsubscribeFromPush, ensureVapidKey } from "@/lib/push";
@@ -2155,6 +2156,38 @@ const DiversesTab = () => {
 };
 
 
+// ==================== SETTINGS SHORTCUTS (Schnellzugriff auf Sub-Module) ====================
+const SETTINGS_SHORTCUTS = [
+  { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", description: "Stundensätze, Materialien, Pauschalen" },
+  { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", description: "Mailtexte, Beschreibungen" },
+  { path: "/module/duplikate", icon: Users, label: "Duplikate", description: "Doppelte Kunden zusammenführen" },
+  { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", description: "Mitarbeiter-PIN für Monteur-App" },
+  { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", description: "Hilfe-Artikel und Anleitungen" },
+];
+
+const SettingsShortcuts = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2" data-testid="settings-shortcuts">
+      {SETTINGS_SHORTCUTS.map(({ path, icon: Icon, label, description }) => (
+        <button
+          key={path}
+          onClick={() => navigate(path)}
+          className="flex items-start gap-3 p-3 border rounded-sm bg-background hover:bg-accent text-left transition-colors group"
+          data-testid={`shortcut-${path.split("/").pop()}`}
+        >
+          <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+          <div className="min-w-0">
+            <div className="font-medium text-sm">{label}</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{description}</div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+
 // ==================== MAIN SETTINGS PAGE ====================
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("firma");
@@ -2536,6 +2569,9 @@ const BackupTab = () => {
         <h1 className="text-2xl lg:text-4xl font-bold">Einstellungen</h1>
         <p className="text-muted-foreground mt-1 text-sm">Konfiguration der Graupner Suite</p>
       </div>
+
+      {/* Schnellzugriff auf Settings-Untermodule */}
+      <SettingsShortcuts />
 
       {/* Tab Navigation */}
       <div className="flex gap-1 mb-6 border-b overflow-x-auto pb-px" data-testid="settings-tabs">
