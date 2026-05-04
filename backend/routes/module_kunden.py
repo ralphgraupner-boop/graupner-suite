@@ -160,7 +160,26 @@ async def ensure_modul_registered():
 @router.get("/modules/kunden/data")
 async def get_kunden(user=Depends(get_current_user)):
     await ensure_modul_registered()
-    items = await db.module_kunden.find({}, {"_id": 0}).sort("created_at", -1).to_list(10000)
+    # Soft-gelöschte (im Papierkorb) ausblenden
+    items = await db.module_kunden.find(
+        {"deleted_at": {"$in": [None, ""]}},
+        {"_id": 0},
+    ).sort("created_at", -1).to_list(10000)
+    # Migrations-Fallback: alte Datensätze ohne Feld auch zeigen
+    if not items:
+        items = await db.module_kunden.find(
+            {"deleted_at": {"$exists": False}},
+            {"_id": 0},
+        ).sort("created_at", -1).to_list(10000)
+    else:
+        legacy = await db.module_kunden.find(
+            {"deleted_at": {"$exists": False}},
+            {"_id": 0},
+        ).sort("created_at", -1).to_list(10000)
+        existing = {x["id"] for x in items}
+        for x in legacy:
+            if x.get("id") not in existing:
+                items.append(x)
     return items
 
 
