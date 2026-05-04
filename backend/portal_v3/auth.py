@@ -15,8 +15,8 @@ PORTAL_V3_TOKEN_AUD = "portal-v3-customer"
 
 
 def generate_password(length: int = 10) -> str:
-    """Klartext-Passwort mit guter Lesbarkeit (ohne 0/O/1/l/I)."""
-    alphabet = "".join(c for c in (string.ascii_letters + string.digits) if c not in "0O1lI")
+    """Klartext-Passwort mit guter Lesbarkeit (ohne 0/O, 1/l/I, 5/S)."""
+    alphabet = "".join(c for c in (string.ascii_letters + string.digits) if c not in "0O1lI5S")
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 

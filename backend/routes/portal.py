@@ -235,7 +235,7 @@ def hash_password(pw: str) -> str:
 
 
 # Zeichen-Pool ohne missverständliche Zeichen (0/O, 1/l/I, S/5)
-_PW_ALPHABET = "ABCDEFGHJKLMNPQRTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+_PW_ALPHABET = "ABCDEFGHJKLMNPQRTUVWXYZabcdefghjkmnpqrstuvwxyz2346789"
 
 
 def gen_portal_password(length: int = 10) -> str:
