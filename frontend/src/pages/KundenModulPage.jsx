@@ -279,7 +279,7 @@ const KundenModulPage = () => {
             const displayName = (kunde.vorname || kunde.nachname) ? `${kunde.vorname || ''} ${kunde.nachname || ''}`.trim() : kunde.name;
             return (
               <Card key={kunde.id} className={`transition-all cursor-pointer overflow-hidden border-l-4 ${STATUS_COLORS[kunde.status || kunde.kontakt_status || "Anfrage"]?.border || ""} ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md'}`} data-testid={`kunden-modul-${kunde.id}`}>
-                <div className="flex items-center gap-4 p-3 lg:p-4" onClick={() => setExpandedId(isExpanded ? null : kunde.id)}>
+                <div className="flex items-center gap-2 sm:gap-4 p-3 lg:p-4" onClick={() => setExpandedId(isExpanded ? null : kunde.id)}>
                   <input
                     type="checkbox"
                     checked={selectedIds.has(kunde.id)}
@@ -292,7 +292,7 @@ const KundenModulPage = () => {
                       });
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 cursor-pointer flex-shrink-0"
+                    className="w-4 h-4 cursor-pointer flex-shrink-0 hidden sm:inline-block"
                     title="Für Sammel-Export markieren"
                     data-testid={`chk-export-${kunde.id}`}
                   />
@@ -301,15 +301,15 @@ const KundenModulPage = () => {
                     {kunde.vorname?.charAt(0)?.toUpperCase() || kunde.nachname?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold truncate">{displayName}</span>
-                      {kunde.firma && <Badge variant="info" className="text-xs">{kunde.firma}</Badge>}
-                      {kunde.customer_type && kunde.customer_type !== "Privat" && <Badge variant="default" className="text-xs">{kunde.customer_type}</Badge>}
+                      {kunde.firma && <Badge variant="info" className="text-xs hidden sm:inline-flex">{kunde.firma}</Badge>}
+                      {kunde.customer_type && kunde.customer_type !== "Privat" && <Badge variant="default" className="text-xs hidden sm:inline-flex">{kunde.customer_type}</Badge>}
                       {(kunde.status || kunde.kontakt_status) && <Badge className={`text-xs ${STATUS_COLORS[kunde.status || kunde.kontakt_status]?.badge || "bg-gray-100 text-gray-600"}`}>{kunde.status || kunde.kontakt_status}</Badge>}
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-x-3 gap-y-0.5 text-xs sm:text-sm text-muted-foreground flex-wrap">
                       {kunde.phone && <span>{kunde.phone}</span>}
-                      {kunde.email && <span className="truncate hidden sm:inline">{kunde.email}</span>}
+                      {kunde.email && <span className="truncate">{kunde.email}</span>}
                       {kunde.photos?.length > 0 && <span className="text-primary flex items-center gap-1"><File className="w-3 h-3" />{kunde.photos.length}</span>}
                     </div>
                   </div>
@@ -318,7 +318,7 @@ const KundenModulPage = () => {
                       {kunde.categories.map(cat => <span key={cat} className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">{cat}</span>)}
                     </div>
                   )}
-                  <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                  <div className="hidden sm:flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700" title="Projekte dieses Kunden" data-testid={`btn-projekte-${kunde.id}`}><Folder className="w-4 h-4" /></button>
                     <button onClick={() => { setEditKunde(kunde); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>
                     <button onClick={() => handleDelete(kunde)} className="p-2 rounded-sm hover:bg-destructive/10 text-red-600" title="Kunde sicher löschen (mit Vorab-Backup)" data-testid={`btn-kunde-delete-${kunde.id}`}>
