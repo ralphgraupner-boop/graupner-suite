@@ -23,6 +23,7 @@ from routes.auth import get_current_user
 from routes.anfragen_fetcher import _extract_body
 from .parser import parse_anfrage
 from .spam_filter import evaluate_spam
+from .accounts import get_active_accounts
 
 router = APIRouter()
 
@@ -55,161 +56,204 @@ def _decode(s: str | None) -> str:
 
 @router.post("/scan")
 async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_user)):
-    server = os.environ.get("IMAP_SERVER")
-    port = int(os.environ.get("IMAP_PORT", "993"))
-    username = os.environ.get("IMAP_USER")
-    password = os.environ.get("IMAP_PASSWORD")
-    if not (server and username and password):
-        raise HTTPException(500, "IMAP nicht konfiguriert")
+    """Scannt alle aktiven IMAP-Postfächer (aus module_mail_inbox_accounts).
+    Read-only – markiert auf dem Server NICHTS als gelesen.
+    Pro Mail wird zusätzlich `account_id` und `account_label` gespeichert."""
+    accounts = await get_active_accounts()
+    if not accounts:
+        raise HTTPException(500, "Kein aktives IMAP-Postfach konfiguriert.")
 
     weeks = max(1, min(weeks, 26))
     max_count = max(1, min(max_count, 100))
     since_dt = datetime.now(timezone.utc) - timedelta(weeks=weeks)
     since_str = since_dt.strftime("%d-%b-%Y")
 
-    found, skipped, dup = 0, 0, 0
+    total_found, total_skipped, total_dup = 0, 0, 0
+    per_account = []
 
-    try:
-        imap = imaplib.IMAP4_SSL(server, port)
-        imap.login(username, password)
-        for folder in SEARCH_FOLDERS:
-            try:
-                typ, _ = imap.select(folder, readonly=True)
-                if typ != "OK":
-                    continue
-            except Exception as fe:  # noqa: BLE001
-                logger.warning(f"mail-inbox: Ordner {folder} nicht selektierbar: {fe}")
-                continue
-
-            # Suche: Mails mit "Anfrage" im Subject, Jimdo-Absender,
-            # oder "tischlerei-graupner" im Subject (fängt neue Jimdo-Betreffe
-            # wie "Nachricht über https://www.tischlerei-graupner.de/...").
-            # WICHTIG: nur ASCII-Tokens (imaplib unterstützt keine Umlaute in search).
-            try:
-                typ, data = imap.search(
-                    None,
-                    f'(SINCE "{since_str}")',
-                    '(OR (OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von")) (SUBJECT "tischlerei-graupner"))',
-                )
-            except imaplib.IMAP4.error:
-                continue
-            if typ != "OK" or not data or not data[0]:
-                continue
-
-            uids = data[0].split()
-            uids = uids[-max_count:]
-            uids.reverse()
-            remaining = max_count - found
-            uids = uids[:remaining]
-
-            for uid in uids:
-                if found >= max_count:
-                    break
-                try:
-                    typ, raw = imap.fetch(uid, "(RFC822)")
-                    if typ != "OK" or not raw or not raw[0]:
-                        continue
-                    msg = email.message_from_bytes(raw[0][1])
-
-                    from_name, from_email = parseaddr(msg.get("From", ""))
-                    subject = _decode(msg.get("Subject", ""))
-
-                    # Erkennung: Jimdo-Format ODER altes "Anfrage von"-Subject
-                    # ODER neuer Jimdo-Betreff "Nachricht über https://..."
-                    is_jimdo = bool(JIMDO_FROM_PATTERN.search(from_email or ""))
-                    is_alt = bool(ALT_SUBJECT_PATTERN.search(subject or ""))
-                    is_nachricht_ueber = bool(NACHRICHT_UEBER_PATTERN.search(subject or ""))
-                    if not (is_jimdo or is_alt or is_nachricht_ueber):
-                        skipped += 1
-                        continue
-                    # Wenn Jimdo-Absender, muss tischlerei-graupner.de im Subject sein
-                    # ("Nachricht über" erfüllt diese Bedingung bereits).
-                    if is_jimdo and SUBJECT_DOMAIN not in subject.lower():
-                        skipped += 1
-                        continue
-
-                    message_id = (msg.get("Message-ID") or "").strip()
-
-                    # 1) Duplikatsprüfung in Haupt-Collection (egal welcher Status)
-                    exists = await db.module_mail_inbox.find_one(
-                        {"message_id": message_id} if message_id else {"email_uid": f"{folder}/{uid.decode()}"},
-                        {"_id": 0, "id": 1},
-                    )
-                    if exists:
-                        dup += 1
-                        continue
-
-                    # 2) Tombstone-Check: wurde diese Mail früher schon explizit gelöscht?
-                    if message_id:
-                        tomb = await db.module_mail_inbox_deleted.find_one(
-                            {"message_id": message_id}, {"_id": 0, "message_id": 1},
-                        )
-                        if tomb:
-                            dup += 1
-                            continue
-
-                    body = _extract_body(msg)
-                    parsed = parse_anfrage(body, subject=subject, from_email=from_email)
-
-                    reply_to = ""
-                    rt_raw = msg.get("Reply-To") or ""
-                    if rt_raw:
-                        _, reply_to = parseaddr(rt_raw)
-
-                    if not parsed.get("email") and reply_to and "@" in reply_to:
-                        parsed["email"] = reply_to
-                    if not parsed.get("email") and from_email and "@" in from_email and "jimdo.com" not in from_email.lower():
-                        parsed["email"] = from_email
-
-                    # Spam-Bewertung
-                    spam = evaluate_spam(parsed, body_excerpt=body, from_email=from_email)
-                    initial_status = "spam_verdacht" if spam["is_spam"] else "vorschlag"
-
-                    received_at_iso = ""
-                    d = msg.get("Date")
-                    if d:
-                        try:
-                            received_at_iso = parsedate_to_datetime(d).isoformat()
-                        except Exception:
-                            received_at_iso = d
-
-                    entry = {
-                        "id": str(uuid.uuid4()),
-                        "email_uid": f"{folder}/{uid.decode()}",
-                        "message_id": message_id,
-                        "folder": folder,
-                        "from_email": from_email,
-                        "from_name": _decode(from_name),
-                        "reply_to": reply_to,
-                        "subject": subject,
-                        "received_at": received_at_iso,
-                        "body_excerpt": (body or "")[:2000],
-                        "parsed": parsed,
-                        "spam": spam,
-                        "status": initial_status,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                    await db.module_mail_inbox.insert_one(entry)
-                    found += 1
-                except Exception as e:  # noqa: BLE001
-                    logger.warning(f"mail-inbox scan: Mail-Fehler {e}")
-                    continue
+    for acc in accounts:
+        acc_id = acc["id"]
+        acc_label = acc.get("label", "")
+        acc_user = acc.get("username", "")
+        a_found, a_skipped, a_dup, a_error = 0, 0, 0, ""
 
         try:
-            imap.close()
-        except Exception:
-            pass
-        imap.logout()
-    except imaplib.IMAP4.error as e:
-        raise HTTPException(500, f"IMAP-Login fehlgeschlagen: {e}") from e
+            imap = imaplib.IMAP4_SSL(acc["server"], int(acc.get("port") or 993))
+            imap.login(acc_user, acc.get("password", ""))
+        except imaplib.IMAP4.error as e:
+            a_error = f"Login fehlgeschlagen: {e}"
+            per_account.append({
+                "account_id": acc_id, "label": acc_label, "username": acc_user,
+                "found": 0, "duplicates_skipped": 0, "non_matching_skipped": 0,
+                "error": a_error,
+            })
+            continue
+        except Exception as e:  # noqa: BLE001
+            a_error = f"Verbindungsfehler: {e}"
+            per_account.append({
+                "account_id": acc_id, "label": acc_label, "username": acc_user,
+                "found": 0, "duplicates_skipped": 0, "non_matching_skipped": 0,
+                "error": a_error,
+            })
+            continue
+
+        try:
+            for folder in SEARCH_FOLDERS:
+                if a_found >= max_count:
+                    break
+                try:
+                    typ, _ = imap.select(folder, readonly=True)
+                    if typ != "OK":
+                        continue
+                except Exception as fe:  # noqa: BLE001
+                    logger.warning(f"mail-inbox[{acc_label}]: Ordner {folder} nicht selektierbar: {fe}")
+                    continue
+
+                try:
+                    typ, data = imap.search(
+                        None,
+                        f'(SINCE "{since_str}")',
+                        '(OR (OR (FROM "no-reply@jimdo.com") (SUBJECT "Anfrage von")) (SUBJECT "tischlerei-graupner"))',
+                    )
+                except imaplib.IMAP4.error:
+                    continue
+                if typ != "OK" or not data or not data[0]:
+                    continue
+
+                uids = data[0].split()
+                uids = uids[-max_count:]
+                uids.reverse()
+                remaining = max_count - a_found
+                uids = uids[:remaining]
+
+                for uid in uids:
+                    if a_found >= max_count:
+                        break
+                    try:
+                        typ, raw = imap.fetch(uid, "(RFC822)")
+                        if typ != "OK" or not raw or not raw[0]:
+                            continue
+                        msg = email.message_from_bytes(raw[0][1])
+
+                        from_name, from_email = parseaddr(msg.get("From", ""))
+                        subject = _decode(msg.get("Subject", ""))
+
+                        is_jimdo = bool(JIMDO_FROM_PATTERN.search(from_email or ""))
+                        is_alt = bool(ALT_SUBJECT_PATTERN.search(subject or ""))
+                        is_nachricht_ueber = bool(NACHRICHT_UEBER_PATTERN.search(subject or ""))
+                        if not (is_jimdo or is_alt or is_nachricht_ueber):
+                            a_skipped += 1
+                            continue
+                        if is_jimdo and SUBJECT_DOMAIN not in subject.lower():
+                            a_skipped += 1
+                            continue
+
+                        message_id = (msg.get("Message-ID") or "").strip()
+
+                        # 1) Duplikatsprüfung in Haupt-Collection
+                        exists = await db.module_mail_inbox.find_one(
+                            {"message_id": message_id} if message_id else {"email_uid": f"{folder}/{uid.decode()}"},
+                            {"_id": 0, "id": 1},
+                        )
+                        if exists:
+                            a_dup += 1
+                            continue
+
+                        # 2) Tombstone-Check
+                        if message_id:
+                            tomb = await db.module_mail_inbox_deleted.find_one(
+                                {"message_id": message_id}, {"_id": 0, "message_id": 1},
+                            )
+                            if tomb:
+                                a_dup += 1
+                                continue
+
+                        body = _extract_body(msg)
+                        parsed = parse_anfrage(body, subject=subject, from_email=from_email)
+
+                        reply_to = ""
+                        rt_raw = msg.get("Reply-To") or ""
+                        if rt_raw:
+                            _, reply_to = parseaddr(rt_raw)
+
+                        if not parsed.get("email") and reply_to and "@" in reply_to:
+                            parsed["email"] = reply_to
+                        if not parsed.get("email") and from_email and "@" in from_email and "jimdo.com" not in from_email.lower():
+                            parsed["email"] = from_email
+
+                        spam = evaluate_spam(parsed, body_excerpt=body, from_email=from_email)
+                        initial_status = "spam_verdacht" if spam["is_spam"] else "vorschlag"
+
+                        received_at_iso = ""
+                        d = msg.get("Date")
+                        if d:
+                            try:
+                                received_at_iso = parsedate_to_datetime(d).isoformat()
+                            except Exception:
+                                received_at_iso = d
+
+                        entry = {
+                            "id": str(uuid.uuid4()),
+                            "email_uid": f"{folder}/{uid.decode()}",
+                            "message_id": message_id,
+                            "folder": folder,
+                            "from_email": from_email,
+                            "from_name": _decode(from_name),
+                            "reply_to": reply_to,
+                            "subject": subject,
+                            "received_at": received_at_iso,
+                            "body_excerpt": (body or "")[:2000],
+                            "parsed": parsed,
+                            "spam": spam,
+                            "status": initial_status,
+                            "account_id": acc_id,
+                            "account_label": acc_label,
+                            "account_username": acc_user,
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                        await db.module_mail_inbox.insert_one(entry)
+                        a_found += 1
+                    except Exception as e:  # noqa: BLE001
+                        logger.warning(f"mail-inbox[{acc_label}] scan: Mail-Fehler {e}")
+                        continue
+
+            try:
+                imap.close()
+            except Exception:
+                pass
+            try:
+                imap.logout()
+            except Exception:
+                pass
+        except Exception as e:  # noqa: BLE001
+            a_error = f"Scan-Fehler: {e}"
+            try:
+                imap.logout()
+            except Exception:
+                pass
+
+        total_found += a_found
+        total_skipped += a_skipped
+        total_dup += a_dup
+        per_account.append({
+            "account_id": acc_id,
+            "label": acc_label,
+            "username": acc_user,
+            "found": a_found,
+            "duplicates_skipped": a_dup,
+            "non_matching_skipped": a_skipped,
+            "error": a_error,
+        })
 
     return {
         "ok": True,
-        "found": found,
-        "duplicates_skipped": dup,
-        "non_matching_skipped": skipped,
+        "found": total_found,
+        "duplicates_skipped": total_dup,
+        "non_matching_skipped": total_skipped,
         "weeks": weeks,
         "max_count": max_count,
+        "accounts_scanned": len(accounts),
+        "per_account": per_account,
     }
 
 

@@ -10,6 +10,7 @@ import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
 import { DocumentTemplatesPanel } from "@/components/DocumentTemplatesPanel";
 import { HilfeTab } from "@/components/HilfeTab";
 import { HelpTip } from "@/components/HelpTip";
+import ImapAccountsCard from "@/components/ImapAccountsCard";
 
 // ==================== TAB CONFIG ====================
 const TABS = [
@@ -774,6 +775,8 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
       </Card>
 
       <EmailIgnoreListCard />
+
+      <ImapAccountsCard />
 
       <PushNotificationSettings />
     </div>

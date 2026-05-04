@@ -38,12 +38,17 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 | `module_export` | ZIP-Export inkl. Bilder + Import (Single + Sammel) |
 | `module_health` | Umgebungsbanner, Konsistenz-Check |
 | `module_kunde_delete` | Cascade-Delete mit Zwangs-ZIP-Backup |
-| `module_mail_inbox` | IMAP-Anfragen, Spam-Filter, Tombstones, Delete |
+| `module_mail_inbox` | IMAP-Anfragen, Spam-Filter, Tombstones, Delete, **Multi-Postfach** |
 | `module_user_prefs` | Sidebar-Reihenfolge pro User |
 | `module_portal_v2_backup` | Tägliche Auto-Backups |
 | `module_feedback` | **Notizen-Widget** (Floating, 30-Tage-Archiv) |
 | `monteur_app` | Mobile PWA mit Bildkompression |
 | `routes/portal.py` (legacy) | Kundenportale - heute Datenmasken-fähig gemacht |
+
+## Zuletzt abgeschlossen (04.05.2026)
+
+- **`module_mail_inbox` Multi-Postfach**: Beliebig viele IMAP-Postfächer hinterlegbar (eigene Collection `module_mail_inbox_accounts`, Fernet-verschlüsselte Passwörter). ENV-Postfach wird beim ersten Aufruf automatisch als "Hauptpostfach" migriert. Scan iteriert über alle aktiven Postfächer, pro Mail wird `account_id`/`account_label` gespeichert. UI in *Einstellungen → E-Mail*: Anlegen, Bearbeiten, Pause, Test, Löschen. IMAP bleibt read-only — Live + Vorschau können parallel scannen.
+- **Portal-Passwort-Bug**: '5' war noch im Alphabet enthalten. Gefixt in `routes/portal.py` und allen Legacy-Generatoren `portal_v2/v3/v4/auth.py`. 1000-Iter-Test grün.
 
 ## Zuletzt abgeschlossen (02.05.2026)
 
