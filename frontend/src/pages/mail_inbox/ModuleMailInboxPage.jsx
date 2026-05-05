@@ -202,6 +202,37 @@ const ModuleMailInboxPage = () => {
     }
   };
 
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const bulkDeleteSkipped = async () => {
+    // Nur die in der aktuellen Vorschau angezeigten "übersprungenen" Mails
+    // (also: nicht Treffer, nicht schon in DB) auf einmal als Tombstone markieren.
+    const targets = previewItems.filter((it) => !it.would_match && !it.is_duplicate && it.message_id);
+    if (targets.length === 0) {
+      toast.info("Keine übersprungenen Mails mit Message-ID zum Löschen vorhanden.");
+      return;
+    }
+    if (!window.confirm(`${targets.length} übersprungene Mails endgültig ignorieren?\nDiese Mails werden bei zukünftigen Scans nicht erneut angezeigt.`)) return;
+    setBulkDeleting(true);
+    try {
+      const r = await api.post("/module-mail-inbox/preview-bulk-delete", {
+        items: targets.map((it) => ({
+          message_id: it.message_id,
+          subject: it.subject || "",
+          from_email: it.from_email || "",
+        })),
+      });
+      toast.success(`${r.data.tombstoned} Mails dauerhaft ignoriert`);
+      // Lokal entfernen
+      const targetKeys = new Set(targets.map((it) => `${it.account_id}/${it.folder}/${it.uid}`));
+      setPreviewItems((prev) => prev.filter((x) => !targetKeys.has(`${x.account_id}/${x.folder}/${x.uid}`)));
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Massen-Löschen fehlgeschlagen");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const showPreviewDetail = async (it) => {
     setPreviewDetail({ _meta: it, loading: true });
     setPreviewDetailLoading(true);
@@ -537,6 +568,18 @@ const ModuleMailInboxPage = () => {
                 >
                   Alle anzeigen
                 </button>
+                {previewMode === "skipped" && (
+                  <button
+                    onClick={bulkDeleteSkipped}
+                    disabled={bulkDeleting}
+                    className="px-3 py-1 rounded-sm border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50 inline-flex items-center gap-1 text-xs"
+                    title="Alle aktuell angezeigten übersprungenen Mails dauerhaft ignorieren"
+                    data-testid="btn-preview-bulk-delete"
+                  >
+                    {bulkDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    Alle Übersprungenen löschen
+                  </button>
+                )}
                 <button
                   onClick={openPreview}
                   className="ml-auto px-3 py-1 rounded-sm border hover:bg-accent flex items-center gap-1"
