@@ -55,6 +55,20 @@ Sie soll **mit dem Betrieb wachsen**: vom Einzel-Tischler über kleine Teams bis
 > Duplikate müssen verhindert werden, Löschen muss möglich sein
 > (Ordnung schaffen)."
 
+**Mail-Filter-Stack (4 Stufen, Stand 05.05.2026 — bitte NICHT ohne Ralphs Freigabe ändern):**
+1. Postfach-Regel (OR-Logik) — `accounts.filter_matches()`
+2. Kein Reply-/Auto-Präfix (`Re:`/`AW:`/`Fwd:`/`Read:`/...) — `accounts._is_reply_or_auto()`
+3. ≥ 5 von 8 Pflichtfeldern (vorname/nachname/email/telefon/strasse/plz/ort/nachricht) — `parser.is_complete_form()`
+4. Kein Duplikat (DB + Tombstone in `module_mail_inbox_deleted`)
+
+**Mail-Übernahme-Flow (Stand 05.05.2026):**
+- Klick auf Mail-Karte → `MailDetailModal.jsx` öffnet sich (zeigt Volltext + erkannte Daten)
+- 3 Aktionen: Übernehmen / Ignorieren / Löschen
+- „Übernehmen" navigiert direkt zu `/kunden?edit={kunde_id}` — die **echte Datenmaske** im Kunden-Modul. KEIN eigenes Bearbeitungs-Formular im Mail-Modul!
+
+**ANTI-PATTERN (am 05.05.2026 entfernt nach Ralph-Beschwerde):**
+- ❌ `MailAcceptModal.jsx` mit eigenem Kundenformular im Mail-Modul → war Doppelung der Datenmaske → **gelöscht**.
+
 **Damit darf ein Agent ARBEITEN:**
 - Filter erweitern wenn Ralph neue Marker liefert
 - Parser anpassen für neue Formular-Formate
@@ -67,6 +81,8 @@ Sie soll **mit dem Betrieb wachsen**: vom Einzel-Tischler über kleine Teams bis
 - Statistik-Features wenn nicht ausdrücklich verlangt
 - Mail-Versand-Funktionen (-> wäre Mailprogramm-Ersatz)
 - Komplexe Workflow-Engines
+- **Eigene Form-Felder im Mail-Modul** (Datenmasken-Verstoß!)
+- Den 4-stufigen Filter-Stack lockern (Müll-Risiko) oder verschärfen (Anfrage-Verlust-Risiko)
 
 ---
 
@@ -93,12 +109,13 @@ Falls eine Antwort „Nein" lautet: NICHT bauen. Stattdessen Ralph fragen.
 
 ## Bewertungsphase
 
-Ralph muss in 3 Wochen (Stand: 05.05.2026) sein **Urteil über Emergent als KI-Plattform** abgeben. Dieser Code ist Teil seiner Bewertung. Konsequenzen für Agent-Verhalten:
+Ralph muss in 3 Wochen (Stand: 05.05.2026) sein **Urteil über Emergent als KI-Plattform** abgeben. Dieser Code ist Teil seiner Bewertung. Ralph will den **Leistungstest „wie gut ist EMERGENT"** gewinnen — d.h. die Plattform soll nicht an seinen praktischen Anforderungen scheitern. Konsequenzen für Agent-Verhalten:
 
 - **Keine neuen Module ohne Freigabe**
 - **Kein Feature-Drauflos-Programmieren**
 - **Bestehende Funktionen stabilisieren > neue Features**
 - **Klar und kurz kommunizieren — keine Marketing-Floskeln**
+- **„Jetzt-Software" + „Zukunftsfähig"** — was Ralph heute braucht wird so gebaut, dass es morgen erweitert werden kann (Module-First, Datenmasken). Nichts hardcoden, nichts duplizieren.
 
 ---
 

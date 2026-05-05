@@ -45,6 +45,35 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 | `monteur_app` | Mobile PWA mit Bildkompression |
 | `routes/portal.py` (legacy) | Kundenportale - heute Datenmasken-fähig gemacht |
 
+## Zuletzt abgeschlossen (05.05.2026)
+
+- **Mail-Inbox „Mail öffnen + prüfen"**-Flow (großer Cut). Anti-Pattern entfernt:
+  - ❌ `MailAcceptModal.jsx` gelöscht (war ein Doppel-Kundenformular im Mail-Modul → Verstoß gegen VISION.md „Datenmasken nicht duplizieren")
+  - ✅ Neues `MailDetailModal.jsx` (`/app/frontend/src/components/`): Klick auf Mail-Karte oder „Öffnen / Prüfen" → Volltext + erkannte Daten + 3 Aktionen (Übernehmen / Ignorieren / Löschen). „Übernehmen" navigiert direkt ins **bestehende Kunden-Modul** (`/kunden?edit={id}`), wo die echte Datenmaske ist
+  - ✅ `KundenModulPage.jsx` öffnet bei `?edit={id}` automatisch die Bearbeiten-Maske
+- **Mail-Filter neu in 4 Stufen** (siehe Section unten — wichtig für jeden Agenten):
+  - **Stufe 2 NEU**: Reply-Prefix Hard-Block. Mails mit Betreff-Anfang `Re:`/`AW:`/`Fw:`/`Fwd:`/`WG:`/`Read:`/`Undeliverable:`/`Automatic reply:`/`Automatische Antwort:`/`Out of office:` werden **immer** abgelehnt (`_is_reply_or_auto` in `module_mail_inbox/accounts.py`)
+  - **Stufe 3 NEU**: Vollständigkeitscheck. Nur Mails mit ≥ 5 von 8 Pflichtfeldern (`vorname`, `nachname`, `email`, `telefon`, `strasse`, `plz`, `ort`, `nachricht`) kommen rein. `is_complete_form()` in `module_mail_inbox/parser.py` (`MIN_COMPLETENESS = 5`)
+  - **Bonus-Bugfix Parser**: Leere Felder „klauten" sich gegenseitig die nächste Zeile (`\s*` matchte `\n`) → ersetzt durch `[ \t]*`. Strasse/PLZ/Ort werden jetzt sauber gelesen.
+- **Mail-Vorschau Lösch-Funktionen** (`module-mail-inbox/preview-delete` + `preview-bulk-delete`):
+  - Lösch-Button pro Zeile in „Übersprungene anzeigen"-Modal
+  - **Massen-Aktion** „Alle Übersprungenen löschen" oben in der Tab-Leiste — legt Tombstones für alle aktuell angezeigten übersprungenen Mails auf einen Schlag an
+  - Jede Lösch-Aktion = Tombstone in `module_mail_inbox_deleted` per `message_id` → kommt nie wieder
+- **Cleanup-Run** der bestehenden DB: 8 Reply-/Fwd-/Read-Einträge automatisch auf `ignoriert` gesetzt + Tombstone
+
+## ⚠️ Mail-Filter — der 4-stufige Reinigungs-Stack (Stand 05.05.2026)
+
+**Eine Mail wird nur in `module_mail_inbox` als `vorschlag` gespeichert wenn ALLE 4 Bedingungen zutreffen.** Reihenfolge im Code, kurzschluss-evaluiert:
+
+| # | Bedingung | Wo? | Was schließt es aus |
+|---|---|---|---|
+| 1 | Postfach-Filter (OR-Regeln) trifft | `accounts.filter_matches()` | Newsletter, Werbung, fremde Domains |
+| 2 | Kein Reply-/Auto-Präfix im Betreff | `accounts._is_reply_or_auto()` | Konversations-Müll, Lesebestätigungen, Out-of-Office |
+| 3 | ≥ 5 von 8 Pflichtfeldern ausgefüllt | `parser.is_complete_form()` | leere Formulare, Spam mit nur „Anrede: Herr" |
+| 4 | Kein Duplikat (DB + Tombstone) | `routes.scan` | bereits importierte oder gelöschte Mails |
+
+**ÄNDERUNGEN AN DIESEM STACK NUR MIT RALPHS FREIGABE.** Lockerung verursacht Müll-Importe; Verschärfung verliert echte Anfragen.
+
 ## Zuletzt abgeschlossen (04.05.2026)
 
 - **Papierkorb (`module_papierkorb`)**: Soft-Delete für Kunden mit App-Start-Frage. Backend-Modul mit eigener Route `/api/module-papierkorb` (move/list/count/restore/purge/purge-all). Soft-Delete setzt `deleted_at`+`deleted_by`-Felder am Kunden, `module_kunden.list` filtert sie raus. Endgültiges Löschen erfordert **Login-Passwort** (bcrypt-Verify) + nutzt bestehendes `module_kunde_delete`-Cascade mit Backup-ZIP-Mail. Frontend: vereinfachter Lösch-Dialog (kein Name-eintippen mehr — Soft-Delete als Pflaster), neue Komponente `TrashStartupCheck.jsx` zeigt beim Login automatisch ein Modal mit allen Papierkorb-Einträgen + „Wiederherstellen" pro Eintrag + „Alle X endgültig löschen" mit Passwort-Feld + „Später entscheiden". Pro Browser-Session nur einmal abgefragt (sessionStorage).
