@@ -27,10 +27,32 @@ def _empty():
         "nachname": "",
         "telefon": "",
         "email": "",
+        "strasse": "",
+        "plz": "",
+        "ort": "",
         "nachricht": "",
         "source_url": "",
         "format": "",
     }
+
+
+# Felder, die ein vollständiges Kontaktformular haben sollte.
+# Anrede und source_url zählen NICHT mit (Anrede manchmal optional).
+COMPLETENESS_FIELDS = ["vorname", "nachname", "telefon", "email", "strasse", "plz", "ort", "nachricht"]
+# Mindestens so viele dieser Felder müssen ausgefüllt sein, damit eine Mail
+# als echtes Kontaktformular gilt. Ralph-Vorgabe: ≥5 Zeilen.
+MIN_COMPLETENESS = 5
+
+
+def is_complete_form(parsed: dict) -> tuple[bool, int]:
+    """Prüft, ob ein geparstes Anfrage-Dict ein echtes Kontaktformular ist.
+    Returns: (ok, anzahl_gefuellte_felder)
+    """
+    if not parsed:
+        return False, 0
+    filled = sum(1 for f in COMPLETENESS_FIELDS if (parsed.get(f) or "").strip())
+    return filled >= MIN_COMPLETENESS, filled
+
 
 
 def _parse_jimdo(body: str) -> dict:
@@ -47,23 +69,23 @@ def _parse_jimdo(body: str) -> dict:
         out["source_url"] = m.group(0).rstrip(".,;:")
 
     # ── NEUES Jimdo-Format: separate Vor-/Nachname-Felder ──
-    m = re.search(r"^\s*Auswahlliste\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+    m = re.search(r"^[ \t]*Auswahlliste[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
     if m:
         raw = m.group(1).strip()
         if re.match(r"^(Herr|Frau|Divers)\s*$", raw, re.I):
             out["anrede"] = raw.capitalize()
 
-    m = re.search(r"^\s*Vorname\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+    m = re.search(r"^[ \t]*Vorname[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
     if m:
         out["vorname"] = m.group(1).strip()
 
-    m = re.search(r"^\s*Nachname\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+    m = re.search(r"^[ \t]*Nachname[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
     if m:
         out["nachname"] = m.group(1).strip()
 
     # ── ALTES Jimdo-Format (nur wenn neues nichts geliefert hat) ──
     if not out["anrede"] and not out["nachname"]:
-        m = re.search(r"^\s*Frau\s*Herr\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+        m = re.search(r"^[ \t]*Frau[ \t]*Herr[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
         if m:
             raw = m.group(1).strip()
             only_salutation = re.match(r"^(Herr|Frau)\s*$", raw, re.I)
@@ -77,7 +99,7 @@ def _parse_jimdo(body: str) -> dict:
                 out["nachname"] = raw
 
     if not out["vorname"] and not out["nachname"]:
-        m = re.search(r"^\s*Name\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+        m = re.search(r"^[ \t]*Name[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
         if m:
             raw_name = m.group(1).strip()
             parts = raw_name.split()
@@ -88,11 +110,11 @@ def _parse_jimdo(body: str) -> dict:
                 out["vorname"] = raw_name
 
     # Telefon
-    m = re.search(r"^\s*Telefonnummer\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+    m = re.search(r"^[ \t]*Telefonnummer[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
     if m:
         out["telefon"] = m.group(1).strip()
     if not out["telefon"]:
-        m = re.search(r"^\s*Telefon\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+        m = re.search(r"^[ \t]*Telefon[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
         if m:
             out["telefon"] = m.group(1).strip()
 
@@ -108,6 +130,17 @@ def _parse_jimdo(body: str) -> dict:
     )
     if m:
         out["nachricht"] = m.group(1).strip()
+
+    # Adresse: Strasse / PLZ / Ort (neue Jimdo-Forms)
+    m = re.search(r"^[ \t]*(?:Stra(?:ß|ss)e|Strasse|Anschrift)[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
+    if m:
+        out["strasse"] = m.group(1).strip()
+    m = re.search(r"^[ \t]*PLZ[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
+    if m:
+        out["plz"] = m.group(1).strip()
+    m = re.search(r"^[ \t]*Ort[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
+    if m:
+        out["ort"] = m.group(1).strip()
 
     return out
 
@@ -162,7 +195,7 @@ def _parse_alt(body: str, subject: str = "", from_email: str = "") -> dict:
 def parse_anfrage(body: str, subject: str = "", from_email: str = "") -> dict:
     """Auto-Erkennung welches Format vorliegt."""
     body = (body or "").replace("\r\n", "\n").replace("\r", "\n")
-    is_jimdo_new = bool(re.search(r"^\s*Vorname\s*:", body, re.I | re.M)) and bool(re.search(r"^\s*Nachname\s*:", body, re.I | re.M))
+    is_jimdo_new = bool(re.search(r"^[ \t]*Vorname[ \t]*:", body, re.I | re.M)) and bool(re.search(r"^[ \t]*Nachname[ \t]*:", body, re.I | re.M))
     is_jimdo_old = "Frau Herr:" in body and "Telefonnummer:" in body
     if is_jimdo_new or is_jimdo_old:
         result = _parse_jimdo(body)

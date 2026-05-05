@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from database import db, logger
 from routes.auth import get_current_user
 from routes.anfragen_fetcher import _extract_body
-from .parser import parse_anfrage
+from .parser import parse_anfrage, is_complete_form, MIN_COMPLETENESS, COMPLETENESS_FIELDS
 from .spam_filter import evaluate_spam
 from .accounts import get_active_accounts, filter_matches, _is_reply_or_auto
 
@@ -224,6 +224,17 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                             parsed["email"] = reply_to
                         if not parsed.get("email") and from_email and "@" in from_email and "jimdo.com" not in from_email.lower():
                             parsed["email"] = from_email
+
+                        # Vollständigkeitsprüfung: ein echtes Kontaktformular hat
+                        # mindestens MIN_COMPLETENESS gefüllte Felder.
+                        # Spart uns Mails wie "Anfrage" mit nur 1 Zeile Text.
+                        complete_ok, filled_count = is_complete_form(parsed)
+                        if not complete_ok:
+                            a_skipped += 1
+                            logger.info(
+                                f"mail-inbox[{acc_label}]: übersprungen (nur {filled_count}/{len(COMPLETENESS_FIELDS)} Felder ausgefüllt) – {subject!r}"
+                            )
+                            continue
 
                         spam = evaluate_spam(parsed, body_excerpt=body, from_email=from_email)
                         initial_status = "spam_verdacht" if spam["is_spam"] else "vorschlag"
