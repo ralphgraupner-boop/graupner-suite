@@ -39,6 +39,19 @@ FILTER_TYPES = {
     "from_equals",        # Absender ist exakt
 }
 
+# Hart ausgeschlossen: Antworten, Weiterleitungen, Auto-Responses
+# Diese greifen IMMER, unabhängig davon was die Regeln sagen — denn
+# eine "Re:", "AW:", "Fwd:"-Mail ist per Definition KEINE neue Anfrage.
+REPLY_PREFIXES = (
+    "re:", "aw:", "fw:", "fwd:", "wg:",
+    "read:",                 # Lesebestätigungen (z.B. DEVK)
+    "undeliverable:",        # Bounce
+    "automatic reply:",      # Out-of-Office (engl.)
+    "automatische antwort:", # Out-of-Office (dt.)
+    "out of office:",
+    "abwesenheit",           # variant ohne Doppelpunkt
+)
+
 # Default-Regeln für Bestandspostfächer ohne explizite Filter
 DEFAULT_FILTER_RULES = [
     {"type": "from_contains", "value": "no-reply@jimdo.com"},
@@ -47,11 +60,28 @@ DEFAULT_FILTER_RULES = [
 ]
 
 
+def _is_reply_or_auto(subject: str) -> bool:
+    """Erkennt Antwort-/Weiterleitungs-/Auto-Response-Betreffs.
+    Prüft den Anfang des (getrimmten, lower-cased) Subjects gegen REPLY_PREFIXES.
+    Robust gegen mehrfaches Verschachteln wie "Fwd: Re: AW: ..." — solange
+    das erste Token matcht, reicht das."""
+    s = (subject or "").strip().lower()
+    if not s:
+        return False
+    for p in REPLY_PREFIXES:
+        if s.startswith(p):
+            return True
+    return False
+
+
 def filter_matches(rules: list, subject: str, from_email: str) -> bool:
     """Prüft, ob mindestens eine Regel auf die Mail passt (OR-Logik).
-    Wenn keine Regeln gesetzt → True zurückgeben heisst Aufrufer entscheidet.
-    Diese Funktion erwartet immer mind. 1 Regel und liefert True bei OR-Match."""
+    Zusätzlich: Mails mit Antwort-/Weiterleitungs-Präfix im Betreff werden
+    IMMER abgelehnt — denn das sind keine neuen Anfragen."""
     if not rules:
+        return False
+    # Harter Ausschluss BEVOR wir überhaupt regeln prüfen
+    if _is_reply_or_auto(subject):
         return False
     s = (subject or "").lower()
     f = (from_email or "").lower()
