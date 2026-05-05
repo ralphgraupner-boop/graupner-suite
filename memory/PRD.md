@@ -114,3 +114,5 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 - Portale: 2-Spalten-Layout (links Schriftwechsel, rechts sticky Bilder/Dokumente)
 - Bildkompression: Browser → 1920px / JPEG 80% (passt zu Server-Default)
 - Passwort-Generator: nur eindeutige Zeichen (Helper `gen_portal_password()`)
+- **Mail-Inbox Flow (05.05.2026):** Klick auf Karte oder „Öffnen / Prüfen" öffnet `MailDetailModal` → Volltext + erkannte Daten + 3 Aktionen (Übernehmen / Ignorieren / Löschen). Bei „Übernehmen" wird Kunde mit geparsten Daten angelegt und automatisch zum bestehenden **Kunden-Modul** (`?edit={id}`) navigiert — kein Doppel-Formular im Mail-Modul (folgt VISION.md „Datenmasken nicht duplizieren").
+

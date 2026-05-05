@@ -45,11 +45,27 @@ const KundenModulPage = () => {
   const location = useLocation();
 
   // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
+  // URL-Parameter ?edit={kundeId} -> Datenmaske für diesen Kunden direkt öffnen
+  //   (wird z.B. von der Mail-Inbox nach "Als Kunde übernehmen" genutzt)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const f = params.get("filter");
     if (f) setStatusFilter(f);
-  }, [location.search]);
+    const editId = params.get("edit");
+    if (editId && kunden.length > 0) {
+      const k = kunden.find((x) => x.id === editId);
+      if (k) {
+        // Status auf "alle" stellen, damit der neue Kunde sicher sichtbar ist
+        setStatusFilter("alle");
+        setEditKunde(k);
+        setShowModal(true);
+        // edit-Param aus URL entfernen, damit Refresh nicht erneut öffnet
+        const cleaned = new URLSearchParams(location.search);
+        cleaned.delete("edit");
+        navigate(`${location.pathname}${cleaned.toString() ? "?" + cleaned.toString() : ""}`, { replace: true });
+      }
+    }
+  }, [location.search, kunden]);  // eslint-disable-line
 
   useEffect(() => { loadKunden(); }, []);
 

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download, BarChart3 } from "lucide-react";
+import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download, BarChart3, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Modal } from "@/components/common";
-import MailAcceptModal from "@/components/MailAcceptModal";
+import MailDetailModal from "@/components/MailDetailModal";
 
 const STATUS_LABELS = {
   vorschlag: { label: "Offen", color: "bg-blue-100 text-blue-800" },
@@ -13,6 +14,7 @@ const STATUS_LABELS = {
 };
 
 const ModuleMailInboxPage = () => {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -28,8 +30,8 @@ const ModuleMailInboxPage = () => {
   const [previewDetail, setPreviewDetail] = useState(null);  // {body, subject, from, ...}
   const [previewDetailLoading, setPreviewDetailLoading] = useState(false);
 
-  // Übernahme-Modal
-  const [acceptEntry, setAcceptEntry] = useState(null);
+  // Detail-Modal: Mail prüfen + entscheiden
+  const [detailEntry, setDetailEntry] = useState(null);
 
   // Statistik
   const [stats, setStats] = useState(null);
@@ -75,9 +77,17 @@ const ModuleMailInboxPage = () => {
     }
   };
 
-  const accept = (entry) => {
-    // Öffnet Modal mit vorausgefüllten Feldern + Bemerkung
-    setAcceptEntry(entry);
+  const accept = async (entry) => {
+    // Direkt übernehmen mit den geparsten Daten und ins Kunden-Modul navigieren.
+    // (Bearbeiten passiert dort in der bestehenden Datenmaske – keine Doppelung.)
+    try {
+      const r = await api.post(`/module-mail-inbox/accept/${entry.id}`);
+      toast.success(`Kunde „${r.data.kunde_name}" angelegt`);
+      try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
+      navigate(`/kunden?edit=${r.data.kunde_id}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Übernahme fehlgeschlagen");
+    }
   };
 
   const reject = async (entry) => {
@@ -354,7 +364,13 @@ const ModuleMailInboxPage = () => {
             const sb = STATUS_LABELS[e.status] || { label: e.status, color: "bg-slate-100" };
             const fullName = [p.vorname, p.nachname].filter(Boolean).join(" ") || e.from_name || "(ohne Name)";
             return (
-              <div key={e.id} className="border rounded-sm p-4 bg-card" data-testid={`mail-entry-${e.id}`}>
+              <div
+                key={e.id}
+                className="border rounded-sm p-4 bg-card hover:bg-accent/30 cursor-pointer transition-colors"
+                onClick={() => setDetailEntry(e)}
+                data-testid={`mail-entry-${e.id}`}
+                title="Anklicken zum Öffnen und Prüfen"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -368,35 +384,44 @@ const ModuleMailInboxPage = () => {
                       {e.received_at ? new Date(e.received_at).toLocaleString("de-DE") : ""} · {e.subject}
                     </p>
                   </div>
-                  {e.status === "vorschlag" && (
-                    <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                      <button
-                        onClick={() => accept(e)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-sm hover:bg-emerald-700"
-                        data-testid={`btn-accept-${e.id}`}
-                      >
-                        <Check className="w-3.5 h-3.5" /> Als Kunde übernehmen
-                      </button>
-                      <button
-                        onClick={() => reject(e)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-sm hover:bg-muted"
-                        data-testid={`btn-reject-${e.id}`}
-                        title="Ignorieren (bleibt zur Kontrolle in der DB)"
-                      >
-                        <X className="w-3.5 h-3.5" /> Ignorieren
-                      </button>
-                      <button
-                        onClick={() => deleteEntry(e)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-red-200 text-red-700 rounded-sm hover:bg-red-50"
-                        data-testid={`btn-delete-${e.id}`}
-                        title="Endgültig löschen (wird bei neuen Scans nicht erneut importiert)"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Löschen
-                      </button>
-                    </div>
-                  )}
-                  {e.status !== "vorschlag" && e.status !== "übernommen" && (
-                    <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-2 flex-shrink-0 flex-wrap" onClick={(ev) => ev.stopPropagation()}>
+                    <button
+                      onClick={() => setDetailEntry(e)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-sm hover:bg-primary/90"
+                      data-testid={`btn-open-${e.id}`}
+                      title="Mail öffnen, Inhalt prüfen, dann entscheiden"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Öffnen / Prüfen
+                    </button>
+                    {e.status === "vorschlag" && (
+                      <>
+                        <button
+                          onClick={() => accept(e)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-sm hover:bg-emerald-700"
+                          data-testid={`btn-accept-${e.id}`}
+                          title="Direkt als Kunde anlegen und im Kunden-Modul öffnen"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Übernehmen
+                        </button>
+                        <button
+                          onClick={() => reject(e)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-sm hover:bg-muted"
+                          data-testid={`btn-reject-${e.id}`}
+                          title="Ignorieren (bleibt zur Kontrolle in der DB)"
+                        >
+                          <X className="w-3.5 h-3.5" /> Ignorieren
+                        </button>
+                        <button
+                          onClick={() => deleteEntry(e)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-red-200 text-red-700 rounded-sm hover:bg-red-50"
+                          data-testid={`btn-delete-${e.id}`}
+                          title="Endgültig löschen (wird bei neuen Scans nicht erneut importiert)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Löschen
+                        </button>
+                      </>
+                    )}
+                    {e.status !== "vorschlag" && e.status !== "übernommen" && (
                       <button
                         onClick={() => deleteEntry(e)}
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-red-200 text-red-700 rounded-sm hover:bg-red-50"
@@ -405,11 +430,11 @@ const ModuleMailInboxPage = () => {
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Löschen
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm" onClick={(ev) => ev.stopPropagation()}>
                   {p.email && (
                     <div className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-muted-foreground" /><a href={`mailto:${p.email}`} className="text-primary hover:underline">{p.email}</a></div>
                   )}
@@ -424,15 +449,12 @@ const ModuleMailInboxPage = () => {
                   )}
                 </div>
 
-                {p.nachricht && (
-                  <details className="mt-3">
-                    <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">Nachricht anzeigen</summary>
-                    <pre className="mt-2 text-xs whitespace-pre-wrap bg-muted/40 rounded-sm p-3 border max-h-60 overflow-auto">{p.nachricht}</pre>
-                  </details>
-                )}
-
                 {e.status === "übernommen" && e.kunde_id && (
-                  <a href={`/kunden#${e.kunde_id}`} className="text-xs text-primary hover:underline mt-2 inline-block">
+                  <a
+                    href={`/kunden?edit=${e.kunde_id}`}
+                    onClick={(ev) => ev.stopPropagation()}
+                    className="text-xs text-primary hover:underline mt-2 inline-block"
+                  >
                     → zum Kundeneintrag
                   </a>
                 )}
@@ -664,14 +686,11 @@ const ModuleMailInboxPage = () => {
         )}
       </Modal>
 
-      {acceptEntry && (
-        <MailAcceptModal
-          entry={acceptEntry}
-          onClose={() => setAcceptEntry(null)}
-          onAccepted={async () => {
-            setAcceptEntry(null);
-            await load();
-          }}
+      {detailEntry && (
+        <MailDetailModal
+          entry={detailEntry}
+          onClose={() => setDetailEntry(null)}
+          onChanged={async () => { await load(); }}
         />
       )}
     </div>
