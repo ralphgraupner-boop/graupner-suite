@@ -3,6 +3,7 @@ import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink,
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Modal } from "@/components/common";
+import MailAcceptModal from "@/components/MailAcceptModal";
 
 const STATUS_LABELS = {
   vorschlag: { label: "Offen", color: "bg-blue-100 text-blue-800" },
@@ -26,6 +27,9 @@ const ModuleMailInboxPage = () => {
   const [importingUid, setImportingUid] = useState("");
   const [previewDetail, setPreviewDetail] = useState(null);  // {body, subject, from, ...}
   const [previewDetailLoading, setPreviewDetailLoading] = useState(false);
+
+  // Übernahme-Modal
+  const [acceptEntry, setAcceptEntry] = useState(null);
 
   // Statistik
   const [stats, setStats] = useState(null);
@@ -71,15 +75,9 @@ const ModuleMailInboxPage = () => {
     }
   };
 
-  const accept = async (entry) => {
-    try {
-      const r = await api.post(`/module-mail-inbox/accept/${entry.id}`);
-      toast.success(`Kunde "${r.data.kunde_name}" angelegt`);
-      await load();
-      try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || "Übernahme fehlgeschlagen");
-    }
+  const accept = (entry) => {
+    // Öffnet Modal mit vorausgefüllten Feldern + Bemerkung
+    setAcceptEntry(entry);
   };
 
   const reject = async (entry) => {
@@ -665,6 +663,17 @@ const ModuleMailInboxPage = () => {
           </div>
         )}
       </Modal>
+
+      {acceptEntry && (
+        <MailAcceptModal
+          entry={acceptEntry}
+          onClose={() => setAcceptEntry(null)}
+          onAccepted={async () => {
+            setAcceptEntry(null);
+            await load();
+          }}
+        />
+      )}
     </div>
   );
 };

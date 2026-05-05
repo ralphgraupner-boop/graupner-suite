@@ -370,30 +370,50 @@ async def list_inbox(status: str = "vorschlag", limit: int = 100, user=Depends(g
 
 
 @router.post("/accept/{entry_id}")
-async def accept(entry_id: str, user=Depends(get_current_user)):
+async def accept(entry_id: str, body: dict | None = None, user=Depends(get_current_user)):
+    """Übernimmt eine Mail-Anfrage als neuen Kunden.
+    Optional darf der Frontend-Body folgende Felder überschreiben/ergänzen:
+      vorname, nachname, anrede, email, phone (= telefon), strasse, plz, ort,
+      anliegen (Beschreibung), bemerkung, kontakt_status, customer_type, kategorie
+    """
     entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
     if not entry:
         raise HTTPException(404, "Eintrag nicht gefunden")
     if entry.get("status") == "übernommen":
         raise HTTPException(400, "Bereits übernommen")
     parsed = entry.get("parsed") or {}
+    body = body or {}
+
+    def _pick(field_in_body: str, fallback: str = "") -> str:
+        v = body.get(field_in_body)
+        return v.strip() if isinstance(v, str) and v.strip() else fallback
 
     new_kunde_id = str(uuid.uuid4())
-    full_name = " ".join(p for p in [parsed.get("vorname", ""), parsed.get("nachname", "")] if p).strip()
+    vorname = _pick("vorname", parsed.get("vorname", ""))
+    nachname = _pick("nachname", parsed.get("nachname", ""))
+    anrede = _pick("anrede", parsed.get("anrede", ""))
+    full_name = " ".join(p for p in [vorname, nachname] if p).strip()
+
     new_kunde = {
         "id": new_kunde_id,
-        "anrede": parsed.get("anrede", ""),
-        "vorname": parsed.get("vorname", ""),
-        "nachname": parsed.get("nachname", ""),
+        "anrede": anrede,
+        "vorname": vorname,
+        "nachname": nachname,
         "name": full_name or entry.get("from_name", ""),
-        "email": parsed.get("email") or entry.get("reply_to", "") or "",
-        "phone": parsed.get("telefon", ""),
-        "kontakt_status": "Anfrage",
-        "quelle": "Jimdo Kontaktformular",
-        "anliegen": parsed.get("nachricht", ""),
+        "email": _pick("email", parsed.get("email") or entry.get("reply_to", "") or ""),
+        "phone": _pick("phone", parsed.get("telefon", "")),
+        "strasse": _pick("strasse", parsed.get("strasse", "")),
+        "plz": _pick("plz", parsed.get("plz", "")),
+        "ort": _pick("ort", parsed.get("ort", "")),
+        "kontakt_status": _pick("kontakt_status", "Anfrage"),
+        "customer_type": _pick("customer_type", "Privat"),
+        "quelle": _pick("quelle", "Jimdo Kontaktformular"),
+        "anliegen": _pick("anliegen", parsed.get("nachricht", "")),
+        "bemerkung": _pick("bemerkung", ""),
+        "categories": body.get("categories") if isinstance(body.get("categories"), list) else [],
         "source_url": parsed.get("source_url", ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "created_by": getattr(user, "username", "system"),
+        "created_by": getattr(user, "username", "system") if not isinstance(user, dict) else (user.get("username") or "system"),
         "imported_from_mail_id": entry_id,
     }
     await db.module_kunden.insert_one(new_kunde)
@@ -404,7 +424,7 @@ async def accept(entry_id: str, user=Depends(get_current_user)):
             "status": "übernommen",
             "kunde_id": new_kunde_id,
             "user_action_at": datetime.now(timezone.utc).isoformat(),
-            "user_action_by": getattr(user, "username", None),
+            "user_action_by": user.get("username") if isinstance(user, dict) else getattr(user, "username", None),
         }},
     )
     return {"ok": True, "kunde_id": new_kunde_id, "kunde_name": new_kunde["name"]}
