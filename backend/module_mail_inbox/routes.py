@@ -505,6 +505,42 @@ async def delete_entry(entry_id: str, user=Depends(get_current_user)):
     return {"ok": True, "deleted": 1}
 
 
+@router.post("/preview-delete")
+async def preview_delete(body: dict, user=Depends(get_current_user)):
+    """Lösch-Aktion aus der „Übersprungene anzeigen"-Vorschau.
+    Erwartet: { message_id, subject?, from_email? }
+    Wirkung:
+      - Tombstone für die message_id wird angelegt → nie wieder importiert
+      - Falls die Mail doch schon in der Haupt-Collection liegt
+        (z.B. zuvor manuell importiert), wird sie zusätzlich entfernt.
+    """
+    mid = (body or {}).get("message_id") or ""
+    if not mid:
+        raise HTTPException(400, "message_id erforderlich")
+    subject = (body or {}).get("subject", "")
+    from_email = (body or {}).get("from_email", "")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.module_mail_inbox_deleted.update_one(
+        {"message_id": mid},
+        {"$set": {
+            "message_id": mid,
+            "subject": subject,
+            "from_email": from_email,
+            "deleted_at": now,
+            "deleted_by": getattr(user, "username", None),
+            "source": "preview-delete",
+        }},
+        upsert=True,
+    )
+    removed = 0
+    existing = await db.module_mail_inbox.find_one({"message_id": mid}, {"_id": 0, "id": 1, "status": 1})
+    if existing and existing.get("status") != "übernommen":
+        r = await db.module_mail_inbox.delete_one({"message_id": mid})
+        removed = r.deleted_count
+    return {"ok": True, "tombstoned": True, "removed_from_db": removed}
+
+
+
 @router.post("/delete-all-spam")
 async def delete_all_spam(user=Depends(get_current_user)):
     """Alle Einträge mit Status 'spam_verdacht' endgültig löschen.

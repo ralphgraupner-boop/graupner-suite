@@ -174,6 +174,34 @@ const ModuleMailInboxPage = () => {
     }
   };
 
+  const deletePreviewItem = async (it) => {
+    if (!it.message_id) {
+      toast.error("Keine Message-ID vorhanden – Mail kann nicht permanent ignoriert werden.");
+      return;
+    }
+    if (!window.confirm(`„${it.subject?.slice(0, 80) || it.from_email}" endgültig ignorieren?\nWird bei nächsten Scans nicht erneut angezeigt.`)) return;
+    const key = `${it.account_id}/${it.folder}/${it.uid}`;
+    setImportingUid(key);  // gleiche Spinner-State, blockiert beide Buttons
+    try {
+      await api.post("/module-mail-inbox/preview-delete", {
+        message_id: it.message_id,
+        subject: it.subject || "",
+        from_email: it.from_email || "",
+      });
+      toast.success("Mail dauerhaft ignoriert");
+      // Lokal aus Liste entfernen
+      setPreviewItems((prev) => prev.filter((x) =>
+        !(x.account_id === it.account_id && x.folder === it.folder && x.uid === it.uid)
+      ));
+      // Falls die Mail in der Haupt-DB war, neu laden
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
+    } finally {
+      setImportingUid("");
+    }
+  };
+
   const showPreviewDetail = async (it) => {
     setPreviewDetail({ _meta: it, loading: true });
     setPreviewDetailLoading(true);
@@ -605,6 +633,16 @@ const ModuleMailInboxPage = () => {
                                 ) : (
                                   <span className="text-xs text-muted-foreground italic px-2">bereits drin</span>
                                 )}
+                                <button
+                                  onClick={() => deletePreviewItem(it)}
+                                  disabled={isImporting}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-sm border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                  title="Endgültig ignorieren – wird bei zukünftigen Scans nicht erneut angezeigt"
+                                  data-testid={`btn-preview-delete-${it.uid}`}
+                                >
+                                  {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                  Löschen
+                                </button>
                               </div>
                             </div>
                           );
@@ -661,6 +699,20 @@ const ModuleMailInboxPage = () => {
               </pre>
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
+              {previewDetail._meta && (
+                <button
+                  onClick={async () => {
+                    await deletePreviewItem(previewDetail._meta);
+                    setPreviewDetail(null);
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-sm border border-red-200 text-red-700 hover:bg-red-50"
+                  title="Mail dauerhaft ignorieren"
+                  data-testid="btn-preview-delete-from-detail"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Löschen
+                </button>
+              )}
               {previewDetail._meta && !previewDetail._meta.is_duplicate && (
                 <button
                   onClick={async () => {
