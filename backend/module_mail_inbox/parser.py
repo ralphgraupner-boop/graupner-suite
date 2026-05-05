@@ -34,7 +34,11 @@ def _empty():
 
 
 def _parse_jimdo(body: str) -> dict:
-    """Format A – neues Jimdo-Formular mit Zeilenumbrüchen."""
+    """Format A – Jimdo-Formular mit Zeilenumbrüchen.
+    Unterstützt zwei Varianten:
+      - Alt:  'Frau Herr:' + 'Name:' (1 Feld für Vor+Nachname)
+      - Neu:  'Auswahlliste:' + 'Vorname:' + 'Nachname:' (separate Felder)
+    """
     out = _empty()
     out["format"] = "jimdo"
 
@@ -42,44 +46,57 @@ def _parse_jimdo(body: str) -> dict:
     if m:
         out["source_url"] = m.group(0).rstrip(".,;:")
 
-    # Anrede + optional Nachname (in "Frau Herr:")
-    # Varianten:
-    #   "Frau Herr: Herr"                 -> Anrede="Herr", Nachname leer
-    #   "Frau Herr: Herr Mustermann"      -> Anrede="Herr", Nachname="Mustermann"
-    #   "Frau Herr: Mustermann"           -> Nachname="Mustermann"
-    m = re.search(r"^\s*Frau\s*Herr\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+    # ── NEUES Jimdo-Format: separate Vor-/Nachname-Felder ──
+    m = re.search(r"^\s*Auswahlliste\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
         raw = m.group(1).strip()
-        # Nur "Herr" oder "Frau" -> reine Anrede
-        only_salutation = re.match(r"^(Herr|Frau)\s*$", raw, re.I)
-        with_name = re.match(r"^(Herr|Frau)\s+(.+)$", raw, re.I)
-        if only_salutation:
-            out["anrede"] = only_salutation.group(1).capitalize()
-        elif with_name:
-            out["anrede"] = with_name.group(1).capitalize()
-            out["nachname"] = with_name.group(2).strip()
-        else:
-            out["nachname"] = raw
+        if re.match(r"^(Herr|Frau|Divers)\s*$", raw, re.I):
+            out["anrede"] = raw.capitalize()
 
-    # Vorname + ggf. Nachname (in "Name:")
-    # Wenn mehrere Wörter vorhanden: erstes = Vorname, Rest = Nachname
-    # (nur setzen, wenn noch kein Nachname aus "Frau Herr:" kam).
-    m = re.search(r"^\s*Name\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+    m = re.search(r"^\s*Vorname\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
-        raw_name = m.group(1).strip()
-        parts = raw_name.split()
-        if len(parts) >= 2 and not out["nachname"]:
-            out["vorname"] = parts[0]
-            out["nachname"] = " ".join(parts[1:])
-        else:
-            out["vorname"] = raw_name
+        out["vorname"] = m.group(1).strip()
+
+    m = re.search(r"^\s*Nachname\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+    if m:
+        out["nachname"] = m.group(1).strip()
+
+    # ── ALTES Jimdo-Format (nur wenn neues nichts geliefert hat) ──
+    if not out["anrede"] and not out["nachname"]:
+        m = re.search(r"^\s*Frau\s*Herr\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+        if m:
+            raw = m.group(1).strip()
+            only_salutation = re.match(r"^(Herr|Frau)\s*$", raw, re.I)
+            with_name = re.match(r"^(Herr|Frau)\s+(.+)$", raw, re.I)
+            if only_salutation:
+                out["anrede"] = only_salutation.group(1).capitalize()
+            elif with_name:
+                out["anrede"] = with_name.group(1).capitalize()
+                out["nachname"] = with_name.group(2).strip()
+            else:
+                out["nachname"] = raw
+
+    if not out["vorname"] and not out["nachname"]:
+        m = re.search(r"^\s*Name\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+        if m:
+            raw_name = m.group(1).strip()
+            parts = raw_name.split()
+            if len(parts) >= 2:
+                out["vorname"] = parts[0]
+                out["nachname"] = " ".join(parts[1:])
+            else:
+                out["vorname"] = raw_name
 
     # Telefon
     m = re.search(r"^\s*Telefonnummer\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
     if m:
         out["telefon"] = m.group(1).strip()
+    if not out["telefon"]:
+        m = re.search(r"^\s*Telefon\s*:\s*([^\n]+?)\s*$", body, re.I | re.M)
+        if m:
+            out["telefon"] = m.group(1).strip()
 
-    # E-Mail (optional)
+    # E-Mail (optional / Pflicht)
     m = re.search(r"E-?Mail[^:]*:\s*([\w.+-]+@[\w.-]+\.\w{2,})", body, re.I)
     if m:
         out["email"] = m.group(1).strip().rstrip(".,;:)")
@@ -145,7 +162,9 @@ def _parse_alt(body: str, subject: str = "", from_email: str = "") -> dict:
 def parse_anfrage(body: str, subject: str = "", from_email: str = "") -> dict:
     """Auto-Erkennung welches Format vorliegt."""
     body = (body or "").replace("\r\n", "\n").replace("\r", "\n")
-    if "Frau Herr:" in body and "Telefonnummer:" in body:
+    is_jimdo_new = bool(re.search(r"^\s*Vorname\s*:", body, re.I | re.M)) and bool(re.search(r"^\s*Nachname\s*:", body, re.I | re.M))
+    is_jimdo_old = "Frau Herr:" in body and "Telefonnummer:" in body
+    if is_jimdo_new or is_jimdo_old:
         result = _parse_jimdo(body)
     elif "Es gibt eine neue Anfrage" in body or re.search(r"Anfrage\s+von\s+", subject or "", re.I):
         result = _parse_alt(body, subject, from_email)
@@ -154,7 +173,6 @@ def parse_anfrage(body: str, subject: str = "", from_email: str = "") -> dict:
         result = _parse_jimdo(body)
 
     # Fallback: source_url auch aus dem Subject extrahieren
-    # (z.B. Betreff "Nachricht über https://www.tischlerei-graupner.de/...")
     if not result.get("source_url") and subject:
         m = URL_PATTERN.search(subject)
         if m:

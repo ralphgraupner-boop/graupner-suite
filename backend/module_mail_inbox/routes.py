@@ -772,28 +772,47 @@ async def import_mail(body: dict, user=Depends(get_current_user)):
 # ───────────────── Mail-Detail ansehen ─────────────────
 @router.post("/reevaluate-spam")
 async def reevaluate_spam(user=Depends(get_current_user)):
-    """Bewertet alle vorhandenen Mails neu mit dem aktuellen Spam-Filter.
-    Mails die als spam_verdacht markiert sind, aber nach neuer Logik OK sind,
-    wandern wieder zu 'vorschlag'. Mails die übernommen oder ignoriert sind
-    bleiben unverändert."""
+    """Bewertet alle vorhandenen Mails neu mit dem aktuellen Parser + Spam-Filter.
+    - Re-parst body_excerpt mit aktueller Parser-Logik (z.B. neue Jimdo-Formate)
+    - Re-evaluiert Spam-Score
+    - Mails die übernommen sind bleiben in der DB, ihre `parsed`-Felder werden
+      aber aktualisiert (z.B. damit Anrede/Telefon nachträglich korrekt sind).
+    - Status (vorschlag ↔ spam_verdacht) wird aktualisiert. Übernommen/Ignoriert
+      bleibt unverändert."""
     moved_to_vorschlag = 0
     moved_to_spam = 0
+    reparsed = 0
     async for d in db.module_mail_inbox.find(
-        {"status": {"$in": ["vorschlag", "spam_verdacht"]}},
-        {"_id": 0, "id": 1, "parsed": 1, "body_excerpt": 1, "from_email": 1, "status": 1},
+        {},
+        {"_id": 0, "id": 1, "parsed": 1, "body_excerpt": 1, "from_email": 1, "status": 1, "subject": 1},
     ):
-        new_spam = evaluate_spam(d.get("parsed") or {}, body_excerpt=d.get("body_excerpt") or "", from_email=d.get("from_email") or "")
-        new_status = "spam_verdacht" if new_spam["is_spam"] else "vorschlag"
-        if new_status != d.get("status"):
-            await db.module_mail_inbox.update_one(
-                {"id": d["id"]},
-                {"$set": {"status": new_status, "spam": new_spam}},
-            )
-            if new_status == "vorschlag":
-                moved_to_vorschlag += 1
-            else:
-                moved_to_spam += 1
-    return {"ok": True, "moved_to_vorschlag": moved_to_vorschlag, "moved_to_spam": moved_to_spam}
+        new_parsed = parse_anfrage(
+            d.get("body_excerpt") or "",
+            subject=d.get("subject") or "",
+            from_email=d.get("from_email") or "",
+        )
+        # Reply-To-Fallback wie beim Scan
+        if not new_parsed.get("email") and d.get("from_email") and "jimdo" not in (d.get("from_email") or "").lower():
+            new_parsed["email"] = d.get("from_email")
+        new_spam = evaluate_spam(new_parsed, body_excerpt=d.get("body_excerpt") or "", from_email=d.get("from_email") or "")
+        update = {"parsed": new_parsed, "spam": new_spam}
+        # Status nur bei vorschlag/spam_verdacht ändern, nicht bei übernommen/ignoriert
+        if d.get("status") in ("vorschlag", "spam_verdacht"):
+            new_status = "spam_verdacht" if new_spam["is_spam"] else "vorschlag"
+            if new_status != d.get("status"):
+                update["status"] = new_status
+                if new_status == "vorschlag":
+                    moved_to_vorschlag += 1
+                else:
+                    moved_to_spam += 1
+        await db.module_mail_inbox.update_one({"id": d["id"]}, {"$set": update})
+        reparsed += 1
+    return {
+        "ok": True,
+        "reparsed": reparsed,
+        "moved_to_vorschlag": moved_to_vorschlag,
+        "moved_to_spam": moved_to_spam,
+    }
 
 
 @router.post("/mail-detail")
