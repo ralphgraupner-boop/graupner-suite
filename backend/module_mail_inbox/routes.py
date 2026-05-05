@@ -770,6 +770,32 @@ async def import_mail(body: dict, user=Depends(get_current_user)):
 
 
 # ───────────────── Mail-Detail ansehen ─────────────────
+@router.post("/reevaluate-spam")
+async def reevaluate_spam(user=Depends(get_current_user)):
+    """Bewertet alle vorhandenen Mails neu mit dem aktuellen Spam-Filter.
+    Mails die als spam_verdacht markiert sind, aber nach neuer Logik OK sind,
+    wandern wieder zu 'vorschlag'. Mails die übernommen oder ignoriert sind
+    bleiben unverändert."""
+    moved_to_vorschlag = 0
+    moved_to_spam = 0
+    async for d in db.module_mail_inbox.find(
+        {"status": {"$in": ["vorschlag", "spam_verdacht"]}},
+        {"_id": 0, "id": 1, "parsed": 1, "body_excerpt": 1, "from_email": 1, "status": 1},
+    ):
+        new_spam = evaluate_spam(d.get("parsed") or {}, body_excerpt=d.get("body_excerpt") or "", from_email=d.get("from_email") or "")
+        new_status = "spam_verdacht" if new_spam["is_spam"] else "vorschlag"
+        if new_status != d.get("status"):
+            await db.module_mail_inbox.update_one(
+                {"id": d["id"]},
+                {"$set": {"status": new_status, "spam": new_spam}},
+            )
+            if new_status == "vorschlag":
+                moved_to_vorschlag += 1
+            else:
+                moved_to_spam += 1
+    return {"ok": True, "moved_to_vorschlag": moved_to_vorschlag, "moved_to_spam": moved_to_spam}
+
+
 @router.post("/mail-detail")
 async def mail_detail(body: dict, user=Depends(get_current_user)):
     """Lädt eine konkrete IMAP-Mail (Body + Header) zur Anzeige.
