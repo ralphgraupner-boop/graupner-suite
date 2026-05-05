@@ -23,7 +23,7 @@ from routes.auth import get_current_user
 from routes.anfragen_fetcher import _extract_body
 from .parser import parse_anfrage
 from .spam_filter import evaluate_spam
-from .accounts import get_active_accounts, filter_matches
+from .accounts import get_active_accounts, filter_matches, _is_reply_or_auto
 
 router = APIRouter()
 
@@ -577,6 +577,13 @@ async def scan_preview(weeks: int = 6, max_count: int = 100, user=Depends(get_cu
                         msg = email.message_from_bytes(raw[0][1])
                         from_name, from_email = parseaddr(msg.get("From", ""))
                         subject = _decode(msg.get("Subject", ""))
+
+                        # Reply-/Forward-/Auto-Response-Mails tauchen hier GAR NICHT auf.
+                        # Das sind per Definition keine neuen Anfragen und würden
+                        # die "Übersprungene"-Liste unbrauchbar zumüllen.
+                        if _is_reply_or_auto(subject):
+                            continue
+
                         message_id = (msg.get("Message-ID") or "").strip()
                         date_str = msg.get("Date") or ""
                         try:
