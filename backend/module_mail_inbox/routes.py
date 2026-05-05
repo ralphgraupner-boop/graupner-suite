@@ -64,29 +64,32 @@ def _is_ascii(s: str) -> bool:
 
 def _build_imap_search_args(since_str: str, rules: list) -> tuple:
     """Baut die IMAP-Search-Argumente aus den Filter-Rules.
-    - imaplib unterstützt keine Umlaute → Rules mit non-ASCII-Werten werden
-      übersprungen (clientseitige Filter fängt sie trotzdem korrekt ab).
-    - Pro Rule wird eine IMAP-Bedingung erzeugt; mehrere werden via OR verknüpft.
-    - Wenn keine ASCII-Rule übrig bleibt, Fallback auf reines SINCE.
+    - Wenn IRGENDEIN Regel-Wert nicht-ASCII ist (Umlaute etc.) → fallback auf
+      reines SINCE und alle Mails holen, clientseitig filtern. So gehen
+      keine Treffer verloren weil imaplib keine Umlaute kann.
+    - Sonst: gezielte IMAP-Search aus den ASCII-Rules (schneller).
     """
+    has_non_ascii = any(
+        not _is_ascii((r.get("value") or "")) for r in (rules or [])
+    )
+    base = f'(SINCE "{since_str}")'
+    if has_non_ascii or not rules:
+        return (base,)
     parts = []
-    for r in rules or []:
+    for r in rules:
         t = (r.get("type") or "").strip()
         v = (r.get("value") or "").strip()
-        if not t or not v or not _is_ascii(v):
+        if not t or not v:
             continue
         v_safe = v.replace('"', '')
         if t in ("subject_contains", "subject_startswith"):
             parts.append(f'(SUBJECT "{v_safe}")')
         elif t in ("from_contains", "from_equals"):
             parts.append(f'(FROM "{v_safe}")')
-    base = f'(SINCE "{since_str}")'
     if not parts:
         return (base,)
     if len(parts) == 1:
         return (base, parts[0])
-    # OR-Verknüpfung mehrerer Bedingungen: IMAP OR ist binär,
-    # daher reduzieren wir nach links: OR a (OR b (OR c d))
     expr = parts[-1]
     for p in reversed(parts[:-1]):
         expr = f"(OR {p} {expr})"
