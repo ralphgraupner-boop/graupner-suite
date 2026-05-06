@@ -166,6 +166,94 @@ async def revoke_link(link_id: str, user=Depends(get_current_user)):
     return {"ok": True}
 
 
+@router.post("/{link_id}/extend")
+async def extend_link(link_id: str, body: dict, user=Depends(get_current_user)):
+    """Verlängert einen Mitarbeiter-Link.
+    Body: { days: int }  – akzeptiert 1..90 Tage.
+    Neue Ablaufzeit = max(jetzt, alter Ablauf) + days. So verschwendet
+    eine vorzeitige Verlängerung keine Restlaufzeit.
+    """
+    days = int((body or {}).get("days") or 0)
+    if days < 1 or days > 90:
+        raise HTTPException(400, "days muss zwischen 1 und 90 liegen")
+    link = await db.module_kundenlink.find_one({"id": link_id}, {"_id": 0})
+    if not link:
+        raise HTTPException(404, "Link nicht gefunden")
+    if link.get("revoked"):
+        raise HTTPException(400, "Link wurde widerrufen")
+    now = _now()
+    try:
+        old_exp = datetime.fromisoformat(link.get("expires_at", ""))
+        if old_exp.tzinfo is None:
+            old_exp = old_exp.replace(tzinfo=timezone.utc)
+    except Exception:
+        old_exp = now  # noqa: B904
+    base = old_exp if old_exp > now else now
+    new_exp = base + timedelta(days=days)
+    await db.module_kundenlink.update_one(
+        {"id": link_id},
+        {"$set": {
+            "expires_at": _iso(new_exp),
+            "extended_at": _iso(now),
+            "extended_by": getattr(user, "username", None),
+        }, "$inc": {"extend_count": 1}},
+    )
+    return {"ok": True, "expires_at": _iso(new_exp)}
+
+
+@router.get("/expiring")
+async def expiring_links(days: int = 7, user=Depends(get_current_user)):
+    """Liefert alle nicht-widerrufenen Links, die in den nächsten `days` Tagen
+    ablaufen ODER bereits abgelaufen sind (für Startup-Check).
+    Gibt Kundenname mit (Datenmaske: live aus module_kunden geladen).
+    """
+    if days < 0:
+        days = 7
+    now = _now()
+    cutoff = now + timedelta(days=days)
+    out = []
+    async for link in db.module_kundenlink.find(
+        {"revoked": {"$ne": True}},
+        {"_id": 0},
+    ).sort("expires_at", 1):
+        try:
+            exp = datetime.fromisoformat(link.get("expires_at", ""))
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+        except Exception:
+            continue
+        if exp > cutoff:
+            continue
+        # Kundenname dazuholen (Datenmaske)
+        k = await db.module_kunden.find_one(
+            {"id": link.get("kunde_id")},
+            {"_id": 0, "vorname": 1, "nachname": 1, "firma": 1, "email": 1, "deleted_at": 1},
+        )
+        if not k or k.get("deleted_at"):
+            # Kunde gelöscht → Link automatisch widerrufen, nicht anzeigen
+            await db.module_kundenlink.update_one(
+                {"id": link["id"]},
+                {"$set": {"revoked": True, "revoked_at": _iso(now), "revoked_reason": "Kunde gelöscht"}},
+            )
+            continue
+        kunde_name = " ".join(filter(None, [k.get("vorname"), k.get("nachname")])).strip() or k.get("firma") or k.get("email") or "Unbekannt"
+        out.append({
+            "id": link["id"],
+            "kunde_id": link["kunde_id"],
+            "kunde_name": kunde_name,
+            "kunde_firma": k.get("firma") or "",
+            "expires_at": link["expires_at"],
+            "expired": exp < now,
+            "days_remaining": int((exp - now).total_seconds() // 86400),
+            "view_count": link.get("view_count", 0),
+            "contribution_count": link.get("contribution_count", 0),
+            "last_viewed_at": link.get("last_viewed_at"),
+            "created_at": link.get("created_at"),
+            "created_by": link.get("created_by"),
+        })
+    return out
+
+
 # ─────────── Öffentlicher Endpoint (KEIN Login) ───────────
 @router.get("/view/{token}")
 async def view_by_token(token: str):
