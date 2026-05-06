@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
@@ -15,6 +15,7 @@ const allNavItems = [
   { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], variant: "new" },
   { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
   { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"], variant: "new" },
+  { path: "/module/feedback", icon: StickyNote, label: "Notizen & Bugs", roles: ["admin"], variant: "new" },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"], parentPath: "/settings" },
   { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "deprecated", hideByDefault: true },
