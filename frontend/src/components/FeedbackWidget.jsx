@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { StickyNote, X, Plus, Loader2, Bug, Lightbulb, CheckSquare, Sparkles, Trash2, Archive, Check } from "lucide-react";
+import { StickyNote, X, Plus, Loader2, Bug, Lightbulb, CheckSquare, Sparkles, Trash2, Archive, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
-import { Modal } from "@/components/common";
 
 const TYP_META = {
   bug: { label: "Bug", icon: Bug, color: "bg-red-100 text-red-700" },
@@ -23,13 +23,8 @@ const TABS = [
   { key: "erledigt", label: "Erledigt" },
 ];
 
-const STATUS_LABELS = {
-  offen: "Offen",
-  in_arbeit: "In Arbeit",
-  erledigt: "Erledigt",
-};
-
 const FeedbackWidget = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [badge, setBadge] = useState(0);
@@ -41,8 +36,12 @@ const FeedbackWidget = () => {
   const [quickTyp, setQuickTyp] = useState("bug");
   const [quickPrio, setQuickPrio] = useState("normal");
   const [submitting, setSubmitting] = useState(false);
-  const [editItem, setEditItem] = useState(null);
   const panelRef = useRef(null);
+
+  const goToDataset = (id) => {
+    setOpen(false);
+    navigate(`/module/feedback?open=${id}`);
+  };
 
   const loadBadge = useCallback(async () => {
     try {
@@ -172,46 +171,62 @@ const FeedbackWidget = () => {
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             data-testid="feedback-panel"
           >
-            {/* Header — größerer Schließen-Button */}
+            {/* Header — Link zur Übersicht + Schließen */}
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <div className="flex items-center gap-2">
                 <StickyNote className="w-5 h-5 text-primary" />
                 <h2 className="font-semibold">Notizen & Bugs</h2>
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-2 hover:bg-muted rounded-sm min-w-[44px] min-h-[44px] flex items-center justify-center"
-                style={{ touchAction: "manipulation" }}
-                data-testid="btn-feedback-close"
-                aria-label="Schließen"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => { setOpen(false); navigate("/module/feedback"); }}
+                  className="px-2 py-2 text-xs hover:bg-muted rounded-sm inline-flex items-center gap-1 text-primary"
+                  data-testid="btn-feedback-goto-page"
+                  title="Zur vollständigen Übersicht (Sidebar)"
+                >
+                  <ExternalLink className="w-4 h-4" /> Übersicht
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-2 hover:bg-muted rounded-sm min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  style={{ touchAction: "manipulation" }}
+                  data-testid="btn-feedback-close"
+                  aria-label="Schließen"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Quick-Add — als FORM, damit Enter und Submit korrekt funktionieren */}
+            {/* Quick-Add — max 3 Zeilen, Strg+Enter sendet */}
             <form
               onSubmit={(e) => { e.preventDefault(); if (!submitting && quickTitle.trim()) createItem(); }}
               className="px-4 py-3 border-b bg-muted/30 space-y-2"
             >
-              <div className="flex gap-2">
-                <input
+              <div className="flex gap-2 items-stretch">
+                <textarea
                   value={quickTitle}
                   onChange={(e) => setQuickTitle(e.target.value)}
-                  placeholder="Neuer Eintrag…"
-                  className="flex-1 px-3 py-3 text-base sm:text-sm border rounded-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && quickTitle.trim() && !submitting) {
+                      e.preventDefault();
+                      createItem();
+                    }
+                  }}
+                  rows={3}
+                  placeholder="Schnell-Notiz… (Strg+Enter zum Speichern)"
+                  className="flex-1 px-3 py-2 text-base sm:text-sm border rounded-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
                   data-testid="input-feedback-title"
-                  enterKeyHint="send"
                   autoComplete="off"
-                  autoCorrect="off"
                   autoCapitalize="sentences"
                 />
                 <button
                   type="submit"
                   disabled={submitting || !quickTitle.trim()}
-                  className="px-4 py-3 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 active:scale-95 disabled:opacity-40 flex items-center gap-1 min-w-[48px] min-h-[44px] justify-center"
+                  className="px-4 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 active:scale-95 disabled:opacity-40 flex items-center gap-1 min-w-[48px] justify-center"
                   style={{ touchAction: "manipulation" }}
                   data-testid="btn-feedback-create"
+                  title="Speichern"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
                 </button>
@@ -303,10 +318,10 @@ const FeedbackWidget = () => {
                         <div className="flex items-start gap-2 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => setEditItem(item)}
+                            onClick={() => goToDataset(item.id)}
                             className={`text-sm text-left hover:underline focus:outline-none focus:underline ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}
                             data-testid={`btn-feedback-edit-${item.id}`}
-                            title="Bearbeiten"
+                            title="Zum Datensatz öffnen"
                           >
                             {item.title}
                           </button>
@@ -328,10 +343,10 @@ const FeedbackWidget = () => {
                         {item.description && (
                           <button
                             type="button"
-                            onClick={() => setEditItem(item)}
-                            className="block w-full text-left text-xs text-muted-foreground mt-1 whitespace-pre-wrap hover:text-foreground"
+                            onClick={() => goToDataset(item.id)}
+                            className="block w-full text-left text-xs text-muted-foreground mt-1 whitespace-pre-wrap hover:text-foreground line-clamp-2"
                             data-testid={`btn-feedback-edit-desc-${item.id}`}
-                            title="Bearbeiten"
+                            title="Zum Datensatz öffnen"
                           >
                             {item.description}
                           </button>
@@ -341,14 +356,24 @@ const FeedbackWidget = () => {
                           {item.created_by ? ` · ${item.created_by}` : ""}
                         </p>
                       </div>
-                      <button
-                        onClick={() => removeItem(item)}
-                        className="p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-sm flex-shrink-0"
-                        data-testid={`btn-feedback-delete-${item.id}`}
-                        title="Löschen"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <button
+                          onClick={() => goToDataset(item.id)}
+                          className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-sm"
+                          data-testid={`btn-feedback-open-${item.id}`}
+                          title="In der Übersicht öffnen"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => removeItem(item)}
+                          className="p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-sm"
+                          data-testid={`btn-feedback-delete-${item.id}`}
+                          title="Löschen"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -357,206 +382,7 @@ const FeedbackWidget = () => {
           </div>
         </div>
       )}
-      {/* Bearbeiten-Modal */}
-      {editItem && (
-        <FeedbackEditModal
-          item={editItem}
-          onClose={() => setEditItem(null)}
-          onSaved={async () => {
-            setEditItem(null);
-            await loadItems();
-            await loadBadge();
-          }}
-          onDeleted={async () => {
-            setEditItem(null);
-            await loadItems();
-            await loadBadge();
-          }}
-        />
-      )}
     </>
-  );
-};
-
-
-/**
- * FeedbackEditModal — Vollständiges Bearbeiten eines Notizen-/Bug-Eintrags.
- * Felder: Titel · Beschreibung · Typ · Prio · Status
- * Aktionen: Speichern · Abbrechen · Löschen
- */
-const FeedbackEditModal = ({ item, onClose, onSaved, onDeleted }) => {
-  const [form, setForm] = useState({
-    title: item.title || "",
-    description: item.description || "",
-    typ: item.typ || "bug",
-    prio: item.prio || "normal",
-    status: item.status || "offen",
-  });
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-
-  const save = async () => {
-    if (!form.title.trim()) {
-      toast.error("Titel darf nicht leer sein");
-      return;
-    }
-    setSaving(true);
-    try {
-      await api.patch(`/module-feedback/${item.id}`, {
-        title: form.title.trim(),
-        description: form.description,
-        typ: form.typ,
-        prio: form.prio,
-        status: form.status,
-      });
-      toast.success("Notiz gespeichert");
-      onSaved?.();
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || "Speichern fehlgeschlagen");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const remove = async () => {
-    if (!window.confirm(`Notiz „${item.title}" endgültig löschen?`)) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/module-feedback/${item.id}`);
-      toast.success("Notiz gelöscht");
-      onDeleted?.();
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <Modal isOpen={!!item} onClose={onClose} title="Notiz bearbeiten" size="lg">
-      <div className="space-y-3 text-sm" data-testid="feedback-edit-modal">
-        {/* Titel */}
-        <div>
-          <label className="block text-xs font-medium mb-1">Titel</label>
-          <input
-            value={form.title}
-            onChange={(e) => set("title", e.target.value)}
-            className="w-full border rounded-sm p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            data-testid="input-edit-title"
-            autoFocus
-          />
-        </div>
-
-        {/* Beschreibung */}
-        <div>
-          <label className="block text-xs font-medium mb-1">
-            Beschreibung <span className="text-muted-foreground font-normal">(optional, mehrzeilig)</span>
-          </label>
-          <textarea
-            value={form.description}
-            onChange={(e) => set("description", e.target.value)}
-            rows={5}
-            placeholder="Details, Schritte zur Reproduktion, Anmerkungen…"
-            className="w-full border rounded-sm p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            data-testid="textarea-edit-description"
-          />
-        </div>
-
-        {/* Typ */}
-        <div>
-          <label className="block text-xs font-medium mb-1">Typ</label>
-          <div className="flex flex-wrap gap-1.5">
-            {Object.entries(TYP_META).map(([k, m]) => {
-              const Icon = m.icon;
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => set("typ", k)}
-                  className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-sm border transition-colors ${form.typ === k ? m.color + " border-transparent font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}
-                  data-testid={`btn-edit-typ-${k}`}
-                >
-                  <Icon className="w-3.5 h-3.5" /> {m.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Prio */}
-        <div>
-          <label className="block text-xs font-medium mb-1">Priorität</label>
-          <div className="flex gap-1.5">
-            {["hoch", "normal", "niedrig"].map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => set("prio", p)}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-sm border transition-colors ${form.prio === p ? "bg-foreground text-background border-transparent font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}
-                data-testid={`btn-edit-prio-${p}`}
-              >
-                <span className={`w-2 h-2 rounded-full ${PRIO_DOT[p]}`} /> {p}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Status */}
-        <div>
-          <label className="block text-xs font-medium mb-1">Status</label>
-          <div className="flex gap-1.5">
-            {Object.entries(STATUS_LABELS).map(([k, label]) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => set("status", k)}
-                className={`px-3 py-1.5 text-xs rounded-sm border transition-colors ${form.status === k ? "bg-primary text-primary-foreground border-transparent font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}
-                data-testid={`btn-edit-status-${k}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Aktionen */}
-        <div className="flex justify-between gap-2 pt-3 border-t flex-wrap">
-          <button
-            type="button"
-            onClick={remove}
-            disabled={saving || deleting}
-            className="inline-flex items-center gap-1 px-3 py-2 text-sm border border-red-200 text-red-700 rounded-sm hover:bg-red-50 disabled:opacity-50"
-            data-testid="btn-edit-delete"
-          >
-            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            Löschen
-          </button>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving || deleting}
-              className="px-3 py-2 text-sm border rounded-sm hover:bg-muted"
-              data-testid="btn-edit-cancel"
-            >
-              Abbrechen
-            </button>
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving || deleting || !form.title.trim()}
-              className="inline-flex items-center gap-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
-              data-testid="btn-edit-save"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              Speichern
-            </button>
-          </div>
-        </div>
-      </div>
-    </Modal>
   );
 };
 

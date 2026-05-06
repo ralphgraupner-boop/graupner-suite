@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { StickyNote, Loader2, Bug, Lightbulb, CheckSquare, Sparkles, Search, Filter, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -30,6 +31,8 @@ const fmt = (iso) => {
 };
 
 const ModuleFeedbackPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [historyCounts, setHistoryCounts] = useState({});  // {feedback_id: count}
   const [loading, setLoading] = useState(false);
@@ -64,6 +67,22 @@ const ModuleFeedbackPage = () => {
   }, [includeArchived]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ?open={id} → Datensatz direkt im Detail-Modal öffnen.
+  // Kommt vom Floating-Widget oder externer Verlinkung.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const openId = params.get("open");
+    if (!openId || items.length === 0) return;
+    const target = items.find((it) => it.id === openId);
+    if (target) {
+      setSelected(target);
+      // URL aufräumen, damit Refresh nicht erneut triggert
+      const cleaned = new URLSearchParams(location.search);
+      cleaned.delete("open");
+      navigate(`${location.pathname}${cleaned.toString() ? "?" + cleaned.toString() : ""}`, { replace: true });
+    }
+  }, [location.search, items, navigate, location.pathname]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
