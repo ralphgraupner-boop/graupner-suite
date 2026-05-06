@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Phone, Mail, MapPin, User, Building2, Clock, AlertTriangle, Loader2, FileText, Image as ImageIcon } from "lucide-react";
+import { Phone, Mail, MapPin, User, Building2, Clock, AlertTriangle, Loader2, FileText, Image as ImageIcon, Send, Camera, Check } from "lucide-react";
 import axios from "axios";
 
 /**
@@ -17,6 +17,74 @@ const KundenLinkPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+
+  // Mitarbeiter-Beitrag (Notiz + Foto)
+  const [author, setAuthor] = useState("");
+  const [noteText, setNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [savedNoteFlash, setSavedNoteFlash] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadedFlash, setUploadedFlash] = useState(false);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    // Name persistent im Browser pro Mitarbeiter-Handy
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem("graupner_link_author") : "";
+    if (saved) setAuthor(saved);
+  }, []);
+
+  const saveAuthor = (v) => {
+    setAuthor(v);
+    try { window.localStorage.setItem("graupner_link_author", v || ""); } catch { /* noop */ }
+  };
+
+  const reload = async () => {
+    try {
+      const r = await axios.get(`${API}/api/module-kundenlink/view/${token}`);
+      setData(r.data);
+    } catch { /* noop */ }
+  };
+
+  const submitNote = async () => {
+    const text = noteText.trim();
+    if (!text) return;
+    setSavingNote(true);
+    try {
+      await axios.post(`${API}/api/module-kundenlink/view/${token}/note`, { text, author });
+      setNoteText("");
+      setSavedNoteFlash(true);
+      setTimeout(() => setSavedNoteFlash(false), 2500);
+      await reload();
+    } catch (err) {
+      alert(err?.response?.data?.detail || "Speichern fehlgeschlagen");
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const submitPhoto = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+    setUploadingPhoto(true);
+    try {
+      for (const f of files) {
+        const fd = new FormData();
+        fd.append("file", f);
+        fd.append("author", author || "");
+        await axios.post(`${API}/api/module-kundenlink/view/${token}/photo`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      setUploadedFlash(true);
+      setTimeout(() => setUploadedFlash(false), 2500);
+      await reload();
+    } catch (err) {
+      alert(err?.response?.data?.detail || "Upload fehlgeschlagen");
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -223,6 +291,77 @@ const KundenLinkPage = () => {
             </ul>
           </section>
         )}
+
+        {/* Mitarbeiter-Beitrag (Notiz + Foto) */}
+        <section className="bg-amber-50 border border-amber-200 rounded-sm p-3 space-y-3">
+          <div>
+            <h3 className="text-xs font-semibold text-amber-800 uppercase mb-1">Beitrag vom Mitarbeiter</h3>
+            <p className="text-[11px] text-amber-700">
+              Was du hier einträgst, geht direkt zurück in den Kundendatensatz beim Auftraggeber.
+            </p>
+          </div>
+
+          {/* Mitarbeiter-Name */}
+          <div>
+            <label className="block text-[11px] font-medium text-amber-900 mb-1">Dein Name <span className="text-amber-700 font-normal">(einmalig — wird auf diesem Handy gemerkt)</span></label>
+            <input
+              type="text"
+              value={author}
+              onChange={(e) => saveAuthor(e.target.value)}
+              placeholder="z.B. Thorsten"
+              className="w-full px-3 py-2 text-sm border rounded-sm bg-white"
+              data-testid="kundenlink-author"
+            />
+          </div>
+
+          {/* Notiz */}
+          <div>
+            <label className="block text-[11px] font-medium text-amber-900 mb-1">Notiz / Bemerkung</label>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              rows={3}
+              placeholder="z.B. Besichtigung erfolgt – Tür ausgehängt, Material für nächste Woche bestellen…"
+              className="w-full px-3 py-2 text-sm border rounded-sm bg-white"
+              data-testid="kundenlink-note-text"
+            />
+            <button
+              type="button"
+              onClick={submitNote}
+              disabled={savingNote || !noteText.trim()}
+              className="mt-2 w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-sm hover:bg-amber-700 disabled:opacity-50"
+              data-testid="kundenlink-note-submit"
+            >
+              {savingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : savedNoteFlash ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+              {savedNoteFlash ? "Gespeichert" : "Notiz speichern"}
+            </button>
+          </div>
+
+          {/* Foto-Upload */}
+          <div>
+            <label className="block text-[11px] font-medium text-amber-900 mb-1">Foto hinzufügen</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              onChange={(e) => submitPhoto(e.target.files)}
+              className="hidden"
+              data-testid="kundenlink-photo-input"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-slate-800 text-white rounded-sm hover:bg-slate-900 disabled:opacity-50"
+              data-testid="kundenlink-photo-trigger"
+            >
+              {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : uploadedFlash ? <Check className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+              {uploadingPhoto ? "Lade hoch…" : uploadedFlash ? "Hochgeladen" : "Foto aufnehmen / auswählen"}
+            </button>
+          </div>
+        </section>
 
         {/* Gültigkeits-Hinweis */}
         <footer className="text-xs text-slate-500 text-center p-2 flex items-center justify-center gap-1">

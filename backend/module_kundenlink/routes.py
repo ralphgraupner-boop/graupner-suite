@@ -25,10 +25,11 @@ import secrets
 import uuid
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 
 from database import db
 from routes.auth import get_current_user
+from utils.storage import put_object
 
 router = APIRouter()
 
@@ -200,3 +201,108 @@ async def view_by_token(token: str):
         "created_at": link["created_at"],
         "kunde": kunde,
     }
+
+
+# ─────────── Öffentliche Schreib-Endpoints (Mitarbeiter-Beitrag) ───────────
+async def _validate_token_or_404(token: str) -> dict:
+    """Holt Link, prüft Gültigkeit, wirft passende HTTPExceptions.
+    Returns: das Link-Dokument (mit kunde_id) bei Erfolg.
+    """
+    link = await db.module_kundenlink.find_one({"token": token}, {"_id": 0})
+    if not link:
+        raise HTTPException(404, "Link ungültig")
+    if link.get("revoked"):
+        raise HTTPException(403, "Link wurde widerrufen")
+    try:
+        exp = datetime.fromisoformat(link.get("expires_at", ""))
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+    except Exception:
+        raise HTTPException(400, "Link-Datum ungültig")  # noqa: B904
+    if _now() > exp:
+        raise HTTPException(410, "Link ist abgelaufen")
+    return link
+
+
+@router.post("/view/{token}/note")
+async def add_note(token: str, body: dict):
+    """Mitarbeiter fügt eine Notiz dem Kunden hinzu (kein Login).
+    Erwartet: { text: str, author?: str }
+    Wirkung: An kunde.notes wird eine zeitgestempelte Mitarbeiter-Notiz
+    angehängt mit Markierung '[Mitarbeiter ...]'.
+    """
+    link = await _validate_token_or_404(token)
+    text = ((body or {}).get("text") or "").strip()
+    if not text:
+        raise HTTPException(400, "Text darf nicht leer sein")
+    author = ((body or {}).get("author") or "").strip()
+    if len(author) > 60:
+        author = author[:60]
+    now = _now()
+    head = f"[{now.strftime('%d.%m.%Y %H:%M')} Mitarbeiter{(' ' + author) if author else ''}]"
+    note_line = f"{head} {text}"
+
+    kunde = await db.module_kunden.find_one({"id": link["kunde_id"]}, {"_id": 0, "notes": 1})
+    if not kunde:
+        raise HTTPException(404, "Kunde nicht mehr vorhanden")
+    existing = (kunde.get("notes") or "").rstrip()
+    new_notes = f"{existing}\n\n{note_line}" if existing else note_line
+    await db.module_kunden.update_one(
+        {"id": link["kunde_id"]},
+        {"$set": {"notes": new_notes, "updated_at": _iso(now)}},
+    )
+    # Auch den Link selber als "wurde benutzt" markieren
+    await db.module_kundenlink.update_one(
+        {"id": link["id"]},
+        {"$inc": {"contribution_count": 1}, "$set": {"last_contribution_at": _iso(now)}},
+    )
+    return {"ok": True, "note": note_line}
+
+
+@router.post("/view/{token}/photo")
+async def add_photo(
+    token: str,
+    file: UploadFile = File(...),
+    author: str = Form(""),
+):
+    """Mitarbeiter lädt ein Foto in die Kunden-Galerie hoch (kein Login).
+    Maximale Größe: 10 MB pro Foto.
+    """
+    link = await _validate_token_or_404(token)
+    MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Leere Datei")
+    if len(content) > MAX_SIZE:
+        raise HTTPException(400, "Datei zu groß (max. 10 MB)")
+    ct = (file.content_type or "").lower()
+    if not ct.startswith("image/"):
+        raise HTTPException(400, "Nur Bilder erlaubt")
+
+    safe_name = (file.filename or "foto.jpg").replace(" ", "_")
+    storage_path = f"module_kunden/{link['kunde_id']}/m_{uuid.uuid4().hex[:8]}_{safe_name}"
+    result = put_object(storage_path, content, ct)
+    if not result:
+        raise HTTPException(500, "Upload fehlgeschlagen")
+
+    photo_entry = {
+        "id": str(uuid.uuid4()),
+        "url": storage_path,  # interner Object-Key, view_by_token wandelt um
+        "filename": safe_name,
+        "content_type": ct,
+        "uploaded_at": _iso(_now()),
+        "uploaded_by_link": link["id"],
+        "uploaded_by_label": (author or "").strip()[:60] or "Mitarbeiter",
+    }
+    await db.module_kunden.update_one(
+        {"id": link["kunde_id"]},
+        {
+            "$push": {"photos": photo_entry},
+            "$set": {"updated_at": _iso(_now())},
+        },
+    )
+    await db.module_kundenlink.update_one(
+        {"id": link["id"]},
+        {"$inc": {"contribution_count": 1}, "$set": {"last_contribution_at": _iso(_now())}},
+    )
+    return {"ok": True, "photo": {"url": f"/api/storage/{storage_path}", "filename": safe_name}}
