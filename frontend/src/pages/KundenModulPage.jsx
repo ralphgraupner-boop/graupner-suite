@@ -71,6 +71,7 @@ const KundenModulPage = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteKunde, setDeleteKunde] = useState(null);
   const [mailHistoryFor, setMailHistoryFor] = useState(null);  // {email, name}
+  const [linkDialogKunde, setLinkDialogKunde] = useState(null);  // Kunde-Objekt für Link-Dialog
   const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
   const navigate = useNavigate();
@@ -530,6 +531,15 @@ const KundenModulPage = () => {
                         </button>
                       )}
                       <button
+                        onClick={() => setLinkDialogKunde(kunde)}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 transition-colors"
+                        data-testid={`btn-kunde-link-${kunde.id}`}
+                        title="Temporären Link für Mitarbeiter / Monteur erzeugen"
+                      >
+                        <Mail className="w-4 h-4" />
+                        Link für Mitarbeiter
+                      </button>
+                      <button
                         onClick={async () => {
                           try {
                             const res = await api.get(`/portals/for-customer/${kunde.id}`);
@@ -618,6 +628,12 @@ const KundenModulPage = () => {
         onClose={() => setMailHistoryFor(null)}
         email={mailHistoryFor?.email || ""}
         kundeName={mailHistoryFor?.name || ""}
+      />
+
+      <KundenLinkDialog
+        isOpen={!!linkDialogKunde}
+        onClose={() => setLinkDialogKunde(null)}
+        kunde={linkDialogKunde}
       />
     </div>
   );
