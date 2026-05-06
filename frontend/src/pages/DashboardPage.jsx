@@ -264,19 +264,23 @@ const DashboardPage = () => {
                 className={`block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors ${borderColor}`}
                 data-testid={`dashboard-anfrage-${a.id}`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} title={status || "Anfrage"} />
-                    <span className="font-medium text-sm">{a.name || "Unbekannt"}</span>
-                    {a.email && <span className="text-xs text-muted-foreground">{a.email}</span>}
-                    {a.phone && <span className="text-xs text-muted-foreground">{a.phone}</span>}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 mb-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} title={status || "Anfrage"} />
+                      <span className="font-medium text-sm truncate">{a.name || "Unbekannt"}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 sm:ml-0 ml-[18px] min-w-0">
+                      {a.email && <span className="text-xs text-muted-foreground truncate">{a.email}</span>}
+                      {a.phone && <span className="text-xs text-muted-foreground truncate">{a.phone}</span>}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap ml-4 sm:ml-0">
                     {isNew && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold">NEU</span>}
                     {isInProgress && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-semibold">In Arbeit</span>}
                     {(a.photos || []).length > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">{a.photos.length} Bild(er)</span>}
                     {a.created_at && <span className="text-[10px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString("de-DE")}</span>}
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground hidden sm:inline-block" />
                   </div>
                 </div>
                 {(a.categories || []).length > 0 && (
