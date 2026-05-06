@@ -20,6 +20,7 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 ## Kern-Regeln
 - `module_kunden` ist die einzige Kunden-Wahrheit. Die legacy `customers`-Collection ist **tot**.
 - Alle neuen Features als `module_X` (Backend) + eigene UI.
+- 🚨 **Auswahlfelder-Pflicht (06.05.2026, Ralph bestätigt, dauerhaft):** Alle Grundlagen-Auswahlfelder (Status, Kategorien, Anreden, Mahn-Stufen, Abschluss-Gründe, Auftragsarten, …) werden **ausschließlich** in `module_textvorlagen` mit eigenem `doc_type` gepflegt. Niemals hartcodiert. Niemals neues Modul. Niemals doppelt. Frontend lädt live über `/api/modules/textvorlagen/data?doc_type=...`.
 - Keine Captchas; Spam wird server-seitig im Mail-Parser gefiltert.
 - Preview-Theme = Blau. Live-Theme = Rot. Unterscheidet sofort visuell.
 - Ralph wünscht **konsultativen Stil**: Plan vorschlagen → auf „Ja" warten → umsetzen.

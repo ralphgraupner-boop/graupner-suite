@@ -19,6 +19,18 @@
 
 ## 🏗️ 2. ARCHITEKTUR-PRINZIPIEN (NICHT VERHANDELBAR)
 
+### 🚨 Auswahlfelder ⇒ Textvorlagen (Pflicht seit 06.05.2026)
+**Alle Grundlagen-Auswahlfelder** (Kunden-Status, Kategorien, Anreden, Mahn-Stufen, Abschluss-Gründe, Auftragsarten, Termin-Typen, …) werden **ausschließlich** im bestehenden Modul **`module_textvorlagen`** mit eigenem `doc_type` (z.B. `kunden_status`, `kunden_kategorie`, `abschlussgrund`) gepflegt.
+
+- ❌ **Niemals hartcodiert** im Frontend oder Backend
+- ❌ **Niemals ein neues Modul** für Auswahlfelder anlegen
+- ❌ **Niemals doppelt** speichern
+- ✅ Bestehende hartcodierte Listen werden **migriert** (Skript), nicht ersetzt
+- ✅ Frontend liest live: `GET /api/modules/textvorlagen/data?doc_type=<typ>`
+- ✅ Fallback bei Modul-Ausfall: bestehende Werte aus dem Code als Default
+
+**Bestätigt durch Ralph Graupner. Gilt dauerhaft, für jede Aufgabe, jeden Tag, jeden Agenten.**
+
 ### Module-First-Prinzip
 Jedes neue Feature lebt in **eigenem `module_X`-Ordner** (Backend) mit:
 - eigener `routes.py`
