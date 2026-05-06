@@ -11,7 +11,7 @@ import { api } from "@/lib/api";
  * - Link kopieren / QR-Code anzeigen / widerrufen
  * Probezeit-Feature, wird später durch echte Monteur-App ersetzt.
  */
-const KundenLinkDialog = ({ isOpen, onClose, kunde }) => {
+const KundenLinkDialog = ({ isOpen, onClose, kunde, projekt = null }) => {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -23,21 +23,25 @@ const KundenLinkDialog = ({ isOpen, onClose, kunde }) => {
     if (!kunde?.id) return;
     setLoading(true);
     try {
-      const r = await api.get(`/module-kundenlink/list/${kunde.id}`);
+      const url = projekt?.id
+        ? `/module-kundenlink/list/${kunde.id}?projekt_id=${projekt.id}`
+        : `/module-kundenlink/list/${kunde.id}`;
+      const r = await api.get(url);
       setLinks(r.data || []);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Laden fehlgeschlagen");
     } finally {
       setLoading(false);
     }
-  }, [kunde?.id]);
+  }, [kunde?.id, projekt?.id]);
 
   useEffect(() => { if (isOpen) load(); }, [isOpen, load]);
 
   const createLink = async () => {
     setCreating(true);
     try {
-      await api.post(`/module-kundenlink/create/${kunde.id}`);
+      const body = projekt?.id ? { projekt_id: projekt.id } : {};
+      await api.post(`/module-kundenlink/create/${kunde.id}`, body);
       toast.success("Link erzeugt");
       await load();
     } catch (err) {
@@ -82,12 +86,21 @@ const KundenLinkDialog = ({ isOpen, onClose, kunde }) => {
   const fullName = [kunde.vorname, kunde.nachname].filter(Boolean).join(" ") || kunde.firma || "Kunde";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Link für Mitarbeiter (Besichtigung)" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={projekt ? "Link für Mitarbeiter (Projekt)" : "Link für Mitarbeiter (Besichtigung)"} size="lg">
       <div className="space-y-3 text-sm" data-testid="kundenlink-dialog">
         <div className="text-xs text-muted-foreground border-b pb-2">
           Kunde: <span className="font-medium text-foreground">{fullName}</span>
+          {projekt && (
+            <>
+              {" · "}
+              Projekt: <span className="font-medium text-foreground">{projekt.titel}</span>
+            </>
+          )}
           <span className="block mt-1 italic">
-            Öffentlicher Link – kein Login nötig. 30 Tage gültig. Mitarbeiter sehen nur Kontakt, Adresse, Anliegen, Bilder.
+            Öffentlicher Link – kein Login nötig. 30 Tage gültig.
+            {projekt
+              ? " Mitarbeiter sieht Kunde + Projekt-Bilder, -Beschreibung, -Notizen."
+              : " Mitarbeiter sehen nur Kontakt, Adresse, Anliegen, Bilder."}
           </span>
         </div>
 

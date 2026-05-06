@@ -235,6 +235,93 @@ const KundenLinkPage = () => {
           </section>
         )}
 
+        {/* Projekt-Section (nur wenn Link projektbezogen) */}
+        {data.projekt && (
+          <section className="bg-violet-50 border border-violet-200 rounded-sm p-3 space-y-3" data-testid="kundenlink-projekt">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="text-sm font-semibold text-violet-900 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Projekt: {data.projekt.titel}
+              </h3>
+              <div className="flex items-center gap-1.5">
+                {data.projekt.status && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-200 text-violet-900 font-medium">
+                    {data.projekt.status}
+                  </span>
+                )}
+                {data.projekt.kategorie && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white border border-violet-200 text-violet-700">
+                    {data.projekt.kategorie}
+                  </span>
+                )}
+              </div>
+            </div>
+            {data.projekt.adresse && (
+              <div className="text-xs bg-white border border-violet-200 rounded-sm p-2">
+                <span className="font-semibold text-violet-700 uppercase text-[10px]">Adresse abweichend:</span>{" "}
+                {data.projekt.adresse}
+              </div>
+            )}
+            {data.projekt.beschreibung && (
+              <div>
+                <div className="text-[10px] font-semibold text-violet-700 uppercase mb-1">Beschreibung</div>
+                <p className="text-sm whitespace-pre-wrap">{data.projekt.beschreibung}</p>
+              </div>
+            )}
+            {data.projekt.notizen && (
+              <div>
+                <div className="text-[10px] font-semibold text-violet-700 uppercase mb-1">Notizen / Hinweise</div>
+                <p className="text-sm whitespace-pre-wrap bg-white p-2 border border-violet-200 rounded-sm">
+                  {data.projekt.notizen}
+                </p>
+              </div>
+            )}
+            {data.projekt.bilder?.length > 0 && (() => {
+              const groups = data.projekt.bilder.reduce((acc, b) => {
+                const k = b.kategorie || "sonstiges";
+                acc[k] = acc[k] || [];
+                acc[k].push(b);
+                return acc;
+              }, {});
+              const order = ["vorher", "schaden", "nachher", "sonstiges"];
+              return (
+                <div className="space-y-3">
+                  <div className="text-[10px] font-semibold text-violet-700 uppercase flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3" /> Projekt-Bilder ({data.projekt.bilder.length})
+                  </div>
+                  {order.filter((kat) => groups[kat]?.length > 0).map((kat) => (
+                    <div key={kat}>
+                      <div className="text-[11px] font-medium text-violet-800 capitalize mb-1">{kat} ({groups[kat].length})</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {groups[kat].map((b, i) => {
+                          const src = fullUrl(b.url);
+                          return (
+                            <a
+                              key={b.id || i}
+                              href={src}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              data-testid={`kundenlink-projekt-bild-${kat}-${i}`}
+                            >
+                              <img
+                                src={src}
+                                alt={b.filename || `Bild ${i + 1}`}
+                                loading="lazy"
+                                className="w-full h-32 object-cover rounded-sm border bg-white"
+                                onError={(e) => { e.target.style.opacity = "0.3"; }}
+                              />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </section>
+        )}
+
         {/* Bilder */}
         {k.photos?.length > 0 && (
           <section className="bg-white border rounded-sm p-3">

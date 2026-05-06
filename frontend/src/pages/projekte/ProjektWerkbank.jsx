@@ -10,6 +10,7 @@ import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common
 import { api } from "@/lib/api";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
+import KundenLinkDialog from "@/components/KundenLinkDialog";
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 const KATEGORIEN = ["Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"];
@@ -160,7 +161,7 @@ const ProjektWerkbank = () => {
       ) : (
         <div className="space-y-4">
           {projekte.map(p => (
-            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} onChanged={load} />
+            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} kunde={kunde} onChanged={load} />
           ))}
         </div>
       )}
@@ -178,12 +179,13 @@ const ProjektWerkbank = () => {
 };
 
 // ==================== Projekt-Karte (inline editierbar) ====================
-const ProjektKarte = ({ projekt, kundeId, onChanged }) => {
+const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
   const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState(projekt);
   const [saving, setSaving] = useState(false);
   const [uploadKategorie, setUploadKategorie] = useState("schaden");
   const [uploading, setUploading] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
@@ -354,16 +356,35 @@ const ProjektKarte = ({ projekt, kundeId, onChanged }) => {
             <TerminePanel projekt_id={data.id} title="Termine für dieses Projekt" defaultCollapsed={true} compact={true} />
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t">
+          <div className="flex items-center justify-between pt-3 border-t flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-600 hover:bg-red-50" data-testid={`btn-delete-${data.id}`}>
               <Trash2 className="w-4 h-4" /> Löschen
             </Button>
-            <Button size="sm" onClick={save} disabled={saving} data-testid={`btn-save-${data.id}`}>
-              <Save className="w-4 h-4" /> {saving ? "Speichere…" : "Speichern"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLinkDialog(true)}
+                className="border-violet-300 text-violet-700 hover:bg-violet-50"
+                data-testid={`btn-projekt-link-${data.id}`}
+                title="Temporären Link für Mitarbeiter mit Projekt-Bildern erzeugen"
+              >
+                <Mail className="w-4 h-4" /> Link für Mitarbeiter
+              </Button>
+              <Button size="sm" onClick={save} disabled={saving} data-testid={`btn-save-${data.id}`}>
+                <Save className="w-4 h-4" /> {saving ? "Speichere…" : "Speichern"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
+      <KundenLinkDialog
+        isOpen={showLinkDialog}
+        onClose={() => setShowLinkDialog(false)}
+        kunde={kunde ? { ...kunde, id: kundeId } : { id: kundeId }}
+        projekt={{ id: data.id, titel: data.titel }}
+      />
     </Card>
   );
 };

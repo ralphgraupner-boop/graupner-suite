@@ -124,6 +124,9 @@ const KundenLinkExpiryCheck = () => {
                       <div className="font-semibold text-sm truncate">
                         Kunde: {it.kunde_name}
                         {it.kunde_firma && <span className="text-muted-foreground font-normal"> ({it.kunde_firma})</span>}
+                        {it.projekt_titel && (
+                          <span className="text-violet-700 font-normal"> · Projekt: {it.projekt_titel}</span>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap mt-0.5">
                         <span className={`flex items-center gap-1 ${it.expired ? "text-red-700 font-medium" : ""}`}>

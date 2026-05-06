@@ -118,18 +118,71 @@ async def _sanitize_customer_for_public(kunde_id: str) -> dict | None:
 
 
 # ─────────── Admin-Endpoints (Login nötig) ───────────
+async def _sanitize_projekt_for_public(projekt_id: str) -> dict | None:
+    """Lädt Projekt-Details (Bilder, Notizen, Beschreibung) für die
+    öffentliche Mitarbeiter-Ansicht. Datenmaske aus module_projekte.
+    Notizen werden mitgegeben (im Werkbank-UI sind sie als „intern" markiert,
+    aber im Mitarbeiter-Kontext sind das genau die Hinweise, die er braucht).
+    """
+    p = await db.module_projekte.find_one({"id": projekt_id}, {"_id": 0})
+    if not p:
+        return None
+
+    def _to_public_url(raw: str) -> str:
+        if not raw:
+            return ""
+        if raw.startswith("http://") or raw.startswith("https://"):
+            return raw
+        if raw.startswith("/"):
+            return raw
+        return f"/api/storage/{raw.lstrip('/')}"
+
+    bilder = []
+    for b in (p.get("bilder") or []):
+        bilder.append({
+            "id": b.get("id"),
+            "url": _to_public_url(b.get("url") or b.get("path") or ""),
+            "filename": b.get("filename") or "",
+            "kategorie": b.get("kategorie") or "sonstiges",
+            "beschreibung": b.get("beschreibung") or "",
+        })
+    return {
+        "id": p.get("id"),
+        "titel": p.get("titel") or "",
+        "status": p.get("status") or "",
+        "kategorie": p.get("kategorie") or "",
+        "beschreibung": p.get("beschreibung") or "",
+        "notizen": p.get("notizen") or "",
+        "adresse": p.get("adresse") or "",
+        "bilder": bilder,
+    }
+
+
 @router.post("/create/{kunde_id}")
-async def create_link(kunde_id: str, user=Depends(get_current_user)):
+async def create_link(kunde_id: str, body: dict | None = None, user=Depends(get_current_user)):
     """Erzeugt einen neuen Mitarbeiter-Link für den Kunden.
-    Widerruft bestehende (noch gültige) Links derselben Person nicht,
-    damit man mehrere Monteure gleichzeitig einladen kann."""
+    Optional: body = { projekt_id: str } → Link zeigt zusätzlich das Projekt
+    (Bilder, Beschreibung, Notizen) auf der öffentlichen Mitarbeiter-Seite.
+    Widerruft bestehende Links nicht — mehrere Monteure parallel möglich."""
     k = await db.module_kunden.find_one({"id": kunde_id}, {"_id": 0, "id": 1})
     if not k:
         raise HTTPException(404, "Kunde nicht gefunden")
+    projekt_id = ((body or {}).get("projekt_id") or "").strip() or None
+    projekt_titel = ""
+    if projekt_id:
+        p = await db.module_projekte.find_one(
+            {"id": projekt_id, "kunde_id": kunde_id},
+            {"_id": 0, "titel": 1},
+        )
+        if not p:
+            raise HTTPException(404, "Projekt gehört nicht zu diesem Kunden")
+        projekt_titel = p.get("titel") or ""
     now = _now()
     entry = {
         "id": str(uuid.uuid4()),
         "kunde_id": kunde_id,
+        "projekt_id": projekt_id,
+        "projekt_titel": projekt_titel,  # Cache für Listen/Expiring (Datenmaske ist live aus _sanitize_projekt_for_public)
         "token": secrets.token_urlsafe(36),
         "created_at": _iso(now),
         "created_by": getattr(user, "username", None),
@@ -145,10 +198,15 @@ async def create_link(kunde_id: str, user=Depends(get_current_user)):
 
 
 @router.get("/list/{kunde_id}")
-async def list_links(kunde_id: str, user=Depends(get_current_user)):
-    """Alle Links eines Kunden (aktive und widerrufene/abgelaufene)."""
+async def list_links(kunde_id: str, projekt_id: str | None = None, user=Depends(get_current_user)):
+    """Alle Links eines Kunden (aktive und widerrufene/abgelaufene).
+    Optional: ?projekt_id=... → nur Links für dieses Projekt.
+    """
+    q = {"kunde_id": kunde_id}
+    if projekt_id is not None:
+        q["projekt_id"] = projekt_id or None
     out = []
-    async for e in db.module_kundenlink.find({"kunde_id": kunde_id}, {"_id": 0}).sort("created_at", -1):
+    async for e in db.module_kundenlink.find(q, {"_id": 0}).sort("created_at", -1):
         out.append(e)
     return out
 
@@ -237,11 +295,22 @@ async def expiring_links(days: int = 7, user=Depends(get_current_user)):
             )
             continue
         kunde_name = " ".join(filter(None, [k.get("vorname"), k.get("nachname")])).strip() or k.get("firma") or k.get("email") or "Unbekannt"
+        # Projekt-Titel live joinen (Datenmaske) — Cache nur Fallback
+        projekt_titel = link.get("projekt_titel") or ""
+        if link.get("projekt_id"):
+            p = await db.module_projekte.find_one(
+                {"id": link["projekt_id"]},
+                {"_id": 0, "titel": 1},
+            )
+            if p:
+                projekt_titel = p.get("titel") or projekt_titel
         out.append({
             "id": link["id"],
             "kunde_id": link["kunde_id"],
             "kunde_name": kunde_name,
             "kunde_firma": k.get("firma") or "",
+            "projekt_id": link.get("projekt_id"),
+            "projekt_titel": projekt_titel,
             "expires_at": link["expires_at"],
             "expired": exp < now,
             "days_remaining": int((exp - now).total_seconds() // 86400),
@@ -278,6 +347,10 @@ async def view_by_token(token: str):
     if not kunde:
         raise HTTPException(404, "Zugehöriger Kunde nicht mehr vorhanden")
 
+    projekt = None
+    if link.get("projekt_id"):
+        projekt = await _sanitize_projekt_for_public(link["projekt_id"])
+
     # Zähler + Zeitstempel erhöhen
     await db.module_kundenlink.update_one(
         {"id": link["id"]},
@@ -288,6 +361,7 @@ async def view_by_token(token: str):
         "expires_at": link["expires_at"],
         "created_at": link["created_at"],
         "kunde": kunde,
+        "projekt": projekt,
     }
 
 
