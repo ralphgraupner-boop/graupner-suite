@@ -38,7 +38,7 @@ const MailDetailModal = ({ entry, onClose, onChanged }) => {
       onChanged?.();
       try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
       // Direkt ins bestehende Kunden-Modul (Bearbeiten-Maske)
-      navigate(`/kunden?edit=${r.data.kunde_id}`);
+      navigate(`/module/kunden?edit=${r.data.kunde_id}`);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Übernahme fehlgeschlagen");
       setBusy("");

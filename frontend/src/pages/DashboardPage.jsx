@@ -259,7 +259,7 @@ const DashboardPage = () => {
               const borderColor = isNew ? "border-l-4 border-l-red-500" : isInProgress ? "border-l-4 border-l-yellow-500" : "";
               return (
               <Link
-                to={`/kunden?edit=${a.id}`}
+                to={`/module/kunden?edit=${a.id}`}
                 key={a.id}
                 className={`block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors ${borderColor}`}
                 data-testid={`dashboard-anfrage-${a.id}`}
@@ -379,7 +379,7 @@ const DashboardPage = () => {
               {(stats?.anfragen?.recent || []).map((a) => (
                 <Link
                   key={a.id}
-                  to={`/kunden?edit=${a.id}`}
+                  to={`/module/kunden?edit=${a.id}`}
                   className="flex items-center justify-between p-3 bg-muted/30 rounded-sm border hover:bg-muted transition-colors"
                   data-testid={`dashboard-anfrage-small-${a.id}`}
                 >
@@ -392,7 +392,7 @@ const DashboardPage = () => {
                   </span>
                 </Link>
               ))}
-              <Link to="/kunden?filter=anfragen">
+              <Link to="/module/kunden?filter=anfragen">
                 <Button variant="ghost" size="sm" className="w-full mt-2">
                   Alle Anfragen anzeigen <ChevronRight className="w-4 h-4" />
                 </Button>

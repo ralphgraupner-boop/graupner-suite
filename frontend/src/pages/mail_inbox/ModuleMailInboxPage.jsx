@@ -84,7 +84,7 @@ const ModuleMailInboxPage = () => {
       const r = await api.post(`/module-mail-inbox/accept/${entry.id}`);
       toast.success(`Kunde „${r.data.kunde_name}" angelegt`);
       try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
-      navigate(`/kunden?edit=${r.data.kunde_id}`);
+      navigate(`/module/kunden?edit=${r.data.kunde_id}`);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Übernahme fehlgeschlagen");
     }
@@ -510,7 +510,7 @@ const ModuleMailInboxPage = () => {
 
                 {e.status === "übernommen" && e.kunde_id && (
                   <a
-                    href={`/kunden?edit=${e.kunde_id}`}
+                    href={`/module/kunden?edit=${e.kunde_id}`}
                     onClick={(ev) => ev.stopPropagation()}
                     className="text-xs text-primary hover:underline mt-2 inline-block"
                   >
