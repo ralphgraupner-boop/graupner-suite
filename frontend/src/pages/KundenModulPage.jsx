@@ -13,6 +13,7 @@ import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
 import MailHistoryModal from "@/components/MailHistoryModal";
 import AbschlussDialog from "@/components/AbschlussDialog";
+import KundenLinkDialog from "@/components/KundenLinkDialog";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -640,6 +641,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [pendingAbschluss, setPendingAbschluss] = useState(null);  // {newStatus} oder null
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
 
   useEffect(() => {
     if (kunde) {
@@ -821,7 +823,18 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
             <input id="kunden-modul-file-upload" type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx" onChange={handleFileSelect} className="hidden" />
           </div>
         </div>
-        <div className="flex justify-end gap-4 pt-4">
+        <div className="flex justify-end gap-4 pt-4 flex-wrap">
+          {kunde && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowLinkDialog(true)}
+              data-testid="btn-kunde-link"
+              className="mr-auto"
+            >
+              <Mail className="w-4 h-4" /> Link für Mitarbeiter
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
           <Button type="submit" disabled={loading}>{loading ? "Speichern..." : "Speichern"}</Button>
         </div>
@@ -845,6 +858,12 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
         }}
         titleLabel={`Kunde abschließen → "${pendingAbschluss?.newStatus || ""}"`}
         subjectLabel={`${form.vorname || ""} ${form.nachname || ""}${form.firma ? " (" + form.firma + ")" : ""}`.trim() || "Kunde"}
+      />
+
+      <KundenLinkDialog
+        isOpen={showLinkDialog}
+        onClose={() => setShowLinkDialog(false)}
+        kunde={kunde}
       />
     </Modal>
   );

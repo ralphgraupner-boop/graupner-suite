@@ -35,6 +35,7 @@ import { PortalV3CustomerPage } from "@/pages/portal_v3/PortalV3CustomerPage";
 import { PortalV4AdminPage } from "@/pages/portal_v4/PortalV4AdminPage";
 import { PortalV4DetailPage } from "@/pages/portal_v4/PortalV4DetailPage";
 import { PortalV4LoginPage } from "@/pages/portal_v4/PortalV4LoginPage";
+import KundenLinkPage from "@/pages/KundenLinkPage";
 import { PortalV4CustomerPage } from "@/pages/portal_v4/PortalV4CustomerPage";
 import { MonteurAppPage } from "@/pages/monteur_app/MonteurAppPage";
 import { MonteurEinsatzDetailPage } from "@/pages/monteur_app/MonteurEinsatzDetailPage";
@@ -111,6 +112,8 @@ function App() {
           <Route path="/portal-v4/login" element={<PortalV4LoginPage />} />
           <Route path="/portal-v4/login/:token" element={<PortalV4LoginPage />} />
           <Route path="/portal-v4/app" element={<PortalV4CustomerPage />} />
+          {/* Mitarbeiter-Kundenlink (oeffentlich, 30 Tage gueltig) */}
+          <Route path="/m/:token" element={<KundenLinkPage />} />
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLogin={login} />} />
           ) : (

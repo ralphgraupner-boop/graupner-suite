@@ -57,6 +57,7 @@ from module_kunde_delete import router as module_kunde_delete_router
 from module_papierkorb import router as module_papierkorb_router
 from module_mail_inbox import router as module_mail_inbox_router
 from module_feedback import router as module_feedback_router
+from module_kundenlink.routes import router as module_kundenlink_router
 from module_portal_v2_backup import router as module_portal_v2_backup_router
 from module_portal_v2_backup.routes import start_auto_backup_task
 from dokumente_v2 import router as dokumente_v2_router
@@ -130,6 +131,7 @@ app.include_router(module_kunde_delete_router, prefix="/api/module-kunde-delete"
 app.include_router(module_papierkorb_router, prefix="/api/module-papierkorb", tags=["Papierkorb"])  # Soft-Delete + Restore + Purge
 app.include_router(module_mail_inbox_router, prefix="/api/module-mail-inbox", tags=["MailInbox"])  # Jimdo-Anfragen → Kundenvorschlag
 app.include_router(module_feedback_router, prefix="/api/module-feedback", tags=["Feedback"])  # Persönliche Notizen/Bugs/Ideen
+app.include_router(module_kundenlink_router, prefix="/api/module-kundenlink", tags=["KundenLink"])  # Öffentl. Link an Mitarbeiter (Probezeit)
 app.include_router(module_portal_v2_backup_router)  # Portal-v2-Sicherungen, prefix /api/module-portal-v2-backup
 
 @app.on_event("startup")
