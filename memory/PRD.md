@@ -40,11 +40,31 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 | `module_health` | Umgebungsbanner, Konsistenz-Check |
 | `module_kunde_delete` | Cascade-Delete mit Zwangs-ZIP-Backup |
 | `module_mail_inbox` | IMAP-Anfragen, Spam-Filter, Tombstones, Delete, **Multi-Postfach** |
+| `module_kundenlink` | Tokenbasierte Public-Links für Mitarbeiter (kunden- oder projektbezogen, Verlängerungs-Workflow) |
 | `module_user_prefs` | Sidebar-Reihenfolge pro User |
 | `module_portal_v2_backup` | Tägliche Auto-Backups |
 | `module_feedback` | **Notizen-Widget** (Floating, 30-Tage-Archiv) |
 | `monteur_app` | Mobile PWA mit Bildkompression |
 | `routes/portal.py` (legacy) | Kundenportale - heute Datenmasken-fähig gemacht |
+
+## Zuletzt abgeschlossen (06.05.2026)
+
+- **Kunden-Seite Crash gefixt** — `KundenModulPage.jsx` rief `KUNDEN_STATUSES` im Listen-Bereich auf, ohne dass die Variable im Hauptcomponent existierte (Refactor-Fehler von vorher). `useTextvorlagen("kunden_status", ...)` ergänzt → Status- und Kategorien-Chips werden jetzt überall live aus `module_textvorlagen` geladen.
+- **`module_kundenlink` Phase 2 — Verlängerung & Projekt-Bezug:**
+  - Neuer Endpunkt `GET /api/module-kundenlink/expiring?days=7` listet aktive Links die in 7 Tagen ablaufen oder schon abgelaufen sind, mit Kundenname (Datenmaske) + Projekt-Titel (live aus `module_projekte`).
+  - Neuer Endpunkt `POST /api/module-kundenlink/{id}/extend` mit `{days}` (1–90) — verlängert Link, ohne Restlaufzeit zu verschwenden (`base = max(now, old_expires_at) + days`). Setzt `extended_at`, `extended_by`, `extend_count`.
+  - Neuer Endpunkt `GET /api/module-kundenlink/counts` → `{kunde_id: count_aktiver_links}` für Badges in der Kunden-Liste.
+  - **Startup-Check** `KundenLinkExpiryCheck.jsx` (analog zu `TrashStartupCheck`): zeigt beim Login einmal pro Session ein Modal mit allen ablaufenden Links + Buttons **+7 / +14 / +30 Tage** + **Widerrufen**. Zeigt zusätzlich „· Projekt XYZ" wenn Link projektbezogen.
+  - Gelöschter Kunde → Link wird im `expiring`-Endpunkt automatisch widerrufen (statt anzuzeigen).
+- **Mitarbeiter-Link pro Projekt:**
+  - `POST /api/module-kundenlink/create/{kunde_id}` nimmt jetzt optional Body `{projekt_id}` an. `projekt_titel` wird im Link-Dokument als Cache gespeichert (Datenmaske: live aus `module_projekte`).
+  - `GET /view/{token}` liefert `{kunde, projekt}` — Mitarbeiter sieht Projekt-Beschreibung, Notizen, Bilder gruppiert nach Kategorie (vorher/schaden/nachher/sonstiges).
+  - `GET /list/{kunde_id}?projekt_id=...` filterbar nach Projekt.
+  - **Werkbank** (`ProjektWerkbank.jsx`): pro Projekt-Karte eigener „Link für Mitarbeiter"-Button (violett) → öffnet `KundenLinkDialog` mit `projekt`-Prop → erzeugt projektbezogene Links.
+  - **Public-Seite** `KundenLinkPage.jsx`: violette Projekt-Sektion mit Status, Kategorie, abweichende Adresse, Beschreibung, Notizen + Bilder-Grid pro Kategorie.
+- **Aktive-Links-Badge in Kunden-Liste:**
+  - `KundenModulPage.jsx` lädt `/module-kundenlink/counts` und zeigt 🔗 N als violettes Badge in der Kompakt-Zeile sowie in der Aktion-Leiste am „Link für Mitarbeiter"-Button.
+- **Aktion-Button „Link für Mitarbeiter" im Kunden-Modul** (war im Edit-Modal versteckt) jetzt zusätzlich prominent in der aufgeklappten Detail-Aktionsleiste.
 
 ## Zuletzt abgeschlossen (05.05.2026)
 
