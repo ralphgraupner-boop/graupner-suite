@@ -4,7 +4,8 @@ import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Im
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
-import { CATEGORIES } from "@/lib/constants";
+// (CATEGORIES wurde entfernt — Kategorien kommen jetzt aus module_textvorlagen
+// mit doc_type=kunden_kategorie. Siehe useTextvorlagen-Hook unten.)
 import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
 import { KundeExportButton } from "@/components/KundeExportButton";
@@ -15,7 +16,34 @@ import MailHistoryModal from "@/components/MailHistoryModal";
 import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 
-const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
+// Hartcodierte Liste = Fallback wenn das Textvorlagen-Modul gerade nicht
+// antwortet. Pflege erfolgt im UI: Einstellungen → Textvorlagen → "Kunden-Status".
+// (Pflicht-Regel seit 06.05.2026, siehe VISION.md / AGENT_BRIEFING.md)
+const KUNDEN_STATUSES_FALLBACK = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Aufmaß", "Angebot", "Auftrag", "Abgeschlossen", "Archiv"];
+const KUNDEN_KATEGORIEN_FALLBACK = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"];
+
+// useTextvorlagen-Hook — lädt Werte live aus module_textvorlagen
+// und fällt bei Fehler/Leerantwort auf Default-Liste zurück.
+const useTextvorlagen = (docType, fallback) => {
+  const [items, setItems] = useState(fallback);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.get(`/modules/textvorlagen/data?doc_type=${docType}`);
+        const titles = (r.data || [])
+          .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || (a.title || "").localeCompare(b.title || ""))
+          .map((t) => t.title)
+          .filter(Boolean);
+        if (!cancelled && titles.length > 0) setItems(titles);
+      } catch {
+        // Fallback bleibt aktiv
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [docType]);
+  return items;
+};
 
 const STATUS_COLORS = {
   Anfrage: { dot: "bg-blue-500", badge: "bg-blue-100 text-blue-700", border: "border-l-blue-500" },
@@ -43,6 +71,7 @@ const KundenModulPage = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [deleteKunde, setDeleteKunde] = useState(null);
   const [mailHistoryFor, setMailHistoryFor] = useState(null);  // {email, name}
+  const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -226,7 +255,7 @@ const KundenModulPage = () => {
       {/* Kategorie Filter */}
       <div className="flex flex-wrap gap-2 mb-2">
         <button onClick={() => setCategoryFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!categoryFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>Alle</button>
-        {CATEGORIES.map(cat => (
+        {KUNDEN_KATEGORIEN_PAGE.map(cat => (
           <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${categoryFilter === cat ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>{cat}</button>
         ))}
@@ -642,6 +671,8 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [pendingAbschluss, setPendingAbschluss] = useState(null);  // {newStatus} oder null
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
+  const KUNDEN_KATEGORIEN = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
 
   useEffect(() => {
     if (kunde) {
@@ -752,7 +783,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
         <div>
           <label className="block text-sm font-medium mb-2">Kategorien</label>
           <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => (<button key={cat} type="button" onClick={() => { const cats = (form.categories || []).includes(cat) ? form.categories.filter(c => c !== cat) : [...(form.categories || []), cat]; setForm({ ...form, categories: cats }); }}
+            {KUNDEN_KATEGORIEN.map(cat => (<button key={cat} type="button" onClick={() => { const cats = (form.categories || []).includes(cat) ? form.categories.filter(c => c !== cat) : [...(form.categories || []), cat]; setForm({ ...form, categories: cats }); }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${(form.categories || []).includes(cat) ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input"}`}>{cat}</button>))}
           </div>
         </div>
