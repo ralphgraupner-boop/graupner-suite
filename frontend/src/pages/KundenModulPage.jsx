@@ -12,6 +12,7 @@ import { KundeImportButton } from "@/components/KundeImportButton";
 import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
 import MailHistoryModal from "@/components/MailHistoryModal";
+import AbschlussDialog from "@/components/AbschlussDialog";
 
 const KUNDEN_STATUSES = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 
@@ -632,14 +633,17 @@ const DuplicateDialog = ({ title, duplicates, onCancel, onOpen, onForce, loading
 
 
 // ==================== KUNDEN FORM MODAL ====================
+const ABSCHLUSS_STATES = ["Abgeschlossen", "Archiv"];
+
 const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [pendingAbschluss, setPendingAbschluss] = useState(null);  // {newStatus} oder null
 
   useEffect(() => {
     if (kunde) {
-      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", objekt_strasse: kunde.objekt_strasse || "", objekt_plz: kunde.objekt_plz || "", objekt_ort: kunde.objekt_ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "" });
+      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", objekt_strasse: kunde.objekt_strasse || "", objekt_plz: kunde.objekt_plz || "", objekt_ort: kunde.objekt_ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "", abschluss_grund: kunde.abschluss_grund || "", abschluss_at: kunde.abschluss_at || "" });
     } else {
       setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", strasse: "", hausnummer: "", plz: "", ort: "", objekt_strasse: "", objekt_plz: "", objekt_ort: "", customer_type: "Privat", status: "Anfrage", categories: [], notes: "", nachricht: "" });
     }
@@ -752,9 +756,31 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">Status</label>
-          <select value={form.status || "Neu"} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
+          <select
+            value={form.status || "Neu"}
+            onChange={e => {
+              const newStatus = e.target.value;
+              const oldStatus = form.status || "Neu";
+              if (ABSCHLUSS_STATES.includes(newStatus) && !ABSCHLUSS_STATES.includes(oldStatus)) {
+                // Abschluss-Dialog erzwingen
+                setPendingAbschluss({ newStatus });
+              } else {
+                setForm({ ...form, status: newStatus });
+              }
+            }}
+            className="w-full h-10 rounded-sm border border-input bg-background px-3"
+            data-testid="kunden-form-status"
+          >
             {KUNDEN_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+          {form.abschluss_grund && (
+            <div className="mt-1 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-sm p-2">
+              <span className="font-semibold">Abschluss-Grund:</span> {form.abschluss_grund}
+              {form.abschluss_at && (
+                <span className="text-muted-foreground ml-1">· {new Date(form.abschluss_at).toLocaleString("de-DE")}</span>
+              )}
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-2">Adresse</label>
@@ -800,6 +826,26 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
           <Button type="submit" disabled={loading}>{loading ? "Speichern..." : "Speichern"}</Button>
         </div>
       </form>
+
+      <AbschlussDialog
+        isOpen={!!pendingAbschluss}
+        onClose={() => setPendingAbschluss(null)}
+        onConfirm={async ({ grund }) => {
+          const newStatus = pendingAbschluss?.newStatus || "Abgeschlossen";
+          const now = new Date().toISOString();
+          const datedNote = `[${new Date().toLocaleDateString("de-DE")} Abschluss] ${grund}`;
+          setForm((f) => ({
+            ...f,
+            status: newStatus,
+            abschluss_grund: grund,
+            abschluss_at: now,
+            notes: f.notes ? `${f.notes}\n\n${datedNote}` : datedNote,
+          }));
+          setPendingAbschluss(null);
+        }}
+        titleLabel={`Kunde abschließen → "${pendingAbschluss?.newStatus || ""}"`}
+        subjectLabel={`${form.vorname || ""} ${form.nachname || ""}${form.firma ? " (" + form.firma + ")" : ""}`.trim() || "Kunde"}
+      />
     </Modal>
   );
 };

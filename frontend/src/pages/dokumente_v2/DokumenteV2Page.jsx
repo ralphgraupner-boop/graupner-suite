@@ -6,6 +6,7 @@ import {
   FileText, Plus, Search, CheckCircle2, AlertCircle, Clock, XCircle,
   Settings as SettingsIcon, Scale, Trash2, Hash, Power, Pencil,
 } from "lucide-react";
+import AbschlussDialog from "@/components/AbschlussDialog";
 
 /**
  * Dokumente v2 – Admin-Übersicht (Phase 1: Liste + CRUD + Nummer + GoBD-Schutz)
@@ -43,6 +44,7 @@ export function DokumenteV2Page() {
   const [kundenList, setKundenList] = useState([]);
   const [kundenSearching, setKundenSearching] = useState(false);
   const [selectedKunde, setSelectedKunde] = useState(null);
+  const [cancelDoc_, setCancelDoc_] = useState(null);  // Doc fürs Storno-Modal
 
   const load = async () => {
     setLoading(true);
@@ -158,12 +160,16 @@ export function DokumenteV2Page() {
     }
   };
 
-  const cancelDoc = async (d) => {
-    const reason = window.prompt("Stornierungsgrund:", "");
-    if (reason === null) return;
+  const cancelDoc = (d) => {
+    setCancelDoc_(d);  // öffnet AbschlussDialog
+  };
+
+  const submitCancel = async ({ grund }) => {
+    if (!cancelDoc_) return;
     try {
-      await api.post(`/dokumente-v2/admin/dokumente/${d.id}/cancel`, {}, { params: { reason } });
+      await api.post(`/dokumente-v2/admin/dokumente/${cancelDoc_.id}/cancel`, {}, { params: { reason: grund } });
       toast.success("Storniert");
+      setCancelDoc_(null);
       load();
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
@@ -433,6 +439,15 @@ export function DokumenteV2Page() {
           </div>
         </div>
       )}
+
+      {/* Storno-Dialog */}
+      <AbschlussDialog
+        isOpen={!!cancelDoc_}
+        onClose={() => setCancelDoc_(null)}
+        onConfirm={submitCancel}
+        titleLabel="Dokument stornieren"
+        subjectLabel={cancelDoc_ ? `${TYPE_LABEL[cancelDoc_.type] || cancelDoc_.type} ${cancelDoc_.number || cancelDoc_.id?.slice(0, 8)}${cancelDoc_.subject ? " – " + cancelDoc_.subject : ""}` : ""}
+      />
     </div>
   );
 }
