@@ -68,6 +68,11 @@ const KundenLinkPage = () => {
   if (!data) return null;
   const k = data.kunde;
   const exp = new Date(data.expires_at).toLocaleDateString("de-DE");
+  const fullUrl = (u) => {
+    if (!u) return "";
+    if (u.startsWith("http://") || u.startsWith("https://")) return u;
+    return `${API}${u.startsWith("/") ? u : "/" + u}`;
+  };
   const mapsUrl = k.objekt_address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(k.objekt_address)}`
     : k.address_plain
@@ -169,18 +174,27 @@ const KundenLinkPage = () => {
               <ImageIcon className="w-3.5 h-3.5" /> Bilder ({k.photos.length})
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              {k.photos.map((p, i) => (
-                <a
-                  key={i}
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                  data-testid={`kundenlink-photo-${i}`}
-                >
-                  <img src={p.url} alt={`Bild ${i + 1}`} className="w-full h-32 object-cover rounded-sm border" />
-                </a>
-              ))}
+              {k.photos.map((p, i) => {
+                const src = fullUrl(p.url);
+                return (
+                  <a
+                    key={i}
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                    data-testid={`kundenlink-photo-${i}`}
+                  >
+                    <img
+                      src={src}
+                      alt={p.filename || `Bild ${i + 1}`}
+                      loading="lazy"
+                      className="w-full h-32 object-cover rounded-sm border bg-slate-100"
+                      onError={(e) => { e.target.style.opacity = "0.3"; }}
+                    />
+                  </a>
+                );
+              })}
             </div>
           </section>
         )}
@@ -195,7 +209,7 @@ const KundenLinkPage = () => {
               {k.files.map((f, i) => (
                 <li key={i}>
                   <a
-                    href={f.url}
+                    href={fullUrl(f.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 p-2 rounded-sm border bg-slate-50 text-sm"

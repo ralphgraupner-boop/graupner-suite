@@ -67,23 +67,37 @@ async def _sanitize_customer_for_public(kunde_id: str) -> dict | None:
             k.get("objekt_strasse"),
             " ".join(filter(None, [k.get("objekt_plz"), k.get("objekt_ort")])).strip(),
         ]))
-    # Bilder + PDFs: nur die photo_urls / files (IDs), das Frontend lädt sie über die
-    # bestehenden öffentlichen Endpoints (falls vorhanden). Für die Probezeit
-    # reichen die URLs als Anzeige-Pfad.
+    # Bilder + PDFs: URLs werden aus Object-Keys aufgebaut (öffentlicher
+    # Storage-Endpoint /api/storage/{path}). Das Frontend ergänzt den
+    # Backend-Origin (REACT_APP_BACKEND_URL).
+    def _to_public_url(raw: str) -> str:
+        if not raw:
+            return ""
+        # Schon vollständige URL? Lassen.
+        if raw.startswith("http://") or raw.startswith("https://"):
+            return raw
+        # Schon mit /api/... → lassen
+        if raw.startswith("/"):
+            return raw
+        return f"/api/storage/{raw.lstrip('/')}"
+
     files = []
     for f in (k.get("files") or []):
         files.append({
             "id": f.get("id"),
             "name": f.get("filename") or f.get("name"),
             "content_type": f.get("content_type", ""),
-            "url": f.get("url") or f.get("public_url") or "",
+            "url": _to_public_url(f.get("url") or f.get("public_url") or f.get("path") or ""),
         })
     photos = []
     for p in (k.get("photos") or []):
         if isinstance(p, str):
-            photos.append({"url": p})
+            photos.append({"url": _to_public_url(p)})
         elif isinstance(p, dict):
-            photos.append({"url": p.get("url") or p.get("public_url") or ""})
+            photos.append({
+                "url": _to_public_url(p.get("url") or p.get("public_url") or p.get("path") or ""),
+                "filename": p.get("filename") or "",
+            })
     return {
         "name": full_name or "Unbekannt",
         "firma": k.get("firma") or "",
