@@ -192,11 +192,11 @@ const DashboardPage = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
         <HelpTip id="dashboard.stat-anfragen" block>
-        <Link to="/module/kunden?filter=anfragen" className="block" data-testid="stat-link-anfragen">
+        <Link to="/module/mail-inbox" className="block" data-testid="stat-link-anfragen">
           <StatCard
-            title="Anfragen"
+            title="Mailanfragen"
             value={stats?.anfragen?.total || 0}
-            subtitle={`Kontakte: ${stats?.kontakte_count || 0}`}
+            subtitle="Neu / Offen"
             icon={Inbox}
           />
         </Link>
@@ -243,62 +243,8 @@ const DashboardPage = () => {
         </HelpTip>
       </div>
 
-      {/* Letzte Anfragen aus Kontakt-Modul */}
-      {stats?.anfragen?.recent?.length > 0 && (
-        <Card className="p-6 mb-6" data-testid="dashboard-anfragen-recent">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Inbox className="w-5 h-5 text-primary" />
-            Letzte Anfragen
-          </h3>
-          <div className="space-y-3">
-            {stats.anfragen.recent.map((a) => {
-              const status = a.kontakt_status || "";
-              const isNew = status === "Neu";
-              const isInProgress = status === "In Bearbeitung" || status === "in_bearbeitung";
-              const dotColor = isNew ? "bg-red-500 animate-pulse" : isInProgress ? "bg-yellow-500" : "bg-green-500";
-              const borderColor = isNew ? "border-l-4 border-l-red-500" : isInProgress ? "border-l-4 border-l-yellow-500" : "";
-              return (
-              <Link
-                to={`/module/kunden?edit=${a.id}`}
-                key={a.id}
-                className={`block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors ${borderColor}`}
-                data-testid={`dashboard-anfrage-${a.id}`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 mb-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} title={status || "Anfrage"} />
-                      <span className="font-medium text-sm truncate">{a.name || "Unbekannt"}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 sm:ml-0 ml-[18px] min-w-0">
-                      {a.email && <span className="text-xs text-muted-foreground truncate">{a.email}</span>}
-                      {a.phone && <span className="text-xs text-muted-foreground truncate">{a.phone}</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap ml-4 sm:ml-0">
-                    {isNew && <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold">NEU</span>}
-                    {isInProgress && <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-semibold">In Arbeit</span>}
-                    {(a.photos || []).length > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">{a.photos.length} Bild(er)</span>}
-                    {a.created_at && <span className="text-[10px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString("de-DE")}</span>}
-                    <ChevronRight className="w-4 h-4 text-muted-foreground hidden sm:inline-block" />
-                  </div>
-                </div>
-                {(a.categories || []).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-1.5 ml-4">
-                    {a.categories.map((cat, i) => (
-                      <span key={i} className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded font-medium">{cat}</span>
-                    ))}
-                  </div>
-                )}
-                {(a.nachricht || a.notes) && (
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 whitespace-pre-line ml-4">{(a.nachricht || a.notes).slice(0, 250)}</p>
-                )}
-              </Link>
-              );
-            })}
-          </div>
-        </Card>
-      )}
+      {/* "Letzte Anfragen"-Liste entfernt: Dashboard ist Status-Cockpit (Ralph 06.05.2026).
+          Anfragen-Verwaltung passiert ausschließlich im Mail-Inbox-Modul. */}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Umsatz-Chart */}
@@ -370,40 +316,8 @@ const DashboardPage = () => {
           )}
         </Card>
 
-        {/* Neue Anfragen Widget */}
-        <Card className="p-6" data-testid="dashboard-recent-anfragen">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Inbox className="w-5 h-5 text-primary" />
-            Letzte Anfragen
-          </h3>
-          {(stats?.anfragen?.recent || []).length === 0 ? (
-            <p className="text-muted-foreground text-sm py-4 text-center">Keine Anfragen vorhanden</p>
-          ) : (
-            <div className="space-y-3">
-              {(stats?.anfragen?.recent || []).map((a) => (
-                <Link
-                  key={a.id}
-                  to={`/module/kunden?edit=${a.id}`}
-                  className="flex items-center justify-between p-3 bg-muted/30 rounded-sm border hover:bg-muted transition-colors"
-                  data-testid={`dashboard-anfrage-small-${a.id}`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{a.name}</p>
-                    <p className="text-xs text-muted-foreground">{a.email || a.phone || ""}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground ml-2 shrink-0">
-                    {a.created_at ? new Date(a.created_at).toLocaleDateString("de-DE") : ""}
-                  </span>
-                </Link>
-              ))}
-              <Link to="/module/kunden?filter=anfragen">
-                <Button variant="ghost" size="sm" className="w-full mt-2">
-                  Alle Anfragen anzeigen <ChevronRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
-          )}
-        </Card>
+        {/* "Letzte Anfragen"-Seitenwidget entfernt — siehe Hinweis oben.
+            Anfragen werden ausschließlich im Mail-Inbox-Modul verwaltet. */}
 
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
