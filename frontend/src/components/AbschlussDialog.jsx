@@ -30,7 +30,7 @@ const AbschlussDialog = ({ isOpen, onClose, onConfirm, titleLabel = "Abschließe
     (async () => {
       setLoadingVorlagen(true);
       try {
-        const r = await api.get("/modules/textvorlagen/data?text_type=abschluss_grund");
+        const r = await api.get("/modules/textvorlagen/data?doc_type=abschlussgrund");
         if (!cancelled) setVorlagen(r.data || []);
       } catch {
         if (!cancelled) setVorlagen([]);
@@ -77,7 +77,7 @@ const AbschlussDialog = ({ isOpen, onClose, onConfirm, titleLabel = "Abschließe
         {/* Vorlagen */}
         <div>
           <label className="block text-xs font-medium mb-1">
-            Vorlage wählen <span className="text-muted-foreground font-normal">(aus Textvorlagen-Modul)</span>
+            Vorlage wählen <span className="text-muted-foreground font-normal">(Einstellungen → Textvorlagen → Kategorie „Abschlussgrund")</span>
           </label>
           {loadingVorlagen ? (
             <div className="text-xs text-muted-foreground flex items-center gap-2 py-2">
@@ -85,7 +85,7 @@ const AbschlussDialog = ({ isOpen, onClose, onConfirm, titleLabel = "Abschließe
             </div>
           ) : vorlagen.length === 0 ? (
             <div className="text-xs text-muted-foreground italic py-2">
-              Keine Abschluss-Gründe hinterlegt. Du kannst welche anlegen unter Einstellungen → Textvorlagen (Textart „abschluss_grund").
+              Keine Abschluss-Gründe hinterlegt. Du kannst welche unter Einstellungen → Textvorlagen → Kategorie „Abschlussgrund" anlegen.
             </div>
           ) : (
             <div className="flex flex-wrap gap-1.5">
