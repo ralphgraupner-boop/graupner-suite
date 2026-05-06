@@ -3,6 +3,21 @@
 > **Wichtig für jeden neuen Agenten: DIESES DOKUMENT ZUERST LESEN.
 > Vor PRD.md, vor allen Task-Listen.**
 
+> **🚨 ARBEITSREGEL — verbindlich seit 06.05.2026:**
+> **Alle Grundlagen-Auswahlfelder** (Kunden-Status, Kategorien, Anreden,
+> Abschluss-Gründe, Mahn-Stufen, Auftragsarten, Termin-Typen, …)
+> werden **ausschließlich** im bestehenden Modul **`module_textvorlagen`**
+> mit eigenem `doc_type` (z.B. `kunden_status`, `kunden_kategorie`,
+> `abschlussgrund`) gepflegt.
+>
+> - **Niemals hartcodiert** im Frontend oder Backend.
+> - **Niemals ein neues Modul** für Auswahlfelder anlegen.
+> - **Niemals doppelt** speichern.
+>
+> Bestehende hartcodierte Listen werden migriert, nicht ersetzt.
+> Frontend liest Werte live über `/api/modules/textvorlagen/data?doc_type=...`.
+> Bestätigt durch Ralph Graupner.
+
 ---
 
 ## Ziel
@@ -29,6 +44,7 @@ Sie soll **mit dem Betrieb wachsen**: vom Einzel-Tischler über kleine Teams bis
 |---|---|
 | 🧱 **Module-First** | Jede neue Funktion = eigenes `module_X` (Backend) mit eigener Route `/api/module-X/*` und eigener MongoDB-Collection. Keine „mal eben schnell ohne Modul"-Lösungen. |
 | 🔗 **Datenmasken** | Daten werden **nicht** dupliziert. `module_kunden` ist die einzige Wahrheit für Kundendaten. Andere Module (Projekte, Mailverlauf, Portale) **referenzieren** per ID und laden live. |
+| 📋 **Auswahlfelder ⇒ Textvorlagen** | **Alle Grundlagen-Auswahlfelder** (Status, Kategorien, Anreden, Abschluss-Gründe, Mahn-Stufen, …) werden **immer** als Einträge im bestehenden `module_textvorlagen` mit eigenem `doc_type` gepflegt – **nie hartcodiert, nie in einem neuen Modul, nie dupliziert**. Frontend lädt die Werte live aus dem Modul. So pflegt der Nutzer alles in **einem** UI (Einstellungen → Textvorlagen). Bestätigt durch Ralph 06.05.2026. |
 | 🇩🇪 **Deutsch + einfach** | Beschriftungen, Toasts, Fehlermeldungen sind in einfacher deutscher Sprache. Keine englischen Fachbegriffe in der UI. |
 | 📱 **Mobil tauglich** | Touch-Targets ≥44 px, lesbare Schrift, Form-Submit über Tastatur, Safe-Area-Inset. PC-Layout darf nicht das mobile Layout ruinieren. |
 | 🛡 **Sicherheit** | Vor jeder destruktiven Aktion: Backup. Lösch-Aktionen mit Passwort-Bestätigung. Tombstones für nachvollziehbare Historie. |
