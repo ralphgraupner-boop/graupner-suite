@@ -258,7 +258,12 @@ const DashboardPage = () => {
               const dotColor = isNew ? "bg-red-500 animate-pulse" : isInProgress ? "bg-yellow-500" : "bg-green-500";
               const borderColor = isNew ? "border-l-4 border-l-red-500" : isInProgress ? "border-l-4 border-l-yellow-500" : "";
               return (
-              <Link to="/module/kontakt" key={a.id} className={`block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors ${borderColor}`}>
+              <Link
+                to={`/kunden?edit=${a.id}`}
+                key={a.id}
+                className={`block p-3 bg-muted/50 rounded-sm hover:bg-muted transition-colors ${borderColor}`}
+                data-testid={`dashboard-anfrage-${a.id}`}
+              >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotColor}`} title={status || "Anfrage"} />
@@ -372,7 +377,12 @@ const DashboardPage = () => {
           ) : (
             <div className="space-y-3">
               {(stats?.anfragen?.recent || []).map((a) => (
-                <div key={a.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-sm border">
+                <Link
+                  key={a.id}
+                  to={`/kunden?edit=${a.id}`}
+                  className="flex items-center justify-between p-3 bg-muted/30 rounded-sm border hover:bg-muted transition-colors"
+                  data-testid={`dashboard-anfrage-small-${a.id}`}
+                >
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{a.name}</p>
                     <p className="text-xs text-muted-foreground">{a.email || a.phone || ""}</p>
@@ -380,11 +390,11 @@ const DashboardPage = () => {
                   <span className="text-xs text-muted-foreground ml-2 shrink-0">
                     {a.created_at ? new Date(a.created_at).toLocaleDateString("de-DE") : ""}
                   </span>
-                </div>
+                </Link>
               ))}
-              <Link to="/module/kontakt">
+              <Link to="/kunden?filter=anfragen">
                 <Button variant="ghost" size="sm" className="w-full mt-2">
-                  Alle Kontakte anzeigen <ChevronRight className="w-4 h-4" />
+                  Alle Anfragen anzeigen <ChevronRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>
