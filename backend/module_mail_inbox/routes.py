@@ -505,6 +505,33 @@ async def delete_entry(entry_id: str, user=Depends(get_current_user)):
     return {"ok": True, "deleted": 1}
 
 
+@router.post("/{entry_id}/abschliessen")
+async def abschliessen(entry_id: str, body: dict, user=Depends(get_current_user)):
+    """Anfrage abschließen mit Grund (statt löschen).
+    Erwartet: { grund: str }  (Pflicht)
+    Setzt: status='abgeschlossen', abschluss_grund, abschluss_at, abschluss_by
+    Eintrag bleibt in der DB erhalten und ist im Archiv-Tab sichtbar.
+    """
+    grund = ((body or {}).get("grund") or "").strip()
+    if not grund:
+        raise HTTPException(400, "Grund ist erforderlich")
+    entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.module_mail_inbox.update_one(
+        {"id": entry_id},
+        {"$set": {
+            "status": "abgeschlossen",
+            "abschluss_grund": grund,
+            "abschluss_at": now,
+            "abschluss_by": getattr(user, "username", None),
+        }},
+    )
+    return {"ok": True, "id": entry_id, "status": "abgeschlossen"}
+
+
+
 @router.post("/preview-delete")
 async def preview_delete(body: dict, user=Depends(get_current_user)):
     """Lösch-Aktion aus der „Übersprungene anzeigen"-Vorschau.

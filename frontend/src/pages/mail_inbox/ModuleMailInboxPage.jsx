@@ -7,9 +7,10 @@ import { Modal } from "@/components/common";
 import MailDetailModal from "@/components/MailDetailModal";
 
 const STATUS_LABELS = {
-  vorschlag: { label: "Offen", color: "bg-blue-100 text-blue-800" },
+  vorschlag: { label: "Offen", color: "bg-amber-100 text-amber-800" },
   übernommen: { label: "Übernommen", color: "bg-emerald-100 text-emerald-800" },
   ignoriert: { label: "Ignoriert", color: "bg-slate-100 text-slate-600" },
+  abgeschlossen: { label: "Abgeschlossen", color: "bg-slate-100 text-slate-700" },
   spam_verdacht: { label: "Spam-Verdacht", color: "bg-red-100 text-red-800" },
 };
 
@@ -376,7 +377,7 @@ const ModuleMailInboxPage = () => {
       )}
 
       <div className="flex flex-wrap gap-2 border-b items-center">
-        {[["vorschlag", "Offen"], ["spam_verdacht", "Spam-Verdacht"], ["übernommen", "Übernommen"], ["ignoriert", "Ignoriert"], ["all", "Alle"]].map(([k, label]) => (
+        {[["vorschlag", "Offen"], ["spam_verdacht", "Spam-Verdacht"], ["übernommen", "Übernommen"], ["abgeschlossen", "Archiv"], ["ignoriert", "Ignoriert"], ["all", "Alle"]].map(([k, label]) => (
           <button
             key={k}
             onClick={() => setStatusFilter(k)}
@@ -516,6 +517,18 @@ const ModuleMailInboxPage = () => {
                   >
                     → zum Kundeneintrag
                   </a>
+                )}
+
+                {e.status === "abgeschlossen" && e.abschluss_grund && (
+                  <div className="mt-2 pt-2 border-t text-xs">
+                    <span className="text-slate-600 font-medium">Abschluss-Grund:</span>{" "}
+                    <span className="text-slate-700">{e.abschluss_grund}</span>
+                    {e.abschluss_at && (
+                      <span className="text-muted-foreground ml-2">
+                        · {new Date(e.abschluss_at).toLocaleString("de-DE")}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             );

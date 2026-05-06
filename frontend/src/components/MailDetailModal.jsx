@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Check, X, Loader2, Trash2, Mail, Phone, MapPin, ExternalLink, ArrowRight } from "lucide-react";
+import { Check, X, Loader2, Trash2, Mail, Phone, MapPin, ExternalLink, ArrowRight, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import AbschlussDialog from "@/components/AbschlussDialog";
 
 /**
  * MailDetailModal
@@ -24,11 +25,24 @@ import { api } from "@/lib/api";
 const MailDetailModal = ({ entry, onClose, onChanged }) => {
   const navigate = useNavigate();
   const [busy, setBusy] = useState("");
+  const [showAbschluss, setShowAbschluss] = useState(false);
 
   if (!entry) return null;
   const p = entry.parsed || {};
   const fullName = [p.vorname, p.nachname].filter(Boolean).join(" ") || entry.from_name || "(ohne Name)";
   const isVorschlag = entry.status === "vorschlag" || entry.status === "spam_verdacht";
+
+  const abschliessen = async ({ grund }) => {
+    try {
+      await api.post(`/module-mail-inbox/${entry.id}/abschliessen`, { grund });
+      toast.success("Anfrage abgeschlossen – im Archiv sichtbar");
+      setShowAbschluss(false);
+      onChanged?.();
+      onClose?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Abschließen fehlgeschlagen");
+    }
+  };
 
   const accept = async () => {
     setBusy("accept");
@@ -183,6 +197,16 @@ const MailDetailModal = ({ entry, onClose, onChanged }) => {
                 Ignorieren
               </button>
               <button
+                onClick={() => setShowAbschluss(true)}
+                disabled={!!busy}
+                className="px-3 py-2 text-sm border border-slate-300 text-slate-700 rounded-sm hover:bg-slate-50 inline-flex items-center gap-1 disabled:opacity-50"
+                data-testid="btn-detail-abschliessen"
+                title="Mit Grund abschließen – bleibt im Archiv sichtbar"
+              >
+                <Archive className="w-4 h-4" />
+                Abschließen
+              </button>
+              <button
                 onClick={accept}
                 disabled={!!busy}
                 className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 inline-flex items-center gap-1 disabled:opacity-50"
@@ -197,6 +221,13 @@ const MailDetailModal = ({ entry, onClose, onChanged }) => {
           )}
         </div>
       </div>
+
+      <AbschlussDialog
+        isOpen={showAbschluss}
+        onClose={() => setShowAbschluss(false)}
+        onConfirm={abschliessen}
+        subjectLabel={`${fullName}${entry.subject ? " – " + entry.subject : ""}`}
+      />
     </Modal>
   );
 };
