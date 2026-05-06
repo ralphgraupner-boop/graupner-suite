@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -72,6 +72,7 @@ const KundenModulPage = () => {
   const [deleteKunde, setDeleteKunde] = useState(null);
   const [mailHistoryFor, setMailHistoryFor] = useState(null);  // {email, name}
   const [linkDialogKunde, setLinkDialogKunde] = useState(null);  // Kunde-Objekt für Link-Dialog
+  const [linkCounts, setLinkCounts] = useState({});  // {kunde_id: count_aktiver_links}
   const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
   const navigate = useNavigate();
@@ -100,7 +101,7 @@ const KundenModulPage = () => {
     }
   }, [location.search, kunden]);  // eslint-disable-line
 
-  useEffect(() => { loadKunden(); }, []);
+  useEffect(() => { loadKunden(); loadLinkCounts(); }, []);
 
   const loadKunden = async () => {
     try {
@@ -109,6 +110,18 @@ const KundenModulPage = () => {
     } catch { toast.error("Fehler beim Laden"); }
     finally { setLoading(false); }
   };
+
+  const loadLinkCounts = async () => {
+    try {
+      const r = await api.get("/module-kundenlink/counts");
+      setLinkCounts(r.data || {});
+    } catch { /* still ignore */ }
+  };
+
+  // Wenn der Link-Dialog geschlossen wird → Counts neu laden
+  useEffect(() => {
+    if (!linkDialogKunde) loadLinkCounts();
+  }, [linkDialogKunde]);
 
   const handleDelete = (kunde) => {
     setDeleteKunde(kunde);
@@ -368,6 +381,15 @@ const KundenModulPage = () => {
                       {kunde.phone && <span>{kunde.phone}</span>}
                       {kunde.email && <span className="truncate">{kunde.email}</span>}
                       {kunde.photos?.length > 0 && <span className="text-primary flex items-center gap-1"><File className="w-3 h-3" />{kunde.photos.length}</span>}
+                      {(linkCounts[kunde.id] || 0) > 0 && (
+                        <span
+                          className="text-violet-700 flex items-center gap-1 font-medium"
+                          title={`${linkCounts[kunde.id]} aktive(r) Mitarbeiter-Link(s)`}
+                          data-testid={`link-badge-${kunde.id}`}
+                        >
+                          <LinkIcon className="w-3 h-3" />{linkCounts[kunde.id]}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {(kunde.categories || []).length > 0 && (
@@ -538,6 +560,11 @@ const KundenModulPage = () => {
                       >
                         <Mail className="w-4 h-4" />
                         Link für Mitarbeiter
+                        {(linkCounts[kunde.id] || 0) > 0 && (
+                          <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-violet-600 text-white rounded-full">
+                            {linkCounts[kunde.id]}
+                          </span>
+                        )}
                       </button>
                       <button
                         onClick={async () => {

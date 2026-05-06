@@ -259,6 +259,24 @@ async def extend_link(link_id: str, body: dict, user=Depends(get_current_user)):
     return {"ok": True, "expires_at": _iso(new_exp)}
 
 
+@router.get("/counts")
+async def link_counts(user=Depends(get_current_user)):
+    """Liefert pro Kunde die Anzahl der AKTIVEN Mitarbeiter-Links
+    (nicht widerrufen, nicht abgelaufen). Format: { kunde_id: count }
+    Wird vom Kunden-Modul für ein kleines Badge pro Karte verwendet.
+    """
+    now_iso = _iso(_now())
+    out: dict[str, int] = {}
+    async for link in db.module_kundenlink.find(
+        {"revoked": {"$ne": True}, "expires_at": {"$gt": now_iso}},
+        {"_id": 0, "kunde_id": 1},
+    ):
+        kid = link.get("kunde_id")
+        if kid:
+            out[kid] = out.get(kid, 0) + 1
+    return out
+
+
 @router.get("/expiring")
 async def expiring_links(days: int = 7, user=Depends(get_current_user)):
     """Liefert alle nicht-widerrufenen Links, die in den nächsten `days` Tagen
