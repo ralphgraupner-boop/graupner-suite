@@ -72,6 +72,7 @@ const KundenModulPage = () => {
   const [deleteKunde, setDeleteKunde] = useState(null);
   const [mailHistoryFor, setMailHistoryFor] = useState(null);  // {email, name}
   const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
+  const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
   const navigate = useNavigate();
   const location = useLocation();
 
