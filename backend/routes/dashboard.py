@@ -320,6 +320,36 @@ async def get_dashboard_stats():
             except (ValueError, TypeError):
                 pass
 
+    # Rechnungen in Arbeit (Entwurf-Status)
+    invoice_drafts = sum(1 for i in invoices if i.get("status") == "Entwurf")
+
+    # Umsatz aktueller Monat / Vormonat (für Vergleichs-Anzeige)
+    cur_mk = now.strftime("%Y-%m")
+    last_month = (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    revenue_current = round(monthly_revenue.get(cur_mk, 0), 2)
+    revenue_last = round(monthly_revenue.get(last_month, 0), 2)
+
+    # Termine heute / diese Woche
+    termine_today, termine_week = 0, 0
+    try:
+        termine = await db.module_termine.find({}, {"_id": 0}).to_list(2000)
+    except Exception:
+        termine = []
+    today_str = now.date().isoformat()
+    week_end = now.date() + timedelta(days=7)
+    for t in termine:
+        d = (t.get("datum") or t.get("date") or t.get("start") or "")[:10]
+        if not d:
+            continue
+        try:
+            td = datetime.fromisoformat(d).date()
+        except (ValueError, TypeError):
+            continue
+        if td.isoformat() == today_str:
+            termine_today += 1
+        if now.date() <= td <= week_end:
+            termine_week += 1
+
     return {
         "customers_count": customers,
         "kontakte_count": len(kontakte),
@@ -335,6 +365,7 @@ async def get_dashboard_stats():
         "invoices": {
             "total": len(invoices),
             "unpaid": unpaid_invoices,
+            "drafts": invoice_drafts,
             "total_value": round(total_invoices_value, 2),
             "paid_value": round(paid_invoices_value, 2)
         },
@@ -348,5 +379,13 @@ async def get_dashboard_stats():
         },
         "monthly": months_data,
         "invoice_statuses": invoice_statuses,
-        "overdue_count": overdue_count
+        "overdue_count": overdue_count,
+        "revenue": {
+            "current_month": revenue_current,
+            "last_month": revenue_last,
+        },
+        "termine": {
+            "today": termine_today,
+            "next_7_days": termine_week,
+        }
     }

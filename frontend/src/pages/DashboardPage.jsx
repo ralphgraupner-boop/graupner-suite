@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen } from "lucide-react";
+import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, TrendingDown, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen, FilePlus, Calendar, Wrench } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 import { HelpTip } from "@/components/HelpTip";
@@ -241,6 +241,58 @@ const DashboardPage = () => {
           />
         </Link>
         </HelpTip>
+      </div>
+
+      {/* Status-Kacheln (Cockpit) — Stand 06.05.2026 */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8" data-testid="status-tiles">
+        <Link to="/module/dokumente?status=ueberfaellig" className="block" data-testid="stat-link-overdue">
+          <StatCard
+            title="Überfällig"
+            value={stats?.overdue_count || 0}
+            subtitle="Rechnungen > 30 Tage"
+            icon={AlertTriangle}
+          />
+        </Link>
+        <Link to="/module/dokumente?status=entwurf" className="block" data-testid="stat-link-drafts">
+          <StatCard
+            title="In Arbeit"
+            value={stats?.invoices?.drafts || 0}
+            subtitle="Rechnungs-Entwürfe"
+            icon={FilePlus}
+          />
+        </Link>
+        <div data-testid="stat-revenue-month">
+          {(() => {
+            const cur = stats?.revenue?.current_month || 0;
+            const last = stats?.revenue?.last_month || 0;
+            const diff = last > 0 ? ((cur - last) / last) * 100 : null;
+            const trend = diff === null ? "—" : `${diff >= 0 ? "+" : ""}${diff.toFixed(0)}%`;
+            return (
+              <StatCard
+                title="Umsatz / Monat"
+                value={`${cur.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €`}
+                subtitle={`Vormonat: ${trend}`}
+                icon={diff !== null && diff < 0 ? TrendingDown : TrendingUp}
+              />
+            );
+          })()}
+        </div>
+        <Link to="/einsaetze" className="block" data-testid="stat-link-einsaetze">
+          <StatCard
+            title="Aktive Aufträge"
+            value={stats?.orders?.open || 0}
+            subtitle="Offene Einsätze"
+            icon={Wrench}
+          />
+        </Link>
+        <Link to="/module/termine" className="block" data-testid="stat-link-termine">
+          <StatCard
+            title="Termine heute"
+            value={stats?.termine?.today || 0}
+            subtitle={`${stats?.termine?.next_7_days || 0} in 7 Tagen`}
+            icon={Calendar}
+          />
+        </Link>
       </div>
 
       {/* "Letzte Anfragen"-Liste entfernt: Dashboard ist Status-Cockpit (Ralph 06.05.2026).
