@@ -141,6 +141,57 @@ async def export_textvorlagen(doc_type: str = "", text_type: str = "", user=Depe
     }
 
 
+@router.post("/modules/textvorlagen/export-email")
+async def export_email(payload: dict, user=Depends(get_current_user)):
+    """Sendet den Export als JSON-Anhang an die angegebene E-Mail-Adresse.
+    Body: { to: str, doc_type?: str, text_type?: str }
+    """
+    import json as _json
+    from utils import send_email
+    to = (payload.get("to") or "").strip()
+    if not to or "@" not in to:
+        raise HTTPException(400, "Empfänger-E-Mail fehlt")
+    q = {}
+    if payload.get("doc_type"):
+        q["doc_type"] = payload["doc_type"]
+    if payload.get("text_type"):
+        q["text_type"] = payload["text_type"]
+    items = await db.module_textvorlagen.find(q, {"_id": 0}).to_list(10000)
+    modul = await db.modules.find_one({"slug": "textvorlagen"}, {"_id": 0})
+    export_obj = {
+        "module": modul,
+        "data": items,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(items),
+        "filter": {"doc_type": payload.get("doc_type") or None, "text_type": payload.get("text_type") or None},
+    }
+    blob = _json.dumps(export_obj, ensure_ascii=False, indent=2).encode("utf-8")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    suffix = f"_{payload.get('doc_type')}" if payload.get("doc_type") else (f"_{payload.get('text_type')}" if payload.get("text_type") else "")
+    filename = f"textvorlagen{suffix}_{today}.json"
+    body_html = (
+        f"<p>Hallo,</p>"
+        f"<p>im Anhang findest Du den Export aus Graupner Suite:</p>"
+        f"<ul>"
+        f"<li><b>Anzahl:</b> {len(items)} Vorlagen</li>"
+        f"<li><b>Filter:</b> {payload.get('doc_type') or '–'} / {payload.get('text_type') or '–'}</li>"
+        f"<li><b>Datum:</b> {today}</li>"
+        f"</ul>"
+        f"<p>Beste Grüße<br>Graupner Suite</p>"
+    )
+    try:
+        send_email(
+            to_email=to,
+            subject=f"Textvorlagen-Export ({len(items)}) – {today}",
+            body_html=body_html,
+            attachments=[{"filename": filename, "data": blob}],
+        )
+    except Exception as exc:
+        logger.error(f"Export-Mail fehlgeschlagen: {exc}")
+        raise HTTPException(500, f"Mail-Versand fehlgeschlagen: {exc}")
+    return {"ok": True, "to": to, "count": len(items), "filename": filename}
+
+
 def _normalize_import_item(raw: dict) -> dict | None:
     """Validiert+normalisiert einen einzelnen Import-Eintrag. Gibt None zurück,
     wenn der Eintrag unbrauchbar ist (z.B. fehlender Titel/Doc-Type).
