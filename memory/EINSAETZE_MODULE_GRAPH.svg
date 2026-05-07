@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 950" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <style>
+      .label { font-size: 13px; fill: #1e293b; font-weight: 600; }
+      .sub { font-size: 11px; fill: #475569; }
+      .ep { font-size: 10px; fill: #0f766e; font-family: monospace; }
+      .title { font-size: 22px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-size: 13px; fill: #64748b; }
+      .legend { font-size: 11px; fill: #334155; }
+      .warn { font-size: 12px; fill: #b45309; font-weight: 600; }
+    </style>
+  </defs>
+
+  <text x="700" y="35" text-anchor="middle" class="title">Einsätze — Modul-Abhängigkeiten</text>
+  <text x="700" y="58" text-anchor="middle" class="subtitle">Auswahllisten (Reparaturgruppen, Materialien, Prioritäten, Bild-Kategorien) seit 07.05.2026 ausschliesslich aus module_textvorlagen</text>
+
+  <!-- Frontend -->
+  <rect x="40" y="90" width="1320" height="170" fill="#eff6ff" stroke="#bfdbfe" rx="8"/>
+  <text x="55" y="112" class="label">Frontend</text>
+
+  <rect x="540" y="130" width="320" height="60" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="6"/>
+  <text x="700" y="155" text-anchor="middle" class="label">EinsaetzeModulPage.jsx</text>
+  <text x="700" y="175" text-anchor="middle" class="sub">/einsaetze · Liste, Detail, Anlegen</text>
+
+  <rect x="80" y="210" width="200" height="40" fill="#fff" stroke="#3b82f6" rx="5"/>
+  <text x="180" y="235" text-anchor="middle" class="label">EinsatzFormModal</text>
+
+  <rect x="300" y="210" width="220" height="40" fill="#fff" stroke="#3b82f6" rx="5"/>
+  <text x="410" y="235" text-anchor="middle" class="label">EinsatzKonfigPage</text>
+
+  <rect x="540" y="210" width="200" height="40" fill="#fff" stroke="#3b82f6" rx="5"/>
+  <text x="640" y="235" text-anchor="middle" class="label">EinsatzBilderUpload</text>
+
+  <rect x="760" y="210" width="200" height="40" fill="#fff" stroke="#3b82f6" rx="5"/>
+  <text x="860" y="235" text-anchor="middle" class="label">TerminPicker (Termine)</text>
+
+  <rect x="980" y="210" width="200" height="40" fill="#fff" stroke="#3b82f6" rx="5"/>
+  <text x="1080" y="235" text-anchor="middle" class="label">MonteurApp (mobile)</text>
+
+  <line x1="700" y1="190" x2="180" y2="210" stroke="#3b82f6" marker-end="url(#ar)"/>
+  <line x1="700" y1="190" x2="410" y2="210" stroke="#3b82f6" marker-end="url(#ar)"/>
+  <line x1="700" y1="190" x2="640" y2="210" stroke="#3b82f6" marker-end="url(#ar)"/>
+  <line x1="700" y1="190" x2="860" y2="210" stroke="#3b82f6" marker-end="url(#ar)"/>
+  <line x1="700" y1="190" x2="1080" y2="210" stroke="#3b82f6" marker-end="url(#ar)"/>
+
+  <!-- Module -->
+  <rect x="40" y="290" width="1320" height="280" fill="#f0fdf4" stroke="#bbf7d0" rx="8"/>
+  <text x="55" y="312" class="label">Backend Module</text>
+
+  <!-- Kern -->
+  <rect x="540" y="340" width="320" height="100" fill="#dcfce7" stroke="#16a34a" stroke-width="3" rx="6"/>
+  <text x="700" y="362" text-anchor="middle" class="label">module_einsaetze/</text>
+  <text x="700" y="380" text-anchor="middle" class="sub">routes.py</text>
+  <text x="700" y="398" text-anchor="middle" class="ep">/api/einsaetze/*</text>
+  <text x="700" y="414" text-anchor="middle" class="ep">/api/einsatz-config (Datenmaske)</text>
+  <text x="700" y="430" text-anchor="middle" class="ep">DB: einsaetze</text>
+
+  <line x1="700" y1="250" x2="700" y2="340" stroke="#16a34a" stroke-width="2" marker-end="url(#arG)"/>
+
+  <!-- Auswahlfelder Source -->
+  <rect x="80" y="340" width="220" height="100" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="190" y="362" text-anchor="middle" class="label">module_textvorlagen</text>
+  <text x="190" y="380" text-anchor="middle" class="sub">Source-of-Truth Auswahl</text>
+  <text x="190" y="396" text-anchor="middle" class="ep">doc_type=reparaturgruppe</text>
+  <text x="190" y="410" text-anchor="middle" class="ep">doc_type=material</text>
+  <text x="190" y="424" text-anchor="middle" class="ep">doc_type=prioritaet</text>
+  <line x1="300" y1="385" x2="540" y2="385" stroke="#d97706" stroke-width="1.5" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+
+  <!-- Kunden -->
+  <rect x="320" y="340" width="200" height="100" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="420" y="362" text-anchor="middle" class="label">module_kunden</text>
+  <text x="420" y="380" text-anchor="middle" class="sub">Kunde-Source-of-Truth</text>
+  <text x="420" y="398" text-anchor="middle" class="ep">einsatz.kunde_id ↦ Kunde</text>
+  <text x="420" y="414" text-anchor="middle" class="ep">Adresse, Tel live joinen</text>
+  <line x1="520" y1="395" x2="540" y2="395" stroke="#d97706" stroke-width="1.5" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+
+  <!-- Projekte -->
+  <rect x="880" y="340" width="200" height="100" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="980" y="362" text-anchor="middle" class="label">module_projekte</text>
+  <text x="980" y="380" text-anchor="middle" class="sub">einsatz.projekt_id (optional)</text>
+  <text x="980" y="398" text-anchor="middle" class="ep">/api/module-projekte/*</text>
+  <text x="980" y="414" text-anchor="middle" class="ep">DB: module_projekte</text>
+  <line x1="860" y1="395" x2="880" y2="395" stroke="#d97706" stroke-width="1.5" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+
+  <!-- Termine -->
+  <rect x="1100" y="340" width="240" height="100" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="1220" y="362" text-anchor="middle" class="label">module_termine</text>
+  <text x="1220" y="380" text-anchor="middle" class="sub">verknuepfter Termin</text>
+  <text x="1220" y="398" text-anchor="middle" class="ep">/api/module-termine/*</text>
+  <text x="1220" y="414" text-anchor="middle" class="ep">termin.einsatz_id</text>
+  <line x1="860" y1="405" x2="1100" y2="405" stroke="#d97706" stroke-width="1.5" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+
+  <!-- Aufgaben + Mitarbeiter unten -->
+  <rect x="80" y="460" width="220" height="80" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="190" y="482" text-anchor="middle" class="label">module_aufgaben</text>
+  <text x="190" y="500" text-anchor="middle" class="ep">aufgabe.einsatz_id</text>
+  <text x="190" y="516" text-anchor="middle" class="sub">Pflicht-Tasks pro Einsatz</text>
+
+  <rect x="320" y="460" width="200" height="80" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="420" y="482" text-anchor="middle" class="label">routes/mitarbeiter.py</text>
+  <text x="420" y="500" text-anchor="middle" class="ep">/api/mitarbeiter/*</text>
+  <text x="420" y="516" text-anchor="middle" class="sub">einsatz.zugewiesen_an</text>
+
+  <rect x="540" y="460" width="200" height="80" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="640" y="482" text-anchor="middle" class="label">module_kundenlink</text>
+  <text x="640" y="500" text-anchor="middle" class="ep">/api/module-kundenlink/*</text>
+  <text x="640" y="516" text-anchor="middle" class="sub">Public-Token (Monteur)</text>
+
+  <rect x="760" y="460" width="200" height="80" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="860" y="482" text-anchor="middle" class="label">routes/distance.py</text>
+  <text x="860" y="500" text-anchor="middle" class="ep">/api/distance/*</text>
+  <text x="860" y="516" text-anchor="middle" class="sub">Routenplanung</text>
+
+  <rect x="980" y="460" width="220" height="80" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="6"/>
+  <text x="1090" y="482" text-anchor="middle" class="label">module_kalender_export</text>
+  <text x="1090" y="500" text-anchor="middle" class="ep">/api/kalender-export/*</text>
+  <text x="1090" y="516" text-anchor="middle" class="sub">iCal · Google Calendar</text>
+
+  <line x1="190" y1="460" x2="640" y2="440" stroke="#d97706" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+  <line x1="420" y1="460" x2="650" y2="440" stroke="#d97706" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+  <line x1="640" y1="460" x2="700" y2="440" stroke="#d97706" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+  <line x1="860" y1="460" x2="710" y2="440" stroke="#d97706" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+  <line x1="1090" y1="460" x2="730" y2="440" stroke="#d97706" marker-end="url(#ar)" stroke-dasharray="3 2"/>
+
+  <!-- Workflow -->
+  <rect x="40" y="600" width="1320" height="160" fill="#dcfce7" stroke="#16a34a" rx="8"/>
+  <text x="55" y="622" class="label">Workflow rund um den Einsatz</text>
+
+  <rect x="80" y="640" width="200" height="50" fill="#fff" stroke="#16a34a" stroke-width="2" rx="5"/>
+  <text x="180" y="660" text-anchor="middle" class="label">Mail-Anfrage</text>
+  <text x="180" y="678" text-anchor="middle" class="ep">module_mail_inbox</text>
+
+  <line x1="280" y1="665" x2="320" y2="665" stroke="#16a34a" stroke-width="2" marker-end="url(#arG)"/>
+
+  <rect x="320" y="640" width="200" height="50" fill="#fff" stroke="#16a34a" stroke-width="2" rx="5"/>
+  <text x="420" y="660" text-anchor="middle" class="label">Kunde anlegen</text>
+  <text x="420" y="678" text-anchor="middle" class="ep">module_kunden</text>
+
+  <line x1="520" y1="665" x2="560" y2="665" stroke="#16a34a" stroke-width="2" marker-end="url(#arG)"/>
+
+  <rect x="560" y="640" width="200" height="50" fill="#fff" stroke="#16a34a" stroke-width="2" rx="5"/>
+  <text x="660" y="660" text-anchor="middle" class="label">Termin · Einsatz planen</text>
+  <text x="660" y="678" text-anchor="middle" class="ep">module_einsaetze</text>
+
+  <line x1="760" y1="665" x2="800" y2="665" stroke="#16a34a" stroke-width="2" marker-end="url(#arG)"/>
+
+  <rect x="800" y="640" width="200" height="50" fill="#fff" stroke="#16a34a" stroke-width="2" rx="5"/>
+  <text x="900" y="660" text-anchor="middle" class="label">Monteur vor Ort</text>
+  <text x="900" y="678" text-anchor="middle" class="ep">module_kundenlink</text>
+
+  <line x1="1000" y1="665" x2="1040" y2="665" stroke="#16a34a" stroke-width="2" marker-end="url(#arG)"/>
+
+  <rect x="1040" y="640" width="280" height="50" fill="#fff" stroke="#16a34a" stroke-width="2" rx="5"/>
+  <text x="1180" y="660" text-anchor="middle" class="label">Angebot/Auftrag/Rechnung</text>
+  <text x="1180" y="678" text-anchor="middle" class="ep">module_angebote → ... → module_rechnungen</text>
+
+  <text x="700" y="730" text-anchor="middle" class="warn">⚠️ Datenmaske: einsatz speichert nur kunde_id und projekt_id — keine Adresse, kein Kundenname!</text>
+
+  <!-- DB -->
+  <rect x="40" y="790" width="1320" height="120" fill="#fef2f2" stroke="#fecaca" rx="8"/>
+  <text x="55" y="812" class="label">MongoDB</text>
+
+  <rect x="80" y="830" width="240" height="60" fill="#fff" stroke="#dc2626" rx="4"/>
+  <text x="200" y="850" text-anchor="middle" class="label">einsaetze</text>
+  <text x="200" y="868" text-anchor="middle" class="sub">id, kunde_id, projekt_id, status,</text>
+  <text x="200" y="882" text-anchor="middle" class="sub">reparaturgruppe, material, prioritaet, bilder</text>
+
+  <rect x="340" y="830" width="220" height="60" fill="#fff" stroke="#dc2626" rx="4"/>
+  <text x="450" y="850" text-anchor="middle" class="label">module_textvorlagen</text>
+  <text x="450" y="868" text-anchor="middle" class="sub">doc_type=reparaturgruppe/</text>
+  <text x="450" y="882" text-anchor="middle" class="sub">material/prioritaet/bild_kategorie</text>
+
+  <rect x="580" y="830" width="200" height="60" fill="#fff" stroke="#dc2626" rx="4"/>
+  <text x="680" y="850" text-anchor="middle" class="label">module_termine</text>
+  <text x="680" y="868" text-anchor="middle" class="sub">termin.einsatz_id</text>
+
+  <rect x="800" y="830" width="200" height="60" fill="#fff" stroke="#dc2626" rx="4"/>
+  <text x="900" y="850" text-anchor="middle" class="label">module_aufgaben</text>
+  <text x="900" y="868" text-anchor="middle" class="sub">aufgabe.einsatz_id (optional)</text>
+
+  <rect x="1020" y="830" width="200" height="60" fill="#fff" stroke="#dc2626" rx="4"/>
+  <text x="1120" y="850" text-anchor="middle" class="label">storage (Bilder)</text>
+  <text x="1120" y="868" text-anchor="middle" class="sub">/api/storage/* — Bilder lokal abgelegt</text>
+
+  <!-- Legende -->
+  <rect x="1000" y="920" width="380" height="22" fill="#fff" stroke="#cbd5e1" rx="4"/>
+  <line x1="1015" y1="932" x2="1045" y2="932" stroke="#16a34a" stroke-width="2" marker-end="url(#arG)"/>
+  <text x="1055" y="937" class="legend">Workflow-Schritt</text>
+  <line x1="1180" y1="932" x2="1210" y2="932" stroke="#d97706" stroke-dasharray="3 2" marker-end="url(#ar)"/>
+  <text x="1220" y="937" class="legend">Hilfs-/Lookup-Modul</text>
+</svg>
