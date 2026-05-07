@@ -4,7 +4,7 @@ from database import client, logger
 
 # Import all route modules
 from routes.auth import router as auth_router
-from routes.customers import router as customers_router
+from module_kunden import router as kunden_router  # Modul-First (07.05.2026)
 from routes.articles import router as articles_router
 from routes.services import router as services_router
 from routes.quotes import router as quotes_router
@@ -39,7 +39,8 @@ from routes.modules import router as modules_router
 from routes.module_artikel import router as module_artikel_router
 from routes.module_dokumente import router as module_dokumente_router
 from routes.module_textvorlagen import router as module_textvorlagen_router
-from routes.module_kunden import router as module_kunden_router
+# kunden_router ist oben bereits aus module_kunden importiert — alter
+# routes.module_kunden Import wurde im Refactor entfernt.
 from routes.rechnungen_v2 import router as rechnungen_v2_router
 from portal_v2 import router as portal_v2_router
 from portal_v3 import router as portal_v3_router
@@ -68,7 +69,7 @@ api_router = APIRouter(prefix="/api")
 
 # Include all route modules
 api_router.include_router(auth_router)
-api_router.include_router(customers_router)
+api_router.include_router(kunden_router)
 api_router.include_router(articles_router)
 api_router.include_router(services_router)
 api_router.include_router(quotes_router)
@@ -103,7 +104,7 @@ api_router.include_router(modules_router)
 api_router.include_router(module_artikel_router)
 api_router.include_router(module_dokumente_router)
 api_router.include_router(module_textvorlagen_router)
-api_router.include_router(module_kunden_router)
+# kunden_router wurde bereits weiter oben (Zeile ~71) eingehaengt
 
 
 @api_router.get("/")
@@ -145,7 +146,7 @@ async def startup_event():
     await migrate_kontakt_to_kunden()
     # Auto-Sync kontakt_status & legacy status (einmalig beim Start, idempotent)
     try:
-        from routes.module_kunden import auto_sync_kontakt_status_on_startup
+        from module_kunden import auto_sync_kontakt_status_on_startup
         await auto_sync_kontakt_status_on_startup()
     except Exception as e:
         logger.warning(f"Auto-Sync kontakt_status import: {e}")
