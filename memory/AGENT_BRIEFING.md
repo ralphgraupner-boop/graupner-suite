@@ -1,6 +1,10 @@
 # 🛑 PFLICHTLEKTÜRE FÜR DEN NÄCHSTEN AGENTEN
 
-> **Stand:** 02.05.2026, 19:15 Uhr · Vereinbart mit Ralph Graupner
+> **VOR ALLEM ANDEREN:** Lies zuerst `/app/memory/AGENT_START_CHECKLISTE.md`.
+> Dort stehen die fünf Dateien, die in dieser Reihenfolge gelesen werden
+> MÜSSEN, plus die Modul-Landkarte als SVG-Übersicht.
+
+> **Stand:** 07.05.2026 · Vereinbart mit Ralph Graupner
 >
 > **WICHTIG:** Bevor du irgendeine Aufgabe annimmst oder Code änderst,
 > bestätige Ralph diese Punkte **wörtlich**. Erst dann darfst du loslegen.
