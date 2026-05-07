@@ -6,7 +6,7 @@ from uuid import uuid4
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht", "abschluss_grund"]
 
 PLACEHOLDERS = [
@@ -78,7 +78,7 @@ async def get_placeholders(user=Depends(get_current_user)):
 @router.post("/modules/textvorlagen/data")
 async def create_textvorlage(data: dict, user=Depends(get_current_user)):
     # Auswahlfeld-Typen brauchen keinen Inhalt — der Titel IST die Auswahl
-    SELECTION_TYPES = {"kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie", "abschlussgrund"}
+    SELECTION_TYPES = {"kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie", "abschlussgrund", "reparaturgruppe", "material", "prioritaet", "bild_kategorie"}
     if not data.get("title"):
         raise HTTPException(400, "Titel erforderlich")
     if data.get("doc_type") not in SELECTION_TYPES and not data.get("content"):

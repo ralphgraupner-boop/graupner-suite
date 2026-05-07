@@ -3,44 +3,149 @@ from fastapi.responses import Response
 from database import db, logger
 from auth import get_current_user
 from datetime import datetime, timezone
+from uuid import uuid4
 import uuid
 
 router = APIRouter()
 
 
 # ===================== KONFIGURATION (Auswahlfelder verwalten) =====================
+# WICHTIG (06.05.2026, Vision-Regel):
+# Reparaturgruppen, Materialien, Prioritäten und Bild-Kategorien werden in
+# module_textvorlagen mit eigenem doc_type gepflegt — nicht hartcodiert,
+# nicht in einer separaten Collection. Dieser Endpoint liest live aus
+# module_textvorlagen (Datenmaske) und migriert beim ersten Aufruf
+# bestehende Werte aus der alten einsatz_config-Collection.
+
+EINSATZ_DOC_TYPES = {
+    "reparaturgruppen": "reparaturgruppe",
+    "materialien": "material",
+    "prioritaeten": "prioritaet",
+    "bild_kategorien": "bild_kategorie",
+}
+
+
+async def _list_titles(doc_type: str) -> list[str]:
+    """Datenmaske: Titel aus module_textvorlagen für gegebenen doc_type."""
+    out: list[str] = []
+    async for v in db.module_textvorlagen.find(
+        {"doc_type": doc_type}, {"_id": 0, "title": 1}
+    ).sort("title", 1):
+        t = (v.get("title") or "").strip()
+        if t:
+            out.append(t)
+    return out
+
+
+# Einmalige Defaults für die allererste Migration — werden aus der bisher
+# in einsatz_config hartcodierten Liste übernommen. Diese Konstanten sind
+# KEIN laufender Hardcode-Pfad: sie werden nur EINMAL beim allerersten
+# Aufruf in module_textvorlagen geschrieben und danach nie wieder gelesen.
+# Quelle Echtdaten ab dann ausschließlich module_textvorlagen.
+_INITIAL_FALLBACK = {
+    "reparaturgruppe": [
+        "Hebeschiebekipptuer (HSK)", "Schiebetuer", "Fenster",
+        "Eingangstuer", "Innentuer", "Rolllaeden",
+        "Sonstige Reparaturen", "Neubau/Einbau",
+    ],
+    "material": ["Holz", "Kunststoff", "Aluminium", "Holz/Alu", "Sonstiges"],
+    "prioritaet": ["niedrig", "normal", "hoch", "dringend"],
+    "bild_kategorie": [
+        "kundenanfrage", "besichtigung", "waehrend_arbeit",
+        "abnahme", "hinweise", "sonstiges",
+    ],
+}
+
+
+async def _seed_from_einsatz_config_once():
+    """Einmalige Migration: Werte aus alter einsatz_config-Collection nach
+    module_textvorlagen kopieren. Idempotent — pro doc_type nur wenn dort
+    noch nichts existiert. Wenn auch einsatz_config keine Werte hat, werden
+    die Initial-Defaults (Erstausstattung) verwendet.
+    """
+    legacy = await db.einsatz_config.find_one({"id": "main"}, {"_id": 0}) or {}
+    now = datetime.now(timezone.utc).isoformat()
+    for legacy_field, doc_type in EINSATZ_DOC_TYPES.items():
+        has_any = await db.module_textvorlagen.find_one({"doc_type": doc_type})
+        if has_any:
+            continue
+        values = legacy.get(legacy_field) or _INITIAL_FALLBACK.get(doc_type, [])
+        for v in values:
+            v = (v or "").strip()
+            if not v:
+                continue
+            await db.module_textvorlagen.insert_one({
+                "id": str(uuid4()),
+                "title": v,
+                "content": "",
+                "doc_type": doc_type,
+                "text_type": "titel",
+                "created_at": now,
+                "updated_at": now,
+            })
+
 
 @router.get("/einsatz-config")
 async def get_config(user=Depends(get_current_user)):
-    config = await db.einsatz_config.find_one({"id": "main"}, {"_id": 0})
-    if not config:
-        config = {
-            "id": "main",
-            "reparaturgruppen": [
-                "Hebeschiebekipptuer (HSK)", "Schiebetuer", "Fenster",
-                "Eingangstuer", "Innentuer", "Rolllaeden",
-                "Sonstige Reparaturen", "Neubau/Einbau"
-            ],
-            "materialien": ["Holz", "Kunststoff", "Aluminium", "Holz/Alu", "Sonstiges"],
-            "prioritaeten": ["niedrig", "normal", "hoch", "dringend"],
-            "bild_kategorien": [
-                "kundenanfrage", "besichtigung", "waehrend_arbeit",
-                "abnahme", "hinweise", "sonstiges"
-            ],
-            "termin_vorlagen": [],
-        }
-        await db.einsatz_config.insert_one(config)
-        config.pop("_id", None)
-    return config
+    """Liefert alle vier Auswahllisten LIVE aus module_textvorlagen.
+    Format unverändert (Rückwärtskompatibilität für Frontend), aber die
+    Werte stammen jetzt aus der einen Wahrheit module_textvorlagen.
+    """
+    await _seed_from_einsatz_config_once()
+    # termin_vorlagen bleibt vorerst in einsatz_config (eigenes Format)
+    legacy = await db.einsatz_config.find_one({"id": "main"}, {"_id": 0}) or {}
+    return {
+        "id": "main",
+        "reparaturgruppen": await _list_titles("reparaturgruppe"),
+        "materialien": await _list_titles("material"),
+        "prioritaeten": await _list_titles("prioritaet"),
+        "bild_kategorien": await _list_titles("bild_kategorie"),
+        "termin_vorlagen": legacy.get("termin_vorlagen", []),
+    }
 
 
 @router.put("/einsatz-config")
 async def update_config(body: dict, user=Depends(get_current_user)):
-    allowed = ["reparaturgruppen", "materialien", "anfrage_schritte", "termin_vorlagen", "prioritaeten", "bild_kategorien"]
-    updates = {k: v for k, v in body.items() if k in allowed}
-    if not updates:
+    """Schreibt Auswahllisten zurück nach module_textvorlagen (1:1 Sync mit
+    übergebener Liste). termin_vorlagen bleibt in einsatz_config.
+    """
+    await _seed_from_einsatz_config_once()
+    now = datetime.now(timezone.utc).isoformat()
+    handled = False
+    for legacy_field, doc_type in EINSATZ_DOC_TYPES.items():
+        if legacy_field not in body:
+            continue
+        handled = True
+        new_values = [str(v).strip() for v in (body[legacy_field] or []) if str(v).strip()]
+        # Vorhandene laden, Diff erzeugen
+        existing = {}
+        async for v in db.module_textvorlagen.find(
+            {"doc_type": doc_type}, {"_id": 0, "id": 1, "title": 1}
+        ):
+            existing[v["title"]] = v["id"]
+        # Neue anlegen
+        for title in new_values:
+            if title not in existing:
+                await db.module_textvorlagen.insert_one({
+                    "id": str(uuid4()),
+                    "title": title,
+                    "content": "",
+                    "doc_type": doc_type,
+                    "text_type": "titel",
+                    "created_at": now,
+                    "updated_at": now,
+                })
+        # Entfernte löschen
+        for title, _id in existing.items():
+            if title not in new_values:
+                await db.module_textvorlagen.delete_one({"id": _id})
+    if "termin_vorlagen" in body:
+        handled = True
+        await db.einsatz_config.update_one(
+            {"id": "main"}, {"$set": {"termin_vorlagen": body["termin_vorlagen"]}}, upsert=True,
+        )
+    if not handled:
         raise HTTPException(400, "Keine Aenderungen")
-    await db.einsatz_config.update_one({"id": "main"}, {"$set": updates}, upsert=True)
     return {"message": "Konfiguration gespeichert"}
 
 

@@ -61,36 +61,50 @@ async def test_smtp(data: dict):
 
 
 # ── Anfragen-Kategorien ──
-DEFAULT_KATEGORIEN = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"]
+# WICHTIG (06.05.2026): Identisch mit "reparaturgruppe" in module_textvorlagen.
+# Datenmaske live — keine eigene Collection mehr (Vision-Regel).
 
 @router.get("/anfragen-kategorien")
 async def get_anfragen_kategorien():
-    doc = await db.settings.find_one({"id": "anfragen_kategorien"}, {"_id": 0})
-    if doc and "kategorien" in doc:
-        return doc["kategorien"]
-    # Fallback: load from einsatz_config reparaturgruppen
-    config = await db.einsatz_config.find_one({"id": "main"}, {"_id": 0})
-    if config and config.get("reparaturgruppen"):
-        return config["reparaturgruppen"]
-    return DEFAULT_KATEGORIEN
+    out = []
+    async for v in db.module_textvorlagen.find(
+        {"doc_type": "reparaturgruppe"}, {"_id": 0, "title": 1}
+    ).sort("title", 1):
+        t = (v.get("title") or "").strip()
+        if t:
+            out.append(t)
+    return out
+
 
 @router.put("/anfragen-kategorien")
 async def update_anfragen_kategorien(body: dict):
-    kategorien = body.get("kategorien", [])
-    kategorien = [k for k in kategorien if k.strip()]
-    # Save categories
-    await db.settings.update_one(
-        {"id": "anfragen_kategorien"},
-        {"$set": {"id": "anfragen_kategorien", "kategorien": kategorien}},
-        upsert=True,
-    )
-    # Sync to Reparaturgruppen in einsatz_config
-    await db.einsatz_config.update_one(
-        {"id": "main"},
-        {"$set": {"reparaturgruppen": kategorien}},
-        upsert=True,
-    )
-    return kategorien
+    """Schreibt Anfragen-Kategorien als reparaturgruppe nach module_textvorlagen.
+    Synchronisation mit einsatz_config ist nicht mehr nötig — Quelle ist eine.
+    """
+    from datetime import datetime as _dt, timezone as _tz
+    from uuid import uuid4 as _uuid
+    new_values = [str(k).strip() for k in body.get("kategorien", []) if str(k).strip()]
+    existing = {}
+    async for v in db.module_textvorlagen.find(
+        {"doc_type": "reparaturgruppe"}, {"_id": 0, "id": 1, "title": 1}
+    ):
+        existing[v["title"]] = v["id"]
+    now = _dt.now(_tz.utc).isoformat()
+    for title in new_values:
+        if title not in existing:
+            await db.module_textvorlagen.insert_one({
+                "id": str(_uuid()),
+                "title": title,
+                "content": "",
+                "doc_type": "reparaturgruppe",
+                "text_type": "titel",
+                "created_at": now,
+                "updated_at": now,
+            })
+    for title, _id in existing.items():
+        if title not in new_values:
+            await db.module_textvorlagen.delete_one({"id": _id})
+    return new_values
 
 
 DEFAULT_CUSTOMER_STATUSES = ["Neu", "Aktiv", "Inaktiv", "Interessent", "Stammkunde", "Abgeschlossen"]
