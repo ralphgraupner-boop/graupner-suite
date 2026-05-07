@@ -87,27 +87,52 @@ async def _seed_from_einsatz_config_once():
 
 @router.get("/einsatz-config")
 async def get_config(user=Depends(get_current_user)):
-    """Liefert alle vier Auswahllisten LIVE aus module_textvorlagen.
+    """Liefert alle Auswahllisten LIVE aus module_textvorlagen.
     Format unverändert (Rückwärtskompatibilität für Frontend), aber die
     Werte stammen jetzt aus der einen Wahrheit module_textvorlagen.
+    termin_vorlagen wird aus doc_type=termin gelesen.
     """
     await _seed_from_einsatz_config_once()
-    # termin_vorlagen bleibt vorerst in einsatz_config (eigenes Format)
-    legacy = await db.einsatz_config.find_one({"id": "main"}, {"_id": 0}) or {}
+    # termin_vorlagen kommt aus module_textvorlagen mit doc_type=termin —
+    # liefert Objekte mit title+content für Mail/Termin-Texte.
+    termin_vorlagen = []
+    async for v in db.module_textvorlagen.find(
+        {"doc_type": "termin"}, {"_id": 0, "id": 1, "title": 1, "content": 1, "text_type": 1}
+    ).sort("title", 1):
+        termin_vorlagen.append(v)
     return {
         "id": "main",
         "reparaturgruppen": await _list_titles("reparaturgruppe"),
         "materialien": await _list_titles("material"),
         "prioritaeten": await _list_titles("prioritaet"),
         "bild_kategorien": await _list_titles("bild_kategorie"),
-        "termin_vorlagen": legacy.get("termin_vorlagen", []),
+        "termin_vorlagen": termin_vorlagen,
     }
+
+
+@router.post("/einsatz-config/cleanup-legacy")
+async def cleanup_legacy(user=Depends(get_current_user)):
+    """Räumt einmalig die alten Datenquellen auf, nachdem die Migration nach
+    module_textvorlagen abgeschlossen ist:
+      - drop einsatz_config-Collection (wird nicht mehr gelesen)
+      - delete settings.anfragen_kategorien-Dokument (Synchron-Brücke ist tot)
+    Idempotent — kann beliebig oft aufgerufen werden.
+    """
+    res = {"einsatz_config_dropped": False, "anfragen_kategorien_deleted": 0}
+    try:
+        await db.einsatz_config.drop()
+        res["einsatz_config_dropped"] = True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"einsatz_config.drop() fehlgeschlagen: {exc}")
+    r = await db.settings.delete_one({"id": "anfragen_kategorien"})
+    res["anfragen_kategorien_deleted"] = r.deleted_count
+    return res
 
 
 @router.put("/einsatz-config")
 async def update_config(body: dict, user=Depends(get_current_user)):
     """Schreibt Auswahllisten zurück nach module_textvorlagen (1:1 Sync mit
-    übergebener Liste). termin_vorlagen bleibt in einsatz_config.
+    übergebener Liste).
     """
     await _seed_from_einsatz_config_once()
     now = datetime.now(timezone.utc).isoformat()
@@ -117,13 +142,11 @@ async def update_config(body: dict, user=Depends(get_current_user)):
             continue
         handled = True
         new_values = [str(v).strip() for v in (body[legacy_field] or []) if str(v).strip()]
-        # Vorhandene laden, Diff erzeugen
         existing = {}
         async for v in db.module_textvorlagen.find(
             {"doc_type": doc_type}, {"_id": 0, "id": 1, "title": 1}
         ):
             existing[v["title"]] = v["id"]
-        # Neue anlegen
         for title in new_values:
             if title not in existing:
                 await db.module_textvorlagen.insert_one({
@@ -135,15 +158,9 @@ async def update_config(body: dict, user=Depends(get_current_user)):
                     "created_at": now,
                     "updated_at": now,
                 })
-        # Entfernte löschen
         for title, _id in existing.items():
             if title not in new_values:
                 await db.module_textvorlagen.delete_one({"id": _id})
-    if "termin_vorlagen" in body:
-        handled = True
-        await db.einsatz_config.update_one(
-            {"id": "main"}, {"$set": {"termin_vorlagen": body["termin_vorlagen"]}}, upsert=True,
-        )
     if not handled:
         raise HTTPException(400, "Keine Aenderungen")
     return {"message": "Konfiguration gespeichert"}
