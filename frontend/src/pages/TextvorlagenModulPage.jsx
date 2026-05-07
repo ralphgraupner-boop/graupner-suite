@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Download, Package, FileText, ClipboardCheck, Receipt, Copy, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Search, Edit, Trash2, Download, Upload, Package, FileText, ClipboardCheck, Receipt, Copy, Sparkles, AlertTriangle, CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -45,13 +45,99 @@ const TextvorlagenModulPage = () => {
 
   const handleExport = async () => {
     try {
-      const res = await api.get("/modules/textvorlagen/export");
+      // Aktuell aktive Filter mitgeben (nur gefilterte exportieren)
+      const params = new URLSearchParams();
+      if (filterDocType) params.set("doc_type", filterDocType);
+      if (filterTextType) params.set("text_type", filterTextType);
+      const qs = params.toString();
+      const res = await api.get(`/modules/textvorlagen/export${qs ? `?${qs}` : ""}`);
       const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = `textvorlagen_${new Date().toISOString().split("T")[0]}.json`; a.click();
+      const a = document.createElement("a");
+      const filterLabel = filterDocType || filterTextType ? `_${filterDocType || filterTextType}` : "";
+      a.href = url;
+      a.download = `textvorlagen${filterLabel}_${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
       URL.revokeObjectURL(url);
-      toast.success("Exportiert");
-    } catch { toast.error("Fehler"); }
+      toast.success(`${res.data.count} Vorlagen exportiert`);
+    } catch { toast.error("Fehler beim Export"); }
+  };
+
+  // ─── Import-Workflow ───
+  const fileInputRef = useRef(null);
+  const [importPreview, setImportPreview] = useState(null);  // {items, summary}
+  const [importSelected, setImportSelected] = useState(new Set());
+  const [importOverwrite, setImportOverwrite] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+
+  const handleImportFile = async (file) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const items = Array.isArray(json) ? json : (json.data || json.items || []);
+      if (!Array.isArray(items) || items.length === 0) {
+        toast.error("Datei enthält keine Vorlagen");
+        return;
+      }
+      const r = await api.post("/modules/textvorlagen/import-preview", { items });
+      const preview = r.data;
+      setImportPreview(preview);
+      // Default-Auswahl: alle "neu" angehakt, "konflikt" und "invalid" abgehakt
+      const sel = new Set();
+      preview.items.forEach((it) => { if (it.status === "neu") sel.add(it.key); });
+      setImportSelected(sel);
+    } catch (err) {
+      toast.error("Import-Datei ungültig: " + (err?.message || "Unbekannter Fehler"));
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const toggleImportItem = (key) => {
+    setImportSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const setImportSelectionForStatus = (status, on) => {
+    setImportSelected((prev) => {
+      const next = new Set(prev);
+      importPreview?.items?.forEach((it) => {
+        if (it.status !== status) return;
+        if (on) next.add(it.key); else next.delete(it.key);
+      });
+      return next;
+    });
+  };
+
+  const performImport = async () => {
+    if (!importPreview) return;
+    if (importSelected.size === 0) {
+      toast.error("Keine Vorlage zum Import ausgewählt");
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const r = await api.post("/modules/textvorlagen/import", {
+        items: importPreview.items,
+        selected_keys: Array.from(importSelected),
+        overwrite: importOverwrite,
+      });
+      toast.success(
+        `Import: ${r.data.inserted} neu, ${r.data.updated} überschrieben, ${r.data.skipped} übersprungen`
+      );
+      setImportPreview(null);
+      setImportSelected(new Set());
+      setImportOverwrite(false);
+      loadItems();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Fehler beim Import");
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   const [seeding, setSeeding] = useState(false);
@@ -95,7 +181,20 @@ const TextvorlagenModulPage = () => {
           <Button variant="outline" size="sm" onClick={handleSeedPortal} disabled={seeding} data-testid="btn-seed-portal-vorlagen" title="Legt die 3 Standard-Vorlagen fuer das Kundenportal an">
             <Sparkles className="w-4 h-4" /> {seeding ? "Lege an..." : "Portal-Vorlagen importieren"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4" /> Export</Button>
+          <Button variant="outline" size="sm" onClick={handleExport} data-testid="btn-export-vorlagen" title={filterDocType || filterTextType ? "Aktuell gefilterte Auswahl exportieren" : "Alle Vorlagen exportieren"}>
+            <Download className="w-4 h-4" /> Export{(filterDocType || filterTextType) ? " (gefiltert)" : ""}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => handleImportFile(e.target.files?.[0])}
+            data-testid="input-import-vorlagen"
+          />
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} data-testid="btn-import-vorlagen" title="JSON-Datei einlesen, Vorschau anzeigen">
+            <Upload className="w-4 h-4" /> Import
+          </Button>
           <Button size="sm" className="lg:h-10 lg:px-4" onClick={() => { setEditItem(null); setShowModal(true); }} data-testid="btn-new-vorlage">
             <Plus className="w-4 h-4" /> Neue Vorlage
           </Button>
@@ -184,6 +283,178 @@ const TextvorlagenModulPage = () => {
       )}
 
       <VorlageFormModal isOpen={showModal} onClose={() => setShowModal(false)} item={editItem} onSave={() => { setShowModal(false); loadItems(); }} />
+
+      {importPreview && (
+        <ImportPreviewModal
+          preview={importPreview}
+          selected={importSelected}
+          onToggle={toggleImportItem}
+          onSelectStatus={setImportSelectionForStatus}
+          overwrite={importOverwrite}
+          onOverwriteChange={setImportOverwrite}
+          onCancel={() => { setImportPreview(null); setImportSelected(new Set()); }}
+          onConfirm={performImport}
+          loading={importLoading}
+        />
+      )}
+    </div>
+  );
+};
+
+// ─── Import-Vorschau-Dialog ───
+const ImportPreviewModal = ({ preview, selected, onToggle, onSelectStatus, overwrite, onOverwriteChange, onCancel, onConfirm, loading }) => {
+  const grouped = { neu: [], konflikt: [], invalid: [] };
+  preview.items.forEach((it) => grouped[it.status].push(it));
+  const selCount = selected.size;
+  const STATUS_BADGE = {
+    neu: "bg-emerald-100 text-emerald-800",
+    konflikt: "bg-amber-100 text-amber-800",
+    invalid: "bg-red-100 text-red-800",
+  };
+
+  const renderRow = (it) => {
+    const isOn = selected.has(it.key);
+    const isInvalid = it.status === "invalid";
+    return (
+      <div
+        key={it.key}
+        className={`flex items-start gap-3 p-2 rounded-sm border ${isOn ? "bg-primary/5 border-primary/30" : "bg-background"}`}
+        data-testid={`import-row-${it.key}`}
+      >
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={isOn}
+          disabled={isInvalid}
+          onChange={() => onToggle(it.key)}
+          data-testid={`import-check-${it.key}`}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_BADGE[it.status]}`}>
+              {it.status === "neu" ? "neu" : it.status === "konflikt" ? "Konflikt" : "ungültig"}
+            </span>
+            <span className="font-medium truncate">{it.title}</span>
+            <span className="text-xs text-muted-foreground">
+              {DOC_TYPE_LABELS[it.doc_type] || it.doc_type} · {TEXT_TYPE_LABELS[it.text_type] || it.text_type}
+            </span>
+          </div>
+          {it.status === "konflikt" && (
+            <div className="text-xs text-amber-800 mt-1">
+              Eintrag mit gleichem Titel und Typ existiert bereits.
+              {overwrite ? " → wird ÜBERSCHRIEBEN" : " → wird übersprungen falls Haken aus"}
+            </div>
+          )}
+          {it.status === "invalid" && (
+            <div className="text-xs text-red-700 mt-1">{it.reason}</div>
+          )}
+          {it.content && (
+            <div className="text-xs text-muted-foreground mt-1 line-clamp-1 whitespace-pre-line">{it.content}</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4" data-testid="import-preview-modal">
+      <div className="bg-background rounded-lg shadow-xl w-full max-w-3xl flex flex-col max-h-[92vh]">
+        <div className="p-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Upload className="w-5 h-5" />
+            Import-Vorschau ({preview.items.length} Einträge)
+          </h2>
+          <button onClick={onCancel} className="p-1 hover:bg-muted rounded-sm" data-testid="btn-import-cancel">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3 overflow-auto">
+          {/* Summary */}
+          <div className="flex items-center gap-2 flex-wrap text-sm">
+            <span className="px-2 py-1 rounded-sm bg-emerald-100 text-emerald-800 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> {preview.summary.neu} neu
+            </span>
+            <span className="px-2 py-1 rounded-sm bg-amber-100 text-amber-800 flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5" /> {preview.summary.konflikt} Konflikt
+            </span>
+            {preview.summary.invalid > 0 && (
+              <span className="px-2 py-1 rounded-sm bg-red-100 text-red-800">
+                {preview.summary.invalid} ungültig
+              </span>
+            )}
+            <span className="ml-auto text-xs text-muted-foreground">
+              {selCount} ausgewählt
+            </span>
+          </div>
+
+          {/* Konflikt-Strategie */}
+          {preview.summary.konflikt > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-sm p-3">
+              <div className="text-sm font-medium mb-2">Bei Konflikten (gleicher Titel + Typ):</div>
+              <div className="flex items-center gap-3 text-sm">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={!overwrite}
+                    onChange={() => onOverwriteChange(false)}
+                    data-testid="radio-skip"
+                  />
+                  Überspringen (empfohlen)
+                </label>
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={overwrite}
+                    onChange={() => onOverwriteChange(true)}
+                    data-testid="radio-overwrite"
+                  />
+                  Überschreiben
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Listen */}
+          {grouped.neu.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-sm font-semibold">Neu ({grouped.neu.length})</h3>
+                <div className="flex items-center gap-1 text-xs">
+                  <button onClick={() => onSelectStatus("neu", true)} className="px-2 py-0.5 hover:bg-muted rounded-sm" data-testid="btn-select-all-neu">Alle</button>
+                  <button onClick={() => onSelectStatus("neu", false)} className="px-2 py-0.5 hover:bg-muted rounded-sm">Keine</button>
+                </div>
+              </div>
+              <div className="space-y-1.5">{grouped.neu.map(renderRow)}</div>
+            </div>
+          )}
+          {grouped.konflikt.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-sm font-semibold">Konflikte ({grouped.konflikt.length})</h3>
+                <div className="flex items-center gap-1 text-xs">
+                  <button onClick={() => onSelectStatus("konflikt", true)} className="px-2 py-0.5 hover:bg-muted rounded-sm">Alle</button>
+                  <button onClick={() => onSelectStatus("konflikt", false)} className="px-2 py-0.5 hover:bg-muted rounded-sm">Keine</button>
+                </div>
+              </div>
+              <div className="space-y-1.5">{grouped.konflikt.map(renderRow)}</div>
+            </div>
+          )}
+          {grouped.invalid.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold mb-1.5">Ungültig ({grouped.invalid.length})</h3>
+              <div className="space-y-1.5">{grouped.invalid.map(renderRow)}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-3 border-t flex justify-end gap-2">
+          <Button variant="outline" onClick={onCancel} disabled={loading}>Abbrechen</Button>
+          <Button onClick={onConfirm} disabled={loading || selCount === 0} data-testid="btn-import-confirm">
+            {loading ? "Importiere..." : `${selCount} Vorlage${selCount === 1 ? "" : "n"} importieren`}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

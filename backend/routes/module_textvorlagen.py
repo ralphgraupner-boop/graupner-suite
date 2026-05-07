@@ -122,10 +122,151 @@ async def delete_textvorlage(item_id: str, user=Depends(get_current_user)):
 
 
 @router.get("/modules/textvorlagen/export")
-async def export_textvorlagen(user=Depends(get_current_user)):
-    items = await db.module_textvorlagen.find({}, {"_id": 0}).to_list(10000)
+async def export_textvorlagen(doc_type: str = "", text_type: str = "", user=Depends(get_current_user)):
+    """Exportiert Textvorlagen als JSON. Optional gefiltert per Query-Parameter,
+    damit der User nur die gerade gefilterte Auswahl exportieren kann."""
+    q = {}
+    if doc_type:
+        q["doc_type"] = doc_type
+    if text_type:
+        q["text_type"] = text_type
+    items = await db.module_textvorlagen.find(q, {"_id": 0}).to_list(10000)
     modul = await db.modules.find_one({"slug": "textvorlagen"}, {"_id": 0})
-    return {"module": modul, "data": items, "exported_at": datetime.now(timezone.utc).isoformat(), "count": len(items)}
+    return {
+        "module": modul,
+        "data": items,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "count": len(items),
+        "filter": {"doc_type": doc_type or None, "text_type": text_type or None},
+    }
+
+
+def _normalize_import_item(raw: dict) -> dict | None:
+    """Validiert+normalisiert einen einzelnen Import-Eintrag. Gibt None zurück,
+    wenn der Eintrag unbrauchbar ist (z.B. fehlender Titel/Doc-Type).
+    Erlaubt minimale Datensaetze (Titel allein bei Auswahl-Typen).
+    """
+    title = (raw.get("title") or "").strip()
+    doc_type = (raw.get("doc_type") or "").strip()
+    text_type = (raw.get("text_type") or "titel").strip()
+    content = raw.get("content") or ""
+    if not title or not doc_type:
+        return None
+    if doc_type not in VALID_DOC_TYPES:
+        return None
+    if text_type not in VALID_TEXT_TYPES:
+        return None
+    return {"title": title, "doc_type": doc_type, "text_type": text_type, "content": content}
+
+
+@router.post("/modules/textvorlagen/import-preview")
+async def import_preview(payload: dict, user=Depends(get_current_user)):
+    """Pruefung vor Import: liefert pro Eintrag den Match-Status:
+       neu | konflikt | invalid
+    Frontend zeigt das im Vorschau-Dialog mit Checkboxen.
+    Body: { items: [...] }  -- akzeptiert flaches Array oder Export-Format mit `data`.
+    """
+    raw_items = payload.get("items") or payload.get("data") or []
+    if not isinstance(raw_items, list):
+        raise HTTPException(400, "items muss ein Array sein")
+    out = []
+    for idx, raw in enumerate(raw_items):
+        norm = _normalize_import_item(raw)
+        if not norm:
+            out.append({
+                "key": idx,
+                "status": "invalid",
+                "title": (raw or {}).get("title") or "(ohne Titel)",
+                "doc_type": (raw or {}).get("doc_type") or "",
+                "text_type": (raw or {}).get("text_type") or "",
+                "content": (raw or {}).get("content") or "",
+                "reason": "Pflichtfelder fehlen oder Typ unbekannt",
+            })
+            continue
+        existing = await db.module_textvorlagen.find_one(
+            {"title": norm["title"], "doc_type": norm["doc_type"]},
+            {"_id": 0, "id": 1, "content": 1, "text_type": 1},
+        )
+        out.append({
+            "key": idx,
+            "status": "konflikt" if existing else "neu",
+            "title": norm["title"],
+            "doc_type": norm["doc_type"],
+            "text_type": norm["text_type"],
+            "content": norm["content"],
+            "existing_id": existing.get("id") if existing else None,
+            "existing_text_type": existing.get("text_type") if existing else None,
+            "existing_content": existing.get("content") if existing else None,
+        })
+    return {"items": out, "summary": {
+        "neu": sum(1 for x in out if x["status"] == "neu"),
+        "konflikt": sum(1 for x in out if x["status"] == "konflikt"),
+        "invalid": sum(1 for x in out if x["status"] == "invalid"),
+    }}
+
+
+@router.post("/modules/textvorlagen/import")
+async def import_apply(payload: dict, user=Depends(get_current_user)):
+    """Fuehrt den Import durch.
+    Body:
+      {
+        "items": [...],            # gleiche Struktur wie Vorschau-Input
+        "selected_keys": [0,1,3],  # Indizes welche importiert werden sollen
+        "overwrite": false         # bei Konflikten: true=ueberschreiben, false=ueberspringen
+      }
+    """
+    raw_items = payload.get("items") or payload.get("data") or []
+    selected = set(payload.get("selected_keys") or list(range(len(raw_items))))
+    overwrite = bool(payload.get("overwrite", False))
+    if not isinstance(raw_items, list):
+        raise HTTPException(400, "items muss ein Array sein")
+    now = datetime.now(timezone.utc).isoformat()
+    inserted = 0
+    updated = 0
+    skipped = 0
+    invalid = 0
+    for idx, raw in enumerate(raw_items):
+        if idx not in selected:
+            skipped += 1
+            continue
+        norm = _normalize_import_item(raw)
+        if not norm:
+            invalid += 1
+            continue
+        existing = await db.module_textvorlagen.find_one(
+            {"title": norm["title"], "doc_type": norm["doc_type"]}, {"_id": 0, "id": 1},
+        )
+        if existing:
+            if not overwrite:
+                skipped += 1
+                continue
+            await db.module_textvorlagen.update_one(
+                {"id": existing["id"]},
+                {"$set": {
+                    "content": norm["content"],
+                    "text_type": norm["text_type"],
+                    "updated_at": now,
+                }},
+            )
+            updated += 1
+        else:
+            await db.module_textvorlagen.insert_one({
+                "id": str(uuid4()),
+                "title": norm["title"],
+                "doc_type": norm["doc_type"],
+                "text_type": norm["text_type"],
+                "content": norm["content"],
+                "created_at": now,
+                "updated_at": now,
+            })
+            inserted += 1
+    return {
+        "inserted": inserted,
+        "updated": updated,
+        "skipped": skipped,
+        "invalid": invalid,
+        "total": len(raw_items),
+    }
 
 
 # Standard-Vorlagen fuer das Kundenportal (werden per Seed-Endpoint eingespielt)
