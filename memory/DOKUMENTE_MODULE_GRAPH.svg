@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+    </marker>
+    <style>
+      .label { font-size: 13px; fill: #1e293b; font-weight: 600; }
+      .sublabel { font-size: 11px; fill: #475569; }
+      .endpoint { font-size: 10px; fill: #0f766e; font-family: monospace; }
+      .title { font-size: 22px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-size: 13px; fill: #64748b; }
+      .legend { font-size: 11px; fill: #334155; }
+    </style>
+  </defs>
+
+  <!-- Header -->
+  <text x="700" y="35" text-anchor="middle" class="title">Dokumente — Modul-Abhaengigkeiten</text>
+  <text x="700" y="58" text-anchor="middle" class="subtitle">Stand 07.05.2026 · alle API-Pfade unter /api/...</text>
+
+  <!-- Frontend layer -->
+  <rect x="40" y="90" width="1320" height="170" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" rx="8"/>
+  <text x="55" y="112" class="label">Frontend (React)</text>
+
+  <!-- DokumenteModulPage Tab-Wrapper -->
+  <rect x="540" y="130" width="320" height="60" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="6"/>
+  <text x="700" y="155" text-anchor="middle" class="label">DokumenteModulPage.jsx</text>
+  <text x="700" y="175" text-anchor="middle" class="sublabel">/module/dokumente · Tab-Wrapper</text>
+
+  <!-- Tab pages -->
+  <rect x="80" y="210" width="180" height="40" fill="#fff" stroke="#3b82f6" stroke-width="1.5" rx="5"/>
+  <text x="170" y="235" text-anchor="middle" class="label">QuotesPage.jsx</text>
+
+  <rect x="280" y="210" width="180" height="40" fill="#fff" stroke="#3b82f6" stroke-width="1.5" rx="5"/>
+  <text x="370" y="235" text-anchor="middle" class="label">OrdersPage.jsx</text>
+
+  <rect x="480" y="210" width="180" height="40" fill="#fff" stroke="#3b82f6" stroke-width="1.5" rx="5"/>
+  <text x="570" y="235" text-anchor="middle" class="label">InvoicesPage.jsx</text>
+
+  <rect x="680" y="210" width="220" height="40" fill="#fff" stroke="#3b82f6" stroke-width="1.5" rx="5"/>
+  <text x="790" y="235" text-anchor="middle" class="label">DocumentTemplatesPanel</text>
+
+  <rect x="920" y="210" width="200" height="40" fill="#fff" stroke="#3b82f6" stroke-width="1.5" rx="5"/>
+  <text x="1020" y="235" text-anchor="middle" class="label">WysiwygDocumentEditor</text>
+  <text x="1020" y="200" text-anchor="middle" class="sublabel">Editor (alle 3 Doc-Arten)</text>
+
+  <!-- arrows from DokumenteModulPage to tabs -->
+  <line x1="700" y1="190" x2="170" y2="210" stroke="#3b82f6" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="700" y1="190" x2="370" y2="210" stroke="#3b82f6" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="700" y1="190" x2="570" y2="210" stroke="#3b82f6" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="700" y1="190" x2="790" y2="210" stroke="#3b82f6" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Backend Module layer -->
+  <rect x="40" y="290" width="1320" height="380" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" rx="8"/>
+  <text x="55" y="312" class="label">Backend Module (FastAPI · Module-First seit 07.05.2026)</text>
+
+  <!-- module_angebote -->
+  <rect x="80" y="340" width="180" height="80" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="170" y="362" text-anchor="middle" class="label">module_angebote/</text>
+  <text x="170" y="380" text-anchor="middle" class="sublabel">routes.py</text>
+  <text x="170" y="398" text-anchor="middle" class="endpoint">/api/quotes/*</text>
+  <text x="170" y="412" text-anchor="middle" class="endpoint">DB: quotes</text>
+
+  <!-- module_auftraege -->
+  <rect x="280" y="340" width="180" height="80" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="370" y="362" text-anchor="middle" class="label">module_auftraege/</text>
+  <text x="370" y="380" text-anchor="middle" class="sublabel">routes.py</text>
+  <text x="370" y="398" text-anchor="middle" class="endpoint">/api/orders/*</text>
+  <text x="370" y="412" text-anchor="middle" class="endpoint">DB: orders</text>
+
+  <!-- module_rechnungen -->
+  <rect x="480" y="340" width="180" height="80" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="570" y="362" text-anchor="middle" class="label">module_rechnungen/</text>
+  <text x="570" y="380" text-anchor="middle" class="sublabel">routes_v1 + routes_v2</text>
+  <text x="570" y="398" text-anchor="middle" class="endpoint">/api/invoices/*</text>
+  <text x="570" y="412" text-anchor="middle" class="endpoint">DB: invoices</text>
+
+  <!-- module_dokumente -->
+  <rect x="680" y="340" width="220" height="80" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="790" y="362" text-anchor="middle" class="label">module_dokumente/</text>
+  <text x="790" y="380" text-anchor="middle" class="sublabel">routes_legacy/_manager/_templates/_data</text>
+  <text x="790" y="398" text-anchor="middle" class="endpoint">/api/document-templates/*</text>
+  <text x="790" y="412" text-anchor="middle" class="endpoint">DB: document_templates</text>
+
+  <!-- arrows: tab -> module -->
+  <line x1="170" y1="250" x2="170" y2="340" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <line x1="370" y1="250" x2="370" y2="340" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <line x1="570" y1="250" x2="570" y2="340" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <line x1="790" y1="250" x2="790" y2="340" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <line x1="1020" y1="250" x2="570" y2="340" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowGreen)" stroke-dasharray="4 3"/>
+  <line x1="1020" y1="250" x2="170" y2="340" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowGreen)" stroke-dasharray="4 3"/>
+  <line x1="1020" y1="250" x2="370" y2="340" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowGreen)" stroke-dasharray="4 3"/>
+
+  <!-- Cross-module workflow ketten -->
+  <line x1="260" y1="380" x2="280" y2="380" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <text x="270" y="338" text-anchor="middle" class="endpoint" fill="#dc2626">Angebot → Auftrag</text>
+
+  <line x1="460" y1="380" x2="480" y2="380" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <text x="470" y="338" text-anchor="middle" class="endpoint" fill="#dc2626">Auftrag → Rechnung</text>
+
+  <!-- Helper-Module unten -->
+  <rect x="80" y="470" width="180" height="60" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" rx="6"/>
+  <text x="170" y="492" text-anchor="middle" class="label">module_kunden/</text>
+  <text x="170" y="510" text-anchor="middle" class="endpoint">find_customer_in_modules</text>
+  <text x="170" y="522" text-anchor="middle" class="endpoint">DB: module_kunden</text>
+
+  <rect x="280" y="470" width="180" height="60" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" rx="6"/>
+  <text x="370" y="492" text-anchor="middle" class="label">module_textvorlagen/</text>
+  <text x="370" y="510" text-anchor="middle" class="endpoint">doc_type=angebot|auftrag|</text>
+  <text x="370" y="522" text-anchor="middle" class="endpoint">rechnung (Datenmaske)</text>
+
+  <rect x="480" y="470" width="180" height="60" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" rx="6"/>
+  <text x="570" y="492" text-anchor="middle" class="label">routes/articles.py</text>
+  <text x="570" y="510" text-anchor="middle" class="endpoint">/api/articles</text>
+  <text x="570" y="522" text-anchor="middle" class="endpoint">DB: articles</text>
+
+  <rect x="680" y="470" width="220" height="60" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" rx="6"/>
+  <text x="790" y="492" text-anchor="middle" class="label">routes/leistungsbloecke.py</text>
+  <text x="790" y="510" text-anchor="middle" class="endpoint">/api/leistungsbloecke</text>
+  <text x="790" y="522" text-anchor="middle" class="endpoint">DB: leistungsbloecke</text>
+
+  <rect x="920" y="470" width="200" height="60" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" rx="6"/>
+  <text x="1020" y="492" text-anchor="middle" class="label">routes/text_templates.py</text>
+  <text x="1020" y="510" text-anchor="middle" class="endpoint">Mahn-Texte</text>
+  <text x="1020" y="522" text-anchor="middle" class="endpoint">DB: text_templates</text>
+
+  <rect x="1140" y="470" width="200" height="60" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" rx="6"/>
+  <text x="1240" y="492" text-anchor="middle" class="label">routes/pdf.py</text>
+  <text x="1240" y="510" text-anchor="middle" class="endpoint">/api/pdf/{quote|order|invoice}/{id}</text>
+  <text x="1240" y="522" text-anchor="middle" class="endpoint">PDF-Erzeugung</text>
+
+  <!-- arrows: modules -> helpers -->
+  <line x1="170" y1="420" x2="170" y2="470" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 2"/>
+  <line x1="370" y1="420" x2="370" y2="470" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 2"/>
+  <line x1="570" y1="420" x2="570" y2="470" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 2"/>
+  <line x1="790" y1="420" x2="790" y2="470" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 2"/>
+  <line x1="570" y1="420" x2="1020" y2="470" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 2"/>
+  <line x1="570" y1="420" x2="1240" y2="470" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 2"/>
+
+  <!-- Mahnung Email -->
+  <rect x="1140" y="340" width="200" height="80" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="1240" y="362" text-anchor="middle" class="label">routes/email.py</text>
+  <text x="1240" y="380" text-anchor="middle" class="sublabel">utils/send_email</text>
+  <text x="1240" y="398" text-anchor="middle" class="endpoint">/api/email/dunning/{id}</text>
+  <text x="1240" y="412" text-anchor="middle" class="endpoint">SMTP-Versand</text>
+  <line x1="660" y1="380" x2="1140" y2="380" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowGreen)" stroke-dasharray="4 3"/>
+
+  <!-- DB layer -->
+  <rect x="40" y="700" width="1320" height="180" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5" rx="8"/>
+  <text x="55" y="722" class="label">MongoDB Collections (Datenmaske: kein Duplizieren)</text>
+
+  <rect x="80" y="745" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="160" y="765" text-anchor="middle" class="label">quotes</text>
+  <text x="160" y="780" text-anchor="middle" class="sublabel">Angebote</text>
+
+  <rect x="260" y="745" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="340" y="765" text-anchor="middle" class="label">orders</text>
+  <text x="340" y="780" text-anchor="middle" class="sublabel">Auftraege</text>
+
+  <rect x="440" y="745" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="520" y="765" text-anchor="middle" class="label">invoices</text>
+  <text x="520" y="780" text-anchor="middle" class="sublabel">Rechnungen + Mahnstufen</text>
+
+  <rect x="620" y="745" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="700" y="765" text-anchor="middle" class="label">document_templates</text>
+  <text x="700" y="780" text-anchor="middle" class="sublabel">Vorlagen</text>
+
+  <rect x="800" y="745" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="880" y="765" text-anchor="middle" class="label">articles</text>
+  <text x="880" y="780" text-anchor="middle" class="sublabel">Artikelstamm</text>
+
+  <rect x="980" y="745" width="170" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="1065" y="765" text-anchor="middle" class="label">leistungsbloecke</text>
+  <text x="1065" y="780" text-anchor="middle" class="sublabel">Positions-Buendel</text>
+
+  <rect x="1170" y="745" width="170" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="1255" y="765" text-anchor="middle" class="label">module_textvorlagen</text>
+  <text x="1255" y="780" text-anchor="middle" class="sublabel">Auswahlfelder + Texte</text>
+
+  <rect x="80" y="810" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="160" y="830" text-anchor="middle" class="label">module_kunden</text>
+  <text x="160" y="845" text-anchor="middle" class="sublabel">Kunde-Source-of-Truth</text>
+
+  <rect x="260" y="810" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="340" y="830" text-anchor="middle" class="label">settings</text>
+  <text x="340" y="845" text-anchor="middle" class="sublabel">Briefkopf, Skonti, Mahn</text>
+
+  <rect x="440" y="810" width="160" height="50" fill="#fff" stroke="#dc2626" stroke-width="1.2" rx="4"/>
+  <text x="520" y="830" text-anchor="middle" class="label">mitarbeiter</text>
+  <text x="520" y="845" text-anchor="middle" class="sublabel">PDF-Footer</text>
+
+  <rect x="620" y="810" width="160" height="50" fill="#fef9c3" stroke="#a16207" stroke-width="1.2" rx="4" stroke-dasharray="4 2"/>
+  <text x="700" y="830" text-anchor="middle" class="label">module_dokumente_v2_*</text>
+  <text x="700" y="845" text-anchor="middle" class="sublabel">Sandbox · NICHT produktiv</text>
+
+  <!-- Legend -->
+  <rect x="970" y="900" width="380" height="80" fill="#fff" stroke="#cbd5e1" stroke-width="1" rx="4"/>
+  <text x="985" y="920" class="label">Legende</text>
+  <line x1="985" y1="935" x2="1015" y2="935" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <text x="1025" y="940" class="legend">API-Aufruf (Frontend → Modul)</text>
+  <line x1="985" y1="955" x2="1015" y2="955" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <text x="1025" y="960" class="legend">Workflow-Kette (Doc-zu-Doc)</text>
+  <line x1="1180" y1="935" x2="1210" y2="935" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 2"/>
+  <text x="1220" y="940" class="legend">Hilfs-/Querschnittsmodul</text>
+  <rect x="1180" y="950" width="20" height="14" fill="#fef9c3" stroke="#a16207" stroke-dasharray="3 2"/>
+  <text x="1210" y="962" class="legend">Sandbox (nicht produktiv)</text>
+
+  <!-- Footer note -->
+  <text x="55" y="940" class="legend" fill="#475569">Tipp: Wenn ein neuer Auswahltyp (z.B. „Mahn-Status") gebraucht wird → IMMER in module_textvorlagen mit eigenem doc_type anlegen, niemals hartcodieren.</text>
+  <text x="55" y="960" class="legend" fill="#475569">Workflow-Ketten erzeugen je einen neuen Datensatz in der naechsten Collection. Verbindung: kunde_id, source_quote_id, source_order_id.</text>
+</svg>
