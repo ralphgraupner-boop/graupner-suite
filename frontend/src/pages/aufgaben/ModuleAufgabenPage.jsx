@@ -86,11 +86,17 @@ export default function ModuleAufgabenPage() {
     }
   };
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const remove = async (a) => {
-    if (!window.confirm(`Aufgabe "${a.titel}" wirklich löschen?`)) return;
+    if (confirmDeleteId !== a.id) {
+      setConfirmDeleteId(a.id);
+      setTimeout(() => setConfirmDeleteId((cur) => (cur === a.id ? null : cur)), 4000);
+      return;
+    }
     try {
       await api.delete(`/module-aufgaben/${a.id}`);
       toast.success("Aufgabe gelöscht");
+      setConfirmDeleteId(null);
       load();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
@@ -249,11 +255,15 @@ export default function ModuleAufgabenPage() {
                       </button>
                       <button
                         onClick={() => remove(a)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded-sm border border-transparent hover:border-red-200"
-                        title="Löschen"
+                        className={`p-1 rounded-sm border transition-colors ${confirmDeleteId === a.id ? "bg-red-500 text-white border-red-500" : "text-red-500 hover:bg-red-50 border-transparent hover:border-red-200"}`}
+                        title={confirmDeleteId === a.id ? "Nochmal klicken zum Bestätigen" : "Löschen"}
                         data-testid={`btn-delete-${a.id}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {confirmDeleteId === a.id ? (
+                          <span className="text-xs font-bold px-1">Wirklich?</span>
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
                   </div>
