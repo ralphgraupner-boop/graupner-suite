@@ -160,7 +160,7 @@ export default function ModuleAufgabenPage() {
         })}
       </div>
 
-      {/* Kategorie-Filter */}
+      {/* Kategorie-Filter (dynamisch aus module_textvorlagen + Legacy-Werte) */}
       <div className="flex items-center gap-2 flex-wrap mb-4 text-sm">
         <Filter className="w-4 h-4 text-muted-foreground" />
         <button
@@ -170,14 +170,14 @@ export default function ModuleAufgabenPage() {
         >
           Alle
         </button>
-        {Object.keys(KATEGORIE_LABELS).map(k => (
+        {(meta?.kategorien || Object.keys(KATEGORIE_LABELS)).map(k => (
           <button
             key={k}
             onClick={() => setFilterKategorie(filterKategorie === k ? "" : k)}
             className={`px-2 py-1 rounded-sm border ${filterKategorie === k ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             data-testid={`filter-kategorie-${k}`}
           >
-            {KATEGORIE_LABELS[k]}
+            {KATEGORIE_LABELS[k] || k}
           </button>
         ))}
       </div>

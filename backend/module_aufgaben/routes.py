@@ -20,10 +20,25 @@ from .settings import _get_or_create_settings
 router = APIRouter()
 
 
-VALID_KATEGORIEN = ["auto", "werkzeug", "lager", "fahrzeug", "buero", "sonstige"]
+VALID_KATEGORIEN_LEGACY = ["auto", "werkzeug", "lager", "fahrzeug", "buero", "sonstige"]
+# Neu (06.05.2026): Kategorien werden in module_textvorlagen mit
+# doc_type=aufgaben_kategorie gepflegt (siehe VISION.md). VALID_KATEGORIEN_LEGACY
+# bleibt als Fallback erhalten, damit alte Aufgaben weiterhin gelten.
 VALID_PRIORITAETEN = ["niedrig", "normal", "hoch"]
 VALID_STATUS = ["offen", "in_arbeit", "erledigt"]
 VALID_WIEDERHOLUNG = ["einmalig", "taeglich", "woechentlich", "monatlich"]
+
+
+async def _allowed_kategorien() -> list[str]:
+    """Zulässige Kategorien aus module_textvorlagen + Legacy-Werte für
+    Rückwärtskompatibilität. Reine Validierungs-Hilfe.
+    """
+    out: set[str] = set(VALID_KATEGORIEN_LEGACY)
+    async for v in db.module_textvorlagen.find({"doc_type": "aufgaben_kategorie"}, {"_id": 0, "title": 1}):
+        t = (v.get("title") or "").strip()
+        if t:
+            out.add(t)
+    return sorted(out)
 
 
 # ==================== MODELS ====================
@@ -67,14 +82,28 @@ async def _require_enabled():
 
 
 def _validate_enums(data: dict):
-    if "kategorie" in data and data["kategorie"] not in VALID_KATEGORIEN:
-        raise HTTPException(400, f"kategorie muss eine von {VALID_KATEGORIEN} sein")
+    # kategorie wird in den Endpunkten dynamisch gegen _allowed_kategorien()
+    # geprüft. Hier nur die unveränderlichen Enums.
     if "prioritaet" in data and data["prioritaet"] not in VALID_PRIORITAETEN:
         raise HTTPException(400, f"prioritaet muss eine von {VALID_PRIORITAETEN} sein")
     if "status" in data and data["status"] not in VALID_STATUS:
         raise HTTPException(400, f"status muss einer von {VALID_STATUS} sein")
     if "wiederholung" in data and data["wiederholung"] not in VALID_WIEDERHOLUNG:
         raise HTTPException(400, f"wiederholung muss eine von {VALID_WIEDERHOLUNG} sein")
+
+
+async def _validate_kategorie_or_400(data: dict):
+    if "kategorie" not in data:
+        return
+    val = (data.get("kategorie") or "").strip()
+    if not val:
+        return
+    allowed = await _allowed_kategorien()
+    if val not in allowed:
+        raise HTTPException(
+            400,
+            "kategorie nicht zulässig — bitte zuerst in Einstellungen → Textvorlagen → 'Aufgaben-Kategorie' anlegen",
+        )
 
 
 # ==================== SETTINGS ====================
@@ -102,7 +131,7 @@ async def update_settings(payload: dict, user=Depends(get_current_user)):
 @router.get("/meta")
 async def meta(user=Depends(get_current_user)):
     return {
-        "kategorien": VALID_KATEGORIEN,
+        "kategorien": await _allowed_kategorien(),
         "prioritaeten": VALID_PRIORITAETEN,
         "status": VALID_STATUS,
         "wiederholungen": VALID_WIEDERHOLUNG,
@@ -176,6 +205,7 @@ async def create_aufgabe(payload: AufgabeCreate, user=Depends(get_current_user))
     if not data["titel"].strip():
         raise HTTPException(400, "Titel darf nicht leer sein")
     _validate_enums(data)
+    await _validate_kategorie_or_400(data)
 
     now = datetime.now(timezone.utc).isoformat()
     item = {
@@ -211,6 +241,7 @@ async def update_aufgabe(aufgabe_id: str, payload: AufgabeUpdate, user=Depends(g
 
     data = {k: v for k, v in payload.model_dump().items() if v is not None}
     _validate_enums(data)
+    await _validate_kategorie_or_400(data)
     if "titel" in data and not data["titel"].strip():
         raise HTTPException(400, "Titel darf nicht leer sein")
 
