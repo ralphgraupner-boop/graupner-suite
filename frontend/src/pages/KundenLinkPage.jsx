@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Phone, Mail, MapPin, User, Building2, Clock, AlertTriangle, Loader2, FileText, Image as ImageIcon, Send, Camera, Check } from "lucide-react";
+import { Phone, Mail, MapPin, User, Building2, Clock, AlertTriangle, Loader2, FileText, Image as ImageIcon, Send, Camera, Check, Mic, Square, Sparkles } from "lucide-react";
 import axios from "axios";
 
 /**
@@ -26,6 +26,87 @@ const KundenLinkPage = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadedFlash, setUploadedFlash] = useState(false);
   const fileInputRef = useRef(null);
+
+  // ── Sprachaufnahme (Whisper + KI-Strukturierung) ──
+  const [recording, setRecording] = useState(false);
+  const [voiceProcessing, setVoiceProcessing] = useState(false);
+  const [voiceSeconds, setVoiceSeconds] = useState(0);
+  const recorderRef = useRef(null);
+  const voiceChunksRef = useRef([]);
+  const voiceStreamRef = useRef(null);
+  const voiceTimerRef = useRef(null);
+
+  const startRecording = async () => {
+    if (!navigator?.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      alert("Sprachaufnahme wird vom Browser nicht unterstuetzt.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStreamRef.current = stream;
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : (MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "");
+      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recorderRef.current = rec;
+      voiceChunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
+      rec.onstop = handleVoiceStop;
+      rec.start();
+      setRecording(true);
+      setVoiceSeconds(0);
+      voiceTimerRef.current = setInterval(() => setVoiceSeconds((s) => s + 1), 1000);
+    } catch (err) {
+      alert("Mikrofon-Zugriff verweigert: " + (err?.message || ""));
+    }
+  };
+
+  const stopRecording = () => {
+    try { recorderRef.current?.stop(); } catch { /* noop */ }
+    voiceStreamRef.current?.getTracks()?.forEach((t) => t.stop());
+    clearInterval(voiceTimerRef.current);
+    setRecording(false);
+  };
+
+  const handleVoiceStop = async () => {
+    setVoiceProcessing(true);
+    try {
+      const type = recorderRef.current?.mimeType || "audio/webm";
+      const blob = new Blob(voiceChunksRef.current, { type });
+      if (blob.size < 1000) {
+        alert("Aufnahme zu kurz (< 1 Sekunde).");
+        return;
+      }
+      const ext = type.includes("mp4") ? "m4a" : "webm";
+      const fd = new FormData();
+      fd.append("audio", blob, `aufnahme.${ext}`);
+      fd.append("language", "de");
+      const r = await axios.post(`${API}/api/voice-intake/transcribe-public/${token}`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const txt = (r.data?.text || "").trim();
+      const fields = r.data?.fields || {};
+      // Struktur als Klartext anhaengen
+      let extra = "";
+      const order = ["reparaturgruppe", "material", "hersteller", "alter_jahre", "schaden", "beschreibung"];
+      const filled = order.filter((k) => fields[k]);
+      if (filled.length > 0) {
+        extra = "\n\n— KI-Erkennung —\n" + filled.map((k) => `${k}: ${fields[k]}`).join("\n");
+      }
+      setNoteText((prev) => (prev ? prev + "\n\n" : "") + txt + extra);
+    } catch (err) {
+      alert("Transkription fehlgeschlagen: " + (err?.response?.data?.detail || err?.message || ""));
+    } finally {
+      setVoiceProcessing(false);
+    }
+  };
+
+  // Cleanup
+  useEffect(() => () => {
+    try { recorderRef.current?.stop(); } catch { /* noop */ }
+    voiceStreamRef.current?.getTracks()?.forEach((t) => t.stop());
+    clearInterval(voiceTimerRef.current);
+  }, []);
 
   useEffect(() => {
     // Name persistent im Browser pro Mitarbeiter-Handy
@@ -404,10 +485,43 @@ const KundenLinkPage = () => {
           {/* Notiz */}
           <div>
             <label className="block text-[11px] font-medium text-amber-900 mb-1">Notiz / Bemerkung</label>
+            {/* Sprachaufnahme – diktieren statt tippen */}
+            <div className="mb-2 flex items-center gap-2 flex-wrap">
+              {!recording && !voiceProcessing && (
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-sm bg-violet-600 text-white hover:bg-violet-700"
+                  data-testid="kundenlink-voice-start"
+                >
+                  <Mic className="w-4 h-4" />
+                  Sprachnotiz aufnehmen
+                </button>
+              )}
+              {recording && (
+                <button
+                  type="button"
+                  onClick={stopRecording}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-sm bg-red-600 text-white animate-pulse"
+                  data-testid="kundenlink-voice-stop"
+                >
+                  <Square className="w-4 h-4" />
+                  Stop ({Math.floor(voiceSeconds / 60)}:{String(voiceSeconds % 60).padStart(2, "0")})
+                </button>
+              )}
+              {voiceProcessing && (
+                <div className="inline-flex items-center gap-2 px-3 py-2 text-sm text-violet-800">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Transkribiere…
+                </div>
+              )}
+              <span className="text-[10px] text-amber-700 inline-flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Frei sprechen — KI macht Text + erkennt Material/Hersteller
+              </span>
+            </div>
             <textarea
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
-              rows={3}
+              rows={4}
               placeholder="z.B. Besichtigung erfolgt – Tür ausgehängt, Material für nächste Woche bestellen…"
               className="w-full px-3 py-2 text-sm border rounded-sm bg-white"
               data-testid="kundenlink-note-text"

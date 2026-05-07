@@ -39,6 +39,7 @@ from routes.modules import router as modules_router
 from module_artikel import router as module_artikel_router  # Modul-First (07.05.2026)
 # routes.module_dokumente ist Teil von module_dokumente; eigener Eintrag entfaellt.
 from module_textvorlagen import router as module_textvorlagen_router  # Modul-First (07.05.2026)
+from module_voice_intake import router as voice_intake_router  # Modul-First (07.05.2026)
 # kunden_router ist oben bereits aus module_kunden importiert — alter
 # routes.module_kunden Import wurde im Refactor entfernt.
 from module_rechnungen import router_v2 as rechnungen_v2_router  # Modul-First (07.05.2026)
@@ -104,6 +105,7 @@ api_router.include_router(modules_router)
 api_router.include_router(module_artikel_router)
 # module_dokumente_data ist Teil von module_dokumente
 api_router.include_router(module_textvorlagen_router)
+api_router.include_router(voice_intake_router)
 # kunden_router wurde bereits weiter oben (Zeile ~71) eingehaengt
 
 
