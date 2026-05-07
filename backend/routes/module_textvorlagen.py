@@ -6,7 +6,7 @@ from uuid import uuid4
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht", "abschluss_grund"]
 
 PLACEHOLDERS = [
@@ -57,6 +57,9 @@ async def ensure_modul_registered():
 @router.get("/modules/textvorlagen/data")
 async def get_textvorlagen(doc_type: str = "", text_type: str = "", user=Depends(get_current_user)):
     await ensure_modul_registered()
+    # Auto-Seed Aufgaben-Kategorien bei erstem Aufruf (idempotent)
+    if doc_type == "aufgaben_kategorie":
+        await ensure_aufgaben_kategorien_seeded()
     query = {}
     if text_type:
         query["text_type"] = text_type
@@ -74,8 +77,12 @@ async def get_placeholders(user=Depends(get_current_user)):
 
 @router.post("/modules/textvorlagen/data")
 async def create_textvorlage(data: dict, user=Depends(get_current_user)):
-    if not data.get("title") or not data.get("content"):
-        raise HTTPException(400, "Titel und Inhalt erforderlich")
+    # Auswahlfeld-Typen brauchen keinen Inhalt — der Titel IST die Auswahl
+    SELECTION_TYPES = {"kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie", "abschlussgrund"}
+    if not data.get("title"):
+        raise HTTPException(400, "Titel erforderlich")
+    if data.get("doc_type") not in SELECTION_TYPES and not data.get("content"):
+        raise HTTPException(400, "Inhalt erforderlich")
     if data.get("doc_type") not in VALID_DOC_TYPES:
         raise HTTPException(400, f"doc_type muss einer von {VALID_DOC_TYPES} sein")
     if data.get("text_type") not in VALID_TEXT_TYPES:
@@ -83,7 +90,7 @@ async def create_textvorlage(data: dict, user=Depends(get_current_user)):
     item = {
         "id": str(uuid4()),
         "title": data["title"],
-        "content": data["content"],
+        "content": data.get("content", ""),
         "doc_type": data["doc_type"],
         "text_type": data["text_type"],
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -243,4 +250,40 @@ async def seed_aufgaben_vorlagen(user=Depends(get_current_user)):
         "total": len(STANDARD_AUFGABEN_VORLAGEN),
         "details": results,
     }
+
+
+# Aufgaben-Kategorien — werden als doc_type=aufgaben_kategorie in
+# module_textvorlagen geführt (siehe VISION.md). Default-Set wird beim
+# ersten Aufruf von list_data automatisch angelegt + bestehende
+# kategorie-Werte aus module_aufgaben einmalig migriert.
+DEFAULT_AUFGABEN_KATEGORIEN = ["Aufmaß", "Material", "Montage", "Kundengespräch", "Verwaltung", "Sonstige"]
+
+
+async def ensure_aufgaben_kategorien_seeded():
+    """Idempotent: legt Default-Kategorien + bestehende kategorie-Werte aus
+    module_aufgaben an, falls die Sammlung leer ist. Pro Kategorie wird ein
+    Datensatz mit doc_type=aufgaben_kategorie und text_type=titel erstellt.
+    """
+    has_any = await db.module_textvorlagen.find_one({"doc_type": "aufgaben_kategorie"})
+    if has_any:
+        return
+    titles: set[str] = set()
+    for default in DEFAULT_AUFGABEN_KATEGORIEN:
+        titles.add(default)
+    # bestehende Kategorien aus Aufgaben einsammeln (Migration)
+    async for a in db.module_aufgaben.find({"kategorie": {"$exists": True, "$nin": [None, ""]}}, {"_id": 0, "kategorie": 1}):
+        v = (a.get("kategorie") or "").strip()
+        if v and v.lower() != "sonstige":
+            titles.add(v)
+    now = datetime.now(timezone.utc).isoformat()
+    for t in titles:
+        await db.module_textvorlagen.insert_one({
+            "id": str(uuid4()),
+            "title": t,
+            "content": "",
+            "doc_type": "aufgaben_kategorie",
+            "text_type": "titel",
+            "created_at": now,
+            "updated_at": now,
+        })
 

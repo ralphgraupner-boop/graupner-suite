@@ -203,7 +203,7 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
   const [data, setData] = useState({
     titel: existing?.titel || "",
     beschreibung: existing?.beschreibung || "",
-    kategorie: existing?.kategorie || "sonstige",
+    kategorie: existing?.kategorie || "Sonstige",
     prioritaet: existing?.prioritaet || "normal",
     zugewiesen_an: existing?.zugewiesen_an || "",
     faellig_am: existing?.faellig_am || "",
@@ -213,6 +213,23 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
     projekt_id: existing?.projekt_id || projekt_id,
   });
   const [saving, setSaving] = useState(false);
+  // Aufgaben-Kategorien aus module_textvorlagen (doc_type=aufgaben_kategorie),
+  // siehe VISION.md — keine Hardcoding. Fallback wenn API nicht antwortet.
+  const [kategorien, setKategorien] = useState(["Aufmaß", "Material", "Montage", "Kundengespräch", "Verwaltung", "Sonstige"]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.get("/modules/textvorlagen/data?doc_type=aufgaben_kategorie");
+        const titles = (r.data || [])
+          .map((t) => t.title)
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
+        if (!cancelled && titles.length > 0) setKategorien(titles);
+      } catch { /* Fallback bleibt */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const upd = (k, v) => setData(d => ({ ...d, [k]: v }));
 
   const save = async () => {
@@ -300,6 +317,26 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
                 data-testid="quick-input-faellig"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Kategorie
+              <span className="text-xs text-muted-foreground font-normal"> · Pflege in Einstellungen → Textvorlagen → „Aufgaben-Kategorie"</span>
+            </label>
+            <select
+              value={data.kategorie}
+              onChange={(e) => upd("kategorie", e.target.value)}
+              className="w-full border rounded-sm p-2 text-sm"
+              data-testid="quick-select-kategorie"
+            >
+              {/* Wenn der gespeicherte Wert nicht in der Liste ist, trotzdem anzeigen */}
+              {data.kategorie && !kategorien.includes(data.kategorie) && (
+                <option value={data.kategorie}>{data.kategorie}</option>
+              )}
+              {kategorien.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Zugewiesen an</label>
