@@ -63,7 +63,55 @@ const TextvorlagenModulPage = () => {
     } catch { toast.error("Fehler beim Export"); }
   };
 
-  // ─── Import-Workflow ───
+  // ─── Robustes Kopieren mit Fallback ───
+  // navigator.clipboard.writeText schlaegt im iframe oder ohne HTTPS lautlos
+  // fehl. Daher: erst die moderne API versuchen, sonst auf textarea +
+  // document.execCommand ausweichen. HTML-Inhalt wird in plain Text
+  // konvertiert (Rich-Text-Editor speichert HTML).
+  const htmlToText = (html) => {
+    if (!html) return "";
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    // Zeilenumbrueche bei Block-Elementen erhalten
+    tmp.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+    tmp.querySelectorAll("p, div, li").forEach((el) => el.append("\n"));
+    return (tmp.innerText || tmp.textContent || "").replace(/\n{3,}/g, "\n\n").trim();
+  };
+
+  const copyToClipboard = async (text, successMsg = "Kopiert") => {
+    const value = String(text ?? "");
+    if (!value) {
+      toast.error("Nichts zum Kopieren");
+      return false;
+    }
+    // 1) moderne Async-API
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        toast.success(successMsg);
+        return true;
+      }
+    } catch { /* faellt unten in den Fallback */ }
+    // 2) Fallback per textarea
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = value;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (ok) {
+        toast.success(successMsg);
+        return true;
+      }
+    } catch { /* nichts */ }
+    toast.error("Kopieren wurde vom Browser blockiert. Bitte Text manuell markieren und mit Strg+C kopieren.");
+    return false;
+  };
   const fileInputRef = useRef(null);
   const [importPreview, setImportPreview] = useState(null);  // {items, summary}
   const [importSelected, setImportSelected] = useState(new Set());
@@ -235,7 +283,7 @@ const TextvorlagenModulPage = () => {
           <p className="text-xs font-semibold text-muted-foreground mb-1">Verfuegbare Platzhalter (klicken zum Kopieren):</p>
           <div className="flex flex-wrap gap-1">
             {placeholders.map(p => (
-              <button key={p.alias} onClick={() => { navigator.clipboard.writeText(p.alias); toast.success(`${p.alias} kopiert`); }}
+              <button key={p.alias} onClick={() => copyToClipboard(p.alias, `${p.alias} kopiert`)}
                 className="px-2 py-0.5 bg-background border rounded text-xs font-mono hover:bg-primary/5 hover:border-primary/30 transition-all" title={p.beschreibung}>
                 {p.alias}
               </button>
@@ -265,7 +313,7 @@ const TextvorlagenModulPage = () => {
                   <p className="text-sm text-muted-foreground mt-1 line-clamp-2 group-hover/content:line-clamp-none whitespace-pre-line transition-all">{item.content}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => { navigator.clipboard.writeText(item.content); toast.success("Inhalt kopiert"); }} className="p-2 hover:bg-muted rounded-sm" title="Kopieren">
+                  <button onClick={() => copyToClipboard(htmlToText(item.content), "Inhalt kopiert")} className="p-2 hover:bg-muted rounded-sm" title="Kopieren">
                     <Copy className="w-4 h-4" />
                   </button>
                   <button onClick={() => { setEditItem(item); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten">
