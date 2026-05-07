@@ -431,7 +431,6 @@ const KundenLinkPage = () => {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               multiple
               onChange={(e) => submitPhoto(e.target.files)}
               className="hidden"
