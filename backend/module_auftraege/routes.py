@@ -3,7 +3,7 @@ from typing import List
 from datetime import datetime, timezone
 from models import Order, OrderUpdate, Position
 from database import db
-from routes.quotes import find_customer_in_modules
+from module_angebote import find_customer_in_modules
 
 router = APIRouter()
 

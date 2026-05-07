@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from models import Invoice, InvoiceCreate, InvoiceUpdate, Position
 from database import db, logger
 from auth import get_current_user
-from routes.quotes import find_customer_in_modules
+from module_angebote import find_customer_in_modules
 
 router = APIRouter()
 

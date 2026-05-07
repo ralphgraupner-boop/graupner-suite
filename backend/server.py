@@ -7,9 +7,9 @@ from routes.auth import router as auth_router
 from module_kunden import router as kunden_router  # Modul-First (07.05.2026)
 from routes.articles import router as articles_router
 from routes.services import router as services_router
-from routes.quotes import router as quotes_router
-from routes.orders import router as orders_router
-from routes.invoices import router as invoices_router
+from module_angebote import router as quotes_router  # Modul-First (07.05.2026)
+from module_auftraege import router as orders_router
+from module_rechnungen import router_v1 as invoices_router
 from routes.email import router as email_router
 from routes.settings import router as settings_router
 from routes.push import router as push_router
@@ -23,7 +23,7 @@ from routes.text_templates import router as text_templates_router
 from routes.leistungsbloecke import router as leistungsbloecke_router
 from routes.portal import router as portal_router
 from routes.portal_klon import router as portal_klon_router
-from routes.einsaetze import router as einsaetze_router
+from module_einsaetze import router as einsaetze_router  # Modul-First (07.05.2026)
 from routes.document_templates import router as document_templates_router
 from routes.imap import router as imap_router
 from routes.kalkulation import router as kalkulation_router
@@ -41,7 +41,7 @@ from routes.module_dokumente import router as module_dokumente_router
 from routes.module_textvorlagen import router as module_textvorlagen_router
 # kunden_router ist oben bereits aus module_kunden importiert — alter
 # routes.module_kunden Import wurde im Refactor entfernt.
-from routes.rechnungen_v2 import router as rechnungen_v2_router
+from module_rechnungen import router_v2 as rechnungen_v2_router  # Modul-First (07.05.2026)
 from portal_v2 import router as portal_v2_router
 from portal_v3 import router as portal_v3_router
 from portal_v4 import router as portal_v4_router
