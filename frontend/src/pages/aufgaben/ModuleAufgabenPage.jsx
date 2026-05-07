@@ -7,22 +7,16 @@ import {
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 
-const KATEGORIE_LABELS = {
-  auto: "Auto / Fahrzeug",
-  werkzeug: "Werkzeug",
-  lager: "Lager / Material",
-  fahrzeug: "Fahrzeug",
-  buero: "Büro / Verwaltung",
-  sonstige: "Sonstige",
-};
-
-const KATEGORIE_ICONS = {
-  auto: Car,
-  fahrzeug: Car,
-  werkzeug: Wrench,
-  lager: Package,
-  buero: Briefcase,
-  sonstige: MoreHorizontal,
+// Kategorien sind reine Datenmaske aus module_textvorlagen — kein Hardcoding
+// (siehe VISION.md, 06.05.2026). Diese Heuristik liefert nur Icons je
+// Kategorie-Name (rein optisch, kein Datenpfad).
+const ICON_HEURISTIK = (name) => {
+  const n = (name || "").toLowerCase();
+  if (n.includes("auto") || n.includes("fahrzeug")) return Car;
+  if (n.includes("werkzeug") || n.includes("montage")) return Wrench;
+  if (n.includes("material") || n.includes("lieferung") || n.includes("lager")) return Package;
+  if (n.includes("buero") || n.includes("büro") || n.includes("verwaltung") || n.includes("kunden")) return Briefcase;
+  return MoreHorizontal;
 };
 
 const PRIO_STYLES = {
@@ -160,7 +154,7 @@ export default function ModuleAufgabenPage() {
         })}
       </div>
 
-      {/* Kategorie-Filter (dynamisch aus module_textvorlagen + Legacy-Werte) */}
+      {/* Kategorie-Filter (Datenmaske: live aus module_textvorlagen) */}
       <div className="flex items-center gap-2 flex-wrap mb-4 text-sm">
         <Filter className="w-4 h-4 text-muted-foreground" />
         <button
@@ -170,14 +164,14 @@ export default function ModuleAufgabenPage() {
         >
           Alle
         </button>
-        {(meta?.kategorien || Object.keys(KATEGORIE_LABELS)).map(k => (
+        {(meta?.kategorien || []).map(k => (
           <button
             key={k}
             onClick={() => setFilterKategorie(filterKategorie === k ? "" : k)}
             className={`px-2 py-1 rounded-sm border ${filterKategorie === k ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             data-testid={`filter-kategorie-${k}`}
           >
-            {KATEGORIE_LABELS[k] || k}
+            {k}
           </button>
         ))}
       </div>
@@ -194,7 +188,7 @@ export default function ModuleAufgabenPage() {
       ) : (
         <div className="space-y-2" data-testid="aufgaben-list">
           {aufgaben.map(a => {
-            const Icon = KATEGORIE_ICONS[a.kategorie] || MoreHorizontal;
+            const Icon = ICON_HEURISTIK(a.kategorie);
             const StatusIcon = STATUS_STYLES[a.status].icon;
             const mitarbeiterName = mitarbeiter.find(m => m.username === a.zugewiesen_an)?.anzeige_name || a.zugewiesen_an;
             return (
@@ -224,7 +218,7 @@ export default function ModuleAufgabenPage() {
                     </div>
                     {a.beschreibung && <p className="text-sm text-muted-foreground mt-1">{a.beschreibung}</p>}
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-                      <span>{KATEGORIE_LABELS[a.kategorie] || a.kategorie}</span>
+                      <span>{a.kategorie || "—"}</span>
                       {mitarbeiterName && <span>👤 {mitarbeiterName}</span>}
                       {a.faellig_am && <span>📅 fällig: {new Date(a.faellig_am).toLocaleDateString("de-DE")}</span>}
                       {a.erledigt_am && (
@@ -288,7 +282,7 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
   const [data, setData] = useState({
     titel: aufgabe?.titel || "",
     beschreibung: aufgabe?.beschreibung || "",
-    kategorie: aufgabe?.kategorie || "sonstige",
+    kategorie: aufgabe?.kategorie || "",
     prioritaet: aufgabe?.prioritaet || "normal",
     zugewiesen_an: aufgabe?.zugewiesen_an || "",
     faellig_am: aufgabe?.faellig_am || "",
@@ -367,17 +361,29 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Kategorie</label>
-              <select
-                value={data.kategorie}
-                onChange={(e) => upd("kategorie", e.target.value)}
-                className="w-full border rounded-sm p-2 text-sm"
-                data-testid="select-kategorie"
-              >
-                {(meta?.kategorien || []).map(k => (
-                  <option key={k} value={k}>{KATEGORIE_LABELS[k] || k}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium mb-1">
+                Kategorie
+                <span className="text-xs text-muted-foreground font-normal"> · Pflege in Einstellungen → Textvorlagen</span>
+              </label>
+              {(meta?.kategorien || []).length === 0 ? (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2">
+                  Noch keine Kategorien vorhanden. Lege welche unter Einstellungen → Textvorlagen → „Aufgaben-Kategorie" an.
+                </div>
+              ) : (
+                <select
+                  value={data.kategorie}
+                  onChange={(e) => upd("kategorie", e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm"
+                  data-testid="select-kategorie"
+                >
+                  {data.kategorie && !(meta?.kategorien || []).includes(data.kategorie) && (
+                    <option value={data.kategorie}>{data.kategorie}</option>
+                  )}
+                  {(meta?.kategorien || []).map(k => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Priorität</label>

@@ -252,29 +252,28 @@ async def seed_aufgaben_vorlagen(user=Depends(get_current_user)):
     }
 
 
-# Aufgaben-Kategorien — werden als doc_type=aufgaben_kategorie in
-# module_textvorlagen geführt (siehe VISION.md). Default-Set wird beim
-# ersten Aufruf von list_data automatisch angelegt + bestehende
-# kategorie-Werte aus module_aufgaben einmalig migriert.
-DEFAULT_AUFGABEN_KATEGORIEN = ["Aufmaß", "Material", "Montage", "Kundengespräch", "Verwaltung", "Sonstige"]
+# Aufgaben-Kategorien sind reine User-Daten in module_textvorlagen
+# (doc_type=aufgaben_kategorie). Beim allerersten Aufruf werden bestehende
+# Werte aus module_aufgaben einmalig migriert. Wenn die DB komplett leer
+# ist, wird "Sonstige" als minimaler Eintrag angelegt — kein Hardcoding
+# weiterer Defaults (siehe VISION.md, Modul-First / Datenmasken-Regel).
 
 
 async def ensure_aufgaben_kategorien_seeded():
-    """Idempotent: legt Default-Kategorien + bestehende kategorie-Werte aus
-    module_aufgaben an, falls die Sammlung leer ist. Pro Kategorie wird ein
-    Datensatz mit doc_type=aufgaben_kategorie und text_type=titel erstellt.
-    """
+    """Idempotent: einmalig Werte aus module_aufgaben migrieren."""
     has_any = await db.module_textvorlagen.find_one({"doc_type": "aufgaben_kategorie"})
     if has_any:
         return
     titles: set[str] = set()
-    for default in DEFAULT_AUFGABEN_KATEGORIEN:
-        titles.add(default)
-    # bestehende Kategorien aus Aufgaben einsammeln (Migration)
-    async for a in db.module_aufgaben.find({"kategorie": {"$exists": True, "$nin": [None, ""]}}, {"_id": 0, "kategorie": 1}):
+    async for a in db.module_aufgaben.find(
+        {"kategorie": {"$exists": True, "$nin": [None, ""]}},
+        {"_id": 0, "kategorie": 1},
+    ):
         v = (a.get("kategorie") or "").strip()
-        if v and v.lower() != "sonstige":
+        if v:
             titles.add(v)
+    if not titles:
+        titles = {"Sonstige"}
     now = datetime.now(timezone.utc).isoformat()
     for t in titles:
         await db.module_textvorlagen.insert_one({

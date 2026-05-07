@@ -20,25 +20,56 @@ from .settings import _get_or_create_settings
 router = APIRouter()
 
 
-VALID_KATEGORIEN_LEGACY = ["auto", "werkzeug", "lager", "fahrzeug", "buero", "sonstige"]
-# Neu (06.05.2026): Kategorien werden in module_textvorlagen mit
-# doc_type=aufgaben_kategorie gepflegt (siehe VISION.md). VALID_KATEGORIEN_LEGACY
-# bleibt als Fallback erhalten, damit alte Aufgaben weiterhin gelten.
+# Kategorien werden ausschliesslich in module_textvorlagen mit
+# doc_type=aufgaben_kategorie gepflegt (siehe VISION.md, 06.05.2026).
+# Keine Hardcoding hier. Bestehende Werte aus alten Aufgaben werden
+# beim ersten /meta-Aufruf einmalig migriert (siehe ensure_kategorien_seeded).
 VALID_PRIORITAETEN = ["niedrig", "normal", "hoch"]
 VALID_STATUS = ["offen", "in_arbeit", "erledigt"]
 VALID_WIEDERHOLUNG = ["einmalig", "taeglich", "woechentlich", "monatlich"]
 
 
-async def _allowed_kategorien() -> list[str]:
-    """Zulässige Kategorien aus module_textvorlagen + Legacy-Werte für
-    Rückwärtskompatibilität. Reine Validierungs-Hilfe.
+async def ensure_kategorien_seeded():
+    """Idempotent: Falls module_textvorlagen noch keinen Eintrag mit
+    doc_type=aufgaben_kategorie hat, werden:
+      a) alle bestehenden Kategorien aus module_aufgaben uebernommen,
+      b) ein minimaler Default-Satz angelegt, wenn auch das leer ist.
+    Damit ist die Source-of-Truth ab dem ersten Aufruf module_textvorlagen.
     """
-    out: set[str] = set(VALID_KATEGORIEN_LEGACY)
-    async for v in db.module_textvorlagen.find({"doc_type": "aufgaben_kategorie"}, {"_id": 0, "title": 1}):
+    has_any = await db.module_textvorlagen.find_one({"doc_type": "aufgaben_kategorie"})
+    if has_any:
+        return
+    titles: set[str] = set()
+    async for a in db.module_aufgaben.find({"kategorie": {"$exists": True, "$nin": [None, ""]}}, {"_id": 0, "kategorie": 1}):
+        v = (a.get("kategorie") or "").strip()
+        if v:
+            titles.add(v)
+    if not titles:
+        titles = {"Sonstige"}  # minimaler Default fuer leere DB
+    now = datetime.now(timezone.utc).isoformat()
+    for t in titles:
+        await db.module_textvorlagen.insert_one({
+            "id": str(uuid4()),
+            "title": t,
+            "content": "",
+            "doc_type": "aufgaben_kategorie",
+            "text_type": "titel",
+            "created_at": now,
+            "updated_at": now,
+        })
+
+
+async def _allowed_kategorien() -> list[str]:
+    """Datenmaske: live aus module_textvorlagen. Kein Duplikat, kein Cache."""
+    await ensure_kategorien_seeded()
+    out: list[str] = []
+    async for v in db.module_textvorlagen.find(
+        {"doc_type": "aufgaben_kategorie"}, {"_id": 0, "title": 1}
+    ).sort("title", 1):
         t = (v.get("title") or "").strip()
         if t:
-            out.add(t)
-    return sorted(out)
+            out.append(t)
+    return out
 
 
 # ==================== MODELS ====================

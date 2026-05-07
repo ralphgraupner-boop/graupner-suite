@@ -203,7 +203,7 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
   const [data, setData] = useState({
     titel: existing?.titel || "",
     beschreibung: existing?.beschreibung || "",
-    kategorie: existing?.kategorie || "Sonstige",
+    kategorie: existing?.kategorie || "",
     prioritaet: existing?.prioritaet || "normal",
     zugewiesen_an: existing?.zugewiesen_an || "",
     faellig_am: existing?.faellig_am || "",
@@ -213,9 +213,10 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
     projekt_id: existing?.projekt_id || projekt_id,
   });
   const [saving, setSaving] = useState(false);
-  // Aufgaben-Kategorien aus module_textvorlagen (doc_type=aufgaben_kategorie),
-  // siehe VISION.md — keine Hardcoding. Fallback wenn API nicht antwortet.
-  const [kategorien, setKategorien] = useState(["Aufmaß", "Material", "Montage", "Kundengespräch", "Verwaltung", "Sonstige"]);
+  // Kategorien live aus module_textvorlagen (doc_type=aufgaben_kategorie).
+  // VISION.md: keine Hardcoding, keine Fallback-Listen — leeres Array
+  // bedeutet: Backend hat noch keine Werte (z.B. erstes App-Setup).
+  const [kategorien, setKategorien] = useState([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -225,8 +226,8 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
           .map((t) => t.title)
           .filter(Boolean)
           .sort((a, b) => a.localeCompare(b));
-        if (!cancelled && titles.length > 0) setKategorien(titles);
-      } catch { /* Fallback bleibt */ }
+        if (!cancelled) setKategorien(titles);
+      } catch { /* leer lassen — UI zeigt Hinweis */ }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -323,20 +324,26 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
               Kategorie
               <span className="text-xs text-muted-foreground font-normal"> · Pflege in Einstellungen → Textvorlagen → „Aufgaben-Kategorie"</span>
             </label>
-            <select
-              value={data.kategorie}
-              onChange={(e) => upd("kategorie", e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm"
-              data-testid="quick-select-kategorie"
-            >
-              {/* Wenn der gespeicherte Wert nicht in der Liste ist, trotzdem anzeigen */}
-              {data.kategorie && !kategorien.includes(data.kategorie) && (
-                <option value={data.kategorie}>{data.kategorie}</option>
-              )}
-              {kategorien.map((k) => (
-                <option key={k} value={k}>{k}</option>
-              ))}
-            </select>
+            {kategorien.length === 0 ? (
+              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2">
+                Noch keine Kategorien vorhanden. Lege welche unter Einstellungen → Textvorlagen → „Aufgaben-Kategorie" an.
+              </div>
+            ) : (
+              <select
+                value={data.kategorie}
+                onChange={(e) => upd("kategorie", e.target.value)}
+                className="w-full border rounded-sm p-2 text-sm"
+                data-testid="quick-select-kategorie"
+              >
+                {/* Wenn der gespeicherte Wert nicht in der Liste ist, trotzdem anzeigen */}
+                {data.kategorie && !kategorien.includes(data.kategorie) && (
+                  <option value={data.kategorie}>{data.kategorie}</option>
+                )}
+                {kategorien.map((k) => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Zugewiesen an</label>
