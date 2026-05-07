@@ -376,6 +376,7 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
                   className="w-full border rounded-sm p-2 text-sm"
                   data-testid="select-kategorie"
                 >
+                  <option value="">— bitte wählen —</option>
                   {data.kategorie && !(meta?.kategorien || []).includes(data.kategorie) && (
                     <option value={data.kategorie}>{data.kategorie}</option>
                   )}

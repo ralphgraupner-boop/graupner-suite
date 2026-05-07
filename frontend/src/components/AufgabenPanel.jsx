@@ -335,6 +335,7 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
                 className="w-full border rounded-sm p-2 text-sm"
                 data-testid="quick-select-kategorie"
               >
+                <option value="">— bitte wählen —</option>
                 {/* Wenn der gespeicherte Wert nicht in der Liste ist, trotzdem anzeigen */}
                 {data.kategorie && !kategorien.includes(data.kategorie) && (
                   <option value={data.kategorie}>{data.kategorie}</option>

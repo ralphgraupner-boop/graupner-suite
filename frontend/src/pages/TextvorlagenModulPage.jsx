@@ -63,6 +63,22 @@ const TextvorlagenModulPage = () => {
     } catch { toast.error("Fehler beim Export"); }
   };
 
+  const handleDuplicate = async (item) => {
+    try {
+      const copy = {
+        title: `${item.title} (Kopie)`,
+        content: item.content || "",
+        doc_type: item.doc_type,
+        text_type: item.text_type,
+      };
+      await api.post("/modules/textvorlagen/data", copy);
+      toast.success("Vorlage dupliziert");
+      loadItems();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Duplizieren fehlgeschlagen");
+    }
+  };
+
   // ─── Robustes Kopieren mit Fallback ───
   // navigator.clipboard.writeText schlaegt im iframe oder ohne HTTPS lautlos
   // fehl. Daher: erst die moderne API versuchen, sonst auf textarea +
@@ -313,7 +329,7 @@ const TextvorlagenModulPage = () => {
                   <p className="text-sm text-muted-foreground mt-1 line-clamp-2 group-hover/content:line-clamp-none whitespace-pre-line transition-all">{item.content}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => copyToClipboard(htmlToText(item.content), "Inhalt kopiert")} className="p-2 hover:bg-muted rounded-sm" title="Kopieren">
+                  <button onClick={() => handleDuplicate(item)} className="p-2 hover:bg-muted rounded-sm" title="Duplizieren (Kopie anlegen)" data-testid={`btn-duplicate-${item.id}`}>
                     <Copy className="w-4 h-4" />
                   </button>
                   <button onClick={() => { setEditItem(item); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten">
