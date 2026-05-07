@@ -14,31 +14,31 @@ from routes.email import router as email_router
 from routes.settings import router as settings_router
 from routes.push import router as push_router
 from routes.webhook import router as webhook_router
-from routes.documents import router as documents_router
+from module_dokumente import router as documents_router  # Modul-First (07.05.2026)
 from routes.distance import router as distance_router
 from routes.ai import router as ai_router
 from routes.pdf import router as pdf_router
 from routes.dashboard import router as dashboard_router
 from routes.text_templates import router as text_templates_router
 from routes.leistungsbloecke import router as leistungsbloecke_router
-from routes.portal import router as portal_router
-from routes.portal_klon import router as portal_klon_router
+from module_kundenportal import router as portal_router  # Modul-First (07.05.2026)
+# routes.portal_klon ist Teil von module_kundenportal; eigener Eintrag entfaellt.
 from module_einsaetze import router as einsaetze_router  # Modul-First (07.05.2026)
-from routes.document_templates import router as document_templates_router
+# document_templates ist in module_dokumente integriert; eigener Eintrag entfaellt.
 from routes.imap import router as imap_router
 from routes.kalkulation import router as kalkulation_router
-from routes.buchhaltung import router as buchhaltung_router
+from module_buchhaltung import router as buchhaltung_router  # Modul-First (07.05.2026)
 from routes.mitarbeiter import router as mitarbeiter_router
 from routes.diverses import router as diverses_router
 from routes.backup import router as backup_router
 from routes.auto_backup import router as auto_backup_router
 from routes.anfragen import router as anfragen_router
 from routes.anfragen_fetcher import router as anfragen_fetcher_router
-from routes.documents_manager import router as documents_manager_router
+# documents_manager ist in module_dokumente integriert; eigener Eintrag entfaellt.
 from routes.modules import router as modules_router
-from routes.module_artikel import router as module_artikel_router
-from routes.module_dokumente import router as module_dokumente_router
-from routes.module_textvorlagen import router as module_textvorlagen_router
+from module_artikel import router as module_artikel_router  # Modul-First (07.05.2026)
+# routes.module_dokumente ist Teil von module_dokumente; eigener Eintrag entfaellt.
+from module_textvorlagen import router as module_textvorlagen_router  # Modul-First (07.05.2026)
 # kunden_router ist oben bereits aus module_kunden importiert — alter
 # routes.module_kunden Import wurde im Refactor entfernt.
 from module_rechnungen import router_v2 as rechnungen_v2_router  # Modul-First (07.05.2026)
@@ -87,9 +87,9 @@ api_router.include_router(dashboard_router)
 api_router.include_router(text_templates_router)
 api_router.include_router(leistungsbloecke_router)
 api_router.include_router(portal_router)
-api_router.include_router(portal_klon_router)  # Kundenportale Arbeitskopie (Klon von /portals)
+# portal_klon ist Teil von module_kundenportal (oben eingehaengt)
 api_router.include_router(einsaetze_router)
-api_router.include_router(document_templates_router)
+# document_templates ist Teil von module_dokumente
 api_router.include_router(imap_router)
 api_router.include_router(kalkulation_router)
 api_router.include_router(buchhaltung_router)
@@ -99,10 +99,10 @@ api_router.include_router(backup_router)
 api_router.include_router(auto_backup_router)
 api_router.include_router(anfragen_router)
 api_router.include_router(anfragen_fetcher_router)
-api_router.include_router(documents_manager_router)
+# documents_manager ist Teil von module_dokumente
 api_router.include_router(modules_router)
 api_router.include_router(module_artikel_router)
-api_router.include_router(module_dokumente_router)
+# module_dokumente_data ist Teil von module_dokumente
 api_router.include_router(module_textvorlagen_router)
 # kunden_router wurde bereits weiter oben (Zeile ~71) eingehaengt
 
