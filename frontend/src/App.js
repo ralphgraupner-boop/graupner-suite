@@ -129,6 +129,10 @@ function App() {
               <Route path="/module/mail-inbox" element={<MainLayout onLogout={logout}><ModuleMailInboxPage /></MainLayout>} />
               <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
               <Route path="/module/dokumente" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
+              {/* Sicherungskopie (v6) – verwendet bewusst dieselbe Komponente. Bleibt erhalten,
+                  damit jederzeit ein heiler Stand verfuegbar ist, falls am Hauptpfad weiter
+                  entwickelt wird. Wird per "Alt-Module ausblenden" versteckt. */}
+              <Route path="/module/dokumente-v6" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
               <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />
 
               {/* Dokument-Editor (Angebote/Auftraege/Rechnungen) */}
