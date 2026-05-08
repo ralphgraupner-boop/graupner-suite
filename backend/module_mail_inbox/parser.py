@@ -69,11 +69,18 @@ def _parse_jimdo(body: str) -> dict:
         out["source_url"] = m.group(0).rstrip(".,;:")
 
     # ── NEUES Jimdo-Format: separate Vor-/Nachname-Felder ──
-    m = re.search(r"^[ \t]*Auswahlliste[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
+    # Anrede kann als 'Anrede:' (aktuelles Jimdo) ODER 'Auswahlliste:' (älteres Jimdo) kommen
+    m = re.search(r"^[ \t]*Anrede[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
     if m:
         raw = m.group(1).strip()
         if re.match(r"^(Herr|Frau|Divers)\s*$", raw, re.I):
             out["anrede"] = raw.capitalize()
+    if not out["anrede"]:
+        m = re.search(r"^[ \t]*Auswahlliste[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
+        if m:
+            raw = m.group(1).strip()
+            if re.match(r"^(Herr|Frau|Divers)\s*$", raw, re.I):
+                out["anrede"] = raw.capitalize()
 
     m = re.search(r"^[ \t]*Vorname[ \t]*:[ \t]*([^\n]+?)[ \t]*$", body, re.I | re.M)
     if m:
