@@ -198,5 +198,7 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 - **Bild-Performance: Pipeline + Thumbnails (08.05.2026):**
   - **Upload-Pipeline** in `module_projekte/routes.py`: Pillow + pillow_heif. Original auf max. 2400 px Längskante & JPEG-Q85 (HEIC → JPEG), Thumbnail 400 px JPEG-Q80. Beide werden im Storage abgelegt (`<file>.ext` und `<file>.ext.thumb.jpg`), `bild.thumb_url` neu im Subdokument.
   - **Frontend** `ProjektBild.jsx`: Galerie-Tile lädt `thumb_url` (~18 KB statt 3 MB), Lightbox lädt das Original lazy beim Klick mit „Lade Original…"-Spinner. Fallback auf `url` wenn `thumb_url` fehlt (Altbestand).
-  - **Migration** `POST /api/module-projekte/migrate-thumbnails?dry_run=…&limit=…`: erzeugt für Bestandsbilder Thumbnails nach. Originals werden nicht angefasst. Auf Preview erfolgreich getestet (2 Bilder, 3.4 MB → 18 KB Thumbnails).
+  - **Migration** `POST /api/module-projekte/migrate-thumbnails?dry_run=…&limit=…`: erzeugt für Bestandsbilder Thumbnails nach. Originals werden nicht angefasst. Auf Preview erfolgreich getestet (2 Bilder, 3.4 MB → 18 KB Thumbnails). **Auf Live am 08.05.2026 ausgeführt: 30/30 Bilder migriert.**
+  - Bekannter Bug im Migrate-Endpoint: bei kleinem `limit` (z. B. 10) findet er irrtümlich 0 Kandidaten — Workaround `limit=999`. Fix folgt.
+  - Files-Endpoint Whitelist: erweitert um `module_kunden/`, da aus Anfragen übernommene Bilder dort liegen (kein Storage-Duplikat beim Übernehmen, nur Referenz). Auth-Pflicht bleibt.
 
