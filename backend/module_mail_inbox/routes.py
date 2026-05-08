@@ -963,7 +963,10 @@ async def reevaluate_spam(user=Depends(get_current_user)):
 
 
 @router.post("/migrate-anliegen-to-nachricht")
-async def migrate_anliegen_to_nachricht(user=Depends(get_current_user)):
+async def migrate_anliegen_to_nachricht(
+    dry_run: bool = True,
+    user=Depends(get_current_user),
+):
     """One-Shot-Migration: Bug-Fix 07.05.2026.
 
     Vorher hat /accept das Feld als `anliegen` gespeichert, die Kunden-
@@ -972,32 +975,45 @@ async def migrate_anliegen_to_nachricht(user=Depends(get_current_user)):
     wo `nachricht` leer/fehlt. Bestehende manuell gepflegte Nachrichten
     werden NICHT überschrieben. Das veraltete `anliegen`-Feld wird danach
     aus dem betroffenen Datensatz entfernt.
+
+    Standardmäßig im **Dry-Run** — nichts wird verändert, es wird nur
+    gemeldet, was passieren würde. Mit `?dry_run=false` echt ausführen.
     """
-    migrated = 0
-    skipped_has_nachricht = 0
+    would_migrate = []
+    would_only_unset = []
     cursor = db.module_kunden.find(
         {"anliegen": {"$exists": True, "$ne": ""}},
-        {"_id": 0, "id": 1, "anliegen": 1, "nachricht": 1},
+        {"_id": 0, "id": 1, "name": 1, "anliegen": 1, "nachricht": 1},
     )
     async for k in cursor:
         existing_nachricht = (k.get("nachricht") or "").strip()
         anliegen = (k.get("anliegen") or "").strip()
+        preview = {
+            "id": k["id"],
+            "name": k.get("name", ""),
+            "anliegen_excerpt": anliegen[:80],
+            "nachricht_excerpt": existing_nachricht[:80],
+        }
         if existing_nachricht:
-            # nicht überschreiben — nur das Legacy-Feld entfernen
-            await db.module_kunden.update_one(
-                {"id": k["id"]}, {"$unset": {"anliegen": ""}}
-            )
-            skipped_has_nachricht += 1
-            continue
-        await db.module_kunden.update_one(
-            {"id": k["id"]},
-            {"$set": {"nachricht": anliegen}, "$unset": {"anliegen": ""}},
-        )
-        migrated += 1
+            would_only_unset.append(preview)
+            if not dry_run:
+                await db.module_kunden.update_one(
+                    {"id": k["id"]}, {"$unset": {"anliegen": ""}}
+                )
+        else:
+            would_migrate.append(preview)
+            if not dry_run:
+                await db.module_kunden.update_one(
+                    {"id": k["id"]},
+                    {"$set": {"nachricht": anliegen}, "$unset": {"anliegen": ""}},
+                )
     return {
         "ok": True,
-        "migrated": migrated,
-        "skipped_already_has_nachricht": skipped_has_nachricht,
+        "dry_run": dry_run,
+        "migrated_count": len(would_migrate),
+        "skipped_already_has_nachricht_count": len(would_only_unset),
+        "to_migrate": would_migrate,
+        "to_unset_only": would_only_unset,
     }
 
 
