@@ -385,7 +385,7 @@ async def accept(entry_id: str, body: dict | None = None, user=Depends(get_curre
     """Übernimmt eine Mail-Anfrage als neuen Kunden.
     Optional darf der Frontend-Body folgende Felder überschreiben/ergänzen:
       vorname, nachname, anrede, email, phone (= telefon), strasse, plz, ort,
-      anliegen (Beschreibung), bemerkung, kontakt_status, customer_type, kategorie
+      nachricht (Beschreibung des Anliegens), bemerkung, kontakt_status, customer_type, kategorie
     """
     entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
     if not entry:
@@ -419,7 +419,7 @@ async def accept(entry_id: str, body: dict | None = None, user=Depends(get_curre
         "kontakt_status": _pick("kontakt_status", "Anfrage"),
         "customer_type": _pick("customer_type", "Privat"),
         "quelle": _pick("quelle", "Jimdo Kontaktformular"),
-        "anliegen": _pick("anliegen", parsed.get("nachricht", "")),
+        "nachricht": _pick("nachricht", parsed.get("nachricht", "")),
         "bemerkung": _pick("bemerkung", ""),
         "categories": body.get("categories") if isinstance(body.get("categories"), list) else [],
         "source_url": parsed.get("source_url", ""),
@@ -959,6 +959,45 @@ async def reevaluate_spam(user=Depends(get_current_user)):
         "reparsed": reparsed,
         "moved_to_vorschlag": moved_to_vorschlag,
         "moved_to_spam": moved_to_spam,
+    }
+
+
+@router.post("/migrate-anliegen-to-nachricht")
+async def migrate_anliegen_to_nachricht(user=Depends(get_current_user)):
+    """One-Shot-Migration: Bug-Fix 07.05.2026.
+
+    Vorher hat /accept das Feld als `anliegen` gespeichert, die Kunden-
+    Datenmaske erwartet aber `nachricht` (Single Source of Truth).
+    Diese Migration kopiert `anliegen → nachricht` ausschließlich dort,
+    wo `nachricht` leer/fehlt. Bestehende manuell gepflegte Nachrichten
+    werden NICHT überschrieben. Das veraltete `anliegen`-Feld wird danach
+    aus dem betroffenen Datensatz entfernt.
+    """
+    migrated = 0
+    skipped_has_nachricht = 0
+    cursor = db.module_kunden.find(
+        {"anliegen": {"$exists": True, "$ne": ""}},
+        {"_id": 0, "id": 1, "anliegen": 1, "nachricht": 1},
+    )
+    async for k in cursor:
+        existing_nachricht = (k.get("nachricht") or "").strip()
+        anliegen = (k.get("anliegen") or "").strip()
+        if existing_nachricht:
+            # nicht überschreiben — nur das Legacy-Feld entfernen
+            await db.module_kunden.update_one(
+                {"id": k["id"]}, {"$unset": {"anliegen": ""}}
+            )
+            skipped_has_nachricht += 1
+            continue
+        await db.module_kunden.update_one(
+            {"id": k["id"]},
+            {"$set": {"nachricht": anliegen}, "$unset": {"anliegen": ""}},
+        )
+        migrated += 1
+    return {
+        "ok": True,
+        "migrated": migrated,
+        "skipped_already_has_nachricht": skipped_has_nachricht,
     }
 
 
