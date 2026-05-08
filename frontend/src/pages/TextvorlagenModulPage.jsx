@@ -5,7 +5,7 @@ import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common
 import { api } from "@/lib/api";
 import { RichTextEditor } from "@/components/RichTextEditor";
 
-const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", kundenportal: "Kundenportal", einsatz: "Einsatz", termin: "Termin", aufgabe: "Aufgabe", aufgaben_kategorie: "Aufgaben-Kategorie", reparaturgruppe: "Reparaturgruppe", material: "Material", prioritaet: "Priorität", bild_kategorie: "Bild-Kategorie", abschlussgrund: "Abschlussgrund", kunden_status: "Kunden-Status", kunden_kategorie: "Kunden-Kategorie", anrede: "Anrede", allgemein: "Allgemein" };
+const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", kundenportal: "Kundenportal", einsatz: "Einsatz", termin: "Termin", aufgabe: "Aufgabe", aufgaben_kategorie: "Aufgaben-Kategorie", reparaturgruppe: "Reparaturgruppe", material: "Material", prioritaet: "Priorität", bild_kategorie: "Bild-Kategorie", abschlussgrund: "Abschlussgrund", kunden_status: "Kunden-Status", kunden_kategorie: "Kunden-Kategorie", anrede: "Anrede", allgemein: "Allgemein", projekt_status: "Projekt-Status", projekt_kategorie: "Projekt-Kategorie", projekt_bild_kategorie: "Projekt-Bild-Kategorie" };
 const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung", portal_nachricht: "Portal-Nachricht" };
 const TEXT_TYPE_COLORS = { vortext: "bg-blue-100 text-blue-800", schlusstext: "bg-green-100 text-green-800", betreff: "bg-purple-100 text-purple-800", bemerkung: "bg-gray-100 text-gray-800", titel: "bg-amber-100 text-amber-800", email: "bg-cyan-100 text-cyan-800", mahnung: "bg-red-100 text-red-800", portal_nachricht: "bg-emerald-100 text-emerald-800" };
 
@@ -524,17 +524,52 @@ const ImportPreviewModal = ({ preview, selected, onToggle, onSelectStatus, overw
 };
 
 const VorlageFormModal = ({ isOpen, onClose, item, onSave }) => {
-  const [form, setForm] = useState({ title: "", content: "", doc_type: "allgemein", text_type: "vortext" });
+  const [form, setForm] = useState({ title: "", content: "", doc_type: "allgemein", text_type: "vortext", keywords: [] });
   const [loading, setLoading] = useState(false);
+  const [kwInput, setKwInput] = useState("");
 
   useEffect(() => {
-    if (item) setForm({ title: item.title || "", content: item.content || "", doc_type: item.doc_type || "allgemein", text_type: item.text_type || "vortext" });
-    else setForm({ title: "", content: "", doc_type: "allgemein", text_type: "vortext" });
+    if (item) setForm({
+      title: item.title || "",
+      content: item.content || "",
+      doc_type: item.doc_type || "allgemein",
+      text_type: item.text_type || "vortext",
+      keywords: Array.isArray(item.keywords) ? item.keywords : [],
+    });
+    else setForm({ title: "", content: "", doc_type: "allgemein", text_type: "vortext", keywords: [] });
+    setKwInput("");
   }, [item]);
+
+  const isSelectionType = [
+    "kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie",
+    "abschlussgrund", "reparaturgruppe", "material", "prioritaet",
+    "bild_kategorie", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie",
+  ].includes(form.doc_type);
+
+  const addKeyword = () => {
+    const v = kwInput.trim();
+    if (!v) return;
+    if (form.keywords.includes(v)) { setKwInput(""); return; }
+    setForm({ ...form, keywords: [...form.keywords, v] });
+    setKwInput("");
+  };
+  const removeKeyword = (kw) => {
+    setForm({ ...form, keywords: form.keywords.filter(k => k !== kw) });
+  };
+  const onKwKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addKeyword();
+    } else if (e.key === "Backspace" && !kwInput && form.keywords.length) {
+      // Mobile-freundlich: Backspace im leeren Input entfernt das letzte Tag
+      setForm({ ...form, keywords: form.keywords.slice(0, -1) });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title || !form.content) { toast.error("Titel und Inhalt erforderlich"); return; }
+    if (!form.title) { toast.error("Titel erforderlich"); return; }
+    if (!isSelectionType && !form.content) { toast.error("Inhalt erforderlich"); return; }
     setLoading(true);
     try {
       if (item) await api.put(`/modules/textvorlagen/data/${item.id}`, form);
@@ -568,10 +603,45 @@ const VorlageFormModal = ({ isOpen, onClose, item, onSave }) => {
           <label className="block text-sm font-medium mb-2">Titel *</label>
           <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required data-testid="input-vorlage-title" />
         </div>
+        {!isSelectionType && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Inhalt *</label>
+            <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} placeholder="Text eingeben... Formatierung mit der Toolbar" />
+            <p className="text-xs text-muted-foreground mt-1">Platzhalter wie {"{kunde_name}"}, {"{datum}"} werden automatisch ersetzt</p>
+          </div>
+        )}
+        {isSelectionType && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Default-Titel-Vorschlag (optional)</label>
+            <Input value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder="z.B. Schiebetür-Reparatur (wird beim Anlegen als Projekttitel vorgeschlagen)" />
+          </div>
+        )}
+        {/* ── Stichwörter (für Auto-Klassifikation) ── */}
         <div>
-          <label className="block text-sm font-medium mb-2">Inhalt *</label>
-          <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} placeholder="Text eingeben... Formatierung mit der Toolbar" />
-          <p className="text-xs text-muted-foreground mt-1">Platzhalter wie {"{kunde_name}"}, {"{datum}"} werden automatisch ersetzt</p>
+          <label className="block text-sm font-medium mb-2" data-testid="label-keywords">
+            Stichwörter <span className="text-xs font-normal text-muted-foreground">(Auto-Vorschlag bei Anlage; mit Enter oder Komma trennen)</span>
+          </label>
+          <div className="flex flex-wrap gap-1.5 p-2 border rounded-sm bg-muted/20 min-h-[44px]">
+            {form.keywords.map(kw => (
+              <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs" data-testid={`keyword-tag-${kw}`}>
+                {kw}
+                <button type="button" onClick={() => removeKeyword(kw)} className="hover:text-red-600" aria-label={`Stichwort ${kw} entfernen`}>×</button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={kwInput}
+              onChange={(e) => setKwInput(e.target.value)}
+              onKeyDown={onKwKeyDown}
+              onBlur={addKeyword}
+              placeholder={form.keywords.length ? "" : "z.B. schiebetür, fliegengitter"}
+              className="flex-1 min-w-[140px] bg-transparent border-0 outline-none text-sm py-1"
+              data-testid="input-keyword"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Beim Anlegen z. B. eines Projekts wird der Anfrage-Text gegen diese Stichwörter gematcht — die Vorlage mit den meisten Treffern wird als Vorschlag gezeigt.
+          </p>
         </div>
         <div className="flex justify-end gap-4 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>

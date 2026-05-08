@@ -6,8 +6,17 @@ from uuid import uuid4
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht", "abschluss_grund"]
+
+# Doc-Types, deren Eintrag selbst eine Auswahl-Option ist (Titel = Wert).
+# Für diese darf der Match-Endpoint keywords-Vorschläge liefern.
+SELECTION_DOC_TYPES = {
+    "kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie",
+    "abschlussgrund", "reparaturgruppe", "material", "prioritaet",
+    "bild_kategorie", "projekt_status", "projekt_kategorie",
+    "projekt_bild_kategorie",
+}
 
 PLACEHOLDERS = [
     {"alias": "{anrede_brief}", "beschreibung": "Sehr geehrter Herr/Sehr geehrte Frau + Name"},
@@ -78,10 +87,9 @@ async def get_placeholders(user=Depends(get_current_user)):
 @router.post("/modules/textvorlagen/data")
 async def create_textvorlage(data: dict, user=Depends(get_current_user)):
     # Auswahlfeld-Typen brauchen keinen Inhalt — der Titel IST die Auswahl
-    SELECTION_TYPES = {"kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie", "abschlussgrund", "reparaturgruppe", "material", "prioritaet", "bild_kategorie"}
     if not data.get("title"):
         raise HTTPException(400, "Titel erforderlich")
-    if data.get("doc_type") not in SELECTION_TYPES and not data.get("content"):
+    if data.get("doc_type") not in SELECTION_DOC_TYPES and not data.get("content"):
         raise HTTPException(400, "Inhalt erforderlich")
     if data.get("doc_type") not in VALID_DOC_TYPES:
         raise HTTPException(400, f"doc_type muss einer von {VALID_DOC_TYPES} sein")
@@ -93,6 +101,7 @@ async def create_textvorlage(data: dict, user=Depends(get_current_user)):
         "content": data.get("content", ""),
         "doc_type": data["doc_type"],
         "text_type": data["text_type"],
+        "keywords": _normalize_keywords(data.get("keywords")),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -107,6 +116,8 @@ async def update_textvorlage(item_id: str, data: dict, user=Depends(get_current_
     if not existing:
         raise HTTPException(404, "Nicht gefunden")
     update = {k: v for k, v in data.items() if k in ("title", "content", "doc_type", "text_type") and v is not None}
+    if "keywords" in data:
+        update["keywords"] = _normalize_keywords(data.get("keywords"))
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.module_textvorlagen.update_one({"id": item_id}, {"$set": update})
     updated = await db.module_textvorlagen.find_one({"id": item_id}, {"_id": 0})
@@ -477,4 +488,184 @@ async def ensure_aufgaben_kategorien_seeded():
             "created_at": now,
             "updated_at": now,
         })
+
+
+# ===================== Keywords + Match-Engine =====================
+
+import re as _re
+
+
+def _normalize_keywords(raw) -> list[str]:
+    """Akzeptiert Liste oder Komma-getrennten String, normalisiert auf
+    saubere Strings (gestripped, ohne leere Einträge, kleingeschrieben für
+    Match — Display bleibt user-getippt)."""
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        parts = [p.strip() for p in raw.split(",")]
+    elif isinstance(raw, list):
+        parts = [str(p).strip() for p in raw]
+    else:
+        return []
+    return [p for p in parts if p]
+
+
+def _tokenize_text(text: str) -> str:
+    """Bereitet Text fürs Matching vor: lowercase + Whitespace normalisieren."""
+    return _re.sub(r"\s+", " ", (text or "").lower()).strip()
+
+
+def _count_keyword_hits(keyword: str, text: str) -> tuple[int, str | None]:
+    """Zählt Vorkommen eines Keywords im Text (case-insensitive Substring-Match).
+
+    Substring-Match passt gut zu deutschen Komposita: Stichwort "schiebetür"
+    matcht in "Schiebetür" und "Hebeschiebetür". Mehrwort-Phrasen werden als
+    Ganzes gesucht (Whitespace-Folgen werden zuvor durch _tokenize_text auf
+    einzelne Spaces normalisiert).
+
+    Rückgabe: (treffer_anzahl, normalisiertes_keyword) bzw. (0, None).
+    """
+    kw = (keyword or "").strip().lower()
+    if not kw:
+        return 0, None
+    pattern = _re.escape(kw)
+    matches = _re.findall(pattern, text, flags=_re.IGNORECASE)
+    return len(matches), kw if matches else None
+
+
+@router.post("/modules/textvorlagen/match")
+async def match_textvorlage(payload: dict, user=Depends(get_current_user)):
+    """Matched einen Freitext gegen die ``keywords`` der Textvorlagen eines
+    bestimmten ``doc_type`` und liefert die treffer-stärkste Vorlage als
+    Vorschlag.
+
+    Body: ``{ text: str, doc_type: str, top_n?: int = 3 }``
+
+    Antwort:
+    ```
+    {
+      "doc_type": "projekt_kategorie",
+      "best": { id, title, content, keywords, hits, matched_terms } | null,
+      "candidates": [ ... ],   # nach hits absteigend, max top_n
+      "tied": bool             # true wenn 2+ Kandidaten gleichauf liegen
+    }
+    ```
+    """
+    text = (payload or {}).get("text") or ""
+    doc_type = ((payload or {}).get("doc_type") or "").strip()
+    top_n = int((payload or {}).get("top_n") or 3)
+    if not doc_type:
+        raise HTTPException(400, "doc_type erforderlich")
+    if doc_type not in VALID_DOC_TYPES:
+        raise HTTPException(400, f"Unbekannter doc_type: {doc_type}")
+
+    norm_text = _tokenize_text(text)
+    candidates = []
+    async for v in db.module_textvorlagen.find(
+        {"doc_type": doc_type, "keywords": {"$exists": True, "$ne": []}},
+        {"_id": 0},
+    ):
+        kws = v.get("keywords") or []
+        total_hits = 0
+        matched_terms: list[str] = []
+        for kw in kws:
+            hits, term = _count_keyword_hits(kw, norm_text)
+            if hits > 0 and term:
+                total_hits += hits
+                matched_terms.append(term)
+        if total_hits > 0:
+            candidates.append({
+                "id": v.get("id"),
+                "title": v.get("title"),
+                "content": v.get("content") or "",
+                "keywords": kws,
+                "hits": total_hits,
+                "matched_terms": matched_terms,
+            })
+    candidates.sort(key=lambda c: (-c["hits"], c["title"]))
+    top = candidates[:max(1, top_n)]
+    best = top[0] if top else None
+    tied = bool(best and len(top) >= 2 and top[0]["hits"] == top[1]["hits"])
+    return {
+        "doc_type": doc_type,
+        "best": None if tied else best,
+        "candidates": top,
+        "tied": tied,
+    }
+
+
+# ===================== Seed: Projekt-Auswahllisten =====================
+
+STANDARD_PROJEKT_KATEGORIEN = [
+    {"title": "Schiebetür", "content": "Schiebetür-Reparatur",
+     "keywords": ["schiebetür", "schiebetuer", "fliegengitter", "schiebt nicht", "rahmen verzogen", "faltschiebetür"]},
+    {"title": "Fenster", "content": "Fenster-Reparatur",
+     "keywords": ["fenster", "küchenfenster", "schließt nicht", "schliesst nicht", "undicht", "fensterflügel", "fensterfluegel"]},
+    {"title": "Haustür", "content": "Haustür-Reparatur",
+     "keywords": ["haustür", "haustuer", "eingangstür", "eingangstuer", "schloss", "einbruch", "wohnungstür", "wohnungstuer"]},
+    {"title": "Innentür", "content": "Innentür-Reparatur",
+     "keywords": ["innentür", "innentuer", "zimmertür", "zimmertuer", "zarge", "türblatt", "tuerblatt", "schleift"]},
+    {"title": "Terrassentür", "content": "Terrassentür-Reparatur",
+     "keywords": ["terrassentür", "terrassentuer", "balkontür", "balkontuer", "hebeschiebetür"]},
+    {"title": "Sonstiges", "content": "",
+     "keywords": []},
+]
+
+STANDARD_PROJEKT_STATUS = [
+    {"title": "Anfrage"}, {"title": "In Bearbeitung"},
+    {"title": "Abgeschlossen"}, {"title": "Archiv"},
+]
+
+STANDARD_PROJEKT_BILD_KATEGORIEN = [
+    {"title": "vorher"}, {"title": "schaden"},
+    {"title": "nachher"}, {"title": "sonstiges"},
+]
+
+
+@router.post("/modules/textvorlagen/seed-projekt")
+async def seed_projekt_vorlagen(user=Depends(get_current_user)):
+    """Idempotenter Seed für die Projekt-Auswahllisten (Status, Kategorien,
+    Bild-Kategorien) inkl. initialer Keywords für die Auto-Klassifikation.
+    Bestehende Einträge werden nicht überschrieben."""
+    await ensure_modul_registered()
+    now = datetime.now(timezone.utc).isoformat()
+    inserted = 0
+    skipped = 0
+    details = []
+
+    plans = [
+        ("projekt_kategorie", STANDARD_PROJEKT_KATEGORIEN, "titel"),
+        ("projekt_status", STANDARD_PROJEKT_STATUS, "titel"),
+        ("projekt_bild_kategorie", STANDARD_PROJEKT_BILD_KATEGORIEN, "titel"),
+    ]
+    for doc_type, items, text_type in plans:
+        for v in items:
+            existing = await db.module_textvorlagen.find_one(
+                {"title": v["title"], "doc_type": doc_type}
+            )
+            if existing:
+                skipped += 1
+                details.append({"doc_type": doc_type, "title": v["title"], "status": "existiert bereits"})
+                # Keywords nachpflegen, falls leer (defensive Nachrüstung)
+                if v.get("keywords") and not (existing.get("keywords") or []):
+                    await db.module_textvorlagen.update_one(
+                        {"id": existing["id"]},
+                        {"$set": {"keywords": _normalize_keywords(v["keywords"]), "updated_at": now}},
+                    )
+                    details[-1]["status"] = "keywords nachgepflegt"
+                continue
+            await db.module_textvorlagen.insert_one({
+                "id": str(uuid4()),
+                "title": v["title"],
+                "content": v.get("content", ""),
+                "doc_type": doc_type,
+                "text_type": text_type,
+                "keywords": _normalize_keywords(v.get("keywords")),
+                "created_at": now,
+                "updated_at": now,
+            })
+            inserted += 1
+            details.append({"doc_type": doc_type, "title": v["title"], "status": "neu angelegt"})
+
+    return {"inserted": inserted, "skipped": skipped, "details": details}
 

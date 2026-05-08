@@ -1,8 +1,8 @@
 """Projekte-Modul – CRUD + Bilder-Upload."""
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 import uuid
 
 from database import db, logger
@@ -11,10 +11,43 @@ from routes.auth import get_current_user
 router = APIRouter()
 
 # ===================== Konstanten =====================
+#
+# Erlaubte Werte für Status/Kategorie/Bild-Kategorie kommen ausschliesslich aus
+# `module_textvorlagen` (doc_type=projekt_status / projekt_kategorie /
+# projekt_bild_kategorie). Werte werden zur Laufzeit aus der DB gezogen und
+# gegen die Auswahl validiert. Kein Hardcoding mehr (siehe VISION.md, Regel 1).
 
-VALID_STATUS = {"Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"}
-VALID_KATEGORIEN = {"Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"}
-VALID_BILD_KATEGORIEN = {"vorher", "nachher", "schaden", "sonstiges"}
+PROJEKT_STATUS_DOCTYPE = "projekt_status"
+PROJEKT_KATEGORIE_DOCTYPE = "projekt_kategorie"
+PROJEKT_BILD_KATEGORIE_DOCTYPE = "projekt_bild_kategorie"
+
+
+async def _allowed_titles(doc_type: str) -> set[str]:
+    """Alle gepflegten Auswahl-Titel zu einem doc_type aus module_textvorlagen.
+    Liefert leere Menge, wenn nichts gepflegt ist (dann skipped die Validierung
+    fail-safe — neue Werte sind erlaubt)."""
+    out: set[str] = set()
+    async for v in db.module_textvorlagen.find(
+        {"doc_type": doc_type},
+        {"_id": 0, "title": 1},
+    ):
+        t = (v.get("title") or "").strip()
+        if t:
+            out.add(t)
+    return out
+
+
+async def _validate_against_textvorlagen(value: str, doc_type: str, label: str):
+    if not value:
+        return
+    allowed = await _allowed_titles(doc_type)
+    if allowed and value not in allowed:
+        raise HTTPException(
+            400,
+            f"Ungültige {label}: {value!r}. Erlaubt sind die in Textvorlagen "
+            f"({doc_type}) gepflegten Werte: {sorted(allowed)}",
+        )
+
 
 # ===================== Models =====================
 
@@ -26,6 +59,10 @@ class ProjektCreate(BaseModel):
     kategorie: Optional[str] = "Sonstiges"
     adresse: Optional[str] = ""
     status: Optional[str] = "Anfrage"
+    notizen: Optional[str] = ""
+    # Wenn True und der Kunde hat noch kein Projekt: Photos vom Kunden werden
+    # als initiale Projekt-Bilder übernommen (Kategorie 'schaden').
+    bilder_uebernehmen: Optional[bool] = False
 
 
 class ProjektUpdate(BaseModel):
@@ -95,11 +132,34 @@ async def get_projekt(projekt_id: str, user=Depends(get_current_user)):
 @router.post("/")
 async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user)):
     k = await _kunde_or_404(payload.kunde_id)
-    if payload.status and payload.status not in VALID_STATUS:
-        raise HTTPException(400, f"Ungueltiger Status. Erlaubt: {sorted(VALID_STATUS)}")
-    if payload.kategorie and payload.kategorie not in VALID_KATEGORIEN:
-        raise HTTPException(400, f"Ungueltige Kategorie. Erlaubt: {sorted(VALID_KATEGORIEN)}")
+    await _validate_against_textvorlagen(payload.status, PROJEKT_STATUS_DOCTYPE, "Status")
+    await _validate_against_textvorlagen(payload.kategorie, PROJEKT_KATEGORIE_DOCTYPE, "Kategorie")
     now = datetime.now(timezone.utc).isoformat()
+
+    # Bilder-Übernahme aus Kundenanfrage (nur beim ERSTEN Projekt eines Kunden)
+    bilder = []
+    aus_anfrage = False
+    if payload.bilder_uebernehmen:
+        existing_count = await db.module_projekte.count_documents({"kunde_id": payload.kunde_id})
+        if existing_count == 0:
+            for ph in (k.get("photos") or []):
+                url = ph.get("url") or ph.get("path") or ""
+                if not url:
+                    continue
+                bilder.append({
+                    "id": str(uuid.uuid4()),
+                    "url": url,
+                    "filename": ph.get("filename") or ph.get("name") or "anfrage.jpg",
+                    "kategorie": "schaden",
+                    "beschreibung": "Aus Kundenanfrage übernommen",
+                    "content_type": ph.get("content_type") or "image/jpeg",
+                    "size": ph.get("size") or 0,
+                    "uploaded_by": user.get("username", ""),
+                    "created_at": now,
+                    "kopiert_aus_kunde": True,
+                })
+            aus_anfrage = bool(bilder)
+
     projekt = {
         "id": str(uuid.uuid4()),
         "kunde_id": payload.kunde_id,
@@ -109,18 +169,18 @@ async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user))
         "kategorie": payload.kategorie or "Sonstiges",
         "adresse": (payload.adresse or "").strip() or _projekt_addr_from_kunde(k),
         "status": payload.status or "Anfrage",
-        "notizen": "",
-        "bilder": [],
+        "notizen": (payload.notizen or "").strip(),
+        "bilder": bilder,
         "erledigt_am": None,
         "created_at": now,
         "updated_at": now,
         "created_by": user.get("username") or user.get("email") or "admin",
-        # Phase-2-Vorbereitung – im Portal v4 sichtbar?
         "portal_freigegeben": False,
+        "aus_anfrage": aus_anfrage,
     }
     await db.module_projekte.insert_one(projekt)
     projekt.pop("_id", None)
-    logger.info(f"Projekt erstellt: {projekt['titel']} fuer {projekt['kunde_name']}")
+    logger.info(f"Projekt erstellt: {projekt['titel']} fuer {projekt['kunde_name']} ({len(bilder)} Bild(er))")
     return projekt
 
 
@@ -130,10 +190,10 @@ async def update_projekt(projekt_id: str, payload: ProjektUpdate, user=Depends(g
     if not existing:
         raise HTTPException(404, "Projekt nicht gefunden")
     update = payload.model_dump(exclude_none=True)
-    if "status" in update and update["status"] not in VALID_STATUS:
-        raise HTTPException(400, f"Ungueltiger Status. Erlaubt: {sorted(VALID_STATUS)}")
-    if "kategorie" in update and update["kategorie"] not in VALID_KATEGORIEN:
-        raise HTTPException(400, f"Ungueltige Kategorie. Erlaubt: {sorted(VALID_KATEGORIEN)}")
+    if "status" in update:
+        await _validate_against_textvorlagen(update["status"], PROJEKT_STATUS_DOCTYPE, "Status")
+    if "kategorie" in update:
+        await _validate_against_textvorlagen(update["kategorie"], PROJEKT_KATEGORIE_DOCTYPE, "Kategorie")
     # Wenn Status auf Abgeschlossen wechselt und kein erledigt_am gesetzt -> jetzt setzen
     if update.get("status") == "Abgeschlossen" and not existing.get("erledigt_am") and "erledigt_am" not in update:
         update["erledigt_am"] = datetime.now(timezone.utc).isoformat()
@@ -162,8 +222,7 @@ async def upload_bild(projekt_id: str, kategorie: str = "sonstiges", beschreibun
     p = await db.module_projekte.find_one({"id": projekt_id})
     if not p:
         raise HTTPException(404, "Projekt nicht gefunden")
-    if kategorie not in VALID_BILD_KATEGORIEN:
-        raise HTTPException(400, f"Ungueltige Kategorie. Erlaubt: {sorted(VALID_BILD_KATEGORIEN)}")
+    await _validate_against_textvorlagen(kategorie, PROJEKT_BILD_KATEGORIE_DOCTYPE, "Bild-Kategorie")
     content = await file.read()
     if len(content) > 15 * 1024 * 1024:
         raise HTTPException(400, "Datei zu gross (max 15 MB)")
@@ -202,8 +261,7 @@ async def update_bild(projekt_id: str, bild_id: str, payload: dict, user=Depends
     if "beschreibung" in payload:
         update_fields["bilder.$.beschreibung"] = payload["beschreibung"]
     if "kategorie" in payload:
-        if payload["kategorie"] not in VALID_BILD_KATEGORIEN:
-            raise HTTPException(400, "Ungueltige Bild-Kategorie")
+        await _validate_against_textvorlagen(payload["kategorie"], PROJEKT_BILD_KATEGORIE_DOCTYPE, "Bild-Kategorie")
         update_fields["bilder.$.kategorie"] = payload["kategorie"]
     if not update_fields:
         raise HTTPException(400, "Nichts zu aendern")

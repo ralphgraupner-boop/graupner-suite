@@ -12,15 +12,32 @@ import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 
-const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
-const KATEGORIEN = ["Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"];
-const BILD_KATEGORIEN = ["vorher", "schaden", "nachher", "sonstiges"];
-
 const STATUS_COLORS = {
   "Anfrage": "bg-blue-100 text-blue-700 border-blue-300",
   "In Bearbeitung": "bg-amber-100 text-amber-800 border-amber-300",
   "Abgeschlossen": "bg-emerald-100 text-emerald-700 border-emerald-300",
   "Archiv": "bg-gray-100 text-gray-600 border-gray-300",
+};
+
+/**
+ * Lädt Auswahl-Titel aus module_textvorlagen (live, keine Hardcoding-Listen).
+ * Liefert ein Array mit Title-Strings sowie das Roh-Objekt mit Keywords/Content.
+ */
+const useTextvorlagen = (docType) => {
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await api.get(`/modules/textvorlagen/data?doc_type=${encodeURIComponent(docType)}`);
+        if (alive) setItems(Array.isArray(r.data) ? r.data : []);
+      } catch {
+        if (alive) setItems([]);
+      }
+    })();
+    return () => { alive = false; };
+  }, [docType]);
+  return items;
 };
 
 /**
@@ -35,7 +52,6 @@ const ProjektWerkbank = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
-  const [creating, setCreating] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -52,29 +68,10 @@ const ProjektWerkbank = () => {
 
   useEffect(() => { load(); }, [kunde_id]);
 
-  const createFromAnfrage = async () => {
-    const isFirst = (data?.projekte?.length || 0) === 0;
-    const msg = isFirst
-      ? "Soll aus den Anfrage-Daten dieses Kunden ein neues Projekt erstellt werden?\nAdresse, Beschreibung, Kategorie und Bilder werden automatisch übernommen."
-      : "Soll ein weiteres Projekt aus den Anfrage-Daten erstellt werden?\nAdresse, Beschreibung und Kategorie werden übernommen.\n(Bilder werden NICHT erneut übernommen, da sie schon im 1. Projekt sind.)";
-    if (!window.confirm(msg)) return;
-    setCreating(true);
-    try {
-      const res = await api.post(`/module-projekte/from-kunde/${kunde_id}`, { bilder_uebernehmen: true });
-      const bilderHinweis = res.data.bilder?.length ? ` (${res.data.bilder.length} Bilder übernommen)` : "";
-      toast.success(`Projekt "${res.data.titel}" angelegt${bilderHinweis}`);
-      load();
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || err.message);
-    } finally {
-      setCreating(false);
-    }
-  };
-
   if (loading) return <div className="p-8 text-center text-muted-foreground">Lade…</div>;
   if (!data) return null;
 
-  const { kunde, projekte, stats, has_anfrage_daten } = data;
+  const { kunde, projekte, stats } = data;
   const kundeName = kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim() || "(ohne Name)";
 
   return (
@@ -136,16 +133,14 @@ const ProjektWerkbank = () => {
           Projekte
           <Badge variant="outline" className="text-xs">{stats.projekte_total} gesamt · {stats.projekte_aktiv} aktiv</Badge>
         </h2>
-        <div className="flex gap-2">
-          {has_anfrage_daten && (
-            <Button onClick={createFromAnfrage} disabled={creating} className="bg-emerald-600 hover:bg-emerald-700 text-white" size="sm" data-testid="btn-from-anfrage">
-              <Sparkles className="w-4 h-4" /> {creating ? "Erstelle…" : "Aus Anfrage anlegen"}
-            </Button>
-          )}
-          <Button onClick={() => setShowNew(true)} size="sm" data-testid="btn-new-leer">
-            <Plus className="w-4 h-4" /> Neues leeres Projekt
-          </Button>
-        </div>
+        <Button
+          onClick={() => setShowNew(true)}
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          data-testid="btn-new-projekt"
+        >
+          <Plus className="w-4 h-4" /> Neues Projekt
+        </Button>
       </div>
 
       {projekte.length === 0 ? (
@@ -153,9 +148,8 @@ const ProjektWerkbank = () => {
           <Folder className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
           <div className="text-lg font-semibold">Noch keine Projekte für {kundeName}</div>
           <div className="text-sm text-muted-foreground mt-1">
-            {has_anfrage_daten
-              ? "Du kannst aus den Anfrage-Daten direkt ein Projekt erstellen (grüner Button oben)."
-              : "Lege ein neues Projekt an."}
+            Klicke auf „+ Neues Projekt" — Adresse, Anliegen und Kategorie werden automatisch
+            aus den Kundendaten vorgeschlagen.
           </div>
         </Card>
       ) : (
@@ -167,9 +161,10 @@ const ProjektWerkbank = () => {
       )}
 
       {showNew && (
-        <NewLeeresProjektDialog
+        <NewProjektDialog
           kundeId={kunde_id}
-          kundeName={kundeName}
+          kunde={kunde}
+          isFirstProjekt={projekte.length === 0}
           onClose={() => setShowNew(false)}
           onCreated={() => { setShowNew(false); load(); }}
         />
@@ -188,6 +183,13 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  const statusOptions = useTextvorlagen("projekt_status");
+  const kategorieOptions = useTextvorlagen("projekt_kategorie");
+  const bildKatOptions = useTextvorlagen("projekt_bild_kategorie");
+  const statusList = statusOptions.map(s => s.title).filter(Boolean);
+  const kategorieList = kategorieOptions.map(s => s.title).filter(Boolean);
+  const bildKatList = bildKatOptions.map(s => s.title).filter(Boolean);
 
   // Wenn der Outer-projekt-prop sich aendert (nach load): synchronisieren
   useEffect(() => { setData(projekt); }, [projekt]);
@@ -302,13 +304,13 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">Status</label>
               <select value={data.status} onChange={(e) => update("status", e.target.value)} className="w-full border rounded px-2 py-2 text-sm" data-testid={`select-status-${data.id}`}>
-                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                {statusList.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground block mb-1">Kategorie</label>
-              <select value={data.kategorie || "Sonstiges"} onChange={(e) => update("kategorie", e.target.value)} className="w-full border rounded px-2 py-2 text-sm">
-                {KATEGORIEN.map(k => <option key={k} value={k}>{k}</option>)}
+              <select value={data.kategorie || (kategorieList[0] || "")} onChange={(e) => update("kategorie", e.target.value)} className="w-full border rounded px-2 py-2 text-sm">
+                {kategorieList.map(k => <option key={k} value={k}>{k}</option>)}
               </select>
             </div>
             <div>
@@ -333,7 +335,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
               </h4>
               <div className="flex items-center gap-1">
                 <select value={uploadKategorie} onChange={(e) => setUploadKategorie(e.target.value)} className="border rounded px-2 py-1 text-xs">
-                  {BILD_KATEGORIEN.map(k => <option key={k} value={k}>{k}</option>)}
+                  {bildKatList.map(k => <option key={k} value={k}>{k}</option>)}
                 </select>
                 <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} data-testid={`btn-upload-${data.id}`}>
                   <Upload className="w-3.5 h-3.5" /> {uploading ? "Lade…" : "Hochladen"}
@@ -390,14 +392,22 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
 };
 
 const BilderGrid = ({ bilder, onDelete }) => {
-  // Gruppiere nach Kategorie
-  const groups = BILD_KATEGORIEN.reduce((acc, kat) => {
+  const bildKats = useTextvorlagen("projekt_bild_kategorie");
+  const kategorien = bildKats.map(b => b.title).filter(Boolean);
+  // Bilder ohne bekannte Kategorie unter "sonstiges" gruppieren
+  const known = new Set(kategorien);
+  const groups = kategorien.reduce((acc, kat) => {
     acc[kat] = bilder.filter(b => b.kategorie === kat);
     return acc;
   }, {});
+  const orphan = bilder.filter(b => !known.has(b.kategorie));
+  if (orphan.length) {
+    const fallback = kategorien.includes("sonstiges") ? "sonstiges" : kategorien[0] || "sonstiges";
+    groups[fallback] = [...(groups[fallback] || []), ...orphan];
+  }
   return (
     <div className="space-y-3">
-      {BILD_KATEGORIEN.map(kat => groups[kat].length > 0 && (
+      {kategorien.map(kat => (groups[kat] || []).length > 0 && (
         <div key={kat}>
           <div className="text-xs font-medium text-slate-600 capitalize mb-1">{kat} ({groups[kat].length})</div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -424,24 +434,80 @@ const BilderGrid = ({ bilder, onDelete }) => {
   );
 };
 
-// ==================== Neues leeres Projekt ====================
-const NewLeeresProjektDialog = ({ kundeId, kundeName, onClose, onCreated }) => {
+// ==================== Neues Projekt – mit Auto-Vorschlag ====================
+/**
+ * NewProjektDialog
+ *  - Lädt Kategorien aus module_textvorlagen (live).
+ *  - Befragt /modules/textvorlagen/match mit kunde.nachricht und schlägt
+ *    die treffer-stärkste Kategorie als Banner vor (übernehmbar mit 1 Klick).
+ *  - Pre-fill: Adresse vom Kunden, Beschreibung = nachricht, Kategorie = Match.
+ *  - Bilder-Übernahme als Checkbox (defaultet auf "an" wenn Erstprojekt + Photos).
+ *  - Felder bleiben editierbar.
+ */
+const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt, onClose, onCreated }) => {
+  const kategorieVorlagen = useTextvorlagen("projekt_kategorie");
+  const kategorieList = kategorieVorlagen.map(k => k.title).filter(Boolean);
+
+  const adresseFromKunde = (() => {
+    if (kunde?.address) return kunde.address;
+    const parts = [`${kunde?.strasse || ""} ${kunde?.hausnummer || ""}`.trim(),
+                   `${kunde?.plz || ""} ${kunde?.ort || ""}`.trim()].filter(Boolean);
+    return parts.join(", ");
+  })();
+  const hasKundenPhotos = (kunde?.photos || []).length > 0;
+
   const [titel, setTitel] = useState("");
-  const [kategorie, setKategorie] = useState("Sonstiges");
-  const [beschreibung, setBeschreibung] = useState("");
+  const [kategorie, setKategorie] = useState("");
+  const [adresse, setAdresse] = useState(adresseFromKunde);
+  const [beschreibung, setBeschreibung] = useState((kunde?.nachricht || "").trim());
+  const [bilderUebernehmen, setBilderUebernehmen] = useState(isFirstProjekt && hasKundenPhotos);
+  const [match, setMatch] = useState(null); // {best, candidates, tied}
   const [saving, setSaving] = useState(false);
+
+  // Default-Kategorie aus Liste setzen, sobald sie geladen ist
+  useEffect(() => {
+    if (!kategorie && kategorieList.length > 0) {
+      setKategorie(kategorieList.includes("Sonstiges") ? "Sonstiges" : kategorieList[0]);
+    }
+  }, [kategorieList, kategorie]);
+
+  // Match-API mit Anliegen-Text aufrufen
+  useEffect(() => {
+    const text = (kunde?.nachricht || "").trim();
+    if (!text) return;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await api.post("/modules/textvorlagen/match", { text, doc_type: "projekt_kategorie" });
+        if (!alive) return;
+        setMatch(r.data || null);
+        const best = r.data?.best;
+        if (best?.title) {
+          setKategorie(best.title);
+          if (!titel && best.content) setTitel(best.content);
+        }
+      } catch {
+        if (alive) setMatch(null);
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kunde?.nachricht]);
 
   const submit = async () => {
     if (!titel.trim()) return toast.error("Bitte Titel angeben");
     setSaving(true);
     try {
-      await api.post("/module-projekte/", {
+      const r = await api.post("/module-projekte/", {
         kunde_id: kundeId,
         titel: titel.trim(),
         beschreibung,
         kategorie,
+        adresse,
+        bilder_uebernehmen: bilderUebernehmen,
       });
-      toast.success("Projekt angelegt");
+      const bilderHinweis = r.data?.bilder?.length ? ` (${r.data.bilder.length} Bild(er) übernommen)` : "";
+      toast.success(`Projekt angelegt${bilderHinweis}`);
       onCreated();
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
@@ -450,26 +516,81 @@ const NewLeeresProjektDialog = ({ kundeId, kundeName, onClose, onCreated }) => {
     }
   };
 
+  const kundeName = kunde?.name || `${kunde?.vorname || ""} ${kunde?.nachname || ""}`.trim() || "Kunde";
+
   return (
     <Modal isOpen={true} onClose={onClose} title={`Neues Projekt für ${kundeName}`} size="md">
       <div className="p-4 space-y-3">
+        {/* ── Vorschlags-Banner ── */}
+        {match?.best && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm" data-testid="match-suggestion">
+            <div className="flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-700 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-emerald-900">
+                  Vorschlag: <span className="font-semibold">{match.best.title}</span>
+                  <span className="ml-2 text-xs text-emerald-700">({match.best.hits} Treffer)</span>
+                </div>
+                <div className="text-xs text-emerald-800 mt-0.5">
+                  Erkannte Begriffe: {(match.best.matched_terms || []).map(t => `„${t}"`).join(", ")}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {match?.tied && (match.candidates || []).length >= 2 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs" data-testid="match-tied">
+            <div className="font-medium text-amber-900 mb-1">Mehrere Kategorien passen gleich gut:</div>
+            <div className="flex flex-wrap gap-2">
+              {match.candidates.slice(0, 3).map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => { setKategorie(c.title); if (!titel && c.content) setTitel(c.content); }}
+                  className="px-2 py-1 border border-amber-300 rounded bg-white hover:bg-amber-100"
+                  data-testid={`btn-pick-cat-${c.id}`}
+                >
+                  {c.title} <span className="text-amber-700">({c.hits})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="text-sm font-medium block mb-1">Titel *</label>
-          <Input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="z.B. Innentür Wohnzimmer" data-testid="input-leer-titel" />
+          <Input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="z.B. Schiebetür Terrasse" data-testid="input-projekt-titel" />
         </div>
         <div>
           <label className="text-sm font-medium block mb-1">Kategorie</label>
-          <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} className="w-full border rounded px-2 py-2 text-sm">
-            {KATEGORIEN.map(k => <option key={k} value={k}>{k}</option>)}
+          <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} className="w-full border rounded px-2 py-2 text-sm" data-testid="select-projekt-kategorie">
+            {kategorieList.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
         </div>
         <div>
-          <label className="text-sm font-medium block mb-1">Beschreibung</label>
-          <Textarea value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} />
+          <label className="text-sm font-medium block mb-1">Adresse (überschreibt Kunde)</label>
+          <Input value={adresse} onChange={(e) => setAdresse(e.target.value)} data-testid="input-projekt-adresse" />
         </div>
+        <div>
+          <label className="text-sm font-medium block mb-1">Beschreibung / Anliegen</label>
+          <Textarea value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={4} data-testid="textarea-projekt-beschreibung" />
+          <div className="text-[11px] text-muted-foreground mt-1">Vorausgefüllt aus Kundendaten – kann angepasst werden.</div>
+        </div>
+        {hasKundenPhotos && (
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={bilderUebernehmen}
+              onChange={(e) => setBilderUebernehmen(e.target.checked)}
+              data-testid="checkbox-bilder-uebernehmen"
+            />
+            <span>Bilder vom Kunden ins Projekt übernehmen ({(kunde?.photos || []).length})
+              {!isFirstProjekt && <span className="text-amber-700 ml-1">— nur beim ersten Projekt möglich</span>}
+            </span>
+          </label>
+        )}
         <div className="flex justify-end gap-2 pt-3 border-t">
           <Button variant="outline" onClick={onClose} disabled={saving}>Abbrechen</Button>
-          <Button onClick={submit} disabled={saving} data-testid="btn-leer-anlegen">{saving ? "Speichere…" : "Anlegen"}</Button>
+          <Button onClick={submit} disabled={saving} data-testid="btn-projekt-anlegen">{saving ? "Speichere…" : "Anlegen"}</Button>
         </div>
       </div>
     </Modal>

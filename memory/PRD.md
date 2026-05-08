@@ -171,4 +171,17 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
   - **Accept** (`module_mail_inbox/routes.py`): Vor Anlage wird `module_kunden` per E-Mail (case-insensitive) und Telefon (normalisiert über `_normalize_phone`) auf Treffer geprüft. Bei Treffer HTTP 409 mit `{code: 'duplicate_kunde', duplicates:[…]}`. Frontend (`MailAcceptDuplicateDialog`) bietet entweder „Anfrage zuordnen" (`/accept-link/{id}` → kein Doppelkunde, neue Anfrage wird mit Datums-Header an `kunde.nachricht` angehängt, bestehendes wird nicht überschrieben) oder „Trotzdem neu anlegen" (`force_new:true`).
   - **Scan-Schutz Re-Send** (`/scan`): Zusätzlich zur `message_id`-Prüfung wird ein `content_hash` (SHA-256 aus normalisierter E-Mail + Nachricht-Anfang + Telefon) gegen bestehende Inbox-Einträge geprüft. So werden inhaltsgleiche Anfragen mit neuer Message-ID oder über mehrere Postfächer abgefangen. `reevaluate-spam` trägt den Hash auch auf Bestandsmails nach.
   - Tests: `backend/tests/test_mail_duplikat_schutz.py` (6 Cases inkl. Hash-Stabilität, 409-Pfad, force_new, accept-link).
+- **Projekt-Anlage mit Auto-Vorschlag aus Anfrage-Text (08.05.2026):**
+  - **Backend** `module_textvorlagen`:
+    - Schema erweitert um `keywords: list[str]`. Doc-Types ergänzt: `projekt_status`, `projekt_kategorie`, `projekt_bild_kategorie`. Helpers `_normalize_keywords`, `_tokenize_text`, `_count_keyword_hits` (case-insensitive Substring-Match — passt zu deutschen Komposita).
+    - Neuer Endpoint `POST /api/modules/textvorlagen/match` mit `{text, doc_type, top_n?}` — liefert beste Vorlage, Kandidaten und `tied`-Flag für Gleichstand. Generisch wiederverwendbar für Aufgaben/Einsätze/etc.
+    - Idempotenter Seed `POST /api/modules/textvorlagen/seed-projekt` mit Standard-Kategorien (Schiebetür/Fenster/Haustür/Innentür/Terrassentür/Sonstiges) inkl. branchenüblicher Keywords. Ralph kann Keywords per UI nachpflegen.
+  - **Backend** `module_projekte`:
+    - Hardcoded `VALID_STATUS` / `VALID_KATEGORIEN` / `VALID_BILD_KATEGORIEN` entfernt — Validierung läuft jetzt dynamisch gegen `module_textvorlagen` (Datenmasken-Regel-Konform). Alte `from-kunde`-Logik bleibt für Rückwärtskompatibilität, neuer POST `/` akzeptiert nun zusätzlich `bilder_uebernehmen` und `notizen`.
+  - **Frontend** Textvorlagen-Editor (`TextvorlagenModulPage.jsx`): Neues Tag-Input für Keywords (Chips, Enter/Komma trennt, Backspace im leeren Input entfernt letztes Tag — handy-tauglich). Auswahl-Doc-Types zeigen kein Pflicht-Inhaltsfeld mehr.
+  - **Frontend** `ProjektWerkbank.jsx`:
+    - Hardcoded `STATUSES` / `KATEGORIEN` / `BILD_KATEGORIEN` ersetzt durch `useTextvorlagen(docType)`-Hook (live aus DB).
+    - Statt zwei Buttons („Aus Anfrage anlegen" + „Neues leeres Projekt") jetzt **ein** Button „+ Neues Projekt".
+    - Neuer `NewProjektDialog`: ruft beim Öffnen `/match` auf, zeigt grünes Vorschlags-Banner („Vorschlag: Schiebetür · 2 Treffer · erkannte Begriffe …"), bei Gleichstand gelbes Banner mit klickbaren Alternativen. Pre-fill: Adresse vom Kunden, Beschreibung = `kunde.nachricht`, Kategorie aus Match, Titel = Default-Vorschlag aus Vorlage. Bilder-Übernahme als Checkbox (default an wenn Erstprojekt + Kunde hat Photos).
+  - Tests: `backend/tests/test_textvorlagen_match.py` (6 Cases). HTTP-Roundtrip mit drei Anliegen-Texten verifiziert (Schiebetür/Fenster/Haustür-Match korrekt).
 
