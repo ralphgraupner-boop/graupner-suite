@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import AbschlussDialog from "@/components/AbschlussDialog";
+import MailAcceptDuplicateDialog from "@/components/MailAcceptDuplicateDialog";
 
 /**
  * MailDetailModal
@@ -26,6 +27,7 @@ const MailDetailModal = ({ entry, onClose, onChanged }) => {
   const navigate = useNavigate();
   const [busy, setBusy] = useState("");
   const [showAbschluss, setShowAbschluss] = useState(false);
+  const [duplicates, setDuplicates] = useState(null); // null | array
 
   if (!entry) return null;
   const p = entry.parsed || {};
@@ -44,18 +46,44 @@ const MailDetailModal = ({ entry, onClose, onChanged }) => {
     }
   };
 
-  const accept = async () => {
+  const accept = async (forceNew = false) => {
     setBusy("accept");
     try {
-      const r = await api.post(`/module-mail-inbox/accept/${entry.id}`);
+      const r = await api.post(
+        `/module-mail-inbox/accept/${entry.id}`,
+        forceNew ? { force_new: true } : {},
+      );
       toast.success(`Kunde „${r.data.kunde_name || fullName}" angelegt — öffne Datenmaske…`);
       onChanged?.();
       try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
-      // Direkt ins bestehende Kunden-Modul (Bearbeiten-Maske)
+      setDuplicates(null);
       navigate(`/module/kunden?edit=${r.data.kunde_id}`);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Übernahme fehlgeschlagen");
+      const detail = err?.response?.data?.detail;
+      if (err?.response?.status === 409 && detail && detail.code === "duplicate_kunde") {
+        setDuplicates(detail.duplicates || []);
+        setBusy("");
+        return;
+      }
+      toast.error(typeof detail === "string" ? detail : "Übernahme fehlgeschlagen");
       setBusy("");
+    }
+  };
+
+  const linkToExisting = async (kundeId) => {
+    try {
+      const r = await api.post(`/module-mail-inbox/accept-link/${entry.id}`, {
+        kunde_id: kundeId,
+        append_nachricht: true,
+      });
+      toast.success(`Anfrage zu „${r.data.kunde_name}" zugeordnet`);
+      onChanged?.();
+      try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
+      setDuplicates(null);
+      onClose?.();
+      navigate(`/module/kunden?edit=${kundeId}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Zuordnen fehlgeschlagen");
     }
   };
 
@@ -207,7 +235,7 @@ const MailDetailModal = ({ entry, onClose, onChanged }) => {
                 Abschließen
               </button>
               <button
-                onClick={accept}
+                onClick={() => accept(false)}
                 disabled={!!busy}
                 className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 inline-flex items-center gap-1 disabled:opacity-50"
                 data-testid="btn-detail-accept"
@@ -227,6 +255,14 @@ const MailDetailModal = ({ entry, onClose, onChanged }) => {
         onClose={() => setShowAbschluss(false)}
         onConfirm={abschliessen}
         subjectLabel={`${fullName}${entry.subject ? " – " + entry.subject : ""}`}
+      />
+
+      <MailAcceptDuplicateDialog
+        open={Array.isArray(duplicates)}
+        duplicates={duplicates || []}
+        onLink={linkToExisting}
+        onForce={() => accept(true)}
+        onClose={() => setDuplicates(null)}
       />
     </Modal>
   );

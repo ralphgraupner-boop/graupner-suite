@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Modal } from "@/components/common";
 import MailDetailModal from "@/components/MailDetailModal";
+import MailAcceptDuplicateDialog from "@/components/MailAcceptDuplicateDialog";
 
 const STATUS_LABELS = {
   vorschlag: { label: "Offen", color: "bg-amber-100 text-amber-800" },
@@ -28,6 +29,9 @@ const ModuleMailInboxPage = () => {
   const [previewSummary, setPreviewSummary] = useState([]);
   const [previewMode, setPreviewMode] = useState("skipped"); // skipped|all
   const [importingUid, setImportingUid] = useState("");
+
+  // 409-Konflikt: Duplikatsdialog für Schnell-Übernahme aus der Liste
+  const [dupCtx, setDupCtx] = useState(null); // { entry, duplicates }
   const [previewDetail, setPreviewDetail] = useState(null);  // {body, subject, from, ...}
   const [previewDetailLoading, setPreviewDetailLoading] = useState(false);
 
@@ -78,16 +82,42 @@ const ModuleMailInboxPage = () => {
     }
   };
 
-  const accept = async (entry) => {
+  const accept = async (entry, forceNew = false) => {
     // Direkt übernehmen mit den geparsten Daten und ins Kunden-Modul navigieren.
     // (Bearbeiten passiert dort in der bestehenden Datenmaske – keine Doppelung.)
     try {
-      const r = await api.post(`/module-mail-inbox/accept/${entry.id}`);
+      const r = await api.post(
+        `/module-mail-inbox/accept/${entry.id}`,
+        forceNew ? { force_new: true } : {},
+      );
       toast.success(`Kunde „${r.data.kunde_name}" angelegt`);
       try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
+      setDupCtx(null);
       navigate(`/module/kunden?edit=${r.data.kunde_id}`);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Übernahme fehlgeschlagen");
+      const detail = err?.response?.data?.detail;
+      if (err?.response?.status === 409 && detail && detail.code === "duplicate_kunde") {
+        setDupCtx({ entry, duplicates: detail.duplicates || [] });
+        return;
+      }
+      toast.error(typeof detail === "string" ? detail : "Übernahme fehlgeschlagen");
+    }
+  };
+
+  const linkToExisting = async (kundeId) => {
+    if (!dupCtx) return;
+    try {
+      const r = await api.post(`/module-mail-inbox/accept-link/${dupCtx.entry.id}`, {
+        kunde_id: kundeId,
+        append_nachricht: true,
+      });
+      toast.success(`Anfrage zu „${r.data.kunde_name}" zugeordnet`);
+      try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
+      setDupCtx(null);
+      await load();
+      navigate(`/module/kunden?edit=${kundeId}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Zuordnen fehlgeschlagen");
     }
   };
 
@@ -801,6 +831,14 @@ const ModuleMailInboxPage = () => {
           onChanged={async () => { await load(); }}
         />
       )}
+
+      <MailAcceptDuplicateDialog
+        open={!!dupCtx}
+        duplicates={dupCtx?.duplicates || []}
+        onLink={linkToExisting}
+        onForce={() => dupCtx && accept(dupCtx.entry, true)}
+        onClose={() => setDupCtx(null)}
+      />
     </div>
   );
 };

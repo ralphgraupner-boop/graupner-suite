@@ -43,11 +43,26 @@ class _FakeCollection:
             },
         }
 
+    def find(self, _q, _proj=None):
+        # leere Kunden-Datenbank → keine Duplikate
+        return _EmptyCursor()
+
     async def insert_one(self, doc):
         self.last_inserted = doc
 
     async def update_one(self, q, upd):
         self.updates.append((q, upd))
+
+
+class _EmptyCursor:
+    def limit(self, _n):
+        return self
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        raise StopAsyncIteration
 
 
 def test_accept_schreibt_nachricht_nicht_anliegen(monkeypatch):

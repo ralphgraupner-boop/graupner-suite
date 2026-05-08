@@ -11,6 +11,7 @@ GET  /audit          → komplette Liste
 import os
 import re
 import uuid
+import hashlib
 import imaplib
 import email
 from email.header import decode_header
@@ -33,6 +34,25 @@ SUBJECT_DOMAIN = "tischlerei-graupner.de"
 ALT_SUBJECT_PATTERN = re.compile(r"Anfrage\s+von\s+", re.IGNORECASE)
 # Jimdo-Variante: Betreff wie "Nachricht über https://www.tischlerei-graupner.de/..."
 NACHRICHT_UEBER_PATTERN = re.compile(r"Nachricht\s+über\s+https?://", re.IGNORECASE)
+
+
+def _content_hash(parsed: dict) -> str:
+    """Stabiler Inhalts-Hash für Re-Send-Duplikatserkennung.
+
+    Wird aus normalisierten Feldern gebildet, sodass dieselbe Anfrage –
+    auch wenn sie mit neuer Message-ID erneut zugestellt wird oder über
+    ein zweites Postfach reinkommt – als Duplikat erkannt wird.
+
+    Liefert "" wenn zu wenige Felder befüllt sind (dann keine Hash-Prüfung,
+    fallback auf Message-ID-Prüfung).
+    """
+    em = (parsed.get("email") or "").strip().lower()
+    nach = re.sub(r"\s+", " ", (parsed.get("nachricht") or "").strip().lower())[:200]
+    tel = re.sub(r"\D+", "", (parsed.get("telefon") or ""))
+    if not (em and nach):
+        return ""
+    raw = f"{em}|{nach}|{tel}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 # Postfächer in denen wir suchen (Inbox UND der Filter-Ordner für Anfragen)
 SEARCH_FOLDERS = ["INBOX", '"INBOX.anfrage von"']
@@ -236,6 +256,21 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                             )
                             continue
 
+                        # 3) Content-Hash-Duplikatsprüfung (Re-Sends mit neuer
+                        #    Message-ID oder Mehrfach-Empfang über mehrere
+                        #    Postfächer werden hier abgefangen).
+                        c_hash = _content_hash(parsed)
+                        if c_hash:
+                            dup_by_hash = await db.module_mail_inbox.find_one(
+                                {"content_hash": c_hash}, {"_id": 0, "id": 1, "status": 1}
+                            )
+                            if dup_by_hash:
+                                a_dup += 1
+                                logger.info(
+                                    f"mail-inbox[{acc_label}]: Content-Hash-Duplikat zu {dup_by_hash['id']} (status={dup_by_hash.get('status')}) – {subject!r}"
+                                )
+                                continue
+
                         spam = evaluate_spam(parsed, body_excerpt=body, from_email=from_email)
                         initial_status = "spam_verdacht" if spam["is_spam"] else "vorschlag"
 
@@ -251,6 +286,7 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                             "id": str(uuid.uuid4()),
                             "email_uid": f"{folder}/{uid.decode()}",
                             "message_id": message_id,
+                            "content_hash": c_hash,
                             "folder": folder,
                             "from_email": from_email,
                             "from_name": _decode(from_name),
@@ -380,12 +416,61 @@ async def list_inbox(status: str = "vorschlag", limit: int = 100, user=Depends(g
     return items
 
 
+def _normalize_phone(p: str) -> str:
+    """Normalisiert Telefon für Duplikatsvergleich: nur Ziffern, führende 0 → +49."""
+    if not p:
+        return ""
+    digits = re.sub(r"\D+", "", p)
+    if not digits:
+        return ""
+    if digits.startswith("00"):
+        digits = digits[2:]
+    elif digits.startswith("0"):
+        digits = "49" + digits[1:]
+    return digits
+
+
+async def _find_kunde_duplicates(email: str, phone: str) -> list[dict]:
+    """Sucht in module_kunden nach Treffern per E-Mail (case-insensitive)
+    oder Telefon (normalisiert). Liefert max. 5 Treffer mit Kerndaten."""
+    matches: dict[str, dict] = {}
+    em = (email or "").strip().lower()
+    if em:
+        async for k in db.module_kunden.find(
+            {"email": {"$regex": f"^{re.escape(em)}$", "$options": "i"}},
+            {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1, "kontakt_status": 1, "created_at": 1, "nachricht": 1},
+        ).limit(5):
+            matches[k["id"]] = {**k, "match_reason": "email"}
+    ph_norm = _normalize_phone(phone)
+    if ph_norm:
+        async for k in db.module_kunden.find(
+            {"phone": {"$exists": True, "$ne": ""}},
+            {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1, "kontakt_status": 1, "created_at": 1, "nachricht": 1},
+        ).limit(50):
+            if _normalize_phone(k.get("phone", "")) == ph_norm:
+                if k["id"] in matches:
+                    matches[k["id"]]["match_reason"] = "email+phone"
+                else:
+                    matches[k["id"]] = {**k, "match_reason": "phone"}
+                if len(matches) >= 5:
+                    break
+    return list(matches.values())
+
+
 @router.post("/accept/{entry_id}")
 async def accept(entry_id: str, body: dict | None = None, user=Depends(get_current_user)):
     """Übernimmt eine Mail-Anfrage als neuen Kunden.
+
+    Duplikatsschutz: Ist bereits ein Kunde mit gleicher E-Mail oder Telefon
+    in module_kunden vorhanden, antwortet der Endpoint mit HTTP 409 und
+    einer Liste der Kandidaten. Frontend kann dann
+      • per /accept-link/{entry_id} an einen bestehenden Kunden anhängen,
+      • oder /accept/{entry_id} mit body.force_new=true erneut aufrufen.
+
     Optional darf der Frontend-Body folgende Felder überschreiben/ergänzen:
       vorname, nachname, anrede, email, phone (= telefon), strasse, plz, ort,
-      nachricht (Beschreibung des Anliegens), bemerkung, kontakt_status, customer_type, kategorie
+      nachricht (Beschreibung des Anliegens), bemerkung, kontakt_status, customer_type, kategorie,
+      force_new (bool, Default false)
     """
     entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
     if not entry:
@@ -404,6 +489,22 @@ async def accept(entry_id: str, body: dict | None = None, user=Depends(get_curre
     nachname = _pick("nachname", parsed.get("nachname", ""))
     anrede = _pick("anrede", parsed.get("anrede", ""))
     full_name = " ".join(p for p in [vorname, nachname] if p).strip()
+    email_val = _pick("email", parsed.get("email") or entry.get("reply_to", "") or "")
+    phone_val = _pick("phone", parsed.get("telefon", ""))
+
+    # ── Duplikatsschutz ──
+    if not body.get("force_new"):
+        dups = await _find_kunde_duplicates(email_val, phone_val)
+        if dups:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "duplicate_kunde",
+                    "message": f"Kunde mit dieser E-Mail/Telefon existiert bereits ({len(dups)} Treffer).",
+                    "duplicates": dups,
+                    "entry_id": entry_id,
+                },
+            )
 
     new_kunde = {
         "id": new_kunde_id,
@@ -411,8 +512,8 @@ async def accept(entry_id: str, body: dict | None = None, user=Depends(get_curre
         "vorname": vorname,
         "nachname": nachname,
         "name": full_name or entry.get("from_name", ""),
-        "email": _pick("email", parsed.get("email") or entry.get("reply_to", "") or ""),
-        "phone": _pick("phone", parsed.get("telefon", "")),
+        "email": email_val,
+        "phone": phone_val,
         "strasse": _pick("strasse", parsed.get("strasse", "")),
         "plz": _pick("plz", parsed.get("plz", "")),
         "ort": _pick("ort", parsed.get("ort", "")),
@@ -439,6 +540,58 @@ async def accept(entry_id: str, body: dict | None = None, user=Depends(get_curre
         }},
     )
     return {"ok": True, "kunde_id": new_kunde_id, "kunde_name": new_kunde["name"]}
+
+
+@router.post("/accept-link/{entry_id}")
+async def accept_link(entry_id: str, body: dict, user=Depends(get_current_user)):
+    """Ordnet eine Mail-Anfrage einem **bereits existierenden** Kunden zu,
+    ohne einen neuen Kunden anzulegen.
+
+    Body: { kunde_id: str, append_nachricht: bool=True }
+    - Inbox-Eintrag wird auf status='übernommen' gesetzt + kunde_id eingetragen.
+    - Optional wird die Anfrage-Nachricht als neuer Notiz-Block an die
+      bestehende kunde.nachricht angehängt (mit Datums-Header), so dass
+      keine bestehenden Daten überschrieben werden.
+    """
+    body = body or {}
+    target_kunde_id = (body.get("kunde_id") or "").strip()
+    if not target_kunde_id:
+        raise HTTPException(400, "kunde_id fehlt")
+
+    entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    if entry.get("status") == "übernommen":
+        raise HTTPException(400, "Bereits übernommen")
+
+    kunde = await db.module_kunden.find_one({"id": target_kunde_id}, {"_id": 0})
+    if not kunde:
+        raise HTTPException(404, "Kunde nicht gefunden")
+
+    parsed = entry.get("parsed") or {}
+    new_nachricht = (parsed.get("nachricht") or "").strip()
+
+    if body.get("append_nachricht", True) and new_nachricht:
+        existing = (kunde.get("nachricht") or "").strip()
+        stamp = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+        block = f"[Neue Anfrage {stamp}]\n{new_nachricht}"
+        merged = (existing + "\n\n" + block).strip() if existing else block
+        await db.module_kunden.update_one(
+            {"id": target_kunde_id},
+            {"$set": {"nachricht": merged, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
+
+    await db.module_mail_inbox.update_one(
+        {"id": entry_id},
+        {"$set": {
+            "status": "übernommen",
+            "kunde_id": target_kunde_id,
+            "linked_to_existing": True,
+            "user_action_at": datetime.now(timezone.utc).isoformat(),
+            "user_action_by": user.get("username") if isinstance(user, dict) else getattr(user, "username", None),
+        }},
+    )
+    return {"ok": True, "kunde_id": target_kunde_id, "kunde_name": kunde.get("name", ""), "linked": True}
 
 
 @router.post("/reject/{entry_id}")
@@ -942,7 +1095,7 @@ async def reevaluate_spam(user=Depends(get_current_user)):
         if not new_parsed.get("email") and d.get("from_email") and "jimdo" not in (d.get("from_email") or "").lower():
             new_parsed["email"] = d.get("from_email")
         new_spam = evaluate_spam(new_parsed, body_excerpt=d.get("body_excerpt") or "", from_email=d.get("from_email") or "")
-        update = {"parsed": new_parsed, "spam": new_spam}
+        update = {"parsed": new_parsed, "spam": new_spam, "content_hash": _content_hash(new_parsed)}
         # Status nur bei vorschlag/spam_verdacht ändern, nicht bei übernommen/ignoriert
         if d.get("status") in ("vorschlag", "spam_verdacht"):
             new_status = "spam_verdacht" if new_spam["is_spam"] else "vorschlag"
