@@ -15,6 +15,7 @@ import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
 import MailHistoryModal from "@/components/MailHistoryModal";
 import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
+import NewProjektDialog from "@/components/NewProjektDialog";
 
 // Hartcodierte Liste = Fallback wenn das Textvorlagen-Modul gerade nicht
 // antwortet. Pflege erfolgt im UI: Einstellungen → Textvorlagen → "Kunden-Status".
@@ -73,6 +74,8 @@ const KundenModulPage = () => {
   const [mailHistoryFor, setMailHistoryFor] = useState(null);  // {email, name}
   const [linkDialogKunde, setLinkDialogKunde] = useState(null);  // Kunde-Objekt für Link-Dialog
   const [linkCounts, setLinkCounts] = useState({});  // {kunde_id: count_aktiver_links}
+  const [projektCounts, setProjektCounts] = useState({});  // {kunde_id: count_projekte}
+  const [neuesProjektFuer, setNeuesProjektFuer] = useState(null);  // Kunde-Objekt für Schnell-Projekt-Dialog
   const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
   const navigate = useNavigate();
@@ -118,10 +121,22 @@ const KundenModulPage = () => {
     } catch { /* still ignore */ }
   };
 
+  const loadProjektCounts = async () => {
+    try {
+      const r = await api.get("/module-projekte/counts-by-kunde");
+      setProjektCounts(r.data || {});
+    } catch { /* still ignore */ }
+  };
+
   // Wenn der Link-Dialog geschlossen wird → Counts neu laden
   useEffect(() => {
     if (!linkDialogKunde) loadLinkCounts();
   }, [linkDialogKunde]);
+
+  // Initial Projekt-Counts laden + nach Schnell-Anlage neu laden
+  useEffect(() => {
+    if (!neuesProjektFuer) loadProjektCounts();
+  }, [neuesProjektFuer]);
 
   const handleDelete = (kunde) => {
     setDeleteKunde(kunde);
@@ -398,7 +413,20 @@ const KundenModulPage = () => {
                     </div>
                   )}
                   <div className="hidden sm:flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700" title="Projekte dieses Kunden" data-testid={`btn-projekte-${kunde.id}`}><Folder className="w-4 h-4" /></button>
+                    <button
+                      onClick={() => setNeuesProjektFuer(kunde)}
+                      className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700"
+                      title="Neues Projekt für diesen Kunden anlegen"
+                      data-testid={`btn-quick-projekt-${kunde.id}`}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700 relative" title="Projekt-Werkbank öffnen" data-testid={`btn-projekte-${kunde.id}`}>
+                      <Folder className="w-4 h-4" />
+                      {(projektCounts[kunde.id] || 0) > 0 && (
+                        <span className="absolute -top-1 -right-1 text-[9px] bg-emerald-600 text-white rounded-full px-1 leading-tight min-w-[16px] text-center">{projektCounts[kunde.id]}</span>
+                      )}
+                    </button>
                     <button onClick={() => { setEditKunde(kunde); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>
                     <button onClick={() => handleDelete(kunde)} className="p-2 rounded-sm hover:bg-destructive/10 text-red-600" title="Kunde sicher löschen (mit Vorab-Backup)" data-testid={`btn-kunde-delete-${kunde.id}`}>
                       <Trash2 className="w-4 h-4" />
@@ -535,7 +563,17 @@ const KundenModulPage = () => {
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                       <Button size="sm" onClick={() => { setEditKunde(kunde); setShowModal(true); }}><Edit className="w-4 h-4" /> Bearbeiten</Button>
-                      <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} data-testid={`btn-detail-projekte-${kunde.id}`}><Folder className="w-4 h-4" /> Projekte / Neu</Button>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => setNeuesProjektFuer(kunde)}
+                        data-testid={`btn-detail-quick-projekt-${kunde.id}`}
+                      >
+                        <Plus className="w-4 h-4" /> Neues Projekt
+                      </Button>
+                      <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => navigate(`/module/projekte/werkbank/${kunde.id}`)} data-testid={`btn-detail-projekte-${kunde.id}`}>
+                        <Folder className="w-4 h-4" /> Werkbank{(projektCounts[kunde.id] || 0) > 0 ? ` (${projektCounts[kunde.id]})` : ""}
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => navigate(`/quotes/new?customer=${kunde.id}`)}><FileText className="w-4 h-4" /> Angebot erstellen</Button>
                       <KundeExportButton kunde_id={kunde.id} kunde_name={kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim()} />
                       {kunde.email && (
@@ -662,6 +700,16 @@ const KundenModulPage = () => {
         onClose={() => setLinkDialogKunde(null)}
         kunde={linkDialogKunde}
       />
+
+      {neuesProjektFuer && (
+        <NewProjektDialog
+          kundeId={neuesProjektFuer.id}
+          kunde={neuesProjektFuer}
+          isFirstProjekt={(projektCounts[neuesProjektFuer.id] || 0) === 0}
+          onClose={() => setNeuesProjektFuer(null)}
+          onCreated={() => { setNeuesProjektFuer(null); loadProjektCounts(); }}
+        />
+      )}
     </div>
   );
 };

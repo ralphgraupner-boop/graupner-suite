@@ -121,6 +121,22 @@ async def list_projekte(kunde_id: Optional[str] = None, status: Optional[str] = 
     return items
 
 
+@router.get("/counts-by-kunde")
+async def counts_by_kunde(user=Depends(get_current_user)):
+    """Liefert {kunde_id: anzahl_projekte} für die Kundenliste-Badges.
+
+    Bewusst genauer Pfad statt Path-Param – damit FastAPI das nicht mit
+    GET /{projekt_id} verwechselt.
+    """
+    pipeline = [{"$group": {"_id": "$kunde_id", "n": {"$sum": 1}}}]
+    out: dict = {}
+    async for row in db.module_projekte.aggregate(pipeline):
+        kid = row.get("_id")
+        if kid:
+            out[kid] = row["n"]
+    return out
+
+
 @router.get("/{projekt_id}")
 async def get_projekt(projekt_id: str, user=Depends(get_current_user)):
     p = await db.module_projekte.find_one({"id": projekt_id}, {"_id": 0})

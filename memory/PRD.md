@@ -184,4 +184,11 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
     - Statt zwei Buttons („Aus Anfrage anlegen" + „Neues leeres Projekt") jetzt **ein** Button „+ Neues Projekt".
     - Neuer `NewProjektDialog`: ruft beim Öffnen `/match` auf, zeigt grünes Vorschlags-Banner („Vorschlag: Schiebetür · 2 Treffer · erkannte Begriffe …"), bei Gleichstand gelbes Banner mit klickbaren Alternativen. Pre-fill: Adresse vom Kunden, Beschreibung = `kunde.nachricht`, Kategorie aus Match, Titel = Default-Vorschlag aus Vorlage. Bilder-Übernahme als Checkbox (default an wenn Erstprojekt + Kunde hat Photos).
   - Tests: `backend/tests/test_textvorlagen_match.py` (6 Cases). HTTP-Roundtrip mit drei Anliegen-Texten verifiziert (Schiebetür/Fenster/Haustür-Match korrekt).
+- **Auto-lernende Titel-Vorlagen + Schnell-Anlage aus Kundenliste (08.05.2026):**
+  - Neuer Doc-Type `projekt_titel` in `module_textvorlagen`. Im Projekt-Dialog: Datalist-Autocomplete am Titel-Feld (alle gespeicherten Titel als Vorschlag), zusätzliches Match-Banner für Titel (parallel zur Kategorie). Beim Anlegen wird ein neu eingegebener Titel still als wiederverwendbare Vorlage gespeichert (case-insensitive Duplikat-Check, ≥3 Zeichen). Toast „Titel zur Vorlagenliste hinzugefügt" mit „Rückgängig"-Action (5 Sek).
+  - Dialog `NewProjektDialog` wurde aus `ProjektWerkbank.jsx` in eigene Komponente `components/NewProjektDialog.jsx` extrahiert (inkl. `useTextvorlagen`-Hook, exportiert), damit Schnell-Anlage auch direkt aus der Kundenliste möglich ist.
+  - **`KundenModulPage.jsx`**: 
+    - In jeder Kundenzeile zusätzliches `+`-Icon „Neues Projekt" (öffnet Dialog ohne Werkbank-Umweg). Folder-Icon zeigt Projekt-Anzahl als Badge.
+    - In der ausgeklappten Detail-Ansicht zwei Buttons getrennt: grünes „Neues Projekt" + outline „Werkbank (n)".
+  - Neuer Backend-Endpoint `GET /api/module-projekte/counts-by-kunde` (Aggregation) für die Badges.
 
