@@ -220,9 +220,9 @@ async def serve_projekt_file(path: str, user=Depends(get_current_user)):
     """
     if ".." in path or path.startswith("/"):
         raise HTTPException(400, "Ungültiger Pfad")
-    if not path.startswith("module_projekte/"):
-        # Schützt davor, dass dieser Endpoint zum generischen Storage-Proxy wird
-        raise HTTPException(400, "Pfad ausserhalb von module_projekte")
+    # Whitelist: Projekt-Uploads + aus Kundenanfragen übernommene Bilder
+    if not (path.startswith("module_projekte/") or path.startswith("module_kunden/")):
+        raise HTTPException(400, "Pfad ausserhalb erlaubter Bereiche")
     try:
         from utils.storage import get_object
         data, ct = get_object(path)
@@ -254,7 +254,7 @@ async def migrate_thumbnails(dry_run: bool = True, limit: int = 200, user=Depend
     ):
         for b in p.get("bilder") or []:
             url = (b.get("url") or "").strip()
-            if not url or not url.startswith("module_projekte/"):
+            if not url or not (url.startswith("module_projekte/") or url.startswith("module_kunden/")):
                 continue
             if (b.get("thumb_url") or "").strip():
                 skipped += 1
