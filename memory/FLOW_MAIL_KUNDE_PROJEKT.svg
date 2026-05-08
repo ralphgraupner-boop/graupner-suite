@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 900" font-family="Arial, sans-serif">
+  <style>
+    .title { font-size: 22px; font-weight: 700; fill: #0f172a; }
+    .subtitle { font-size: 12px; fill: #475569; }
+    .step { font-size: 14px; font-weight: 700; fill: #0f172a; }
+    .desc { font-size: 11px; fill: #334155; }
+    .api { font-size: 10px; fill: #1e293b; font-family: Menlo, Consolas, monospace; }
+    .badge { font-size: 10px; font-weight: 700; fill: #ffffff; }
+    .ok { fill: #10b981; stroke: #047857; }
+    .warn { fill: #f59e0b; stroke: #b45309; }
+    .danger { fill: #ef4444; stroke: #b91c1c; }
+    .info { fill: #3b82f6; stroke: #1d4ed8; }
+    .pink { fill: #d946ef; stroke: #a21caf; }
+    .gray { fill: #64748b; stroke: #334155; }
+    .arrow { fill: none; stroke: #475569; stroke-width: 2; marker-end: url(#a); }
+    .arrow-409 { fill: none; stroke: #ef4444; stroke-width: 2; marker-end: url(#a-red); stroke-dasharray: 5 4; }
+    .lane { fill: #f8fafc; stroke: #e2e8f0; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+    </marker>
+    <marker id="a-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <text x="40" y="36" class="title">Workflow: Anfrage → Kunde → Projekt (mit Auto-Vorschlag)</text>
+  <text x="40" y="56" class="subtitle">GraupnerSuite · Stand 08.05.2026 · Komponenten + API-Endpoints + Datenmasken-Joins</text>
+
+  <!-- Lanes -->
+  <rect x="40" y="80" width="1420" height="80" rx="6" class="lane"/>
+  <text x="56" y="104" class="step">Eingang</text>
+  <rect x="40" y="170" width="1420" height="180" rx="6" class="lane"/>
+  <text x="56" y="194" class="step">module_mail_inbox</text>
+  <rect x="40" y="360" width="1420" height="180" rx="6" class="lane"/>
+  <text x="56" y="384" class="step">module_kunden  (Source-of-Truth)</text>
+  <rect x="40" y="550" width="1420" height="240" rx="6" class="lane"/>
+  <text x="56" y="574" class="step">module_projekte  +  module_textvorlagen (Match-Engine)</text>
+
+  <!-- Eingang -->
+  <g>
+    <rect x="180" y="100" width="240" height="50" rx="6" class="info"/>
+    <text x="200" y="122" class="badge">Jimdo-Kontaktformular</text>
+    <text x="200" y="138" class="api">Mail an service24@…</text>
+  </g>
+  <g>
+    <rect x="500" y="100" width="280" height="50" rx="6" class="pink"/>
+    <text x="520" y="122" class="badge">Public Contact API (P1, geplant)</text>
+    <text x="520" y="138" class="api">POST /api/public/contact (JSON)</text>
+  </g>
+
+  <!-- Mail-Inbox -->
+  <g>
+    <rect x="180" y="200" width="220" height="80" rx="6" class="warn"/>
+    <text x="195" y="222" class="badge">1. /scan (alle 15 min)</text>
+    <text x="195" y="240" class="api">parse_anfrage()</text>
+    <text x="195" y="254" class="api">+ Anrede / Vor-/Nachname</text>
+    <text x="195" y="268" class="api">+ Tel/PLZ/Nachricht</text>
+  </g>
+  <g>
+    <rect x="430" y="200" width="220" height="80" rx="6" class="warn"/>
+    <text x="445" y="222" class="badge">2. content_hash check</text>
+    <text x="445" y="240" class="api">SHA-256 (email|nachricht|tel)</text>
+    <text x="445" y="256" class="api">→ Re-Send-Duplikate</text>
+    <text x="445" y="270" class="api">  werden geskippt</text>
+  </g>
+  <g>
+    <rect x="680" y="200" width="220" height="80" rx="6" class="warn"/>
+    <text x="695" y="222" class="badge">3. evaluate_spam()</text>
+    <text x="695" y="240" class="api">→ status=vorschlag</text>
+    <text x="695" y="256" class="api">  oder spam_verdacht</text>
+  </g>
+  <g>
+    <rect x="930" y="200" width="240" height="80" rx="6" class="warn"/>
+    <text x="945" y="222" class="badge">4. Inbox-Karte UI</text>
+    <text x="945" y="240" class="api">MailDetailModal (zeigt</text>
+    <text x="945" y="256" class="api">  parsed.* Felder)</text>
+    <text x="945" y="270" class="api">Buttons: Übernehmen / Ignor.</text>
+  </g>
+  <g>
+    <rect x="1200" y="200" width="240" height="120" rx="6" class="danger"/>
+    <text x="1215" y="222" class="badge">5. POST /accept/{id}</text>
+    <text x="1215" y="240" class="api">_find_kunde_duplicates()</text>
+    <text x="1215" y="256" class="api">  email (case-i)  +</text>
+    <text x="1215" y="270" class="api">  phone (normalisiert)</text>
+    <text x="1215" y="288" class="api">→ HTTP 409 wenn Treffer</text>
+    <text x="1215" y="304" class="api">  duplicates: [{...}]</text>
+  </g>
+
+  <!-- Pfeil 409 → Modal -->
+  <path d="M 1320 320 L 1080 360" class="arrow-409"/>
+  <g>
+    <rect x="950" y="365" width="280" height="60" rx="6" class="danger"/>
+    <text x="965" y="385" class="badge">MailAcceptDuplicateDialog (409-Pfad)</text>
+    <text x="965" y="402" class="api">→ POST /accept-link/{id}  (zuordnen)</text>
+    <text x="965" y="418" class="api">→ POST /accept/{id} {force_new:true}</text>
+  </g>
+
+  <!-- Kunden -->
+  <g>
+    <rect x="180" y="380" width="280" height="140" rx="6" class="info"/>
+    <text x="195" y="402" class="badge">module_kunden Felder</text>
+    <text x="195" y="420" class="api">id, vorname, nachname, anrede</text>
+    <text x="195" y="434" class="api">email, phone, plz, ort, strasse</text>
+    <text x="195" y="450" class="api">nachricht  ← Anliegen-Text</text>
+    <text x="195" y="466" class="api">photos[]  ← aus Mail/Portal</text>
+    <text x="195" y="482" class="api">categories[] · kontakt_status</text>
+    <text x="195" y="498" class="api">imported_from_mail_id</text>
+    <text x="195" y="514" class="api">created_at / updated_at</text>
+  </g>
+  <g>
+    <rect x="490" y="380" width="280" height="140" rx="6" class="ok"/>
+    <text x="505" y="402" class="badge">KundenModulPage UI</text>
+    <text x="505" y="420" class="api">Liste + Filter + Tags</text>
+    <text x="505" y="436" class="api">[+] Schnell-Anlage Projekt</text>
+    <text x="505" y="452" class="api">[Folder] zur Werkbank (mit Badge n)</text>
+    <text x="505" y="468" class="api">Detail: Bearbeiten / Mail-History</text>
+    <text x="505" y="484" class="api">/duplikate · /papierkorb (Soft-Delete)</text>
+    <text x="505" y="500" class="api">Counts: /module-projekte/counts-by-kunde</text>
+    <text x="505" y="516" class="api">       /module-kundenlink/counts</text>
+  </g>
+  <g>
+    <rect x="800" y="380" width="280" height="140" rx="6" class="info"/>
+    <text x="815" y="402" class="badge">module_kundenlink (UI Mitarbeiter)</text>
+    <text x="815" y="420" class="api">/m/{token} passwortlos</text>
+    <text x="815" y="436" class="api">expires_at / extended_at</text>
+    <text x="815" y="452" class="api">Voice-Intake (Whisper + GPT-5.2)</text>
+    <text x="815" y="468" class="api">P1: Auto-Invite nach Mail-Accept</text>
+  </g>
+
+  <!-- Projekt-Anlage -->
+  <g>
+    <rect x="180" y="600" width="320" height="170" rx="6" class="ok"/>
+    <text x="195" y="622" class="badge">NewProjektDialog (wiederverwendbar)</text>
+    <text x="195" y="640" class="api">Lädt: kategorieList, titelList</text>
+    <text x="195" y="656" class="api">  GET /modules/textvorlagen/data?doc_type=…</text>
+    <text x="195" y="672" class="api">Match parallel:</text>
+    <text x="195" y="688" class="api">  POST /modules/textvorlagen/match</text>
+    <text x="195" y="704" class="api">    text=kunde.nachricht</text>
+    <text x="195" y="720" class="api">    doc_type=projekt_kategorie / projekt_titel</text>
+    <text x="195" y="736" class="api">Pre-fill: adresse, beschreibung, kategorie</text>
+    <text x="195" y="752" class="api">Datalist Autocomplete + Banner-Vorschlag</text>
+  </g>
+  <g>
+    <rect x="540" y="600" width="320" height="170" rx="6" class="ok"/>
+    <text x="555" y="622" class="badge">POST /module-projekte/</text>
+    <text x="555" y="640" class="api">_validate_against_textvorlagen()</text>
+    <text x="555" y="656" class="api">→ status, kategorie aus DB-Liste</text>
+    <text x="555" y="674" class="api">bilder_uebernehmen=true (Erstprojekt):</text>
+    <text x="555" y="690" class="api">  Refs aus kunde.photos kopieren</text>
+    <text x="555" y="706" class="api">Datenmaske: kunde_id + kunde_name</text>
+    <text x="555" y="722" class="api">  (kunde_name nur Display-Cache)</text>
+    <text x="555" y="740" class="api">aus_anfrage = True wenn Bilder kopiert</text>
+    <text x="555" y="758" class="api">created_by, created_at</text>
+  </g>
+  <g>
+    <rect x="900" y="600" width="320" height="170" rx="6" class="pink"/>
+    <text x="915" y="622" class="badge">Auto-Lernen Titel  ★ NEU</text>
+    <text x="915" y="640" class="api">Nach POST /module-projekte/:</text>
+    <text x="915" y="656" class="api">  exists = titelList.lower().includes(t)</text>
+    <text x="915" y="672" class="api">  if !exists &amp;&amp; t.length ≥ 3:</text>
+    <text x="915" y="688" class="api">    POST /modules/textvorlagen/data</text>
+    <text x="915" y="704" class="api">      doc_type=projekt_titel, keywords=[]</text>
+    <text x="915" y="720" class="api">Toast 5s mit „Rückgängig"-Button</text>
+    <text x="915" y="736" class="api">  → DELETE /modules/textvorlagen/data/{id}</text>
+    <text x="915" y="754" class="api">→ Liste „wächst durch Benutzung"</text>
+  </g>
+  <g>
+    <rect x="1240" y="600" width="200" height="170" rx="6" class="gray"/>
+    <text x="1255" y="622" class="badge">Bild-Pipeline ★ NEU</text>
+    <text x="1255" y="640" class="api">_process_image():</text>
+    <text x="1255" y="656" class="api">  Original 1920px Q85</text>
+    <text x="1255" y="672" class="api">  Thumb 400px Q80</text>
+    <text x="1255" y="688" class="api">HEIC → JPEG (iPhone)</text>
+    <text x="1255" y="706" class="api">/files/{path} streamt Auth</text>
+    <text x="1255" y="722" class="api">Whitelist:</text>
+    <text x="1255" y="738" class="api">  module_projekte/</text>
+    <text x="1255" y="754" class="api">  module_kunden/</text>
+  </g>
+
+  <!-- Pfeile -->
+  <path d="M 400 240 L 430 240" class="arrow"/>
+  <path d="M 650 240 L 680 240" class="arrow"/>
+  <path d="M 900 240 L 930 240" class="arrow"/>
+  <path d="M 1170 240 L 1200 240" class="arrow"/>
+
+  <path d="M 1320 320 L 1080 360" class="arrow-409"/>
+
+  <!-- mail accept → kunden -->
+  <path d="M 1080 425 C 800 480 600 460 460 440" class="arrow"/>
+  <text x="700" y="476" class="api">erfolgreich → INSERT module_kunden</text>
+
+  <!-- kunden → newprojekt -->
+  <path d="M 340 520 L 340 600" class="arrow"/>
+  <text x="350" y="560" class="api">[+ Neues Projekt] aus Kunden-Karte</text>
+
+  <!-- newprojekt → POST -->
+  <path d="M 500 685 L 540 685" class="arrow"/>
+  <!-- POST → titel -->
+  <path d="M 860 685 L 900 685" class="arrow"/>
+  <!-- POST → bild-pipeline -->
+  <path d="M 860 670 L 1240 670" class="arrow"/>
+  <text x="1080" y="660" class="api">Bilder-Upload</text>
+</svg>

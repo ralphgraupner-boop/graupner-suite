@@ -1,6 +1,6 @@
 # 🚦 START-CHECKLISTE FÜR NEUE AGENTEN
 
-> **Stand: 07.05.2026**
+> **Stand: 08.05.2026**
 > Diese Datei MUSS jeder Agent vor seiner ersten Antwort lesen — Ralph hat
 > dafür mehrfach Zeit und Geld verloren, weil Architektur-Regeln ignoriert
 > wurden. Wer hier abkürzt, liefert Schrott.
@@ -16,6 +16,34 @@ In **dieser Reihenfolge** lesen — keine Ausnahmen:
 3. **`/app/memory/DOKUMENTE_MODULE_GRAPH.md`** — Detail Dokumente-Workflow (oder die Detail-Graphik des Moduls, an dem gearbeitet wird)
 4. **`/app/memory/PRD.md`** — Was bereits gebaut wurde, mit Datum
 5. **`/app/memory/AGENT_BRIEFING.md`** — Kommunikations- und Verhaltensregeln
+
+---
+
+## 🆕 Was am 08.05.2026 NEU dazu kam (kurz für nächsten Agenten)
+
+- **Mail-Parser** versteht aktuelles Jimdo-Format (`Anrede:`).
+- **Mail-Inbox → Kunden** schreibt Anliegen jetzt korrekt in `nachricht` (vorher `anliegen` → leere Datenmaske). Migration auf Live ausgeführt.
+- **Duplikatsschutz Mail→Kunde**: Accept liefert HTTP 409 bei E-Mail/Telefon-Treffer; neuer Endpoint `/accept-link/{id}` ordnet Anfrage an existierenden Kunden zu (kein Doppel). `MailAcceptDuplicateDialog` im Frontend.
+- **Re-Send-Schutz im Scan**: zusätzlich zur `message_id` wird ein `content_hash` (SHA-256) gegen Bestand geprüft.
+- **Match-Engine** in `module_textvorlagen`: Vorlagen können jetzt `keywords: list[str]` haben. Generischer Endpoint `POST /api/modules/textvorlagen/match` matcht beliebigen Text gegen Keywords eines `doc_type` und liefert beste Vorlage. Wiederverwendbar für jedes Modul.
+- **Neue Doc-Types** in `module_textvorlagen`: `projekt_status`, `projekt_kategorie`, `projekt_bild_kategorie`, `projekt_titel`. Seed via `POST /api/modules/textvorlagen/seed-projekt`.
+- **`module_projekte`-Validierung** dynamisch gegen `module_textvorlagen` — alte hardcodierte Listen `VALID_STATUS/KATEGORIEN/BILD_KATEGORIEN` raus.
+- **Schnell-Anlage Projekt** aus Kundenliste: Komponente `components/NewProjektDialog.jsx` (eigenständig, wiederverwendbar). Pre-fill Adresse/Anliegen/Kategorie aus Kunden-Datenmaske, Banner-Vorschläge für Kategorie + Titel, Bilder-Übernahme als Checkbox. Auto-lernende Titel: bei neu eingegebenem Titel wird stiller Eintrag in `projekt_titel` angelegt mit „Rückgängig"-Toast (5 Sek).
+- **Bild-Pipeline** beim Upload (`module_projekte/_process_image`): Original max. 1920 px JPEG-Q85, Thumbnail 400 px JPEG-Q80. HEIC → JPEG. Galerie nutzt `bild.thumb_url`, Lightbox lädt Original lazy.
+- **Files-Endpoint** `GET /api/module-projekte/files/{path:path}` (auth-pflichtig): streamt aus Object-Storage, Whitelist auf `module_projekte/` und `module_kunden/` (Bilder aus Kunden-Anfragen werden referenziert, nicht kopiert).
+- **Migration** `POST /api/module-projekte/migrate-thumbnails` für Altbestand. Auf Live 30/30 Bilder migriert (3-4 MB → ~20 KB Thumbnail = 99 % Ersparnis).
+- **Backend-Endpoint** `GET /api/module-projekte/counts-by-kunde` (Aggregation) für Projekt-Zähler-Badges in der Kundenliste.
+
+**Bekannter kleiner Bug** (Backlog): `migrate-thumbnails` mit kleinem `limit` (z. B. 10) findet 0 Kandidaten, mit `limit=999` alle. Break-Logik fixen.
+
+---
+
+## 🟡 P1-Backlog (nicht angefangen)
+
+1. **Public Contact API** (`module_public_api`): Kontaktformular auf Jimdo-Seite postet direkt JSON an `/api/public/contact`, ohne IMAP-Umweg. Spec: `/app/memory/PUBLIC_API_SPEC.md`. Inkl. Honeypot, Rate-Limit, optionaler Bestätigungs-Mail an Kunden, Datei-Upload für Schaden-Bilder.
+2. **Datenmasken-Refactor Phase B/C**: `module_projekte` und `module_einsaetze` joinen `kunde_name`/`adresse` live aus `module_kunden` (heute teilweise dupliziert). Folgt VISION.md „Daten nicht duplizieren".
+3. **Auto-Portal-Invite**: nach Mail-Annahme automatisch Mitarbeiter-Link erzeugen + senden.
+4. **Match-Engine ausrollen** auf `aufgabe`/`einsatz`/`termin` (Backend bereits generisch, nur Frontend-Anbindung pro Modul).
 
 ---
 
