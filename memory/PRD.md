@@ -195,4 +195,8 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
   - Neuer Auth-pflichtiger Endpoint `GET /api/module-projekte/files/{path:path}` schiebt Bytes aus dem Object-Storage durch (mit Pfad-Whitelist auf `module_projekte/` und Path-Traversal-Schutz).
   - Neue Komponente `components/ProjektBild.jsx`: lädt das Bild als Blob via `axios responseType:"blob"` + `URL.createObjectURL`. Klick öffnet eine schlanke Lightbox (ESC schließt, Body-Scroll-Lock, mobil-tauglich) — kein neuer Tab mehr.
   - Curl-verifiziert: 200 mit Auth, 401 ohne, 400 bei Pfad ausserhalb `module_projekte/`.
+- **Bild-Performance: Pipeline + Thumbnails (08.05.2026):**
+  - **Upload-Pipeline** in `module_projekte/routes.py`: Pillow + pillow_heif. Original auf max. 2400 px Längskante & JPEG-Q85 (HEIC → JPEG), Thumbnail 400 px JPEG-Q80. Beide werden im Storage abgelegt (`<file>.ext` und `<file>.ext.thumb.jpg`), `bild.thumb_url` neu im Subdokument.
+  - **Frontend** `ProjektBild.jsx`: Galerie-Tile lädt `thumb_url` (~18 KB statt 3 MB), Lightbox lädt das Original lazy beim Klick mit „Lade Original…"-Spinner. Fallback auf `url` wenn `thumb_url` fehlt (Altbestand).
+  - **Migration** `POST /api/module-projekte/migrate-thumbnails?dry_run=…&limit=…`: erzeugt für Bestandsbilder Thumbnails nach. Originals werden nicht angefasst. Auf Preview erfolgreich getestet (2 Bilder, 3.4 MB → 18 KB Thumbnails).
 

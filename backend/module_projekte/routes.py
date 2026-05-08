@@ -10,6 +10,74 @@ import uuid
 from database import db, logger
 from routes.auth import get_current_user
 
+# HEIC/HEIF + Pillow für Resize/Konvertierung
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except Exception:
+    pass
+
+try:
+    from PIL import Image, ImageOps
+    _PIL_OK = True
+except Exception:
+    _PIL_OK = False
+
+
+# ───────────── Image-Pipeline ─────────────
+# Original wird auf 2400 px Längskante begrenzt + JPEG-Q85 → ca. 80 % kleiner
+# als typische Smartphone-Aufnahmen. Zusätzlich wird ein Thumbnail (400 px)
+# erzeugt, das die Galerie-Tiles ohne Verzögerung lädt. Beide Pfade landen im
+# selben module_projekte/<id>/-Ordner und werden in der DB als
+# `bild.url` (Original) und `bild.thumb_url` (Thumbnail) gespeichert.
+ORIGINAL_MAX_SIDE = 2400
+THUMB_MAX_SIDE = 400
+JPEG_QUALITY = 85
+
+
+def _process_image(data: bytes, content_type: str, filename: str) -> tuple[bytes, bytes, str, str]:
+    """Liefert (original_bytes, thumb_bytes, mime, ext).
+
+    - HEIC/HEIF → JPEG.
+    - Längskante > ORIGINAL_MAX_SIDE → herunterskalieren.
+    - Thumbnail mit max. THUMB_MAX_SIDE.
+    - Bei Fehler: Rohdaten zurück, ohne Thumbnail (Frontend fällt dann auf
+      Original zurück).
+    """
+    ct = (content_type or "").lower()
+    name = (filename or "").lower()
+    is_heic = "heic" in ct or "heif" in ct or name.endswith((".heic", ".heif"))
+    if not _PIL_OK:
+        return data, b"", ct or "image/jpeg", "jpg"
+    try:
+        img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img)
+        # Originals
+        orig = img.copy()
+        if max(orig.size) > ORIGINAL_MAX_SIDE:
+            orig.thumbnail((ORIGINAL_MAX_SIDE, ORIGINAL_MAX_SIDE))
+        out_orig = io.BytesIO()
+        if is_heic or orig.mode in ("RGBA", "P", "LA"):
+            orig = orig.convert("RGB")
+            orig.save(out_orig, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+            mime, ext = "image/jpeg", "jpg"
+        elif orig.format == "PNG":
+            orig.save(out_orig, format="PNG", optimize=True)
+            mime, ext = "image/png", "png"
+        else:
+            orig.save(out_orig, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+            mime, ext = "image/jpeg", "jpg"
+        # Thumbnail (immer JPEG)
+        thumb = img.copy()
+        thumb = thumb.convert("RGB")
+        thumb.thumbnail((THUMB_MAX_SIDE, THUMB_MAX_SIDE))
+        out_thumb = io.BytesIO()
+        thumb.save(out_thumb, format="JPEG", quality=80, optimize=True)
+        return out_orig.getvalue(), out_thumb.getvalue(), mime, ext
+    except Exception as e:
+        logger.warning(f"Projekt-Bild Pipeline fail ({filename}): {e}")
+        return data, b"", ct or "image/jpeg", "jpg"
+
 router = APIRouter()
 
 # ===================== Konstanten =====================
@@ -164,6 +232,79 @@ async def serve_projekt_file(path: str, user=Depends(get_current_user)):
     return StreamingResponse(io.BytesIO(data), media_type=ct or "image/jpeg")
 
 
+@router.post("/migrate-thumbnails")
+async def migrate_thumbnails(dry_run: bool = True, limit: int = 200, user=Depends(get_current_user)):
+    """Erzeugt für Bestandsbilder Thumbnails (`thumb_url`) nach.
+
+    Lädt das Original aus dem Storage, rechnet Thumbnail (400 px JPEG), legt es
+    daneben (Pfad `<orig>.thumb.jpg`) ab und ergänzt das Bild-Subdokument in der
+    Projekt-Collection. Originals werden nicht angefasst.
+
+    Standard ist `dry_run=true` – nichts wird verändert. Mit `dry_run=false`
+    wird real migriert. `limit` begrenzt die Anzahl pro Aufruf.
+    """
+    from utils.storage import get_object, put_object
+
+    affected = []
+    skipped = 0
+    candidates = []
+    async for p in db.module_projekte.find(
+        {"bilder": {"$exists": True, "$ne": []}},
+        {"_id": 0, "id": 1, "titel": 1, "bilder": 1},
+    ):
+        for b in p.get("bilder") or []:
+            url = (b.get("url") or "").strip()
+            if not url or not url.startswith("module_projekte/"):
+                continue
+            if (b.get("thumb_url") or "").strip():
+                skipped += 1
+                continue
+            candidates.append((p["id"], p.get("titel", ""), b))
+            if len(candidates) >= max(1, int(limit)):
+                break
+        if len(candidates) >= max(1, int(limit)):
+            break
+
+    for projekt_id, titel, b in candidates:
+        info = {"projekt_id": projekt_id, "titel": titel, "bild_id": b.get("id"),
+                "filename": b.get("filename"), "url": b.get("url")}
+        if dry_run:
+            info["status"] = "would_migrate"
+            affected.append(info)
+            continue
+        try:
+            data, _ct = get_object(b["url"])
+            _orig, thumb_bytes, _mime, _ext = _process_image(
+                data, b.get("content_type") or "image/jpeg", b.get("filename") or "bild.jpg",
+            )
+            if not thumb_bytes:
+                info["status"] = "no_thumb_generated"
+                affected.append(info)
+                continue
+            thumb_path = f"{b['url']}.thumb.jpg"
+            tres = put_object(thumb_path, thumb_bytes, "image/jpeg")
+            thumb_url = tres.get("url") or tres.get("path", thumb_path)
+            await db.module_projekte.update_one(
+                {"id": projekt_id, "bilder.id": b["id"]},
+                {"$set": {"bilder.$.thumb_url": thumb_url}},
+            )
+            info["status"] = "migrated"
+            info["thumb_size"] = len(thumb_bytes)
+        except Exception as e:
+            logger.error(f"migrate-thumbnails fail für {b.get('url')}: {e}")
+            info["status"] = f"error: {e}"
+        affected.append(info)
+
+    return {
+        "ok": True,
+        "dry_run": dry_run,
+        "limit": limit,
+        "candidates_found": len(candidates),
+        "already_have_thumb": skipped,
+        "details": affected,
+    }
+
+
 @router.get("/{projekt_id}")
 async def get_projekt(projekt_id: str, user=Depends(get_current_user)):
     p = await db.module_projekte.find_one({"id": projekt_id}, {"_id": 0})
@@ -269,23 +410,37 @@ async def upload_bild(projekt_id: str, kategorie: str = "sonstiges", beschreibun
     content = await file.read()
     if len(content) > 15 * 1024 * 1024:
         raise HTTPException(400, "Datei zu gross (max 15 MB)")
+
+    # Image-Pipeline: Original (max 2400px, Q85) + Thumbnail (400px JPEG)
+    orig_bytes, thumb_bytes, mime, ext = _process_image(content, file.content_type or "", file.filename or "")
+
     try:
         from utils.storage import put_object
-        safe_name = (file.filename or "bild.jpg").replace(" ", "_")
-        path = f"module_projekte/{projekt_id}/{uuid.uuid4().hex[:8]}_{safe_name}"
-        result = put_object(path, content, file.content_type or "image/jpeg")
-        url = result.get("url") or result.get("path", "")
+        safe_name = (file.filename or "bild").replace(" ", "_")
+        if "." in safe_name:
+            safe_name = safe_name.rsplit(".", 1)[0]
+        prefix = f"module_projekte/{projekt_id}/{uuid.uuid4().hex[:8]}_{safe_name}"
+        orig_path = f"{prefix}.{ext}"
+        thumb_path = f"{prefix}.thumb.jpg" if thumb_bytes else ""
+        result = put_object(orig_path, orig_bytes, mime)
+        url = result.get("url") or result.get("path", orig_path)
+        thumb_url = ""
+        if thumb_bytes:
+            tres = put_object(thumb_path, thumb_bytes, "image/jpeg")
+            thumb_url = tres.get("url") or tres.get("path", thumb_path)
     except Exception as e:
         logger.error(f"Projekt-Bild-Upload fehlgeschlagen: {e}")
         raise HTTPException(500, "Upload fehlgeschlagen")
     bild = {
         "id": str(uuid.uuid4()),
         "url": url,
+        "thumb_url": thumb_url,
         "filename": file.filename,
         "kategorie": kategorie,
         "beschreibung": beschreibung,
-        "content_type": file.content_type,
-        "size": len(content),
+        "content_type": mime,
+        "size": len(orig_bytes),
+        "size_original": len(content),
         "uploaded_by": user.get("username", ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
