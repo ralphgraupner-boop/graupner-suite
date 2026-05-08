@@ -6,7 +6,7 @@ from uuid import uuid4
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie", "projekt_titel"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht", "abschluss_grund"]
 
 # Doc-Types, deren Eintrag selbst eine Auswahl-Option ist (Titel = Wert).
@@ -15,7 +15,7 @@ SELECTION_DOC_TYPES = {
     "kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie",
     "abschlussgrund", "reparaturgruppe", "material", "prioritaet",
     "bild_kategorie", "projekt_status", "projekt_kategorie",
-    "projekt_bild_kategorie",
+    "projekt_bild_kategorie", "projekt_titel",
 }
 
 PLACEHOLDERS = [

@@ -446,7 +446,9 @@ const BilderGrid = ({ bilder, onDelete }) => {
  */
 const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt, onClose, onCreated }) => {
   const kategorieVorlagen = useTextvorlagen("projekt_kategorie");
+  const titelVorlagen = useTextvorlagen("projekt_titel");
   const kategorieList = kategorieVorlagen.map(k => k.title).filter(Boolean);
+  const titelList = titelVorlagen.map(t => t.title).filter(Boolean);
 
   const adresseFromKunde = (() => {
     if (kunde?.address) return kunde.address;
@@ -462,6 +464,7 @@ const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt, onClose, onCreated }
   const [beschreibung, setBeschreibung] = useState((kunde?.nachricht || "").trim());
   const [bilderUebernehmen, setBilderUebernehmen] = useState(isFirstProjekt && hasKundenPhotos);
   const [match, setMatch] = useState(null); // {best, candidates, tied}
+  const [titelMatch, setTitelMatch] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // Default-Kategorie aus Liste setzen, sobald sie geladen ist
@@ -471,21 +474,27 @@ const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt, onClose, onCreated }
     }
   }, [kategorieList, kategorie]);
 
-  // Match-API mit Anliegen-Text aufrufen
+  // Match-API mit Anliegen-Text aufrufen — parallel für Kategorie + Titel
   useEffect(() => {
     const text = (kunde?.nachricht || "").trim();
     if (!text) return;
     let alive = true;
     (async () => {
       try {
-        const r = await api.post("/modules/textvorlagen/match", { text, doc_type: "projekt_kategorie" });
+        const [katR, titR] = await Promise.all([
+          api.post("/modules/textvorlagen/match", { text, doc_type: "projekt_kategorie" }),
+          api.post("/modules/textvorlagen/match", { text, doc_type: "projekt_titel" }).catch(() => null),
+        ]);
         if (!alive) return;
-        setMatch(r.data || null);
-        const best = r.data?.best;
+        setMatch(katR.data || null);
+        const best = katR.data?.best;
         if (best?.title) {
           setKategorie(best.title);
           if (!titel && best.content) setTitel(best.content);
         }
+        const titBest = titR?.data?.best;
+        if (titR?.data) setTitelMatch(titR.data);
+        if (titBest?.title && !titel) setTitel(titBest.title);
       } catch {
         if (alive) setMatch(null);
       }
@@ -493,6 +502,31 @@ const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt, onClose, onCreated }
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kunde?.nachricht]);
+
+  /**
+   * Lernt einen neu eingegebenen Titel als wiederverwendbare Vorlage.
+   * - case-insensitive Duplikat-Check gegen titelList
+   * - mind. 3 Zeichen, sonst nutzlos
+   * Liefert die ID der neu angelegten Vorlage zurück (für Undo) oder null.
+   */
+  const learnTitelIfNew = async (rawTitel) => {
+    const t = (rawTitel || "").trim();
+    if (t.length < 3) return null;
+    const exists = titelList.some(x => x.toLowerCase() === t.toLowerCase());
+    if (exists) return null;
+    try {
+      const r = await api.post("/modules/textvorlagen/data", {
+        title: t,
+        content: "",
+        doc_type: "projekt_titel",
+        text_type: "titel",
+        keywords: [],
+      });
+      return r.data?.id || null;
+    } catch {
+      return null;
+    }
+  };
 
   const submit = async () => {
     if (!titel.trim()) return toast.error("Bitte Titel angeben");
@@ -507,7 +541,27 @@ const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt, onClose, onCreated }
         bilder_uebernehmen: bilderUebernehmen,
       });
       const bilderHinweis = r.data?.bilder?.length ? ` (${r.data.bilder.length} Bild(er) übernommen)` : "";
-      toast.success(`Projekt angelegt${bilderHinweis}`);
+
+      // Auto-Lernen: Titel zur Vorlagenliste hinzufügen, wenn neu
+      const newTitelVorlageId = await learnTitelIfNew(titel);
+      if (newTitelVorlageId) {
+        toast.success(`Projekt angelegt${bilderHinweis} · Titel zur Vorlagenliste hinzugefügt`, {
+          duration: 5000,
+          action: {
+            label: "Rückgängig",
+            onClick: async () => {
+              try {
+                await api.delete(`/modules/textvorlagen/data/${newTitelVorlageId}`);
+                toast.success("Titel-Vorlage wieder entfernt");
+              } catch {
+                toast.error("Konnte Titel-Vorlage nicht entfernen");
+              }
+            },
+          },
+        });
+      } else {
+        toast.success(`Projekt angelegt${bilderHinweis}`);
+      }
       onCreated();
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
@@ -556,9 +610,49 @@ const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt, onClose, onCreated }
           </div>
         )}
 
+        {titelMatch?.best && (
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm" data-testid="match-titel-suggestion">
+            <div className="flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-sky-700 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sky-900">
+                  Vorschlag Titel: <span className="font-semibold">{titelMatch.best.title}</span>
+                  <button
+                    onClick={() => setTitel(titelMatch.best.title)}
+                    className="ml-2 text-xs underline text-sky-700 hover:text-sky-900"
+                    data-testid="btn-pick-titel"
+                  >
+                    übernehmen
+                  </button>
+                </div>
+                <div className="text-xs text-sky-800 mt-0.5">
+                  Erkannte Begriffe: {(titelMatch.best.matched_terms || []).map(t => `„${t}"`).join(", ")}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="text-sm font-medium block mb-1">Titel *</label>
-          <Input value={titel} onChange={(e) => setTitel(e.target.value)} placeholder="z.B. Schiebetür Terrasse" data-testid="input-projekt-titel" />
+          <input
+            type="text"
+            value={titel}
+            onChange={(e) => setTitel(e.target.value)}
+            placeholder="z.B. Schiebetür Terrasse"
+            className="w-full h-10 rounded-sm border border-input bg-background px-3 text-sm"
+            list="projekt-titel-vorlagen"
+            data-testid="input-projekt-titel"
+            autoComplete="off"
+          />
+          <datalist id="projekt-titel-vorlagen">
+            {titelList.map(t => <option key={t} value={t} />)}
+          </datalist>
+          {titelList.length > 0 && (
+            <div className="text-[11px] text-muted-foreground mt-1">
+              Tippen für Vorschläge aus der Vorlagenliste · neue Titel werden automatisch übernommen
+            </div>
+          )}
         </div>
         <div>
           <label className="text-sm font-medium block mb-1">Kategorie</label>

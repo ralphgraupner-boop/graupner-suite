@@ -5,7 +5,7 @@ import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common
 import { api } from "@/lib/api";
 import { RichTextEditor } from "@/components/RichTextEditor";
 
-const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", kundenportal: "Kundenportal", einsatz: "Einsatz", termin: "Termin", aufgabe: "Aufgabe", aufgaben_kategorie: "Aufgaben-Kategorie", reparaturgruppe: "Reparaturgruppe", material: "Material", prioritaet: "Priorität", bild_kategorie: "Bild-Kategorie", abschlussgrund: "Abschlussgrund", kunden_status: "Kunden-Status", kunden_kategorie: "Kunden-Kategorie", anrede: "Anrede", allgemein: "Allgemein", projekt_status: "Projekt-Status", projekt_kategorie: "Projekt-Kategorie", projekt_bild_kategorie: "Projekt-Bild-Kategorie" };
+const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", kundenportal: "Kundenportal", einsatz: "Einsatz", termin: "Termin", aufgabe: "Aufgabe", aufgaben_kategorie: "Aufgaben-Kategorie", reparaturgruppe: "Reparaturgruppe", material: "Material", prioritaet: "Priorität", bild_kategorie: "Bild-Kategorie", abschlussgrund: "Abschlussgrund", kunden_status: "Kunden-Status", kunden_kategorie: "Kunden-Kategorie", anrede: "Anrede", allgemein: "Allgemein", projekt_status: "Projekt-Status", projekt_kategorie: "Projekt-Kategorie", projekt_bild_kategorie: "Projekt-Bild-Kategorie", projekt_titel: "Projekt-Titel" };
 const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung", portal_nachricht: "Portal-Nachricht" };
 const TEXT_TYPE_COLORS = { vortext: "bg-blue-100 text-blue-800", schlusstext: "bg-green-100 text-green-800", betreff: "bg-purple-100 text-purple-800", bemerkung: "bg-gray-100 text-gray-800", titel: "bg-amber-100 text-amber-800", email: "bg-cyan-100 text-cyan-800", mahnung: "bg-red-100 text-red-800", portal_nachricht: "bg-emerald-100 text-emerald-800" };
 
@@ -544,6 +544,7 @@ const VorlageFormModal = ({ isOpen, onClose, item, onSave }) => {
     "kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie",
     "abschlussgrund", "reparaturgruppe", "material", "prioritaet",
     "bild_kategorie", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie",
+    "projekt_titel",
   ].includes(form.doc_type);
 
   const addKeyword = () => {
