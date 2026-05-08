@@ -191,4 +191,8 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
     - In jeder Kundenzeile zusätzliches `+`-Icon „Neues Projekt" (öffnet Dialog ohne Werkbank-Umweg). Folder-Icon zeigt Projekt-Anzahl als Badge.
     - In der ausgeklappten Detail-Ansicht zwei Buttons getrennt: grünes „Neues Projekt" + outline „Werkbank (n)".
   - Neuer Backend-Endpoint `GET /api/module-projekte/counts-by-kunde` (Aggregation) für die Badges.
+- **Bug-Fix Projekt-Bilder klickbar (08.05.2026):** Bild-`url` enthält den relativen Storage-Pfad (`module_projekte/<id>/...`); ohne `/api/`-Prefix fing React Router den Pfad ab und zeigte das Dashboard. Lösung:
+  - Neuer Auth-pflichtiger Endpoint `GET /api/module-projekte/files/{path:path}` schiebt Bytes aus dem Object-Storage durch (mit Pfad-Whitelist auf `module_projekte/` und Path-Traversal-Schutz).
+  - Neue Komponente `components/ProjektBild.jsx`: lädt das Bild als Blob via `axios responseType:"blob"` + `URL.createObjectURL`. Klick öffnet eine schlanke Lightbox (ESC schließt, Body-Scroll-Lock, mobil-tauglich) — kein neuer Tab mehr.
+  - Curl-verifiziert: 200 mit Auth, 401 ohne, 400 bei Pfad ausserhalb `module_projekte/`.
 

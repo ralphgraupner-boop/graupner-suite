@@ -12,6 +12,7 @@ import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog, { useTextvorlagen } from "@/components/NewProjektDialog";
+import ProjektBild from "@/components/ProjektBild";
 
 const STATUS_COLORS = {
   "Anfrage": "bg-blue-100 text-blue-700 border-blue-300",
@@ -391,22 +392,9 @@ const BilderGrid = ({ bilder, onDelete }) => {
         <div key={kat}>
           <div className="text-xs font-medium text-slate-600 capitalize mb-1">{kat} ({groups[kat].length})</div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {groups[kat].map(b => {
-              const safeUrl = (b.url || "").startsWith("http") || (b.url || "").startsWith("/uploads")
-                ? b.url
-                : `/${(b.url || "").replace(/^\/+/, "")}`;
-              return (
-              <div key={b.id} className="border rounded overflow-hidden bg-white group relative">
-                <a href={safeUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  <img src={safeUrl} alt={b.filename} className="w-full h-20 object-cover" />
-                </a>
-                <button onClick={(e) => { e.stopPropagation(); onDelete(b.id); }} className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-red-600 opacity-0 group-hover:opacity-100" title="Löschen">
-                  <X className="w-3 h-3" />
-                </button>
-                {b.beschreibung && <div className="text-[10px] text-slate-600 px-1 py-0.5 truncate">{b.beschreibung}</div>}
-              </div>
-              );
-            })}
+            {groups[kat].map(b => (
+              <ProjektBild key={b.id} bild={b} onDelete={onDelete} />
+            ))}
           </div>
         </div>
       ))}

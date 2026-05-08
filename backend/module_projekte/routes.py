@@ -1,5 +1,7 @@
 """Projekte-Modul – CRUD + Bilder-Upload."""
+import io
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from typing import Optional
@@ -135,6 +137,31 @@ async def counts_by_kunde(user=Depends(get_current_user)):
         if kid:
             out[kid] = row["n"]
     return out
+
+
+@router.get("/files/{path:path}")
+async def serve_projekt_file(path: str, user=Depends(get_current_user)):
+    """Liefert ein im Object-Storage abgelegtes Projekt-Bild aus.
+
+    Frontend speichert in `bild.url` den relativen Storage-Pfad
+    (`module_projekte/<id>/<file>`); React Router würde diesen Pfad sonst als
+    Frontend-Route interpretieren und das Dashboard zeigen. Dieser Endpoint
+    schiebt die Bytes durch — auth-pflichtig, daher kein direkter Browser-Aufruf
+    ohne Token. Frontend lädt die Bilder via Axios als Blob und rendert sie
+    über `URL.createObjectURL`.
+    """
+    if ".." in path or path.startswith("/"):
+        raise HTTPException(400, "Ungültiger Pfad")
+    if not path.startswith("module_projekte/"):
+        # Schützt davor, dass dieser Endpoint zum generischen Storage-Proxy wird
+        raise HTTPException(400, "Pfad ausserhalb von module_projekte")
+    try:
+        from utils.storage import get_object
+        data, ct = get_object(path)
+    except Exception as e:
+        logger.error(f"Projekt-Bild laden fehlgeschlagen ({path}): {e}")
+        raise HTTPException(404, "Bild nicht gefunden")
+    return StreamingResponse(io.BytesIO(data), media_type=ct or "image/jpeg")
 
 
 @router.get("/{projekt_id}")
