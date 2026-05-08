@@ -30,7 +30,7 @@ except Exception:
 # erzeugt, das die Galerie-Tiles ohne Verzögerung lädt. Beide Pfade landen im
 # selben module_projekte/<id>/-Ordner und werden in der DB als
 # `bild.url` (Original) und `bild.thumb_url` (Thumbnail) gespeichert.
-ORIGINAL_MAX_SIDE = 2400
+ORIGINAL_MAX_SIDE = 1920
 THUMB_MAX_SIDE = 400
 JPEG_QUALITY = 85
 
