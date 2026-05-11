@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { X, TrendingUp } from "lucide-react";
 
 export const Button = ({ children, variant = "primary", size = "md", className = "", ...props }) => {
@@ -81,16 +82,108 @@ export const Badge = ({ children, variant = "default", className = "" }) => {
   );
 };
 
-export const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
-  if (!isOpen) return null;
+const _slugifyModalKey = (s) =>
+  String(s || "modal").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+
+export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking = false }) => {
   const sizes = { sm: "max-w-md", md: "max-w-2xl", lg: "max-w-4xl", xl: "max-w-6xl" };
+  const storageKey = `modal-pos:${_slugifyModalKey(typeof title === "string" ? title : "")}`;
+
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
+  );
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, origX: 0, origY: 0 });
+
+  // Track desktop breakpoint live
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 768px)");
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener?.("change", handler);
+    return () => mq.removeEventListener?.("change", handler);
+  }, []);
+
+  // Restore persisted position when (re)opening a draggable modal
+  useEffect(() => {
+    if (!isOpen || blocking || !isDesktop) return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.x === "number" && typeof parsed.y === "number") {
+          setPos({ x: parsed.x, y: parsed.y });
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+    setPos({ x: 0, y: 0 });
+  }, [isOpen, storageKey, blocking, isDesktop]);
+
+  // Global mouse listeners while dragging
+  useEffect(() => {
+    if (!dragging) return;
+    const handleMove = (e) => {
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      setPos({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+    };
+    const handleUp = () => {
+      setDragging(false);
+      setPos((p) => {
+        try { window.localStorage.setItem(storageKey, JSON.stringify(p)); } catch { /* ignore */ }
+        return p;
+      });
+    };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [dragging, storageKey]);
+
+  if (!isOpen) return null;
+
+  const draggable = !blocking && isDesktop;
+
+  const startDrag = (e) => {
+    if (!draggable) return;
+    if (e.target.closest?.("[data-modal-close]")) return;
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
+    setDragging(true);
+    e.preventDefault();
+  };
+
+  const wrapperClass = blocking
+    ? "fixed inset-0 z-50 flex items-center justify-center"
+    : "fixed inset-0 z-50 flex items-center justify-center md:pointer-events-none";
+  const backdropClass = blocking
+    ? "absolute inset-0 bg-black/50"
+    : "absolute inset-0 bg-black/50 md:hidden";
+
+  const boxStyle = draggable ? { transform: `translate(${pos.x}px, ${pos.y}px)` } : undefined;
+  const boxExtra = blocking
+    ? ""
+    : "md:pointer-events-auto md:shadow-2xl md:ring-1 md:ring-border";
+  const headerExtra = draggable ? "md:cursor-grab md:active:cursor-grabbing md:select-none" : "";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={`relative bg-card rounded-sm shadow-lg w-full ${sizes[size]} max-h-[90vh] overflow-auto m-4`}>
-        <div className="flex items-center justify-between p-6 border-b">
+    <div className={wrapperClass} data-testid="modal-root">
+      <div className={backdropClass} onClick={onClose} data-testid="modal-backdrop" />
+      <div
+        className={`relative bg-card rounded-sm shadow-lg w-full ${sizes[size]} max-h-[90vh] overflow-auto m-4 ${boxExtra}`}
+        style={boxStyle}
+        data-testid="modal-box"
+      >
+        <div
+          onMouseDown={startDrag}
+          className={`flex items-center justify-between p-6 border-b ${headerExtra}`}
+          data-testid="modal-header"
+        >
           <h2 className="text-xl font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-sm">
+          <button data-modal-close data-testid="modal-close-btn" onClick={onClose} className="p-2 hover:bg-muted rounded-sm">
             <X className="w-5 h-5" />
           </button>
         </div>

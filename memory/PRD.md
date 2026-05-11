@@ -47,6 +47,15 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 | `monteur_app` | Mobile PWA mit Bildkompression |
 | `routes/portal.py` (legacy) | Kundenportale - heute Datenmasken-fähig gemacht |
 
+## Zuletzt abgeschlossen (11.05.2026)
+
+- **Desktop-Modal draggable + nicht-blockierend (User-Request 09.05.2026):**
+  Zentrale `Modal`-Komponente in `/app/frontend/src/components/common/index.jsx` so erweitert, dass auf Desktop (≥768 px) der Backdrop weg ist (`md:hidden`), der Wrapper `md:pointer-events-none` hat und nur die Modal-Box selbst `md:pointer-events-auto` — Hintergrund (Sidebar, andere Komponenten) bleibt klickbar während ein Modal offen ist. Header bekommt `cursor: grab`, Drag per Maus-Event (clientX/clientY-Delta auf `transform: translate(...)`). Position wird pro Modal-Titel-Slug in `localStorage` (`modal-pos:<slug>`) gemerkt, sodass „Kunde bearbeiten" beim erneuten Öffnen an derselben Stelle erscheint.
+  - Neuer Prop `blocking={true}` (default `false`) für künftige Bestätigungs-Dialoge → altes Verhalten (voller schwarzer Backdrop + Click-zum-Schließen).
+  - Mobil unverändert (kein `md:`-Breakpoint trifft → klassischer Vollbild-Backdrop).
+  - `TrashStartupCheck.jsx` und `KundenLinkExpiryCheck.jsx` benutzen eigene Modal-Implementierungen — nicht betroffen, blieben blockierend (was hier auch richtig ist, weil Passwort-/Aktions-Dialoge).
+  - Smoke-Test via Playwright: Modal-Box gerendert ✓, Backdrop unsichtbar auf Desktop ✓, Sidebar-Click bei offenem Modal navigiert tatsächlich ✓ (`/kunden` → `/projekte`), Drag verschiebt Modal (`transform: translate(300px, 150px)`) ✓, `localStorage` enthält `{"x":300,"y":150}` ✓.
+
 ## Zuletzt abgeschlossen (06.05.2026)
 
 - **Kunden-Seite Crash gefixt** — `KundenModulPage.jsx` rief `KUNDEN_STATUSES` im Listen-Bereich auf, ohne dass die Variable im Hauptcomponent existierte (Refactor-Fehler von vorher). `useTextvorlagen("kunden_status", ...)` ergänzt → Status- und Kategorien-Chips werden jetzt überall live aus `module_textvorlagen` geladen.
