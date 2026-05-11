@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { X, TrendingUp } from "lucide-react";
+import { X, TrendingUp, Minus } from "lucide-react";
+import { useWindowManager } from "@/components/windows/WindowManager";
 
 export const Button = ({ children, variant = "primary", size = "md", className = "", ...props }) => {
   const variants = {
@@ -85,56 +86,146 @@ export const Badge = ({ children, variant = "default", className = "" }) => {
 const _slugifyModalKey = (s) =>
   String(s || "modal").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
 
+let _modalInstanceCounter = 0;
+const MIN_W = 320;
+const MIN_H = 200;
+const SIZE_PRESETS = {
+  sm: { w: 480, max: "max-w-md" },
+  md: { w: 720, max: "max-w-2xl" },
+  lg: { w: 960, max: "max-w-4xl" },
+  xl: { w: 1200, max: "max-w-6xl" },
+};
+
 export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking = false }) => {
-  const sizes = { sm: "max-w-md", md: "max-w-2xl", lg: "max-w-4xl", xl: "max-w-6xl" };
+  const preset = SIZE_PRESETS[size] || SIZE_PRESETS.md;
+  const wm = useWindowManager();
+
+  // Stable instance id per Modal element
+  const instanceIdRef = useRef(null);
+  if (!instanceIdRef.current) {
+    _modalInstanceCounter += 1;
+    instanceIdRef.current = `wnd-${_modalInstanceCounter}`;
+  }
+  const id = instanceIdRef.current;
   const storageKey = `modal-pos:${_slugifyModalKey(typeof title === "string" ? title : "")}`;
 
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
   );
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, origX: 0, origY: 0 });
+
+  // Initial size & position (centered on screen)
+  const computeInitial = () => {
+    if (typeof window === "undefined") return { pos: { x: 0, y: 0 }, box: { w: preset.w, h: 600 } };
+    const w = Math.min(preset.w, window.innerWidth - 80);
+    const h = Math.min(700, Math.max(MIN_H, window.innerHeight - 100));
+    return {
+      pos: { x: Math.max(20, (window.innerWidth - w) / 2), y: Math.max(20, (window.innerHeight - h) / 2) },
+      box: { w, h },
+    };
+  };
+
+  const [pos, setPos] = useState(() => computeInitial().pos);
+  const [box, setBox] = useState(() => computeInitial().box);
+  const [dragMode, setDragMode] = useState(null); // 'move' | 'resize-<dir>'
+  const dragRef = useRef({});
 
   // Track desktop breakpoint live
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(min-width: 768px)");
-    const handler = (e) => setIsDesktop(e.matches);
-    mq.addEventListener?.("change", handler);
-    return () => mq.removeEventListener?.("change", handler);
+    const h = (e) => setIsDesktop(e.matches);
+    mq.addEventListener?.("change", h);
+    return () => mq.removeEventListener?.("change", h);
   }, []);
 
-  // Restore persisted position when (re)opening a draggable modal
+  // Register / unregister with WindowManager (only desktop, non-blocking)
   useEffect(() => {
     if (!isOpen || blocking || !isDesktop) return;
+    const titleStr = typeof title === "string" ? title : "Fenster";
+    wm.register(id, titleStr);
+
+    // Restore persisted pos+size, with viewport clamping
     try {
       const raw = window.localStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed.x === "number" && typeof parsed.y === "number") {
-          setPos({ x: parsed.x, y: parsed.y });
-          return;
+        if (parsed?.box?.w && parsed?.box?.h) {
+          const cw = Math.min(parsed.box.w, window.innerWidth - 40);
+          const ch = Math.min(parsed.box.h, window.innerHeight - 40);
+          setBox({ w: Math.max(MIN_W, cw), h: Math.max(MIN_H, ch) });
+        }
+        if (parsed?.pos && typeof parsed.pos.x === "number") {
+          const cx = Math.min(Math.max(0, parsed.pos.x), window.innerWidth - 200);
+          const cy = Math.min(Math.max(0, parsed.pos.y), window.innerHeight - 100);
+          setPos({ x: cx, y: cy });
         }
       }
     } catch { /* ignore */ }
-    setPos({ x: 0, y: 0 });
-  }, [isOpen, storageKey, blocking, isDesktop]);
 
-  // Global mouse listeners while dragging
+    return () => wm.unregister(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, blocking, isDesktop]);
+
+  // Keep title in sync inside WindowManager (taskbar label)
   useEffect(() => {
-    if (!dragging) return;
+    if (isOpen && !blocking && isDesktop) {
+      wm.setTitle(id, typeof title === "string" ? title : "Fenster");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, isOpen, blocking, isDesktop]);
+
+  // Find my live state in WindowManager
+  const myW = wm.windows.find((w) => w.id === id);
+  const minimized = !!myW?.minimized;
+  const zIndex = myW?.zIndex ?? 100;
+
+  // Global mouse listeners while dragging or resizing
+  useEffect(() => {
+    if (!dragMode) return;
     const handleMove = (e) => {
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
-      setPos({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+      if (dragMode === "move") {
+        setPos({ x: dragRef.current.origPosX + dx, y: dragRef.current.origPosY + dy });
+        return;
+      }
+      if (dragMode.startsWith("resize-")) {
+        const dir = dragMode.slice("resize-".length);
+        let nx = dragRef.current.origPosX;
+        let ny = dragRef.current.origPosY;
+        let nw = dragRef.current.origW;
+        let nh = dragRef.current.origH;
+        if (dir.includes("e")) nw = Math.max(MIN_W, dragRef.current.origW + dx);
+        if (dir.includes("s")) nh = Math.max(MIN_H, dragRef.current.origH + dy);
+        if (dir.includes("w")) {
+          const newW = dragRef.current.origW - dx;
+          if (newW >= MIN_W) {
+            nw = newW;
+            nx = dragRef.current.origPosX + dx;
+          } else {
+            nw = MIN_W;
+            nx = dragRef.current.origPosX + (dragRef.current.origW - MIN_W);
+          }
+        }
+        if (dir.includes("n")) {
+          const newH = dragRef.current.origH - dy;
+          if (newH >= MIN_H) {
+            nh = newH;
+            ny = dragRef.current.origPosY + dy;
+          } else {
+            nh = MIN_H;
+            ny = dragRef.current.origPosY + (dragRef.current.origH - MIN_H);
+          }
+        }
+        setBox({ w: nw, h: nh });
+        setPos({ x: nx, y: ny });
+      }
     };
     const handleUp = () => {
-      setDragging(false);
-      setPos((p) => {
-        try { window.localStorage.setItem(storageKey, JSON.stringify(p)); } catch { /* ignore */ }
-        return p;
-      });
+      setDragMode(null);
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify({ pos, box }));
+      } catch { /* ignore */ }
     };
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
@@ -142,53 +233,110 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [dragging, storageKey]);
+  }, [dragMode, storageKey, pos, box]);
 
   if (!isOpen) return null;
 
-  const draggable = !blocking && isDesktop;
+  // === Mobile or explicit blocking → classic full-screen modal ===
+  if (!isDesktop || blocking) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center" data-testid="modal-root">
+        <div className="absolute inset-0 bg-black/50" onClick={onClose} data-testid="modal-backdrop" />
+        <div
+          className={`relative bg-card rounded-sm shadow-lg w-full ${preset.max} max-h-[90vh] overflow-auto m-4`}
+          data-testid="modal-box"
+        >
+          <div className="flex items-center justify-between p-6 border-b">
+            <h2 className="text-xl font-semibold">{title}</h2>
+            <button data-modal-close data-testid="modal-close-btn" onClick={onClose} className="p-2 hover:bg-muted rounded-sm">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-6">{children}</div>
+        </div>
+      </div>
+    );
+  }
 
-  const startDrag = (e) => {
-    if (!draggable) return;
-    if (e.target.closest?.("[data-modal-close]")) return;
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
-    setDragging(true);
+  // === Desktop floating window ===
+  const startMove = (e) => {
+    if (e.target.closest?.("[data-modal-control]")) return;
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origPosX: pos.x, origPosY: pos.y };
+    setDragMode("move");
+    wm.bringToFront(id);
     e.preventDefault();
   };
 
-  const wrapperClass = blocking
-    ? "fixed inset-0 z-50 flex items-center justify-center"
-    : "fixed inset-0 z-50 flex items-center justify-center md:pointer-events-none";
-  const backdropClass = blocking
-    ? "absolute inset-0 bg-black/50"
-    : "absolute inset-0 bg-black/50 md:hidden";
-
-  const boxStyle = draggable ? { transform: `translate(${pos.x}px, ${pos.y}px)` } : undefined;
-  const boxExtra = blocking
-    ? ""
-    : "md:pointer-events-auto md:shadow-2xl md:ring-1 md:ring-border";
-  const headerExtra = draggable ? "md:cursor-grab md:active:cursor-grabbing md:select-none" : "";
+  const startResize = (dir) => (e) => {
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origPosX: pos.x,
+      origPosY: pos.y,
+      origW: box.w,
+      origH: box.h,
+    };
+    setDragMode(`resize-${dir}`);
+    wm.bringToFront(id);
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   return (
-    <div className={wrapperClass} data-testid="modal-root">
-      <div className={backdropClass} onClick={onClose} data-testid="modal-backdrop" />
+    <div
+      onMouseDown={() => wm.bringToFront(id)}
+      className="fixed bg-card rounded-sm shadow-2xl ring-1 ring-border flex flex-col overflow-hidden"
+      style={{
+        left: pos.x,
+        top: pos.y,
+        width: box.w,
+        height: box.h,
+        zIndex,
+        display: minimized ? "none" : "flex",
+      }}
+      data-testid="modal-box"
+      data-modal-id={id}
+    >
+      {/* Header */}
       <div
-        className={`relative bg-card rounded-sm shadow-lg w-full ${sizes[size]} max-h-[90vh] overflow-auto m-4 ${boxExtra}`}
-        style={boxStyle}
-        data-testid="modal-box"
+        onMouseDown={startMove}
+        onDoubleClick={() => wm.setMinimized(id, true)}
+        className="flex items-center justify-between px-4 py-3 border-b cursor-grab active:cursor-grabbing select-none bg-card shrink-0"
+        data-testid="modal-header"
       >
-        <div
-          onMouseDown={startDrag}
-          className={`flex items-center justify-between p-6 border-b ${headerExtra}`}
-          data-testid="modal-header"
-        >
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <button data-modal-close data-testid="modal-close-btn" onClick={onClose} className="p-2 hover:bg-muted rounded-sm">
-            <X className="w-5 h-5" />
+        <h2 className="text-lg font-semibold truncate pr-4">{title}</h2>
+        <div className="flex items-center gap-1 shrink-0" data-modal-control>
+          <button
+            data-testid="modal-minimize-btn"
+            onClick={() => wm.setMinimized(id, true)}
+            className="p-2 hover:bg-muted rounded-sm"
+            title="Minimieren"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button
+            data-modal-close
+            data-testid="modal-close-btn"
+            onClick={onClose}
+            className="p-2 hover:bg-muted rounded-sm"
+            title="Schließen"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
       </div>
+      {/* Body */}
+      <div className="flex-1 overflow-auto p-6">{children}</div>
+
+      {/* Resize handles (edges + corners) */}
+      <div data-testid="resize-n" onMouseDown={startResize("n")} className="absolute top-0 left-2 right-2 h-1.5 cursor-n-resize" />
+      <div data-testid="resize-s" onMouseDown={startResize("s")} className="absolute bottom-0 left-2 right-2 h-1.5 cursor-s-resize" />
+      <div data-testid="resize-w" onMouseDown={startResize("w")} className="absolute top-2 bottom-2 left-0 w-1.5 cursor-w-resize" />
+      <div data-testid="resize-e" onMouseDown={startResize("e")} className="absolute top-2 bottom-2 right-0 w-1.5 cursor-e-resize" />
+      <div data-testid="resize-nw" onMouseDown={startResize("nw")} className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize" />
+      <div data-testid="resize-ne" onMouseDown={startResize("ne")} className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize" />
+      <div data-testid="resize-sw" onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize" />
+      <div data-testid="resize-se" onMouseDown={startResize("se")} className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize" />
     </div>
   );
 };

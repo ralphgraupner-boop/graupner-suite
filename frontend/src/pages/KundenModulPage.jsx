@@ -76,8 +76,7 @@ const KundenModulPage = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("aktiv");
-  const [showModal, setShowModal] = useState(false);
-  const [editKunde, setEditKunde] = useState(null);
+  const [openEdits, setOpenEdits] = useState([]); // mehrere "Kunde bearbeiten"-Fenster parallel
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [vcfUploading, setVcfUploading] = useState(false);
@@ -108,8 +107,7 @@ const KundenModulPage = () => {
       if (k) {
         // Status auf "alle" stellen, damit der neue Kunde sicher sichtbar ist
         setStatusFilter("alle");
-        setEditKunde(k);
-        setShowModal(true);
+        openEditFor(k);
         // edit-Param aus URL entfernen, damit Refresh nicht erneut öffnet
         const cleaned = new URLSearchParams(location.search);
         cleaned.delete("edit");
@@ -119,6 +117,24 @@ const KundenModulPage = () => {
   }, [location.search, kunden]);  // eslint-disable-line
 
   useEffect(() => { loadKunden(); loadLinkCounts(); }, []);
+
+  // Multi-Window Helper: öffnet weiteres "Kunde bearbeiten"-Fenster (Dedupe per kunde.id)
+  const openEditFor = (kunde) => {
+    setOpenEdits((prev) => {
+      if (kunde && kunde.id && prev.some((k) => k && k.id === kunde.id)) return prev;
+      const entry = kunde || { __new: true, __key: `_new_${Date.now()}_${Math.random()}` };
+      return [...prev, entry];
+    });
+  };
+  const closeEditFor = (target) => {
+    setOpenEdits((prev) =>
+      prev.filter((k) => {
+        if (target?.id) return k?.id !== target.id;
+        if (target?.__key) return k?.__key !== target.__key;
+        return false;
+      })
+    );
+  };
 
   const loadKunden = async () => {
     try {
@@ -280,7 +296,7 @@ const KundenModulPage = () => {
           <Button
             size="sm"
             className="lg:h-10 lg:px-4 ml-auto lg:ml-0 flex-shrink-0"
-            onClick={() => { setEditKunde(null); setShowModal(true); }}
+            onClick={() => openEditFor(null)}
             data-testid="btn-new-kunden-modul"
           >
             <Plus className="w-4 h-4" /> Neuer Kunde
@@ -441,7 +457,7 @@ const KundenModulPage = () => {
                         <span className="absolute -top-1 -right-1 text-[9px] bg-emerald-600 text-white rounded-full px-1 leading-tight min-w-[16px] text-center">{projektCounts[kunde.id]}</span>
                       )}
                     </button>
-                    <button onClick={() => { setEditKunde(kunde); setShowModal(true); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>
+                    <button onClick={() => openEditFor(kunde)} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>
                     <button onClick={() => handleDelete(kunde)} className="p-2 rounded-sm hover:bg-destructive/10 text-red-600" title="Kunde sicher löschen (mit Vorab-Backup)" data-testid={`btn-kunde-delete-${kunde.id}`}>
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -576,7 +592,7 @@ const KundenModulPage = () => {
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-                      <Button size="sm" onClick={() => { setEditKunde(kunde); setShowModal(true); }}><Edit className="w-4 h-4" /> Bearbeiten</Button>
+                      <Button size="sm" onClick={() => openEditFor(kunde)}><Edit className="w-4 h-4" /> Bearbeiten</Button>
                       <Button
                         size="sm"
                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -676,7 +692,15 @@ const KundenModulPage = () => {
       )}
 
       {/* Create/Edit Modal */}
-      <KundenFormModal isOpen={showModal} onClose={() => setShowModal(false)} kunde={editKunde} onSave={() => { setShowModal(false); setEditKunde(null); loadKunden(); }} />
+      {openEdits.map((k) => (
+        <KundenFormModal
+          key={k?.id || k?.__key}
+          isOpen={true}
+          kunde={k && !k.__new ? k : null}
+          onClose={() => closeEditFor(k)}
+          onSave={() => { closeEditFor(k); loadKunden(); }}
+        />
+      ))}
 
       {/* Kontakt-Import Modal */}
       <KontaktImportModal isOpen={showKontaktImport} onClose={() => setShowKontaktImport(false)} onImported={() => { setShowKontaktImport(false); loadKunden(); }} />
@@ -687,7 +711,7 @@ const KundenModulPage = () => {
           title={`Kunde aus "${vcfDuplicateDialog.filename}" koennte bereits existieren`}
           duplicates={vcfDuplicateDialog.duplicates}
           onCancel={() => setVcfDuplicateDialog(null)}
-          onOpen={(id) => { setVcfDuplicateDialog(null); setEditKunde(kunden.find(k => k.id === id)); setShowModal(true); }}
+          onOpen={(id) => { setVcfDuplicateDialog(null); const k = kunden.find(x => x.id === id); if (k) openEditFor(k); }}
           onForce={vcfDuplicateDialog.retry}
           loading={vcfUploading}
         />

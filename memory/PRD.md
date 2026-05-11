@@ -49,12 +49,24 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 
 ## Zuletzt abgeschlossen (11.05.2026)
 
-- **Desktop-Modal draggable + nicht-blockierend (User-Request 09.05.2026):**
-  Zentrale `Modal`-Komponente in `/app/frontend/src/components/common/index.jsx` so erweitert, dass auf Desktop (≥768 px) der Backdrop weg ist (`md:hidden`), der Wrapper `md:pointer-events-none` hat und nur die Modal-Box selbst `md:pointer-events-auto` — Hintergrund (Sidebar, andere Komponenten) bleibt klickbar während ein Modal offen ist. Header bekommt `cursor: grab`, Drag per Maus-Event (clientX/clientY-Delta auf `transform: translate(...)`). Position wird pro Modal-Titel-Slug in `localStorage` (`modal-pos:<slug>`) gemerkt, sodass „Kunde bearbeiten" beim erneuten Öffnen an derselben Stelle erscheint.
-  - Neuer Prop `blocking={true}` (default `false`) für künftige Bestätigungs-Dialoge → altes Verhalten (voller schwarzer Backdrop + Click-zum-Schließen).
-  - Mobil unverändert (kein `md:`-Breakpoint trifft → klassischer Vollbild-Backdrop).
-  - `TrashStartupCheck.jsx` und `KundenLinkExpiryCheck.jsx` benutzen eigene Modal-Implementierungen — nicht betroffen, blieben blockierend (was hier auch richtig ist, weil Passwort-/Aktions-Dialoge).
-  - Smoke-Test via Playwright: Modal-Box gerendert ✓, Backdrop unsichtbar auf Desktop ✓, Sidebar-Click bei offenem Modal navigiert tatsächlich ✓ (`/kunden` → `/projekte`), Drag verschiebt Modal (`transform: translate(300px, 150px)`) ✓, `localStorage` enthält `{"x":300,"y":150}` ✓.
+- **Floating-Windows (Variante C — Vollausbau, Ralph 11.05.2026):**
+  Echte Multi-Instance-Fenster für ALLE Modals aus `components/common/index.jsx`. Zentrale Komponenten:
+  - **`/components/windows/WindowManager.jsx`**: React-Context-Provider mit `register/unregister/bringToFront/setMinimized/setTitle`, hält Liste offener Fenster mit Z-Index. Rendert `FloatingTaskBar` unten am Bildschirmrand (`fixed bottom-3 left-1/2 -translate-x-1/2 z-[200]`, `hidden md:flex`) — zeigt alle minimierten Fenster als Buttons mit Titel; Klick stellt Fenster wieder her und holt es nach vorn.
+  - **`Modal` refactored** (`components/common/index.jsx`):
+    - Stabile Instanz-ID pro Modal-Render (`wnd-<n>`). Registriert sich beim Manager bei `isOpen=true`, deregistriert bei `false`.
+    - Desktop (`md:`): `position: fixed` mit individuellem `left/top/width/height/zIndex`. Initial zentriert, persistiert pro Titel-Slug in `localStorage` (`modal-pos:<slug>` → `{pos, box}`), beim Restore Viewport-Clamping.
+    - **Drag**: Header `cursor: grab`, Maus-Drag verschiebt das Fenster. Doppelklick auf Header minimiert.
+    - **Resize**: 8 unsichtbare Handles (4 Kanten + 4 Ecken) mit korrekten `cursor-{n,s,e,w,ne,nw,se,sw}-resize`. Min-Größe 320×200.
+    - **Minimize/Close**: zwei Buttons (`Minus`/`X` Icons) im Header. Minimierte Fenster bleiben gemountet (`display:none`), behalten Formular-State.
+    - **Z-Stack**: jeder `mousedown` auf dem Fenster ruft `bringToFront(id)` → höchste `zIndex`-Counter; Manager-State steuert Reihenfolge.
+    - Mobile / `blocking=true`: unverändert klassischer Vollbild-Backdrop, kein Drag/Resize.
+  - **Multi-Instance „Kunde bearbeiten"** (`KundenModulPage.jsx`): `editKunde`/`showModal` (Single-State) durch `openEdits` (Array) ersetzt. Helper `openEditFor(kunde)`/`closeEditFor(target)`. Dedupe per `kunde.id`, neue Kunden bekommen `__key`. Multiple `<KundenFormModal>` werden via `.map` parallel gerendert. Bedeutet: Ralph kann jetzt Kunde A und Kunde B gleichzeitig bearbeiten.
+  - **`WindowManagerProvider`** in `App.js` zwischen `HelpProvider` und `BrowserRouter` eingehängt → globaler State.
+  - **Bestehende eigene Modal-Implementierungen** (`TrashStartupCheck`, `KundenLinkExpiryCheck`, `MailDetailModal` usw.) sind NICHT vom Refactor betroffen — sie blieben unverändert (Bestätigungs-Dialoge bleiben blockierend, was korrekt ist).
+  - **E2E-Smoke (Playwright):** 2 Fenster parallel ✓, Resize SE-Eck 960×700 → 1159×849 ✓, Minimize → Taskbar mit 1 Eintrag „Kunde bearbeiten" sichtbar ✓, Restore via Taskbar → `display:flex` zurück ✓, Z-Stack bei Klick ✓ (107 → 111), Position+Größe in `localStorage` persistent ✓.
+  - **Bekannt:** Wenn ein Fenster sehr groß resized wird, kann es Sidebar/Hintergrund-Elemente überdecken — Lösung: Fenster verschieben oder minimieren. Mehr-Monitor-Setups: Fenster bleiben im Browser-Viewport (kein OS-Window-Detach).
+
+- **Vorher (heute morgen, jetzt obsolet):** Erste, halbe Variante (Drag + transparenter Backdrop) wurde durch Vollausbau Variante C ersetzt.
 
 ## Zuletzt abgeschlossen (06.05.2026)
 

@@ -56,6 +56,7 @@ import { HealthBanner } from "@/components/HealthBanner";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import TrashStartupCheck from "@/components/TrashStartupCheck";
 import KundenLinkExpiryCheck from "@/components/KundenLinkExpiryCheck";
+import { WindowManagerProvider } from "@/components/windows/WindowManager";
 import { detectAppEnv } from "@/lib/env";
 
 const MainLayout = ({ children, onLogout }) => {
@@ -98,6 +99,7 @@ function App() {
     <div className="App">
       <Toaster position="top-right" richColors />
       <HelpProvider>
+      <WindowManagerProvider>
       <BrowserRouter>
         <Routes>
           {/* Kundenportal (oeffentlich) */}
@@ -180,6 +182,7 @@ function App() {
           )}
         </Routes>
       </BrowserRouter>
+      </WindowManagerProvider>
       </HelpProvider>
     </div>
   );
