@@ -21,7 +21,10 @@ import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
 // Hartcodierte Liste = Fallback wenn das Textvorlagen-Modul gerade nicht
 // antwortet. Pflege erfolgt im UI: Einstellungen → Textvorlagen → "Kunden-Status".
 // (Pflicht-Regel seit 06.05.2026, siehe VISION.md / AGENT_BRIEFING.md)
+// Default-Listen kommen aus module_textvorlagen — werden überschrieben sobald die API antwortet.
 const KUNDEN_STATUSES_FALLBACK = ["Anfrage", "Neu", "Interessent", "Kunde", "In Bearbeitung", "Aufmaß", "Angebot", "Auftrag", "Abgeschlossen", "Archiv"];
+const ANREDEN_FALLBACK = ["Herr", "Frau", "Divers"];
+const CUSTOMER_TYPES_FALLBACK = ["Privat", "Firma", "Vermieter", "Mieter", "Gewerblich", "Hausverwaltung"];
 const KUNDEN_KATEGORIEN_FALLBACK = ["Schiebetür", "Fenster", "Innentür", "Eingangstür", "Sonstige Reparaturen"];
 
 // useTextvorlagen-Hook — lädt Werte live aus module_textvorlagen
@@ -776,6 +779,8 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
   const KUNDEN_KATEGORIEN = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
+  const ANREDEN = useTextvorlagen("anrede", ANREDEN_FALLBACK);
+  const CUSTOMER_TYPES = useTextvorlagen("kunden_typ", CUSTOMER_TYPES_FALLBACK);
 
   useEffect(() => {
     if (kunde) {
@@ -860,15 +865,30 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
       <form onSubmit={handleSubmit} className="space-y-4" data-testid="kunden-modul-form">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Anrede</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium">Anrede</label>
+              <TextvorlagenInlineManager
+                docType="anrede"
+                label="Anreden"
+                onChanged={() => window.dispatchEvent(new CustomEvent("textvorlagen-changed", { detail: { docType: "anrede" } }))}
+              />
+            </div>
             <select value={form.anrede || ""} onChange={e => setForm({ ...form, anrede: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
-              <option value="">Bitte waehlen</option><option value="Herr">Herr</option><option value="Frau">Frau</option><option value="Divers">Divers</option>
+              <option value="">Bitte waehlen</option>
+              {ANREDEN.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Kundentyp</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium">Kundentyp</label>
+              <TextvorlagenInlineManager
+                docType="kunden_typ"
+                label="Kundentypen"
+                onChanged={() => window.dispatchEvent(new CustomEvent("textvorlagen-changed", { detail: { docType: "kunden_typ" } }))}
+              />
+            </div>
             <select value={form.customer_type || "Privat"} onChange={e => setForm({ ...form, customer_type: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
-              <option value="Privat">Privat</option><option value="Firma">Firma</option><option value="Vermieter">Vermieter</option><option value="Mieter">Mieter</option><option value="Gewerblich">Gewerblich</option><option value="Hausverwaltung">Hausverwaltung</option>
+              {CUSTOMER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>
@@ -898,7 +918,14 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Status</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">Status</label>
+            <TextvorlagenInlineManager
+              docType="kunden_status"
+              label="Kunden-Status"
+              onChanged={() => window.dispatchEvent(new CustomEvent("textvorlagen-changed", { detail: { docType: "kunden_status" } }))}
+            />
+          </div>
           <select
             value={form.status || "Neu"}
             onChange={e => {

@@ -6,13 +6,13 @@ from uuid import uuid4
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "anrede", "allgemein", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie", "projekt_titel"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "kunden_typ", "anrede", "allgemein", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie", "projekt_titel"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht", "abschluss_grund"]
 
 # Doc-Types, deren Eintrag selbst eine Auswahl-Option ist (Titel = Wert).
 # Für diese darf der Match-Endpoint keywords-Vorschläge liefern.
 SELECTION_DOC_TYPES = {
-    "kunden_status", "kunden_kategorie", "anrede", "aufgaben_kategorie",
+    "kunden_status", "kunden_kategorie", "kunden_typ", "anrede", "aufgaben_kategorie",
     "abschlussgrund", "reparaturgruppe", "material", "prioritaet",
     "bild_kategorie", "projekt_status", "projekt_kategorie",
     "projekt_bild_kategorie", "projekt_titel",
@@ -620,6 +620,41 @@ STANDARD_PROJEKT_BILD_KATEGORIEN = [
     {"title": "vorher"}, {"title": "schaden"},
     {"title": "nachher"}, {"title": "sonstiges"},
 ]
+
+
+STANDARD_ANREDEN = [{"title": "Herr"}, {"title": "Frau"}, {"title": "Divers"}]
+STANDARD_KUNDEN_TYPEN = [
+    {"title": "Privat"}, {"title": "Firma"}, {"title": "Vermieter"},
+    {"title": "Mieter"}, {"title": "Gewerblich"}, {"title": "Hausverwaltung"},
+]
+
+
+@router.post("/modules/textvorlagen/seed-kunden-auswahl")
+async def seed_kunden_auswahl(user=Depends(get_current_user)):
+    """Idempotenter Seed für Anrede + Kundentyp.
+    Wird selten manuell aufgerufen; eher beim Initial-Setup oder nach Upgrade.
+    Bestehende Einträge werden nicht überschrieben."""
+    await ensure_modul_registered()
+    now = datetime.now(timezone.utc).isoformat()
+    inserted, skipped = 0, 0
+    for doc_type, items in [("anrede", STANDARD_ANREDEN), ("kunden_typ", STANDARD_KUNDEN_TYPEN)]:
+        for v in items:
+            ex = await db.module_textvorlagen.find_one({"title": v["title"], "doc_type": doc_type})
+            if ex:
+                skipped += 1
+                continue
+            await db.module_textvorlagen.insert_one({
+                "id": str(uuid4()),
+                "title": v["title"],
+                "content": "",
+                "doc_type": doc_type,
+                "text_type": "titel",
+                "keywords": [],
+                "created_at": now,
+                "updated_at": now,
+            })
+            inserted += 1
+    return {"inserted": inserted, "skipped": skipped}
 
 
 @router.post("/modules/textvorlagen/seed-projekt")

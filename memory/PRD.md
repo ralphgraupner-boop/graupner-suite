@@ -191,6 +191,10 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
     - In jeder Kundenzeile zusätzliches `+`-Icon „Neues Projekt" (öffnet Dialog ohne Werkbank-Umweg). Folder-Icon zeigt Projekt-Anzahl als Badge.
     - In der ausgeklappten Detail-Ansicht zwei Buttons getrennt: grünes „Neues Projekt" + outline „Werkbank (n)".
   - Neuer Backend-Endpoint `GET /api/module-projekte/counts-by-kunde` (Aggregation) für die Badges.
+- **Inline-Verwaltung von Auswahllisten (08.05.2026):** Wiederverwendbare Komponente `components/TextvorlagenInlineManager.jsx`. Zeigt ein „⚙ verwalten"-Icon neben einem Auswahl-Feld; Klick öffnet kompaktes Modal mit CRUD-Liste (anlegen / umbenennen / löschen) direkt gegen `module_textvorlagen`. Nach jeder Mutation feuert ein globales `textvorlagen-changed`-Event, alle `useTextvorlagen`-Hooks reloaden automatisch.
+  - In `KundenModulPage.jsx` an 4 Stellen eingebaut: Anrede, Kundentyp, Status, Kategorien. Hardcoded `<option>`-Listen für Anrede und Kundentyp entfernt — alle vier Felder beziehen ihre Werte jetzt aus `module_textvorlagen`.
+  - Neuer Doc-Type `kunden_typ` + idempotenter Seed `POST /api/modules/textvorlagen/seed-kunden-auswahl` (Standard-Anreden + Standard-Kundentypen).
+  - Wiederverwendbar für jeden weiteren `doc_type` (Aufgaben-Kategorie, Reparaturgruppe, Material, Projekt-Status, …) ohne neuen Code.
 - **Bug-Fix Projekt-Bilder klickbar (08.05.2026):** Bild-`url` enthält den relativen Storage-Pfad (`module_projekte/<id>/...`); ohne `/api/`-Prefix fing React Router den Pfad ab und zeigte das Dashboard. Lösung:
   - Neuer Auth-pflichtiger Endpoint `GET /api/module-projekte/files/{path:path}` schiebt Bytes aus dem Object-Storage durch (mit Pfad-Whitelist auf `module_projekte/` und Path-Traversal-Schutz).
   - Neue Komponente `components/ProjektBild.jsx`: lädt das Bild als Blob via `axios responseType:"blob"` + `URL.createObjectURL`. Klick öffnet eine schlanke Lightbox (ESC schließt, Body-Scroll-Lock, mobil-tauglich) — kein neuer Tab mehr.
