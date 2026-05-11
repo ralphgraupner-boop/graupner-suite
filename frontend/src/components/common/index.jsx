@@ -286,6 +286,22 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
 
   if (!isOpen) return null;
 
+  // === Inside a /popup/* browser window → fill the entire window ===
+  const isInPopupWindow = typeof window !== "undefined" && window.location?.pathname?.startsWith("/popup/");
+  if (isInPopupWindow) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-card" data-testid="modal-root">
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+          <h2 className="text-xl font-semibold">{title}</h2>
+          <button data-modal-close data-testid="modal-close-btn" onClick={onClose} className="p-2 hover:bg-muted rounded-sm" title="Fenster schließen">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-6" data-testid="modal-box">{children}</div>
+      </div>
+    );
+  }
+
   // === Mobile or explicit blocking → classic full-screen modal ===
   if (!isDesktop || blocking) {
     return (

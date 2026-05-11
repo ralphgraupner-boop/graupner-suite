@@ -94,6 +94,8 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
       3) `popoutUrl` in Caller-Komponente setzen
       4) `broadcast(<event>, …)` nach Save + entsprechende `useBroadcast`-Listener in Listen-Pages
 
+  - **Pop-Out Fix (11.05.2026): Popup-Inhalt füllt jetzt das gesamte Fenster.** Zuvor renderte das Modal im Popup-Browserfenster weiterhin im Floating-Modus → „Fenster-im-Fenster"-Optik (Ralph per Video gemeldet). Lösung: `Modal` erkennt jetzt automatisch `window.location.pathname.startsWith("/popup/")` und rendert in dem Fall im **Full-Window-Modus**: `fixed inset-0`, kein Backdrop, kein Drag/Resize, kein Minimize-/Pop-Out-Button, nur Titel + Schließen. Playwright: `modal-root` füllt 980×800 Popup vollständig, Backdrop/Resize/Minimize alle weg ✓.
+
 ## Zuletzt abgeschlossen (06.05.2026)
 
 - **Kunden-Seite Crash gefixt** — `KundenModulPage.jsx` rief `KUNDEN_STATUSES` im Listen-Bereich auf, ohne dass die Variable im Hauptcomponent existierte (Refactor-Fehler von vorher). `useTextvorlagen("kunden_status", ...)` ergänzt → Status- und Kategorien-Chips werden jetzt überall live aus `module_textvorlagen` geladen.
