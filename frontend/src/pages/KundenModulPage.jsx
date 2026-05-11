@@ -16,6 +16,7 @@ import MailHistoryModal from "@/components/MailHistoryModal";
 import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog from "@/components/NewProjektDialog";
+import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
 
 // Hartcodierte Liste = Fallback wenn das Textvorlagen-Modul gerade nicht
 // antwortet. Pflege erfolgt im UI: Einstellungen → Textvorlagen → "Kunden-Status".
@@ -25,8 +26,18 @@ const KUNDEN_KATEGORIEN_FALLBACK = ["Schiebetür", "Fenster", "Innentür", "Eing
 
 // useTextvorlagen-Hook — lädt Werte live aus module_textvorlagen
 // und fällt bei Fehler/Leerantwort auf Default-Liste zurück.
+// Lauscht auf window-Event 'textvorlagen-changed' und lädt automatisch neu,
+// wenn der TextvorlagenInlineManager etwas geändert hat.
 const useTextvorlagen = (docType, fallback) => {
   const [items, setItems] = useState(fallback);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const onChanged = (e) => {
+      if (!e?.detail?.docType || e.detail.docType === docType) setTick(t => t + 1);
+    };
+    window.addEventListener("textvorlagen-changed", onChanged);
+    return () => window.removeEventListener("textvorlagen-changed", onChanged);
+  }, [docType]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -36,13 +47,13 @@ const useTextvorlagen = (docType, fallback) => {
           .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || (a.title || "").localeCompare(b.title || ""))
           .map((t) => t.title)
           .filter(Boolean);
-        if (!cancelled && titles.length > 0) setItems(titles);
+        if (!cancelled) setItems(titles.length > 0 ? titles : fallback);
       } catch {
         // Fallback bleibt aktiv
       }
     })();
     return () => { cancelled = true; };
-  }, [docType]);
+  }, [docType, tick]);  // eslint-disable-line react-hooks/exhaustive-deps
   return items;
 };
 
@@ -873,7 +884,14 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
           <div><label className="block text-sm font-medium mb-2">Telefon</label><Input value={form.phone || ""} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Kategorien</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">Kategorien</label>
+            <TextvorlagenInlineManager
+              docType="kunden_kategorie"
+              label="Kunden-Kategorien"
+              onChanged={() => window.dispatchEvent(new CustomEvent("textvorlagen-changed", { detail: { docType: "kunden_kategorie" } }))}
+            />
+          </div>
           <div className="flex flex-wrap gap-2">
             {KUNDEN_KATEGORIEN.map(cat => (<button key={cat} type="button" onClick={() => { const cats = (form.categories || []).includes(cat) ? form.categories.filter(c => c !== cat) : [...(form.categories || []), cat]; setForm({ ...form, categories: cats }); }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${(form.categories || []).includes(cat) ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input"}`}>{cat}</button>))}
