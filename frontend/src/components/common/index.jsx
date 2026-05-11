@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, TrendingUp, Minus } from "lucide-react";
+import { X, TrendingUp, Minus, ExternalLink } from "lucide-react";
 import { useWindowManager } from "@/components/windows/WindowManager";
 
 export const Button = ({ children, variant = "primary", size = "md", className = "", ...props }) => {
@@ -126,7 +126,7 @@ const _detectSnap = (clientX, clientY) => {
   return null;
 };
 
-export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking = false }) => {
+export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking = false, popoutUrl = null }) => {
   const preset = SIZE_PRESETS[size] || SIZE_PRESETS.md;
   const wm = useWindowManager();
 
@@ -347,6 +347,24 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
 
   const snapPreview = snapHint ? _snapRect(snapHint) : null;
 
+  const handlePopout = () => {
+    if (!popoutUrl || typeof window === "undefined") return;
+    const w = 980;
+    const h = 800;
+    // Open at center of CURRENT screen (multi-monitor friendly via screenX/screenY)
+    const left = (window.screenX || 0) + Math.max(0, (window.outerWidth - w) / 2);
+    const top = (window.screenY || 0) + Math.max(0, (window.outerHeight - h) / 2);
+    const features = `popup=yes,width=${w},height=${h},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=yes`;
+    const popup = window.open(popoutUrl, `_graupner_popup_${id}`, features);
+    if (popup) {
+      // Close current in-app modal once popup is open
+      onClose?.();
+    } else {
+      // Popup-Blocker
+      try { window.alert("Bitte Popup-Blocker für diese Seite erlauben."); } catch { /* ignore */ }
+    }
+  };
+
   return (
     <>
     {snapPreview && (
@@ -385,6 +403,16 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
       >
         <h2 className="text-lg font-semibold truncate pr-4">{title}</h2>
         <div className="flex items-center gap-1 shrink-0" data-modal-control>
+          {popoutUrl && (
+            <button
+              data-testid="modal-popout-btn"
+              onClick={handlePopout}
+              className="p-2 hover:bg-muted rounded-sm"
+              title="Auf eigenes Fenster (anderer Monitor)"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          )}
           <button
             data-testid="modal-minimize-btn"
             onClick={() => wm.setMinimized(id, true)}

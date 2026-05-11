@@ -17,6 +17,7 @@ import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog from "@/components/NewProjektDialog";
 import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
+import { broadcast, useBroadcast } from "@/lib/windowSync";
 
 // Hartcodierte Liste = Fallback wenn das Textvorlagen-Modul gerade nicht
 // antwortet. Pflege erfolgt im UI: Einstellungen → Textvorlagen → "Kunden-Status".
@@ -117,6 +118,9 @@ const KundenModulPage = () => {
   }, [location.search, kunden]);  // eslint-disable-line
 
   useEffect(() => { loadKunden(); loadLinkCounts(); }, []);
+
+  // Live-Sync mit Pop-Out-Fenstern: nach Speichern dort Liste hier neu laden
+  useBroadcast("kunden-changed", () => { loadKunden(); loadLinkCounts(); });
 
   // Multi-Window Helper: öffnet weiteres "Kunde bearbeiten"-Fenster (Dedupe per kunde.id)
   const openEditFor = (kunde) => {
@@ -795,7 +799,7 @@ const DuplicateDialog = ({ title, duplicates, onCancel, onOpen, onForce, loading
 // ==================== KUNDEN FORM MODAL ====================
 const ABSCHLUSS_STATES = ["Abgeschlossen", "Archiv"];
 
-const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
+const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true }) => {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -852,6 +856,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
         await api.post(`/modules/kunden/data/${kundeId}/upload`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       }
       setDuplicateDialog(null);
+      broadcast("kunden-changed", { kundeId });
       onSave();
     } catch (err) {
       // Duplikat-Konflikt (nur bei Neu-Anlegen)
@@ -876,8 +881,10 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave }) => {
     setSelectedFiles(prev => [...prev, ...files].slice(0, 10));
   };
 
+  const popoutUrl = popoutEnabled && kunde?.id ? `/popup/kunde/${kunde.id}` : (popoutEnabled && !kunde ? "/popup/kunde/new" : null);
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={kunde ? "Kunde bearbeiten" : "Neuer Kunde"} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={kunde ? "Kunde bearbeiten" : "Neuer Kunde"} size="lg" popoutUrl={popoutUrl}>
       {duplicateDialog && (
         <DuplicateDialog
           duplicates={duplicateDialog.duplicates}
@@ -1146,7 +1153,7 @@ const KontaktImportModal = ({ isOpen, onClose, onImported }) => {
   );
 };
 
-export { KundenModulPage };
+export { KundenModulPage, KundenFormModal };
 
 
 // ==================== CUSTOMER DOCUMENTS PANEL ====================

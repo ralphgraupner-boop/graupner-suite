@@ -37,6 +37,7 @@ import { PortalV4DetailPage } from "@/pages/portal_v4/PortalV4DetailPage";
 import { PortalV4LoginPage } from "@/pages/portal_v4/PortalV4LoginPage";
 import KundenLinkPage from "@/pages/KundenLinkPage";
 import { PortalV4CustomerPage } from "@/pages/portal_v4/PortalV4CustomerPage";
+import PopupShell from "@/pages/PopupShell";
 import { MonteurAppPage } from "@/pages/monteur_app/MonteurAppPage";
 import { MonteurEinsatzDetailPage } from "@/pages/monteur_app/MonteurEinsatzDetailPage";
 import { HandyZugangPage } from "@/pages/handy_zugang/HandyZugangPage";
@@ -124,6 +125,10 @@ function App() {
             <>
               {/* Dashboard */}
               <Route path="/dashboard" element={<MainLayout onLogout={logout}><DashboardPage /></MainLayout>} />
+
+              {/* Pop-Out-Fenster (eigene Browser-Fenster, ohne Sidebar — multi-monitor) */}
+              <Route path="/popup/:type/:id" element={<PopupShell />} />
+              <Route path="/popup/:type" element={<PopupShell />} />
 
               {/* Module */}
               <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />

@@ -80,6 +80,20 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
     - Helper `_snapRect(mode)`, `_detectSnap(x, y)`, `_sidebarOffset()` zentralisiert in `common/index.jsx`.
     - Playwright-Test: Snap-Vorschau sichtbar ✓, Snap-LEFT exakt {x:256, y:0, w:832, h:1080} ✓, Unsnap restored ✓, Snap-MAX {256/0/1664/1080} ✓, Snap-RIGHT {1088/0/832/1080} ✓.
 
+  - **Pop-Out / Multi-Monitor (11.05.2026, Ralph 11.05.2026, Variante D Phase 1):**
+    - Neue Datei `lib/windowSync.js`: `BroadcastChannel`-Wrapper mit `broadcast(event, payload)` + React-Hook `useBroadcast(event, handler)`. Kanal: `graupner-suite`.
+    - **`Modal`** bekommt neuen Prop `popoutUrl`. Wenn gesetzt: zusätzlicher Button `ExternalLink`-Icon im Header (zwischen Resize-Handle und Minimize). Klick öffnet ein **echtes Browser-Popup** via `window.open(popoutUrl, _graupner_popup_<id>, "popup=yes,width=980,height=800,left=...,top=...")`. Das Modal im Hauptfenster wird sofort danach geschlossen.
+    - Neue Seite **`pages/PopupShell.jsx`** + Route `/popup/:type/:id?`. Layout ohne Sidebar/Hauptlayout, dark gegen unauthenticated geschützt (`useAuth`). Generic-Container mit Lookup-Table für Typ → Form. Aktuell implementiert: `type=kunde` rendert `<KundenFormModal>` mit `popoutEnabled=false, onClose=window.close, onSave=broadcast+window.close(800ms)`.
+    - **Multi-Screen Window Placement API** (Chromium): `window.getScreenDetails()` wird beim Mount probiert. Wenn mehrere Bildschirme erkannt: kleine Toolbar oben rechts im Popup mit Monitor-Buttons (`Monitor 1 / Monitor 2 / ...`). Klick auf einen anderen Monitor → `window.moveTo(x,y)+resizeTo(w,h)` auf das Ziel-Display zentriert. Listener auf `screenschange` und `currentscreenchange`. Permission-Denied wird stillschweigend toleriert.
+    - **`KundenFormModal`** wurde aus `KundenModulPage` exportiert (`export { KundenModulPage, KundenFormModal }`). Neuer Prop `popoutEnabled` (default `true`); im Popup-Mode auf `false` damit der Pop-Out-Button im Popup selbst nicht erneut erscheint. Nach Save feuert `broadcast("kunden-changed", { kundeId })`.
+    - **`KundenModulPage`** lauscht via `useBroadcast("kunden-changed", () => { loadKunden(); loadLinkCounts(); })` — Liste wird live aktualisiert, wenn in einem Popup gespeichert wird.
+    - **E2E-Test** (Playwright): Pop-Out öffnet `/popup/kunde/<id>` ✓, Formular vorbefüllt ✓, Notiz im Popup ergänzt + Speichern ✓, `kunden-changed`-Event im Hauptfenster empfangen ✓, Popup auto-close nach 800 ms ✓, Marker `E2E_BC_TEST_1778494680` in DB-`notes` verifiziert ✓.
+    - **Noch offen (Phase 2):** Pop-Out für „Neuer Termin", „Mailverlauf", „Neues Projekt", „Aufgabe bearbeiten". Pattern dokumentiert, neuer Form-Typ braucht nur:
+      1) Form-Komponente exportieren mit `popoutEnabled` Prop
+      2) Lookup-Eintrag in `PopupShell.jsx`
+      3) `popoutUrl` in Caller-Komponente setzen
+      4) `broadcast(<event>, …)` nach Save + entsprechende `useBroadcast`-Listener in Listen-Pages
+
 ## Zuletzt abgeschlossen (06.05.2026)
 
 - **Kunden-Seite Crash gefixt** — `KundenModulPage.jsx` rief `KUNDEN_STATUSES` im Listen-Bereich auf, ohne dass die Variable im Hauptcomponent existierte (Refactor-Fehler von vorher). `useTextvorlagen("kunden_status", ...)` ergänzt → Status- und Kategorien-Chips werden jetzt überall live aus `module_textvorlagen` geladen.
