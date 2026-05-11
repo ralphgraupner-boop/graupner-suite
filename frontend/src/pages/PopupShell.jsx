@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { Monitor, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { broadcast } from "@/lib/windowSync";
 import { KundenFormModal } from "@/pages/KundenModulPage";
+import NewProjektDialog from "@/components/NewProjektDialog";
 
 /**
  * Popup-Shell: rendert ein einzelnes Formular als eigenständige Browser-Window-Instanz
@@ -102,7 +103,8 @@ export default function PopupShell() {
       )}
 
       {type === "kunde" && <KundePopupContent id={id} />}
-      {type !== "kunde" && (
+      {type === "projekt" && <ProjektPopupContent id={id} />}
+      {type !== "kunde" && type !== "projekt" && (
         <div className="p-8 text-center text-muted-foreground">
           Unbekannter Popup-Typ: <code>{type}</code>
         </div>
@@ -170,6 +172,67 @@ const KundePopupContent = ({ id }) => {
       onSave={() => {
         broadcast("kunden-changed", { kundeId: kunde?.id });
         // kleine Verzögerung damit Toast sichtbar bleibt
+        setTimeout(() => { try { window.close(); } catch { /* ignore */ } }, 800);
+      }}
+    />
+  );
+};
+
+// === Projekt-Popup: kann "new" sein (Anlage) — id is "new" oder fehlt; query ?kunde_id=... ===
+const ProjektPopupContent = ({ id }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const kundeId = params.get("kunde_id");
+  const [kunde, setKunde] = useState(null);
+  const [isFirstProjekt, setIsFirstProjekt] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        if (kundeId) {
+          const [kundenRes, countsRes] = await Promise.all([
+            api.get("/modules/kunden/data"),
+            api.get("/module-projekte/counts-by-kunde").catch(() => ({ data: {} })),
+          ]);
+          if (cancelled) return;
+          const k = (kundenRes.data || []).find((x) => x.id === kundeId);
+          if (!k) { setError("Kunde nicht gefunden"); return; }
+          setKunde(k);
+          setIsFirstProjekt(((countsRes.data || {})[kundeId] || 0) === 0);
+        }
+        // Wenn kein kunde_id: kein Pre-Fill — NewProjektDialog zeigt Kundenwahl
+      } catch (e) {
+        if (!cancelled) setError("Fehler beim Laden");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [kundeId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin w-8 h-8 text-primary" />
+      </div>
+    );
+  }
+  if (error) {
+    return <div className="p-8 text-center text-destructive">{error}</div>;
+  }
+
+  return (
+    <NewProjektDialog
+      kundeId={kundeId || ""}
+      kunde={kunde}
+      isFirstProjekt={isFirstProjekt}
+      onClose={() => { try { window.close(); } catch { /* ignore */ } }}
+      onCreated={(p) => {
+        broadcast("projekte-changed", { projektId: p?.id, kundeId });
         setTimeout(() => { try { window.close(); } catch { /* ignore */ } }, 800);
       }}
     />

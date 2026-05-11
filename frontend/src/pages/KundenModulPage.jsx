@@ -17,7 +17,7 @@ import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog from "@/components/NewProjektDialog";
 import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
-import { broadcast, useBroadcast } from "@/lib/windowSync";
+import { broadcast, useBroadcast, openInPopup } from "@/lib/windowSync";
 
 // Hartcodierte Liste = Fallback wenn das Textvorlagen-Modul gerade nicht
 // antwortet. Pflege erfolgt im UI: Einstellungen → Textvorlagen → "Kunden-Status".
@@ -122,8 +122,12 @@ const KundenModulPage = () => {
   // Live-Sync mit Pop-Out-Fenstern: nach Speichern dort Liste hier neu laden
   useBroadcast("kunden-changed", () => { loadKunden(); loadLinkCounts(); });
 
-  // Multi-Window Helper: öffnet weiteres "Kunde bearbeiten"-Fenster (Dedupe per kunde.id)
+  // Multi-Window Helper: öffnet weiteres "Kunde bearbeiten"-Fenster.
+  // Bevorzugt direkten Browser-Popup (User-Pref `ui_direct_popout`, default an).
+  // Fallback bei Popup-Blocker oder deaktivierter Pref: In-App-Modal (Dedupe per kunde.id).
   const openEditFor = (kunde) => {
+    const url = kunde?.id ? `/popup/kunde/${kunde.id}` : "/popup/kunde/new";
+    if (openInPopup(url)) return;
     setOpenEdits((prev) => {
       if (kunde && kunde.id && prev.some((k) => k && k.id === kunde.id)) return prev;
       const entry = kunde || { __new: true, __key: `_new_${Date.now()}_${Math.random()}` };
@@ -448,7 +452,10 @@ const KundenModulPage = () => {
                   )}
                   <div className="hidden sm:flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     <button
-                      onClick={() => setNeuesProjektFuer(kunde)}
+                      onClick={() => {
+                        const url = `/popup/projekt/new?kunde_id=${kunde.id}`;
+                        if (!openInPopup(url)) setNeuesProjektFuer(kunde);
+                      }}
                       className="p-2 hover:bg-emerald-50 rounded-sm text-emerald-700"
                       title="Neues Projekt für diesen Kunden anlegen"
                       data-testid={`btn-quick-projekt-${kunde.id}`}
@@ -600,7 +607,10 @@ const KundenModulPage = () => {
                       <Button
                         size="sm"
                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        onClick={() => setNeuesProjektFuer(kunde)}
+                        onClick={() => {
+                        const url = `/popup/projekt/new?kunde_id=${kunde.id}`;
+                        if (!openInPopup(url)) setNeuesProjektFuer(kunde);
+                      }}
                         data-testid={`btn-detail-quick-projekt-${kunde.id}`}
                       >
                         <Plus className="w-4 h-4" /> Neues Projekt

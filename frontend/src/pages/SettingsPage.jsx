@@ -1855,6 +1855,44 @@ const FeatureFlagsCard = () => {
   );
 };
 
+const PopOutPrefsCard = () => {
+  const [enabled, setEnabled] = useState(true);
+  useEffect(() => {
+    try { setEnabled(localStorage.getItem("ui_direct_popout") !== "false"); } catch { /* ignore */ }
+  }, []);
+  const toggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    try { localStorage.setItem("ui_direct_popout", next ? "true" : "false"); } catch { /* ignore */ }
+    toast.success(next ? "Direkt-Popout aktiviert" : "Direkt-Popout deaktiviert — Modals öffnen wieder im Hauptfenster");
+  };
+  return (
+    <Card className="p-4 lg:p-6" data-testid="popout-prefs-card">
+      <h3 className="text-lg font-semibold mb-2">Fenster-Verhalten (Desktop)</h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Steuert, was passiert, wenn Sie z.B. auf „Kunde bearbeiten" klicken.
+      </p>
+      <label className="flex items-start gap-3 p-3 border rounded-sm cursor-pointer hover:bg-muted/30 transition-colors">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={toggle}
+          className="mt-1 h-4 w-4 rounded border-input"
+          data-testid="toggle-direct-popout"
+        />
+        <div className="flex-1">
+          <p className="font-medium">Bearbeiten-Klick öffnet direkt als eigenes Browser-Fenster</p>
+          <p className="text-xs text-muted-foreground">
+            An: Klick öffnet sofort ein neues Browser-Fenster (multi-monitor-tauglich, Windows-Taskleiste).
+            Aus: Klick öffnet das klassische schwebende In-App-Modal (Drag/Resize/Snap).
+            Bei aktiviertem Popup-Blocker wird automatisch das In-App-Modal genutzt.
+          </p>
+        </div>
+      </label>
+    </Card>
+  );
+};
+
 const DiversesTab = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1958,6 +1996,7 @@ const DiversesTab = () => {
   return (
     <div className="space-y-4">
       <FeatureFlagsCard />
+      <PopOutPrefsCard />
 
       {/* Kunden-Status Verwaltung */}
       <Card className="p-4 lg:p-6">

@@ -96,6 +96,16 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 
   - **Pop-Out Fix (11.05.2026): Popup-Inhalt füllt jetzt das gesamte Fenster.** Zuvor renderte das Modal im Popup-Browserfenster weiterhin im Floating-Modus → „Fenster-im-Fenster"-Optik (Ralph per Video gemeldet). Lösung: `Modal` erkennt jetzt automatisch `window.location.pathname.startsWith("/popup/")` und rendert in dem Fall im **Full-Window-Modus**: `fixed inset-0`, kein Backdrop, kein Drag/Resize, kein Minimize-/Pop-Out-Button, nur Titel + Schließen. Playwright: `modal-root` füllt 980×800 Popup vollständig, Backdrop/Resize/Minimize alle weg ✓.
 
+  - **Direct-Popout (11.05.2026, Ralph 11.05.2026, Phase 2a):**
+    Klick auf „Bearbeiten" oder „Neues Projekt" öffnet jetzt **direkt** ein eigenes Browser-Fenster — kein In-App-Floating-Modal mehr dazwischen. User-Pref `ui_direct_popout` (localStorage, default `true`) steuert das. Bei deaktivierter Pref oder Popup-Blocker: automatischer Fallback auf In-App-Modal (Drag/Resize/Snap bleiben verfügbar).
+    - Neuer Helper `openInPopup(url)` in `lib/windowSync.js` + Getter/Setter für die Pref.
+    - **`KundenModulPage`**: `openEditFor()` und beide „Neues Projekt"-Buttons rufen jetzt `openInPopup()` mit Fallback.
+    - **`ProjekteListe`**: „Neues Projekt"-Button rendert via `openInPopup('/popup/projekt/new')`; `useBroadcast("projekte-changed")` lädt Liste live wenn Popup speichert.
+    - **`PopupShell`** um `type=projekt` erweitert: lädt Kunde (per `kunde_id`-Query) + `counts-by-kunde` für `isFirstProjekt`, rendert `NewProjektDialog`. Nach Create: `broadcast("projekte-changed")` + auto-close.
+    - **Settings → Diverses → „Fenster-Verhalten (Desktop)"**: Checkbox-Toggle für Direct-Popout (default an).
+    - E2E-verifiziert: Kunde-Edit → Popup direkt ✓, In-App-Modal vermieden ✓, Projekt-Anlage (Kundenliste + Projekt-Liste) → Popup ✓, Titel pre-fill ✓, Toggle aus → Fallback In-App ✓.
+    - **Phase 2b offen:** Aufgaben + Termine — deren Dialoge sind keine `Modal`-Komponenten (eigene `fixed inset-0`-Wrapper), brauchen kleinen Refactor mit `isInPopupWindow`-Erkennung. Pattern in PRD dokumentiert.
+
 ## Zuletzt abgeschlossen (06.05.2026)
 
 - **Kunden-Seite Crash gefixt** — `KundenModulPage.jsx` rief `KUNDEN_STATUSES` im Listen-Bereich auf, ohne dass die Variable im Hauptcomponent existierte (Refactor-Fehler von vorher). `useTextvorlagen("kunden_status", ...)` ergänzt → Status- und Kategorien-Chips werden jetzt überall live aus `module_textvorlagen` geladen.

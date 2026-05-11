@@ -4,6 +4,7 @@ import { Folder, Plus, Search, RefreshCw, ImageIcon, ChevronRight, User as UserI
 import { toast } from "sonner";
 import { Button, Card, Badge, Modal, Input, Textarea } from "@/components/common";
 import { api } from "@/lib/api";
+import { openInPopup, useBroadcast } from "@/lib/windowSync";
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 const KATEGORIEN = ["Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"];
@@ -39,6 +40,7 @@ const ProjekteListe = () => {
   };
 
   useEffect(() => { load(); }, []);
+  useBroadcast("projekte-changed", () => { load(); });
 
   // Wenn ?kunde_id=… in URL: automatisch Neu-Dialog öffnen + Liste auf diesen Kunden filtern
   useEffect(() => {
@@ -78,7 +80,10 @@ const ProjekteListe = () => {
           <Button variant="outline" size="sm" onClick={load} disabled={loading} data-testid="btn-refresh-projekte">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Aktualisieren
           </Button>
-          <Button size="sm" onClick={() => setShowNew(true)} data-testid="btn-new-projekt">
+          <Button size="sm" onClick={() => {
+            const url = `/popup/projekt/new${presetKundeId ? `?kunde_id=${presetKundeId}` : ""}`;
+            if (!openInPopup(url)) setShowNew(true);
+          }} data-testid="btn-new-projekt">
             <Plus className="w-4 h-4" /> Neues Projekt
           </Button>
         </div>
