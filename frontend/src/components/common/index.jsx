@@ -89,11 +89,41 @@ const _slugifyModalKey = (s) =>
 let _modalInstanceCounter = 0;
 const MIN_W = 320;
 const MIN_H = 200;
+const EDGE_THRESHOLD = 8;       // px from viewport edge
+const SIDEBAR_W_LG = 256;       // matches lg:ml-64
 const SIZE_PRESETS = {
   sm: { w: 480, max: "max-w-md" },
   md: { w: 720, max: "max-w-2xl" },
   lg: { w: 960, max: "max-w-4xl" },
   xl: { w: 1200, max: "max-w-6xl" },
+};
+
+// Returns the offset where the work area starts horizontally (0 unless desktop with sidebar)
+const _sidebarOffset = () => {
+  if (typeof window === "undefined") return 0;
+  return window.innerWidth >= 1024 ? SIDEBAR_W_LG : 0;
+};
+
+// Compute target rect for snap mode ('max' | 'left' | 'right')
+const _snapRect = (mode) => {
+  if (typeof window === "undefined") return null;
+  const sx = _sidebarOffset();
+  const W = window.innerWidth - sx;
+  const H = window.innerHeight;
+  if (mode === "max") return { x: sx, y: 0, w: W, h: H };
+  if (mode === "left") return { x: sx, y: 0, w: Math.floor(W / 2), h: H };
+  if (mode === "right") return { x: sx + Math.ceil(W / 2), y: 0, w: Math.floor(W / 2), h: H };
+  return null;
+};
+
+// Determine snap hint from cursor position
+const _detectSnap = (clientX, clientY) => {
+  if (typeof window === "undefined") return null;
+  const sx = _sidebarOffset();
+  if (clientY <= EDGE_THRESHOLD) return "max";
+  if (clientX <= sx + EDGE_THRESHOLD) return "left";
+  if (clientX >= window.innerWidth - EDGE_THRESHOLD) return "right";
+  return null;
 };
 
 export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking = false }) => {
@@ -127,7 +157,9 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
   const [pos, setPos] = useState(() => computeInitial().pos);
   const [box, setBox] = useState(() => computeInitial().box);
   const [dragMode, setDragMode] = useState(null); // 'move' | 'resize-<dir>'
+  const [snapHint, setSnapHint] = useState(null); // 'left' | 'right' | 'max' | null (during drag)
   const dragRef = useRef({});
+  const preSnapRef = useRef(null); // {pos, box} saved before snap, for restore on drag-away
 
   // Track desktop breakpoint live
   useEffect(() => {
@@ -187,6 +219,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
       const dy = e.clientY - dragRef.current.startY;
       if (dragMode === "move") {
         setPos({ x: dragRef.current.origPosX + dx, y: dragRef.current.origPosY + dy });
+        setSnapHint(_detectSnap(e.clientX, e.clientY));
         return;
       }
       if (dragMode.startsWith("resize-")) {
@@ -222,6 +255,22 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
       }
     };
     const handleUp = () => {
+      // Snap-to-edge on drop?
+      if (dragMode === "move" && snapHint) {
+        const target = _snapRect(snapHint);
+        if (target) {
+          // Remember pre-snap state to restore on next drag-away
+          if (!preSnapRef.current) {
+            preSnapRef.current = { pos: { x: dragRef.current.origPosX, y: dragRef.current.origPosY }, box: { w: box.w, h: box.h } };
+          }
+          setPos({ x: target.x, y: target.y });
+          setBox({ w: target.w, h: target.h });
+        }
+      } else if (dragMode === "move") {
+        // Manual drop away from edges → forget snapped state
+        preSnapRef.current = null;
+      }
+      setSnapHint(null);
       setDragMode(null);
       try {
         window.localStorage.setItem(storageKey, JSON.stringify({ pos, box }));
@@ -233,7 +282,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [dragMode, storageKey, pos, box]);
+  }, [dragMode, storageKey, pos, box, snapHint]);
 
   if (!isOpen) return null;
 
@@ -261,7 +310,21 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
   // === Desktop floating window ===
   const startMove = (e) => {
     if (e.target.closest?.("[data-modal-control]")) return;
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origPosX: pos.x, origPosY: pos.y };
+    let originPosX = pos.x;
+    let originPosY = pos.y;
+    // If currently snapped, restore original size and place window under cursor
+    if (preSnapRef.current) {
+      const restored = preSnapRef.current;
+      setBox({ w: restored.box.w, h: restored.box.h });
+      // Position so the cursor lands proportionally inside the header (~80px from left, ~20px from top)
+      const newX = Math.max(0, e.clientX - 80);
+      const newY = Math.max(0, e.clientY - 20);
+      setPos({ x: newX, y: newY });
+      originPosX = newX;
+      originPosY = newY;
+      preSnapRef.current = null;
+    }
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origPosX: originPosX, origPosY: originPosY };
     setDragMode("move");
     wm.bringToFront(id);
     e.preventDefault();
@@ -282,7 +345,23 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
     e.stopPropagation();
   };
 
+  const snapPreview = snapHint ? _snapRect(snapHint) : null;
+
   return (
+    <>
+    {snapPreview && (
+      <div
+        data-testid="snap-preview"
+        className="fixed bg-primary/20 ring-2 ring-primary/80 pointer-events-none transition-all duration-100"
+        style={{
+          left: snapPreview.x,
+          top: snapPreview.y,
+          width: snapPreview.w,
+          height: snapPreview.h,
+          zIndex: 9998,
+        }}
+      />
+    )}
     <div
       onMouseDown={() => wm.bringToFront(id)}
       className="fixed bg-card rounded-sm shadow-2xl ring-1 ring-border flex flex-col overflow-hidden"
@@ -338,5 +417,6 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
       <div data-testid="resize-sw" onMouseDown={startResize("sw")} className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize" />
       <div data-testid="resize-se" onMouseDown={startResize("se")} className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize" />
     </div>
+    </>
   );
 };

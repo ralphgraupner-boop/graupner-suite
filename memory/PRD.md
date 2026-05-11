@@ -68,6 +68,18 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 
 - **Vorher (heute morgen, jetzt obsolet):** Erste, halbe Variante (Drag + transparenter Backdrop) wurde durch Vollausbau Variante C ersetzt.
 
+  - **Snap-to-Edge (11.05.2026, Ralph 11.05.2026, Bonus):**
+    - Während des Drag wird Maus-Position gegen Viewport-Kanten geprüft (`EDGE_THRESHOLD = 8`):
+      - `clientY ≤ 8` → Mode `max` (Content-Bereich vollflächig)
+      - `clientX ≤ sidebar + 8` → Mode `left` (linke Hälfte des Content-Bereichs)
+      - `clientX ≥ innerWidth - 8` → Mode `right` (rechte Hälfte)
+    - Sidebar wird respektiert: ab `lg` (1024 px) Offset 256 px, sonst 0.
+    - Während Drag: halbtransparente Vorschau-Box (`bg-primary/20 ring-2 ring-primary/80`, z-index 9998) zeigt das Snap-Ziel.
+    - Bei Drop mit Hint: aktuelle Pos+Size in `preSnapRef` gemerkt, Fenster auf Snap-Rect gesetzt.
+    - Neuer Drag aus gesnapptem Zustand: Originalgröße wird wiederhergestellt, Fenster positioniert sich proportional unter dem Cursor (Header-Offset 80/20).
+    - Helper `_snapRect(mode)`, `_detectSnap(x, y)`, `_sidebarOffset()` zentralisiert in `common/index.jsx`.
+    - Playwright-Test: Snap-Vorschau sichtbar ✓, Snap-LEFT exakt {x:256, y:0, w:832, h:1080} ✓, Unsnap restored ✓, Snap-MAX {256/0/1664/1080} ✓, Snap-RIGHT {1088/0/832/1080} ✓.
+
 ## Zuletzt abgeschlossen (06.05.2026)
 
 - **Kunden-Seite Crash gefixt** — `KundenModulPage.jsx` rief `KUNDEN_STATUSES` im Listen-Bereich auf, ohne dass die Variable im Hauptcomponent existierte (Refactor-Fehler von vorher). `useTextvorlagen("kunden_status", ...)` ergänzt → Status- und Kategorien-Chips werden jetzt überall live aus `module_textvorlagen` geladen.
