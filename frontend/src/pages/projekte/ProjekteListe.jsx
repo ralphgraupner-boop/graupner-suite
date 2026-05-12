@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Folder, Plus, Search, RefreshCw, ImageIcon, ChevronRight, User as UserIcon, Calendar, MapPin } from "lucide-react";
+import { Folder, Plus, Search, RefreshCw, ImageIcon, ChevronRight, User as UserIcon, Calendar, MapPin, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, Badge, Modal, Input, Textarea } from "@/components/common";
+import { Button, Card, Badge } from "@/components/common";
 import { api } from "@/lib/api";
 import { openInPopup, useBroadcast } from "@/lib/windowSync";
 
@@ -18,10 +18,14 @@ const STATUS_COLORS = {
 
 const ProjekteListe = () => {
   const [projekte, setProjekte] = useState([]);
+  const [kundenMap, setKundenMap] = useState({});
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("aktiv");
   const [showNew, setShowNew] = useState(false);
+  // Such-zuerst-Schema (Ralph 12.05.2026): erst Kunde oder Projekt wählen
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedKunde, setSelectedKunde] = useState(null); // {id, label}
+  const [searchFocused, setSearchFocused] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -30,8 +34,14 @@ const ProjekteListe = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/module-projekte/");
-      setProjekte(res.data);
+      const [pRes, kRes] = await Promise.all([
+        api.get("/module-projekte/"),
+        api.get("/modules/kunden/data"),
+      ]);
+      setProjekte(pRes.data);
+      const km = {};
+      (kRes.data || []).forEach(k => { km[k.id] = { vorname: k.vorname, nachname: k.nachname, firma: k.firma }; });
+      setKundenMap(km);
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
     } finally {
@@ -42,24 +52,45 @@ const ProjekteListe = () => {
   useEffect(() => { load(); }, []);
   useBroadcast("projekte-changed", () => { load(); });
 
-  // Wenn ?kunde_id=… in URL: automatisch Neu-Dialog öffnen + Liste auf diesen Kunden filtern
+  // ?kunde_id=… → vorbelegen
   useEffect(() => {
-    if (presetKundeId) {
-      setShowNew(true);
+    if (presetKundeId && kundenMap[presetKundeId] && !selectedKunde) {
+      const k = kundenMap[presetKundeId];
+      const label = k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || presetKundeId;
+      setSelectedKunde({ id: presetKundeId, label });
     }
-  }, [presetKundeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetKundeId, kundenMap]);
+
+  const kundeLabel = (id) => {
+    const k = kundenMap[id];
+    if (!k) return null;
+    return k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || null;
+  };
+
+  // Such-Treffer: Kunden + Projekte
+  const searchHits = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 1) return { kunden: [], projekte: [] };
+    const kunden = Object.entries(kundenMap)
+      .map(([id, k]) => ({ id, label: k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id }))
+      .filter(k => k.label.toLowerCase().includes(q))
+      .slice(0, 8);
+    const projekteHits = projekte
+      .filter(p =>
+        (p.titel || "").toLowerCase().includes(q) ||
+        (kundeLabel(p.kunde_id) || "").toLowerCase().includes(q)
+      )
+      .slice(0, 8)
+      .map(p => ({ id: p.id, titel: p.titel || "(ohne Titel)", kunde_id: p.kunde_id, kundeLabel: kundeLabel(p.kunde_id) }));
+    return { kunden, projekte: projekteHits };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, kundenMap, projekte]);
 
   const filtered = projekte.filter(p => {
-    // Wenn presetKundeId in URL: zeige nur Projekte dieses Kunden
-    if (presetKundeId && p.kunde_id !== presetKundeId) return false;
+    if (selectedKunde && p.kunde_id !== selectedKunde.id) return false;
     if (statusFilter === "aktiv" && p.status === "Archiv") return false;
     if (statusFilter !== "aktiv" && statusFilter !== "" && p.status !== statusFilter) return false;
-    if (search) {
-      const s = search.toLowerCase();
-      return (p.titel || "").toLowerCase().includes(s)
-          || (p.kunde_name || "").toLowerCase().includes(s)
-          || (p.beschreibung || "").toLowerCase().includes(s);
-    }
     return true;
   });
 
@@ -73,38 +104,119 @@ const ProjekteListe = () => {
             <Badge className="bg-amber-100 text-amber-700 border-amber-300">NEU</Badge>
           </div>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">
-            {loading ? "Lade…" : `${filtered.length} Projekt${filtered.length === 1 ? "" : "e"} sichtbar · ${projekte.length} gesamt`}
+            {loading ? "Lade…" : selectedKunde ? `${filtered.length} Projekt${filtered.length === 1 ? "" : "e"} für ${selectedKunde.label}` : "Bitte zuerst Kunde oder Projekt oben suchen."}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={load} disabled={loading} data-testid="btn-refresh-projekte">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Aktualisieren
           </Button>
-          <Button size="sm" onClick={() => {
-            const url = `/popup/projekt/new${presetKundeId ? `?kunde_id=${presetKundeId}` : ""}`;
-            if (!openInPopup(url)) setShowNew(true);
-          }} data-testid="btn-new-projekt">
-            <Plus className="w-4 h-4" /> Neues Projekt
-          </Button>
+          {selectedKunde && (
+            <Button size="sm" onClick={() => {
+              const url = `/popup/projekt/new?kunde_id=${selectedKunde.id}`;
+              if (!openInPopup(url)) setShowNew(true);
+            }} data-testid="btn-new-projekt">
+              <Plus className="w-4 h-4" /> Neues Projekt
+            </Button>
+          )}
         </div>
       </div>
 
-      <Card className="p-3 lg:p-4 mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9 h-9 lg:h-10" placeholder="Projekte oder Kunden suchen…" value={search} onChange={(e) => setSearch(e.target.value)} data-testid="input-search-projekte" />
-        </div>
+      {/* Such-zuerst-Schema: Kunde oder Projekt wählen */}
+      <Card className="p-3 lg:p-4 mb-4" data-testid="projekte-search-section">
+        {selectedKunde ? (
+          <div className="flex items-center gap-2" data-testid="selected-kunde">
+            <UserIcon className="w-4 h-4 text-blue-700" />
+            <span className="text-sm font-medium">Kunde: {selectedKunde.label}</span>
+            <button
+              onClick={() => setSelectedKunde(null)}
+              className="ml-auto p-1 hover:bg-muted rounded-sm"
+              title="Auswahl entfernen"
+              data-testid="btn-clear-kunde"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                placeholder="Kunde oder Projekt suchen, um Projekte anzuzeigen oder anzulegen …"
+                className="w-full pl-10 pr-3 py-2 border rounded-md text-sm"
+                data-testid="projekte-search-input"
+              />
+            </div>
+            {searchFocused && searchQuery.trim() && (searchHits.kunden.length > 0 || searchHits.projekte.length > 0) && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-20 max-h-80 overflow-auto" data-testid="projekte-search-results">
+                {searchHits.kunden.length > 0 && (
+                  <div>
+                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 border-b">Kunden ({searchHits.kunden.length})</div>
+                    {searchHits.kunden.map(k => (
+                      <button
+                        key={`k-${k.id}`}
+                        onClick={() => { setSelectedKunde({ id: k.id, label: k.label }); setSearchQuery(""); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0"
+                        data-testid={`projekte-hit-kunde-${k.id}`}
+                      >
+                        <UserIcon className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                        <span>{k.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchHits.projekte.length > 0 && (
+                  <div>
+                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 border-b">Projekte ({searchHits.projekte.length})</div>
+                    {searchHits.projekte.map(p => (
+                      <button
+                        key={`p-${p.id}`}
+                        onClick={() => navigate(`/module/projekte/werkbank/${p.kunde_id}`)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0"
+                        data-testid={`projekte-hit-projekt-${p.id}`}
+                      >
+                        <Folder className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                        <span>{p.titel}</span>
+                        {p.kundeLabel && <span className="text-xs text-muted-foreground ml-auto">({p.kundeLabel})</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {searchFocused && searchQuery.trim() && searchHits.kunden.length === 0 && searchHits.projekte.length === 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-20 p-3 text-sm text-muted-foreground" data-testid="projekte-search-empty">
+                Keine Treffer für „{searchQuery}".
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive</FilterButton>
-        {STATUSES.map(s => (
-          <FilterButton key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s}</FilterButton>
-        ))}
-        <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle</FilterButton>
-      </div>
+      {selectedKunde && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive</FilterButton>
+          {STATUSES.map(s => (
+            <FilterButton key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s}</FilterButton>
+          ))}
+          <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle</FilterButton>
+        </div>
+      )}
 
-      {loading ? (
+      {!selectedKunde ? (
+        <Card className="p-8 text-center" data-testid="projekte-empty-no-target">
+          <Search className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+          <div className="text-lg font-semibold">Bitte zuerst Kunde oder Projekt suchen</div>
+          <div className="text-sm text-muted-foreground mt-1">
+            Erst dann werden die Projekte angezeigt und können angelegt werden.
+          </div>
+        </Card>
+      ) : loading ? (
         <Card className="p-6 text-center text-muted-foreground">Lade…</Card>
       ) : filtered.length === 0 ? (
         <Card className="p-8 text-center" data-testid="empty-state-projekte">
@@ -153,7 +265,7 @@ const ProjekteListe = () => {
 
       {showNew && (
         <NewProjektDialog
-          presetKundeId={presetKundeId}
+          presetKundeId={selectedKunde?.id || presetKundeId}
           onClose={() => setShowNew(false)}
           onCreated={(p) => { setShowNew(false); navigate(`/module/projekte/${p.id}`); }}
         />

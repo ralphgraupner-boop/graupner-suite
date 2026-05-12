@@ -49,18 +49,21 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 
 ## Zuletzt abgeschlossen (12.05.2026)
 
-- **Aufgaben-Modul: Such-zuerst-Workflow (Ralph 12.05.2026, Variante mit Inline-Suche):**
-  Auf User-Wunsch komplett neu organisiert. Nicht mehr „Neue Aufgabe → Dialog → Kunden-Dropdown im Dialog", sondern: **Suchzeile zuerst → Kunde/Projekt wählen → erst dann Aufgabe anlegbar**.
-  - **Header der Aufgaben-Seite**: Klassische Suchzeile (Lupen-Icon + Platzhalter „Kunde oder Projekt suchen, um Aufgaben anzuzeigen oder anzulegen …") direkt unter dem Titel — analog Kunden-/Projekt-Modul. Keine Popups, keine Modals.
-  - **Inline-Treffer**: Während des Tippens erscheint **unter** der Suchzeile (z-Index 20, absolut positioniert) ein Dropdown mit getrennten Sektionen „Kunden (n)" und „Projekte (n)", je max. 8 Treffer. Klick wählt aus.
-  - **Auswahl-Chip**: Nach Klick verschwindet die Suchzeile, ein Chip oben zeigt z.B. „Kunde: graupner.neue" mit ✖ zum Entfernen.
-  - **„+ Neue Aufgabe"-Button** ist NUR sichtbar wenn Auswahl getroffen — sonst ausgeblendet.
-  - **Empty-State zweistufig**: Ohne Auswahl „Bitte zuerst einen Kunden oder ein Projekt oben suchen." Mit Auswahl + leere Liste „Keine Aufgaben für diesen Kunden/dieses Projekt."
-  - **Aufgaben-Liste** filtert auf gewählten Kunden (inkl. Aufgaben aller Projekte dieses Kunden) bzw. nur das gewählte Projekt.
-  - **Dialog**: Kein eigenes Kunden/Projekt-Auswahlfeld mehr (überflüssig — die Auswahl kommt aus dem Such-Chip oben). Stattdessen read-only Info-Zeile „Zuordnung: [Chip]". `kunde_id`/`projekt_id` werden korrekt aus `selectedTarget` befüllt; bei Projekt-Auswahl automatisch auch `kunde_id` aus `projekt.kunde_id`.
-  - **Liste-Chips** (blaues Kunden-Chip, grünes Projekt-Chip pro Aufgabe) bleiben weiter klickbar zur Navigation.
-  - **Datenmaske bleibt strikt sauber:** Backend speichert nur IDs, Frontend joint live aus `kundenMap`/`projekteMap`. Keine Daten-Dopplung.
-  - E2E (Playwright) verifiziert: Suchzeile vorhanden ✓, Empty-Hinweis korrekt ✓, „+ Neue Aufgabe" ohne Auswahl ausgeblendet ✓, Treffer-Liste inline mit 4 Kunden ✓, Chip nach Auswahl mit X ✓, Dialog ohne Auswahlfelder ✓, Chip korrekt vorbelegt ✓, Clear → Reset ✓.
+- **Such-zuerst-Schema einheitlich auf Projekte / Aufgaben / Termine / Einsätze (Ralph 12.05.2026):**
+  Nach erfolgreicher Validierung im Aufgaben-Modul wurde das gleiche Pattern auf weitere drei Module ausgerollt. Kunden bleibt absichtlich unangetastet (User-Entscheidung). Notizen & Bugs ist nicht datenmasken-fähig (kein `kunde_id`), bleibt unverändert.
+  - **Identisches Header-Layout** bei allen vier Modulen: Titel + Untertitel · Refresh-Button · konditionaler Neu-Button.
+  - **Identisches Such-Verhalten**:
+    - Suchzeile mit Lupen-Icon + Platzhalter „Kunde oder Projekt suchen, um <X> anzuzeigen oder anzulegen …".
+    - Inline-Treffer-Dropdown (absolut positioniert, z-Index 20) mit zwei Sektionen „Kunden (n)" + „Projekte (n)", je max. 8 Treffer.
+    - Auswahl-Chip nach Klick (blau für Kunde, grün für Projekt) mit ✖ zum Entfernen.
+    - „+ Neu …"-Button NUR sichtbar wenn Auswahl getroffen.
+    - Empty-States zweistufig: ohne Auswahl „Bitte zuerst Kunde oder Projekt suchen", mit Auswahl + leere Liste „Keine X für diesen Kunden/dieses Projekt".
+  - **Datenmaske strikt eingehalten**: alle Module joinen `kundenMap`/`projekteMap` live, kein Daten-Duplikat. Backend hat `kunde_id`/`projekt_id` bei allen vier (geprüft).
+  - **Dialoge erhalten `selectedTarget` als Vorbelegung**: bei Neuanlage werden `kunde_id`/`projekt_id` (und bei Einsatz auch Adresse/E-Mail/Telefon) automatisch aus der Such-Auswahl befüllt. Sub-Felder im Dialog (Kunde/Projekt-Auswahl) wurden bei Aufgaben entfernt (kommen aus dem Chip oben). Bei Termine/Einsätze bleiben die Felder im Dialog vorhanden, sind aber vorbelegt.
+  - **Projekte-Modul-Spezialfall**: Klick auf Kunde-Treffer = Liste filtert auf seine Projekte, „+ Neues Projekt"-Button sichtbar. Klick auf Projekt-Treffer = navigiert direkt zur Werkbank (Projekt selbst ist ja schon „die Auswahl"). Konsistent mit Datenmodell.
+  - **Einsätze-Modul-Spezialfall**: Da `EinsatzForm` ein großes Spezialformular mit eigener Kunden-Suchlogik + Adress-Pre-Fill ist, wurde nur `selectedTarget` als zusätzliche Vorbelegung hinzugefügt — vorhandene Logik bleibt unverändert.
+  - **Bestätigung E2E (Playwright) für alle drei**: Suchzeile vorhanden ✓, Empty-Hinweis korrekt ✓, Button vor Auswahl versteckt ✓, je 4 Kunden-Treffer ✓, Button nach Auswahl sichtbar ✓.
+  - **Screenshots zeigen einheitliches Layout** über alle Module — UX konsistent.
 
 ## Zuletzt abgeschlossen (11.05.2026)
 

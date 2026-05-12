@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle, FileText, Printer } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle, FileText, Printer, Folder, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -13,41 +13,72 @@ const BILD_KAT_LABELS = {
 const EinsaetzeModulPage = () => {
   const [einsaetze, setEinsaetze] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("aktiv");
   const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [config, setConfig] = useState({ reparaturgruppen: [], materialien: [], bild_kategorien: [], prioritaeten: [] });
   const [mitarbeiter, setMitarbeiter] = useState([]);
+  // Such-zuerst-Schema (Ralph 12.05.2026)
+  const [kunden, setKunden] = useState([]);
+  const [projekte, setProjekte] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTarget, setSelectedTarget] = useState(null);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [res, cfgRes, maRes] = await Promise.all([
+      const [res, cfgRes, maRes, kRes, pRes] = await Promise.all([
         api.get(`/einsaetze?status=${statusFilter}`),
         api.get("/einsatz-config"),
-        api.get("/mitarbeiter")
+        api.get("/mitarbeiter"),
+        api.get("/modules/kunden/data").catch(() => ({ data: [] })),
+        api.get("/module-projekte").catch(() => ({ data: [] })),
       ]);
       setEinsaetze(res.data);
       setConfig(cfgRes.data);
       setMitarbeiter(maRes.data.filter(m => m.status === "aktiv"));
+      setKunden(kRes.data || []);
+      setProjekte(pRes.data || []);
     } catch { toast.error("Fehler beim Laden"); }
     finally { setLoading(false); }
   }, [statusFilter]);
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = einsaetze.filter(e => {
-    const t = search.toLowerCase();
-    return !t ||
-      (e.kunde_name || e.customer_name || "").toLowerCase().includes(t) ||
-      (e.betreff || "").toLowerCase().includes(t) ||
-      (e.reparaturgruppe || "").toLowerCase().includes(t) ||
-      (e.material || "").toLowerCase().includes(t) ||
-      (e.monteur_name || "").toLowerCase().includes(t) ||
-      (e.kunde_email || "").toLowerCase().includes(t) ||
-      (e.beschreibung || "").toLowerCase().includes(t) ||
-      (e.kategorien || []).some(k => k.toLowerCase().includes(t));
-  });
+  const kundeLabelOf = (k) => k?.firma || [k?.vorname, k?.nachname].filter(Boolean).join(" ") || k?.name || k?.id || "";
+  const kundeLabelById = (id) => {
+    const k = kunden.find(x => x.id === id);
+    return k ? kundeLabelOf(k) : null;
+  };
+
+  const searchHits = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 1) return { kunden: [], projekte: [] };
+    const ks = kunden
+      .map(k => ({ id: k.id, label: kundeLabelOf(k) }))
+      .filter(k => k.label.toLowerCase().includes(q))
+      .slice(0, 8);
+    const ps = projekte
+      .map(p => ({ id: p.id, titel: p.titel || "(ohne Titel)", kunde_id: p.kunde_id, kundeLabel: kundeLabelById(p.kunde_id) }))
+      .filter(p => p.titel.toLowerCase().includes(q) || (p.kundeLabel || "").toLowerCase().includes(q))
+      .slice(0, 8);
+    return { kunden: ks, projekte: ps };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, kunden, projekte]);
+
+  const filtered = useMemo(() => {
+    if (!selectedTarget) return einsaetze;
+    if (selectedTarget.type === "kunde") {
+      const projektIdsOfKunde = projekte.filter(p => p.kunde_id === selectedTarget.id).map(p => p.id);
+      return einsaetze.filter(e =>
+        e.kunde_id === selectedTarget.id || (e.projekt_id && projektIdsOfKunde.includes(e.projekt_id))
+      );
+    }
+    if (selectedTarget.type === "projekt") {
+      return einsaetze.filter(e => e.projekt_id === selectedTarget.id);
+    }
+    return einsaetze;
+  }, [einsaetze, selectedTarget, projekte]);
 
   const deleteEinsatz = async (id) => {
     if (!window.confirm("Einsatz wirklich loeschen?")) return;
@@ -68,35 +99,103 @@ const EinsaetzeModulPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto" data-testid="einsaetze-page">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl lg:text-4xl font-bold">Einsaetze</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{einsaetze.length} Einsaetze</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {selectedTarget ? `${filtered.length} Einsatz${filtered.length === 1 ? "" : "e"}` : "Bitte zuerst Kunde oder Projekt oben suchen."}
+          </p>
         </div>
-        <button onClick={() => { setSelected(null); setShowForm(true); }} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90" data-testid="btn-new-einsatz">
-          <Plus className="w-4 h-4" /> Neuer Einsatz
-        </button>
+        {selectedTarget && (
+          <button onClick={() => { setSelected(null); setShowForm(true); }} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90" data-testid="btn-new-einsatz">
+            <Plus className="w-4 h-4" /> Neuer Einsatz
+          </button>
+        )}
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Suchen: Kunde, Betreff, Kategorie, Material, Monteur..." className="w-full pl-10 pr-4 py-2 border rounded-sm text-sm" data-testid="einsatz-search" />
+      {/* Suchzeile (Such-zuerst-Schema) */}
+      {!selected && !showForm && (
+        <div className="mb-4" data-testid="einsaetze-search-section">
+          {selectedTarget ? (
+            <div className="flex items-center gap-2 p-3 bg-muted/40 border rounded-md" data-testid="einsaetze-selected-target">
+              {selectedTarget.type === "kunde" ? <UserIcon className="w-4 h-4 text-blue-700" /> : <Folder className="w-4 h-4 text-emerald-700" />}
+              <span className="text-sm font-medium">
+                {selectedTarget.type === "kunde" ? "Kunde: " : "Projekt: "}{selectedTarget.label}
+              </span>
+              <button onClick={() => { setSelectedTarget(null); setSearchQuery(""); }} className="ml-auto p-1 hover:bg-background rounded-sm" title="Auswahl entfernen" data-testid="btn-einsaetze-clear-target">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  placeholder="Kunde oder Projekt suchen, um Einsätze anzuzeigen oder anzulegen …"
+                  className="w-full pl-10 pr-3 py-2 border rounded-md text-sm"
+                  data-testid="einsaetze-search-input"
+                />
+              </div>
+              {searchFocused && searchQuery.trim() && (searchHits.kunden.length > 0 || searchHits.projekte.length > 0) && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-20 max-h-80 overflow-auto" data-testid="einsaetze-search-results">
+                  {searchHits.kunden.length > 0 && (
+                    <div>
+                      <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 border-b">Kunden ({searchHits.kunden.length})</div>
+                      {searchHits.kunden.map(k => (
+                        <button key={`k-${k.id}`} onClick={() => { setSelectedTarget({ type: "kunde", id: k.id, label: k.label }); setSearchQuery(""); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0" data-testid={`einsaetze-hit-kunde-${k.id}`}>
+                          <UserIcon className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                          <span>{k.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {searchHits.projekte.length > 0 && (
+                    <div>
+                      <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 border-b">Projekte ({searchHits.projekte.length})</div>
+                      {searchHits.projekte.map(p => (
+                        <button key={`p-${p.id}`} onClick={() => { setSelectedTarget({ type: "projekt", id: p.id, label: p.titel, kunde_id: p.kunde_id }); setSearchQuery(""); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0" data-testid={`einsaetze-hit-projekt-${p.id}`}>
+                          <Folder className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                          <span>{p.titel}</span>
+                          {p.kundeLabel && <span className="text-xs text-muted-foreground ml-auto">({p.kundeLabel})</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {searchFocused && searchQuery.trim() && searchHits.kunden.length === 0 && searchHits.projekte.length === 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-20 p-3 text-sm text-muted-foreground" data-testid="einsaetze-search-empty">
+                  Keine Treffer für „{searchQuery}".
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <div className="flex border rounded-sm overflow-hidden text-sm">
-          {["aktiv", "inaktiv", ""].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-2 ${statusFilter === s ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
-              {s === "" ? "Alle" : s === "aktiv" ? "Aktiv" : "Inaktiv"}
-            </button>
-          ))}
+      )}
+
+      {selectedTarget && !selected && !showForm && (
+        <div className="flex gap-2 mb-4">
+          <div className="flex border rounded-sm overflow-hidden text-sm ml-auto">
+            {["aktiv", "inaktiv", ""].map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-2 ${statusFilter === s ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+                {s === "" ? "Alle" : s === "aktiv" ? "Aktiv" : "Inaktiv"}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {showForm && (
         <EinsatzForm
           item={selected}
           config={config}
           mitarbeiter={mitarbeiter}
+          selectedTarget={selectedTarget}
           onClose={() => { setShowForm(false); setSelected(null); }}
           onSaved={() => { setShowForm(false); setSelected(null); load(); }}
         />
@@ -117,8 +216,18 @@ const EinsaetzeModulPage = () => {
 
       {!selected && !showForm && (
         <div className="grid gap-3">
-          {filtered.length === 0 && <Card className="p-8 text-center text-muted-foreground">Keine Einsaetze gefunden.</Card>}
-          {filtered.map((e) => (
+          {!selectedTarget ? (
+            <Card className="p-8 text-center" data-testid="einsaetze-empty-no-target">
+              <Search className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+              <div className="text-lg font-semibold">Bitte zuerst Kunde oder Projekt suchen</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Erst dann werden die Einsätze angezeigt und können angelegt werden.
+              </div>
+            </Card>
+          ) : (
+            <>
+              {filtered.length === 0 && <Card className="p-8 text-center text-muted-foreground">Keine Einsätze für {selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}.</Card>}
+              {filtered.map((e) => (
             <Card key={e.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelected(e)} data-testid={`einsatz-card-${e.id}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
@@ -154,6 +263,8 @@ const EinsaetzeModulPage = () => {
               </div>
             </Card>
           ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -411,7 +522,7 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
 
 
 // ==================== FORM ====================
-const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
+const EinsatzForm = ({ item, config, mitarbeiter, selectedTarget, onClose, onSaved }) => {
   const [form, setForm] = useState({
     betreff: "", beschreibung: "", bemerkungen: "", nachricht_kunde: "",
     kunde_name: "", kunde_email: "", kunde_telefon: "", kunde_adresse: "",
@@ -456,8 +567,26 @@ const EinsatzForm = ({ item, config, mitarbeiter, onClose, onSaved }) => {
     ]).then(([kRes, koRes]) => {
       setKunden(kRes.data);
       setKontakte(koRes.data);
+      // Beim Anlegen mit selectedTarget=Kunde: kunde_id + Felder aus Kundendaten vorbefüllen
+      if (!item && selectedTarget?.type === "kunde") {
+        const k = (kRes.data || []).find(x => x.id === selectedTarget.id);
+        if (k) {
+          const nm = k.vorname || k.nachname ? `${k.vorname || ""} ${k.nachname || ""}`.trim() : (k.firma || "");
+          setForm(f => ({
+            ...f,
+            kunde_id: k.id,
+            kunde_name: nm,
+            kunde_email: k.email || "",
+            kunde_telefon: k.telefon || "",
+            kunde_adresse: [k.strasse, k.plz && `${k.plz} ${k.ort || ""}`].filter(Boolean).join(", "),
+            objekt_strasse: k.strasse || "",
+            objekt_plz: k.plz || "",
+            objekt_ort: k.ort || "",
+          }));
+        }
+      }
     }).catch(() => {});
-  }, [item]);
+  }, [item, selectedTarget]);
 
   // Live-Suche in Kunden + Kontakte
   const suggestions = (() => {
