@@ -47,6 +47,18 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 | `monteur_app` | Mobile PWA mit Bildkompression |
 | `routes/portal.py` (legacy) | Kundenportale - heute Datenmasken-fähig gemacht |
 
+## Zuletzt abgeschlossen (12.05.2026)
+
+- **Aufgaben: Kunden- und Projekt-Zuordnung sichtbar (Ralph 12.05.2026, Datenmaske):**
+  Backend hatte `kunde_id`/`projekt_id` bereits implementiert (siehe `module_aufgaben/routes.py`), Frontend ignorierte sie aber komplett. Folge: Aufgaben waren in der Datenbank korrekt verknüpft, aber in der UI nicht erkennbar.
+  - **`ModuleAufgabenPage.jsx`** lädt jetzt parallel `/modules/kunden/data` + `/module-projekte/` und baut zwei ID→Map-Lookups (`kundenMap`, `projekteMap`). **Keine** Datendopplung — `kunde_name` bleibt nur in `module_kunden`.
+  - **Liste**: Unter jeder Aufgabe blaues Kunden-Chip + grünes Projekt-Chip (klickbar → springt zu `/kunden?edit=...` bzw. `/projekte/...`). Wenn `kunde_id` auf einen gelöschten Kunden zeigt: warnender Hinweis „Kunde nicht gefunden (gelöscht?)".
+  - **Dialog** (Neue/Bearbeiten): 2 neue optionale Felder zwischen Beschreibung und Kategorie:
+    - **Kunde**: Datalist-Suchfeld mit allen sortierten Kunden (Firma oder Vor-/Nachname), „Zuordnung entfernen"-Link.
+    - **Projekt**: Dropdown, gefiltert auf den gewählten Kunden. Hinweis „Dieser Kunde hat noch kein Projekt." bei leerer Auswahl.
+  - **Bug-Fix nebenher**: Dialog-State lud `kunde_id`/`projekt_id` bisher gar nicht aus der Aufgabe → beim Edit + Save wäre die Zuordnung gelöscht worden (latenter Datenverlust). Jetzt korrekt vorbefüllt.
+  - E2E (Playwright) verifiziert: Liste-Chip ✓, gelöschter-Kunde-Warnung ✓, Edit-Vorbefüllung ✓, 22 Kunden in Auswahl ✓.
+
 ## Zuletzt abgeschlossen (11.05.2026)
 
 - **Floating-Windows (Variante C — Vollausbau, Ralph 11.05.2026):**

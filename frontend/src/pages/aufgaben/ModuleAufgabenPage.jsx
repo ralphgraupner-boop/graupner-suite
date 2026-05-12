@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Wrench, Car, Package, Briefcase, Building2, MoreHorizontal,
-  Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter,
+  Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter, User as UserIcon, Folder,
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 
@@ -42,25 +43,37 @@ export default function ModuleAufgabenPage() {
   const [aufgaben, setAufgaben] = useState([]);
   const [meta, setMeta] = useState(null);
   const [mitarbeiter, setMitarbeiter] = useState([]);
+  const [kundenMap, setKundenMap] = useState({});      // {id: {vorname, nachname, firma}}
+  const [projekteMap, setProjekteMap] = useState({});  // {id: {titel, kunde_id}}
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterKategorie, setFilterKategorie] = useState("");
+  const navigate = useNavigate();
 
   const load = async () => {
     setLoading(true);
     try {
-      const [list, m, mit] = await Promise.all([
+      const [list, m, mit, kRes, pRes] = await Promise.all([
         api.get("/module-aufgaben", {
           params: { status: filterStatus, kategorie: filterKategorie },
         }),
         meta ? Promise.resolve({ data: meta }) : api.get("/module-aufgaben/meta"),
         mitarbeiter.length ? Promise.resolve({ data: mitarbeiter }) : api.get("/module-aufgaben/mitarbeiter"),
+        api.get("/modules/kunden/data"),
+        api.get("/module-projekte/").catch(() => ({ data: [] })),
       ]);
       setAufgaben(Array.isArray(list.data) ? list.data : []);
       if (!meta) setMeta(m.data);
       if (!mitarbeiter.length) setMitarbeiter(Array.isArray(mit.data) ? mit.data : []);
+      // Datenmasken: ID→Name-Maps (kein Daten-Duplikat in Aufgabe selber)
+      const km = {};
+      (kRes.data || []).forEach(k => { km[k.id] = { vorname: k.vorname, nachname: k.nachname, firma: k.firma }; });
+      setKundenMap(km);
+      const pm = {};
+      (pRes.data || []).forEach(p => { pm[p.id] = { titel: p.titel, kunde_id: p.kunde_id }; });
+      setProjekteMap(pm);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Aufgaben konnten nicht geladen werden");
     } finally {
@@ -101,6 +114,14 @@ export default function ModuleAufgabenPage() {
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
     }
+  };
+
+  // Datenmaske: ID → lesbarer Kunden-Name
+  const kundeLabel = (kunde_id) => {
+    const k = kundenMap[kunde_id];
+    if (!k) return null;
+    if (k.firma) return k.firma;
+    return [k.vorname, k.nachname].filter(Boolean).join(" ") || null;
   };
 
   return (
@@ -223,6 +244,35 @@ export default function ModuleAufgabenPage() {
                       )}
                     </div>
                     {a.beschreibung && <p className="text-sm text-muted-foreground mt-1">{a.beschreibung}</p>}
+                    {(a.kunde_id || a.projekt_id) && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap" data-testid={`aufgabe-zuordnung-${a.id}`}>
+                        {a.kunde_id && kundeLabel(a.kunde_id) && (
+                          <button
+                            onClick={() => navigate(`/kunden?edit=${a.kunde_id}`)}
+                            className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-800 border border-blue-200 rounded-sm px-2 py-0.5 hover:bg-blue-100 transition-colors"
+                            data-testid={`btn-aufgabe-kunde-${a.id}`}
+                            title="Zum Kunden springen"
+                          >
+                            <UserIcon className="w-3 h-3" /> {kundeLabel(a.kunde_id)}
+                          </button>
+                        )}
+                        {a.projekt_id && projekteMap[a.projekt_id]?.titel && (
+                          <button
+                            onClick={() => navigate(`/projekte/${a.projekt_id}`)}
+                            className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm px-2 py-0.5 hover:bg-emerald-100 transition-colors"
+                            data-testid={`btn-aufgabe-projekt-${a.id}`}
+                            title="Zum Projekt springen"
+                          >
+                            <Folder className="w-3 h-3" /> {projekteMap[a.projekt_id].titel}
+                          </button>
+                        )}
+                        {a.kunde_id && !kundeLabel(a.kunde_id) && (
+                          <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-0.5">
+                            Kunde nicht gefunden (gelöscht?)
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                       <span>{a.kategorie || "—"}</span>
                       {mitarbeiterName && <span>👤 {mitarbeiterName}</span>}
@@ -279,6 +329,8 @@ export default function ModuleAufgabenPage() {
           aufgabe={editing}
           meta={meta}
           mitarbeiter={mitarbeiter}
+          kundenMap={kundenMap}
+          projekteMap={projekteMap}
           onClose={() => { setShowCreate(false); setEditing(null); }}
           onSaved={() => { setShowCreate(false); setEditing(null); load(); }}
         />
@@ -287,7 +339,7 @@ export default function ModuleAufgabenPage() {
   );
 }
 
-const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
+const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, onClose, onSaved }) => {
   const isEdit = !!aufgabe;
   const [data, setData] = useState({
     titel: aufgabe?.titel || "",
@@ -298,8 +350,29 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
     faellig_am: aufgabe?.faellig_am || "",
     wiederholung: aufgabe?.wiederholung || "einmalig",
     status: aufgabe?.status || "offen",
+    kunde_id: aufgabe?.kunde_id || "",
+    projekt_id: aufgabe?.projekt_id || "",
   });
   const [saving, setSaving] = useState(false);
+
+  // Kunden-Liste als sortiertes Array für Auswahl + Schnell-Suche
+  const kundenList = useMemo(() => {
+    const arr = Object.entries(kundenMap || {}).map(([id, k]) => {
+      const label = k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id;
+      return { id, label };
+    });
+    arr.sort((a, b) => a.label.localeCompare(b.label, "de"));
+    return arr;
+  }, [kundenMap]);
+
+  // Projekte gefiltert auf gewählten Kunden
+  const projekteFiltered = useMemo(() => {
+    const arr = Object.entries(projekteMap || {})
+      .filter(([, p]) => !data.kunde_id || p.kunde_id === data.kunde_id)
+      .map(([id, p]) => ({ id, titel: p.titel }));
+    arr.sort((a, b) => (a.titel || "").localeCompare(b.titel || "", "de"));
+    return arr;
+  }, [projekteMap, data.kunde_id]);
 
   const upd = (k, v) => setData(d => ({ ...d, [k]: v }));
 
@@ -367,6 +440,68 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, onClose, onSaved }) => {
               placeholder="Optional: Details, Hinweise, Material …"
               data-testid="input-beschreibung"
             />
+          </div>
+
+          {/* Datenmaske: Kunden- und Projektzuordnung (live aus module_kunden / module_projekte) */}
+          <div className="grid grid-cols-2 gap-3" data-testid="aufgabe-zuordnung-fields">
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                <UserIcon className="w-3.5 h-3.5" /> Kunde
+                <span className="text-xs text-muted-foreground font-normal">· optional</span>
+              </label>
+              <input
+                list="aufgabe-kunden-list"
+                value={kundenList.find(k => k.id === data.kunde_id)?.label || ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const match = kundenList.find(k => k.label === v);
+                  if (match) {
+                    upd("kunde_id", match.id);
+                  } else if (v === "") {
+                    setData(d => ({ ...d, kunde_id: "", projekt_id: "" }));
+                  }
+                }}
+                placeholder="Kunde suchen …"
+                className="w-full border rounded-sm p-2 text-sm"
+                data-testid="input-kunde"
+              />
+              <datalist id="aufgabe-kunden-list">
+                {kundenList.map(k => (
+                  <option key={k.id} value={k.label} />
+                ))}
+              </datalist>
+              {data.kunde_id && (
+                <button
+                  type="button"
+                  onClick={() => setData(d => ({ ...d, kunde_id: "", projekt_id: "" }))}
+                  className="text-xs text-muted-foreground hover:text-red-600 mt-1"
+                  data-testid="btn-kunde-clear"
+                >
+                  Zuordnung entfernen
+                </button>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                <Folder className="w-3.5 h-3.5" /> Projekt
+                <span className="text-xs text-muted-foreground font-normal">· optional</span>
+              </label>
+              <select
+                value={data.projekt_id}
+                onChange={(e) => upd("projekt_id", e.target.value)}
+                className="w-full border rounded-sm p-2 text-sm"
+                disabled={projekteFiltered.length === 0}
+                data-testid="select-projekt"
+              >
+                <option value="">— kein Projekt —</option>
+                {projekteFiltered.map(p => (
+                  <option key={p.id} value={p.id}>{p.titel}</option>
+                ))}
+              </select>
+              {data.kunde_id && projekteFiltered.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Dieser Kunde hat noch kein Projekt.</p>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
