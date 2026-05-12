@@ -49,15 +49,18 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 
 ## Zuletzt abgeschlossen (12.05.2026)
 
-- **Aufgaben: Kunden- und Projekt-Zuordnung sichtbar (Ralph 12.05.2026, Datenmaske):**
-  Backend hatte `kunde_id`/`projekt_id` bereits implementiert (siehe `module_aufgaben/routes.py`), Frontend ignorierte sie aber komplett. Folge: Aufgaben waren in der Datenbank korrekt verknüpft, aber in der UI nicht erkennbar.
-  - **`ModuleAufgabenPage.jsx`** lädt jetzt parallel `/modules/kunden/data` + `/module-projekte/` und baut zwei ID→Map-Lookups (`kundenMap`, `projekteMap`). **Keine** Datendopplung — `kunde_name` bleibt nur in `module_kunden`.
-  - **Liste**: Unter jeder Aufgabe blaues Kunden-Chip + grünes Projekt-Chip (klickbar → springt zu `/kunden?edit=...` bzw. `/projekte/...`). Wenn `kunde_id` auf einen gelöschten Kunden zeigt: warnender Hinweis „Kunde nicht gefunden (gelöscht?)".
-  - **Dialog** (Neue/Bearbeiten): 2 neue optionale Felder zwischen Beschreibung und Kategorie:
-    - **Kunde**: Datalist-Suchfeld mit allen sortierten Kunden (Firma oder Vor-/Nachname), „Zuordnung entfernen"-Link.
-    - **Projekt**: Dropdown, gefiltert auf den gewählten Kunden. Hinweis „Dieser Kunde hat noch kein Projekt." bei leerer Auswahl.
-  - **Bug-Fix nebenher**: Dialog-State lud `kunde_id`/`projekt_id` bisher gar nicht aus der Aufgabe → beim Edit + Save wäre die Zuordnung gelöscht worden (latenter Datenverlust). Jetzt korrekt vorbefüllt.
-  - E2E (Playwright) verifiziert: Liste-Chip ✓, gelöschter-Kunde-Warnung ✓, Edit-Vorbefüllung ✓, 22 Kunden in Auswahl ✓.
+- **Aufgaben-Modul: Such-zuerst-Workflow (Ralph 12.05.2026, Variante mit Inline-Suche):**
+  Auf User-Wunsch komplett neu organisiert. Nicht mehr „Neue Aufgabe → Dialog → Kunden-Dropdown im Dialog", sondern: **Suchzeile zuerst → Kunde/Projekt wählen → erst dann Aufgabe anlegbar**.
+  - **Header der Aufgaben-Seite**: Klassische Suchzeile (Lupen-Icon + Platzhalter „Kunde oder Projekt suchen, um Aufgaben anzuzeigen oder anzulegen …") direkt unter dem Titel — analog Kunden-/Projekt-Modul. Keine Popups, keine Modals.
+  - **Inline-Treffer**: Während des Tippens erscheint **unter** der Suchzeile (z-Index 20, absolut positioniert) ein Dropdown mit getrennten Sektionen „Kunden (n)" und „Projekte (n)", je max. 8 Treffer. Klick wählt aus.
+  - **Auswahl-Chip**: Nach Klick verschwindet die Suchzeile, ein Chip oben zeigt z.B. „Kunde: graupner.neue" mit ✖ zum Entfernen.
+  - **„+ Neue Aufgabe"-Button** ist NUR sichtbar wenn Auswahl getroffen — sonst ausgeblendet.
+  - **Empty-State zweistufig**: Ohne Auswahl „Bitte zuerst einen Kunden oder ein Projekt oben suchen." Mit Auswahl + leere Liste „Keine Aufgaben für diesen Kunden/dieses Projekt."
+  - **Aufgaben-Liste** filtert auf gewählten Kunden (inkl. Aufgaben aller Projekte dieses Kunden) bzw. nur das gewählte Projekt.
+  - **Dialog**: Kein eigenes Kunden/Projekt-Auswahlfeld mehr (überflüssig — die Auswahl kommt aus dem Such-Chip oben). Stattdessen read-only Info-Zeile „Zuordnung: [Chip]". `kunde_id`/`projekt_id` werden korrekt aus `selectedTarget` befüllt; bei Projekt-Auswahl automatisch auch `kunde_id` aus `projekt.kunde_id`.
+  - **Liste-Chips** (blaues Kunden-Chip, grünes Projekt-Chip pro Aufgabe) bleiben weiter klickbar zur Navigation.
+  - **Datenmaske bleibt strikt sauber:** Backend speichert nur IDs, Frontend joint live aus `kundenMap`/`projekteMap`. Keine Daten-Dopplung.
+  - E2E (Playwright) verifiziert: Suchzeile vorhanden ✓, Empty-Hinweis korrekt ✓, „+ Neue Aufgabe" ohne Auswahl ausgeblendet ✓, Treffer-Liste inline mit 4 Kunden ✓, Chip nach Auswahl mit X ✓, Dialog ohne Auswahlfelder ✓, Chip korrekt vorbelegt ✓, Clear → Reset ✓.
 
 ## Zuletzt abgeschlossen (11.05.2026)
 

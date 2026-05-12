@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Wrench, Car, Package, Briefcase, Building2, MoreHorizontal,
-  Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter, User as UserIcon, Folder,
+  Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter, User as UserIcon, Folder, Search,
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 
@@ -50,6 +50,10 @@ export default function ModuleAufgabenPage() {
   const [editing, setEditing] = useState(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterKategorie, setFilterKategorie] = useState("");
+  // Auswahl Kunde/Projekt für gezieltes Aufgaben-Anlegen (Ralph 12.05.2026)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTarget, setSelectedTarget] = useState(null); // {type:'kunde'|'projekt', id, label}
+  const [searchFocused, setSearchFocused] = useState(false);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -124,9 +128,50 @@ export default function ModuleAufgabenPage() {
     return [k.vorname, k.nachname].filter(Boolean).join(" ") || null;
   };
 
+  // Such-Treffer: Kunden + Projekte gefiltert nach Query
+  const searchHits = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 1) return { kunden: [], projekte: [] };
+    const kunden = Object.entries(kundenMap)
+      .map(([id, k]) => {
+        const label = k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id;
+        return { id, label };
+      })
+      .filter(k => k.label.toLowerCase().includes(q))
+      .slice(0, 8);
+    const projekte = Object.entries(projekteMap)
+      .map(([id, p]) => {
+        const kName = kundeLabel(p.kunde_id);
+        return { id, titel: p.titel || "(ohne Titel)", kunde_id: p.kunde_id, kundeLabel: kName };
+      })
+      .filter(p => (p.titel || "").toLowerCase().includes(q) || (p.kundeLabel || "").toLowerCase().includes(q))
+      .slice(0, 8);
+    return { kunden, projekte };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, kundenMap, projekteMap]);
+
+  // Gefilterte Aufgaben-Liste basierend auf selectedTarget
+  const filteredAufgaben = useMemo(() => {
+    if (!selectedTarget) return aufgaben;
+    if (selectedTarget.type === "kunde") {
+      // Aufgaben des Kunden + Aufgaben aller seiner Projekte
+      const projektIdsOfKunde = Object.entries(projekteMap)
+        .filter(([, p]) => p.kunde_id === selectedTarget.id)
+        .map(([id]) => id);
+      return aufgaben.filter(a =>
+        a.kunde_id === selectedTarget.id ||
+        (a.projekt_id && projektIdsOfKunde.includes(a.projekt_id))
+      );
+    }
+    if (selectedTarget.type === "projekt") {
+      return aufgaben.filter(a => a.projekt_id === selectedTarget.id);
+    }
+    return aufgaben;
+  }, [aufgaben, selectedTarget, projekteMap]);
+
   return (
     <div className="max-w-6xl mx-auto p-4 lg:p-6" data-testid="module-aufgaben-page">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Briefcase className="w-6 h-6 text-primary" />
@@ -145,14 +190,111 @@ export default function ModuleAufgabenPage() {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90"
-            data-testid="btn-aufgabe-create"
-          >
-            <Plus className="w-4 h-4" /> Neue Aufgabe
-          </button>
+          {selectedTarget && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-1 px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90"
+              data-testid="btn-aufgabe-create"
+            >
+              <Plus className="w-4 h-4" /> Neue Aufgabe
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* Suchzeile: Kunde oder Projekt wählen, um Aufgaben zu sehen / anzulegen */}
+      <div className="mb-4" data-testid="aufgaben-search-section">
+        {selectedTarget ? (
+          <div className="flex items-center gap-2 p-3 bg-muted/40 border rounded-md" data-testid="selected-target">
+            {selectedTarget.type === "kunde" ? (
+              <UserIcon className="w-4 h-4 text-blue-700" />
+            ) : (
+              <Folder className="w-4 h-4 text-emerald-700" />
+            )}
+            <span className="text-sm font-medium">
+              {selectedTarget.type === "kunde" ? "Kunde: " : "Projekt: "}
+              {selectedTarget.label}
+            </span>
+            <button
+              onClick={() => { setSelectedTarget(null); setSearchQuery(""); }}
+              className="ml-auto p-1 hover:bg-background rounded-sm"
+              title="Auswahl entfernen"
+              data-testid="btn-clear-target"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                placeholder="Kunde oder Projekt suchen, um Aufgaben anzuzeigen oder anzulegen …"
+                className="w-full pl-10 pr-3 py-2 border rounded-md text-sm"
+                data-testid="aufgaben-search-input"
+              />
+            </div>
+            {searchFocused && searchQuery.trim() && (searchHits.kunden.length > 0 || searchHits.projekte.length > 0) && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-20 max-h-80 overflow-auto" data-testid="search-results">
+                {searchHits.kunden.length > 0 && (
+                  <div>
+                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 border-b">
+                      Kunden ({searchHits.kunden.length})
+                    </div>
+                    {searchHits.kunden.map(k => (
+                      <button
+                        key={`k-${k.id}`}
+                        onClick={() => {
+                          setSelectedTarget({ type: "kunde", id: k.id, label: k.label });
+                          setSearchQuery("");
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0"
+                        data-testid={`search-hit-kunde-${k.id}`}
+                      >
+                        <UserIcon className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                        <span>{k.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchHits.projekte.length > 0 && (
+                  <div>
+                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 border-b">
+                      Projekte ({searchHits.projekte.length})
+                    </div>
+                    {searchHits.projekte.map(p => (
+                      <button
+                        key={`p-${p.id}`}
+                        onClick={() => {
+                          setSelectedTarget({ type: "projekt", id: p.id, label: p.titel, kunde_id: p.kunde_id });
+                          setSearchQuery("");
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0"
+                        data-testid={`search-hit-projekt-${p.id}`}
+                      >
+                        <Folder className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                        <span>{p.titel}</span>
+                        {p.kundeLabel && (
+                          <span className="text-xs text-muted-foreground ml-auto">({p.kundeLabel})</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {searchFocused && searchQuery.trim() && searchHits.kunden.length === 0 && searchHits.projekte.length === 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-20 p-3 text-sm text-muted-foreground" data-testid="search-empty">
+                Keine Treffer für „{searchQuery}".
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats-Kacheln */}
@@ -206,15 +348,21 @@ export default function ModuleAufgabenPage() {
       {/* Liste */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Lade Aufgaben...</div>
-      ) : aufgaben.length === 0 ? (
+      ) : !selectedTarget ? (
+        <div className="text-center py-16 border-2 border-dashed rounded-md text-muted-foreground" data-testid="empty-no-target">
+          <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p>Bitte zuerst einen Kunden oder ein Projekt oben suchen.</p>
+          <p className="text-xs mt-1">Erst dann werden die Aufgaben angezeigt und können angelegt werden.</p>
+        </div>
+      ) : filteredAufgaben.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed rounded-md text-muted-foreground" data-testid="empty-state">
           <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Keine Aufgaben{filterStatus || filterKategorie ? " mit diesem Filter" : ""}.</p>
-          <p className="text-xs mt-1">Lege die erste Aufgabe an, z. B. "Werkbank aufräumen" oder "Firmenwagen waschen".</p>
+          <p>Keine Aufgaben für {selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}{filterStatus || filterKategorie ? " mit diesem Filter" : ""}.</p>
+          <p className="text-xs mt-1">Klicke oben rechts auf „+ Neue Aufgabe".</p>
         </div>
       ) : (
         <div className="space-y-2" data-testid="aufgaben-list">
-          {aufgaben.map(a => {
+          {filteredAufgaben.map(a => {
             const Icon = ICON_HEURISTIK(a.kategorie);
             const StatusIcon = STATUS_STYLES[a.status].icon;
             const mitarbeiterName = mitarbeiter.find(m => m.username === a.zugewiesen_an)?.anzeige_name || a.zugewiesen_an;
@@ -331,6 +479,7 @@ export default function ModuleAufgabenPage() {
           mitarbeiter={mitarbeiter}
           kundenMap={kundenMap}
           projekteMap={projekteMap}
+          selectedTarget={selectedTarget}
           onClose={() => { setShowCreate(false); setEditing(null); }}
           onSaved={() => { setShowCreate(false); setEditing(null); load(); }}
         />
@@ -339,8 +488,15 @@ export default function ModuleAufgabenPage() {
   );
 }
 
-const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, onClose, onSaved }) => {
+const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, selectedTarget, onClose, onSaved }) => {
   const isEdit = !!aufgabe;
+  // Vorbelegung: bei Neuanlage aus selectedTarget; bei Edit aus aufgabe selbst
+  const initialKundeId = isEdit
+    ? (aufgabe?.kunde_id || "")
+    : (selectedTarget?.type === "kunde" ? selectedTarget.id : (selectedTarget?.type === "projekt" ? (selectedTarget.kunde_id || "") : ""));
+  const initialProjektId = isEdit
+    ? (aufgabe?.projekt_id || "")
+    : (selectedTarget?.type === "projekt" ? selectedTarget.id : "");
   const [data, setData] = useState({
     titel: aufgabe?.titel || "",
     beschreibung: aufgabe?.beschreibung || "",
@@ -350,29 +506,10 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, onC
     faellig_am: aufgabe?.faellig_am || "",
     wiederholung: aufgabe?.wiederholung || "einmalig",
     status: aufgabe?.status || "offen",
-    kunde_id: aufgabe?.kunde_id || "",
-    projekt_id: aufgabe?.projekt_id || "",
+    kunde_id: initialKundeId,
+    projekt_id: initialProjektId,
   });
   const [saving, setSaving] = useState(false);
-
-  // Kunden-Liste als sortiertes Array für Auswahl + Schnell-Suche
-  const kundenList = useMemo(() => {
-    const arr = Object.entries(kundenMap || {}).map(([id, k]) => {
-      const label = k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id;
-      return { id, label };
-    });
-    arr.sort((a, b) => a.label.localeCompare(b.label, "de"));
-    return arr;
-  }, [kundenMap]);
-
-  // Projekte gefiltert auf gewählten Kunden
-  const projekteFiltered = useMemo(() => {
-    const arr = Object.entries(projekteMap || {})
-      .filter(([, p]) => !data.kunde_id || p.kunde_id === data.kunde_id)
-      .map(([id, p]) => ({ id, titel: p.titel }));
-    arr.sort((a, b) => (a.titel || "").localeCompare(b.titel || "", "de"));
-    return arr;
-  }, [projekteMap, data.kunde_id]);
 
   const upd = (k, v) => setData(d => ({ ...d, [k]: v }));
 
@@ -442,67 +579,24 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, onC
             />
           </div>
 
-          {/* Datenmaske: Kunden- und Projektzuordnung (live aus module_kunden / module_projekte) */}
-          <div className="grid grid-cols-2 gap-3" data-testid="aufgabe-zuordnung-fields">
-            <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                <UserIcon className="w-3.5 h-3.5" /> Kunde
-                <span className="text-xs text-muted-foreground font-normal">· optional</span>
-              </label>
-              <input
-                list="aufgabe-kunden-list"
-                value={kundenList.find(k => k.id === data.kunde_id)?.label || ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  const match = kundenList.find(k => k.label === v);
-                  if (match) {
-                    upd("kunde_id", match.id);
-                  } else if (v === "") {
-                    setData(d => ({ ...d, kunde_id: "", projekt_id: "" }));
-                  }
-                }}
-                placeholder="Kunde suchen …"
-                className="w-full border rounded-sm p-2 text-sm"
-                data-testid="input-kunde"
-              />
-              <datalist id="aufgabe-kunden-list">
-                {kundenList.map(k => (
-                  <option key={k.id} value={k.label} />
-                ))}
-              </datalist>
-              {data.kunde_id && (
-                <button
-                  type="button"
-                  onClick={() => setData(d => ({ ...d, kunde_id: "", projekt_id: "" }))}
-                  className="text-xs text-muted-foreground hover:text-red-600 mt-1"
-                  data-testid="btn-kunde-clear"
-                >
-                  Zuordnung entfernen
-                </button>
+          {/* Datenmaske: Kunden- und Projektzuordnung — wird oben in der Seite gewählt, hier nur Info */}
+          {(data.kunde_id || data.projekt_id) && (
+            <div className="flex items-center gap-2 p-2 bg-muted/40 border rounded-sm text-xs text-muted-foreground" data-testid="aufgabe-context-info">
+              <span>Zuordnung:</span>
+              {data.kunde_id && kundenMap[data.kunde_id] && (
+                <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-sm px-2 py-0.5">
+                  <UserIcon className="w-3 h-3" />
+                  {kundenMap[data.kunde_id].firma || [kundenMap[data.kunde_id].vorname, kundenMap[data.kunde_id].nachname].filter(Boolean).join(" ")}
+                </span>
+              )}
+              {data.projekt_id && projekteMap[data.projekt_id] && (
+                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm px-2 py-0.5">
+                  <Folder className="w-3 h-3" />
+                  {projekteMap[data.projekt_id].titel}
+                </span>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                <Folder className="w-3.5 h-3.5" /> Projekt
-                <span className="text-xs text-muted-foreground font-normal">· optional</span>
-              </label>
-              <select
-                value={data.projekt_id}
-                onChange={(e) => upd("projekt_id", e.target.value)}
-                className="w-full border rounded-sm p-2 text-sm"
-                disabled={projekteFiltered.length === 0}
-                data-testid="select-projekt"
-              >
-                <option value="">— kein Projekt —</option>
-                {projekteFiltered.map(p => (
-                  <option key={p.id} value={p.id}>{p.titel}</option>
-                ))}
-              </select>
-              {data.kunde_id && projekteFiltered.length === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">Dieser Kunde hat noch kein Projekt.</p>
-              )}
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
