@@ -64,6 +64,16 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
   - **Backend**: `VALID_DOC_TYPES` + `SELECTION_DOC_TYPES` in `module_textvorlagen/routes.py` um 3 neue Doc-Types erweitert (`aufgabe_titel`, `termin_titel`, `einsatz_betreff`) — Sammlung startet leer, Pflege über UI.
   - E2E (Playwright): Listen sichtbar in allen 4 Modulen ✓, Untertitel zeigen Sortierung ✓, Titel-Input vorhanden in Aufgabe-Dialog ✓.
 
+- **Titel-Vorschläge Bugfix (12.05.2026, Ralph 12.05.2026):**
+  Ralphs vorhandene Termin-/Aufgaben-/Einsatz-Vorlagen lagen unter den **alten Doc-Types** (`termin`, `aufgabe`, `einsatz`), nicht unter den neuen (`termin_titel`, `aufgabe_titel`, `einsatz_betreff`) → Vorschläge zeigten nichts.
+  - **`TitleInputWithVorlagen`** um Prop `fallbackDocTypes` erweitert: lädt mehrere Doc-Types parallel, mergt + dedupliziert nach Titel (case-insensitive trim), sortiert alphabetisch.
+  - **Aufrufe angepasst**:
+    - Aufgaben: `aufgabe_titel` + Fallback `aufgabe`
+    - Termine: `termin_titel` + Fallback `termin`
+    - Einsätze: `einsatz_betreff` + Fallback `einsatz`
+    - Projekte: `projekt_titel` (kein Fallback nötig)
+  - E2E-verifiziert: bei leerem Titel-Feld erscheinen alle 7 Termin-Vorlagen, beim Tippen „Besi" filtert auf 4 Treffer ✓.
+
 ## Zuletzt abgeschlossen (12.05.2026)
 
 - **Such-zuerst-Schema einheitlich auf Projekte / Aufgaben / Termine / Einsätze (Ralph 12.05.2026):**

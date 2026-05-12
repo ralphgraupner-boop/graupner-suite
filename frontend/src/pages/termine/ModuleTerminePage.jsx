@@ -503,6 +503,7 @@ const TerminDialog = ({ termin, kunden, projekte, aufgaben, mitarbeiter, selecte
             value={data.titel}
             onChange={(v) => upd("titel", v)}
             docType="termin_titel"
+            fallbackDocTypes={["termin"]}
             label="Titel"
             required
             autoFocus

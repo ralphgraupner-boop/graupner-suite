@@ -732,6 +732,7 @@ const EinsatzForm = ({ item, config, mitarbeiter, selectedTarget, onClose, onSav
             value={form.betreff}
             onChange={(v) => setForm(f => ({ ...f, betreff: v }))}
             docType="einsatz_betreff"
+            fallbackDocTypes={["einsatz"]}
             label="Betreff"
             placeholder="z.B. Schiebetuer-Reparatur"
             testId="input-einsatz-betreff"

@@ -12,6 +12,7 @@ import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
  * Props:
  *   value, onChange  — kontrollierter Input
  *   docType          — z. B. "projekt_titel", "aufgabe_titel", "termin_titel", "einsatz_betreff"
+ *   fallbackDocTypes — optional, z.B. ["aufgabe"] um Legacy-Vorlagen mitzuladen
  *   placeholder      — optional
  *   label            — optional, Label oberhalb des Inputs
  *   showManager      — default true: Zahnrad-Icon zum Inline-Pflegen
@@ -23,6 +24,7 @@ export default function TitleInputWithVorlagen({
   value,
   onChange,
   docType,
+  fallbackDocTypes = [],
   placeholder = "Titel eingeben oder aus Vorschlägen wählen …",
   label = "Titel",
   showManager = true,
@@ -36,14 +38,30 @@ export default function TitleInputWithVorlagen({
 
   const load = async () => {
     try {
-      const r = await api.get(`/modules/textvorlagen/data?doc_type=${encodeURIComponent(docType)}`);
-      setVorlagen(Array.isArray(r.data) ? r.data : []);
+      const allTypes = [docType, ...fallbackDocTypes].filter(Boolean);
+      const results = await Promise.all(
+        allTypes.map(dt => api.get(`/modules/textvorlagen/data?doc_type=${encodeURIComponent(dt)}`).catch(() => ({ data: [] })))
+      );
+      // Merge + dedupe nach title (case-insensitive trim)
+      const seen = new Set();
+      const merged = [];
+      results.forEach((r, idx) => {
+        (Array.isArray(r.data) ? r.data : []).forEach(v => {
+          const key = (v.title || "").trim().toLowerCase();
+          if (!key || seen.has(key)) return;
+          seen.add(key);
+          merged.push({ ...v, _source_doc_type: allTypes[idx] });
+        });
+      });
+      // Sort alphabetisch
+      merged.sort((a, b) => (a.title || "").localeCompare(b.title || "", "de"));
+      setVorlagen(merged);
     } catch {
       setVorlagen([]);
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [docType]);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [docType, fallbackDocTypes.join("|")]);
 
   const suggestions = useMemo(() => {
     const q = (value || "").trim().toLowerCase();

@@ -543,6 +543,7 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, sel
             value={data.titel}
             onChange={(v) => upd("titel", v)}
             docType="aufgabe_titel"
+            fallbackDocTypes={["aufgabe"]}
             label="Titel"
             required
             autoFocus
