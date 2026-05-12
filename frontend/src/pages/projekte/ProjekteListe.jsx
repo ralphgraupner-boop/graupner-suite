@@ -104,7 +104,7 @@ const ProjekteListe = () => {
             <Badge className="bg-amber-100 text-amber-700 border-amber-300">NEU</Badge>
           </div>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">
-            {loading ? "Lade…" : selectedKunde ? `${filtered.length} Projekt${filtered.length === 1 ? "" : "e"} für ${selectedKunde.label}` : "Bitte zuerst Kunde oder Projekt oben suchen."}
+            {loading ? "Lade…" : selectedKunde ? `${filtered.length} Projekt${filtered.length === 1 ? "" : "e"} für ${selectedKunde.label}` : `${filtered.length} von ${projekte.length} Projekten · sortiert nach Datum`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -198,25 +198,15 @@ const ProjekteListe = () => {
         )}
       </Card>
 
-      {selectedKunde && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive</FilterButton>
-          {STATUSES.map(s => (
-            <FilterButton key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s}</FilterButton>
-          ))}
-          <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle</FilterButton>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive</FilterButton>
+        {STATUSES.map(s => (
+          <FilterButton key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s}</FilterButton>
+        ))}
+        <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle</FilterButton>
+      </div>
 
-      {!selectedKunde ? (
-        <Card className="p-8 text-center" data-testid="projekte-empty-no-target">
-          <Search className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <div className="text-lg font-semibold">Bitte zuerst Kunde oder Projekt suchen</div>
-          <div className="text-sm text-muted-foreground mt-1">
-            Erst dann werden die Projekte angezeigt und können angelegt werden.
-          </div>
-        </Card>
-      ) : loading ? (
+      {loading ? (
         <Card className="p-6 text-center text-muted-foreground">Lade…</Card>
       ) : filtered.length === 0 ? (
         <Card className="p-8 text-center" data-testid="empty-state-projekte">

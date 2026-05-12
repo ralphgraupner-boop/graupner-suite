@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
+import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
 import {
   Calendar, Plus, Trash2, X, MapPin, User as UserIcon, Folder, Briefcase, HardHat,
   CheckCircle2, Clock, RefreshCw, Filter, AlertTriangle, ChevronRight, XCircle, Search,
@@ -294,17 +295,11 @@ export default function ModuleTerminePage() {
       {/* Liste */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Lade Termine…</div>
-      ) : !selectedTarget ? (
-        <div className="text-center py-16 border-2 border-dashed rounded-md text-muted-foreground" data-testid="termine-empty-no-target">
-          <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Bitte zuerst Kunde oder Projekt oben suchen.</p>
-          <p className="text-xs mt-1">Erst dann werden die Termine angezeigt und können angelegt werden.</p>
-        </div>
       ) : filteredTermine.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed rounded-md text-muted-foreground" data-testid="empty-state">
           <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Keine Termine für {selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}{filterStatus ? " in diesem Status" : ""}.</p>
-          <p className="text-xs mt-1">Klicke oben rechts auf „+ Neuer Termin".</p>
+          <p>{selectedTarget ? `Keine Termine für ${selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}${filterStatus ? " in diesem Status" : ""}.` : "Keine Termine vorhanden."}</p>
+          {selectedTarget && <p className="text-xs mt-1">Klicke oben rechts auf „+ Neuer Termin".</p>}
         </div>
       ) : (
         <div className="space-y-2" data-testid="termine-list">
@@ -504,29 +499,15 @@ const TerminDialog = ({ termin, kunden, projekte, aufgaben, mitarbeiter, selecte
         </div>
 
         <div className="p-4 space-y-3">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium">Titel *</label>
-              <VorlagenPicker
-                doc_type="aufgabe"
-                label="Vorlage"
-                compact
-                onSelect={({ title, content }) => setData(d => ({
-                  ...d,
-                  titel: title,
-                  beschreibung: d.beschreibung || (content || "").replace(/<[^>]*>/g, ""),
-                }))}
-              />
-            </div>
-            <input
-              value={data.titel}
-              onChange={(e) => upd("titel", e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm"
-              placeholder="z.B. Besichtigung Familie Müller"
-              data-testid="input-titel"
-              autoFocus
-            />
-          </div>
+          <TitleInputWithVorlagen
+            value={data.titel}
+            onChange={(v) => upd("titel", v)}
+            docType="termin_titel"
+            label="Titel"
+            required
+            autoFocus
+            placeholder="z.B. Besichtigung Familie Müller"
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div>

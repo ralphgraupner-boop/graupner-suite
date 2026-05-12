@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
 
 /**
  * Lädt Auswahl-Titel aus module_textvorlagen (live, keine Hardcoding-Listen).
@@ -210,27 +211,15 @@ const NewProjektDialog = ({ kundeId, kunde, isFirstProjekt = true, onClose, onCr
           </div>
         )}
 
-        <div>
-          <label className="text-sm font-medium block mb-1">Titel *</label>
-          <input
-            type="text"
-            value={titel}
-            onChange={(e) => setTitel(e.target.value)}
-            placeholder="z.B. Schiebetür Terrasse"
-            className="w-full h-10 rounded-sm border border-input bg-background px-3 text-sm"
-            list="projekt-titel-vorlagen"
-            data-testid="input-projekt-titel"
-            autoComplete="off"
-          />
-          <datalist id="projekt-titel-vorlagen">
-            {titelList.map(t => <option key={t} value={t} />)}
-          </datalist>
-          {titelList.length > 0 && (
-            <div className="text-[11px] text-muted-foreground mt-1">
-              Tippen für Vorschläge aus der Vorlagenliste · neue Titel werden automatisch übernommen
-            </div>
-          )}
-        </div>
+        <TitleInputWithVorlagen
+          value={titel}
+          onChange={setTitel}
+          docType="projekt_titel"
+          label="Titel"
+          required
+          placeholder="z.B. Schiebetür Terrasse"
+          testId="input-projekt-titel"
+        />
         <div>
           <label className="text-sm font-medium block mb-1">Kategorie</label>
           <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} className="w-full border rounded px-2 py-2 text-sm" data-testid="select-projekt-kategorie">

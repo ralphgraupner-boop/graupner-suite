@@ -264,9 +264,7 @@ const KundenModulPage = () => {
     const finalStatusMatch = searchActive ? true : statusMatch;
     return searchMatch && catMatch && finalStatusMatch;
   }).sort((a, b) => {
-    const sa = statusOrder[effStatus(a)] ?? 9;
-    const sb = statusOrder[effStatus(b)] ?? 9;
-    if (sa !== sb) return sa - sb;
+    // Primär nach Anlage-Datum (neueste zuerst) — User-Wunsch 12.05.2026
     return (b.created_at || "").localeCompare(a.created_at || "");
   });
 

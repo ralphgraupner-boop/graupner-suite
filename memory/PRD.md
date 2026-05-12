@@ -47,6 +47,23 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
 | `monteur_app` | Mobile PWA mit Bildkompression |
 | `routes/portal.py` (legacy) | Kundenportale - heute Datenmasken-fähig gemacht |
 
+- **Such-Schema Update (12.05.2026, Ralph 12.05.2026):**
+  - **Listen werden jetzt auch ohne Such-Auswahl angezeigt**, sortiert nach Datum: Aufgaben/Projekte/Einsätze nach `created_at` desc, Termine nach `start` asc, Kunden nach `created_at` desc (primärer Sortierschlüssel, kein Status mehr).
+  - **Empty-State zweistufig** entfernt — bei leerer Liste nur noch „Keine X vorhanden".
+  - **Untertitel** zeigt jetzt „X von Y · sortiert nach Datum" bzw. „X für [Auswahl]".
+  - **Status-Filter** bei Projekten + Einsätzen immer sichtbar (vorher nur nach Auswahl).
+
+- **Titel-Eingabe mit Live-Vorschlägen (12.05.2026, Ralph 12.05.2026, Datenmaske):**
+  Neue zentrale Komponente `/app/frontend/src/components/TitleInputWithVorlagen.jsx`:
+  - Tippen → unterhalb erscheint Dropdown mit max. 8 passenden Vorschlägen aus `module_textvorlagen` (live gefiltert).
+  - Bei leerem Feld: erste 8 vorhandene Vorschläge.
+  - Klick auf Vorschlag → übernimmt ins Feld.
+  - Zahnrad-Symbol im Label öffnet `TextvorlagenInlineManager` zur direkten Pflege.
+  - Frei tippbar bleibt — Vorschlagsliste ist Hilfe, nicht Zwang.
+  - **Eingebaut in**: Aufgaben-Titel (`aufgabe_titel`), Termin-Titel (`termin_titel`), Projekt-Titel (`projekt_titel` ersetzt das alte `datalist`), Einsatz-Betreff (`einsatz_betreff`).
+  - **Backend**: `VALID_DOC_TYPES` + `SELECTION_DOC_TYPES` in `module_textvorlagen/routes.py` um 3 neue Doc-Types erweitert (`aufgabe_titel`, `termin_titel`, `einsatz_betreff`) — Sammlung startet leer, Pflege über UI.
+  - E2E (Playwright): Listen sichtbar in allen 4 Modulen ✓, Untertitel zeigen Sortierung ✓, Titel-Input vorhanden in Aufgabe-Dialog ✓.
+
 ## Zuletzt abgeschlossen (12.05.2026)
 
 - **Such-zuerst-Schema einheitlich auf Projekte / Aufgaben / Termine / Einsätze (Ralph 12.05.2026):**

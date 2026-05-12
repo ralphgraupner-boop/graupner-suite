@@ -3,6 +3,7 @@ import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Cal
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
+import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
 
 const BILD_KAT_LABELS = {
   kundenanfrage: "Kundenanfrage", besichtigung: "Besichtigung",
@@ -103,7 +104,7 @@ const EinsaetzeModulPage = () => {
         <div>
           <h1 className="text-2xl lg:text-4xl font-bold">Einsaetze</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {selectedTarget ? `${filtered.length} Einsatz${filtered.length === 1 ? "" : "e"}` : "Bitte zuerst Kunde oder Projekt oben suchen."}
+            {selectedTarget ? `${filtered.length} Einsatz${filtered.length === 1 ? "" : "e"} für ${selectedTarget.label}` : `${einsaetze.length} Einsätze`}
           </p>
         </div>
         {selectedTarget && (
@@ -178,7 +179,7 @@ const EinsaetzeModulPage = () => {
         </div>
       )}
 
-      {selectedTarget && !selected && !showForm && (
+      {!selected && !showForm && (
         <div className="flex gap-2 mb-4">
           <div className="flex border rounded-sm overflow-hidden text-sm ml-auto">
             {["aktiv", "inaktiv", ""].map(s => (
@@ -216,18 +217,12 @@ const EinsaetzeModulPage = () => {
 
       {!selected && !showForm && (
         <div className="grid gap-3">
-          {!selectedTarget ? (
-            <Card className="p-8 text-center" data-testid="einsaetze-empty-no-target">
-              <Search className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-              <div className="text-lg font-semibold">Bitte zuerst Kunde oder Projekt suchen</div>
-              <div className="text-sm text-muted-foreground mt-1">
-                Erst dann werden die Einsätze angezeigt und können angelegt werden.
-              </div>
+          {filtered.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground">
+              {selectedTarget ? `Keine Einsätze für ${selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}.` : "Keine Einsätze vorhanden."}
             </Card>
           ) : (
-            <>
-              {filtered.length === 0 && <Card className="p-8 text-center text-muted-foreground">Keine Einsätze für {selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}.</Card>}
-              {filtered.map((e) => (
+            filtered.map((e) => (
             <Card key={e.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelected(e)} data-testid={`einsatz-card-${e.id}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
@@ -262,8 +257,7 @@ const EinsaetzeModulPage = () => {
                 </div>
               </div>
             </Card>
-          ))}
-            </>
+          ))
           )}
         </div>
       )}
@@ -734,7 +728,14 @@ const EinsatzForm = ({ item, config, mitarbeiter, selectedTarget, onClose, onSav
           </div>
 
           {/* Anfrage */}
-          {inp("Betreff", "betreff", "z.B. Schiebetuer-Reparatur")}
+          <TitleInputWithVorlagen
+            value={form.betreff}
+            onChange={(v) => setForm(f => ({ ...f, betreff: v }))}
+            docType="einsatz_betreff"
+            label="Betreff"
+            placeholder="z.B. Schiebetuer-Reparatur"
+            testId="input-einsatz-betreff"
+          />
           {inp("Beschreibung (Kundentext)", "beschreibung", "Anfrage-Text des Kunden...", "textarea")}
           {inp("Bemerkungen / Anmerkungen", "bemerkungen", "Interne Notizen...", "textarea")}
 
