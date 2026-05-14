@@ -29,6 +29,23 @@ async def get_smtp_config():
     }
 
 
+async def get_portal_bcc():
+    """Liest die BCC-Adresse aus den Einstellungen, an die alle Kundenportal-Mails (Admin-out, Kunde-in, Invite)
+    als Kopie gesendet werden sollen. Leerer String oder None deaktiviert die Funktion.
+
+    Setting: company_settings.portal_bcc_admin
+    Format: einzelne Mail-Adresse, z.B. "info@tischlerei-graupner.de"
+    """
+    try:
+        settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+        bcc = (settings.get("portal_bcc_admin") or "").strip()
+        if bcc and "@" in bcc:
+            return bcc
+    except Exception as e:
+        logger.warning(f"get_portal_bcc Settings-Lesefehler: {e}")
+    return None
+
+
 def _append_to_sent_folder(msg_obj, imap_settings: dict):
     """Laedt eine Kopie der gesendeten Mail per IMAP APPEND in den Gesendet-Ordner hoch.
     So erscheint die Mail auch in Betterbird/Outlook im 'Gesendet'-Ordner.
@@ -112,9 +129,10 @@ async def _get_imap_settings_for_sent():
     return settings
 
 
-def send_email(to_email: str, subject: str, body_html: str, attachments: list = None, smtp_config: dict = None, imap_settings: dict = None):
+def send_email(to_email: str, subject: str, body_html: str, attachments: list = None, smtp_config: dict = None, imap_settings: dict = None, bcc: str = None):
     """Send email via SMTP with optional attachments.
     Wenn imap_settings mitgegeben werden, wird eine Kopie der Mail in den Gesendet-Ordner hochgeladen.
+    Wenn bcc gesetzt ist, wird die Mail zusätzlich an die BCC-Adresse zugestellt (unsichtbar für Empfänger).
 
     Wichtig: Subject und Body werden UTF-8 codiert, damit Umlaute korrekt
     übertragen werden (sonst werden ä/ö/ü/ß durch '?' ersetzt).
@@ -138,12 +156,20 @@ def send_email(to_email: str, subject: str, body_html: str, attachments: list = 
             part["Content-Disposition"] = f'attachment; filename="{att["filename"]}"'
             msg.attach(part)
 
+    # Recipients = primärer Empfänger + ggf. BCC (BCC steht NICHT als Header in der Mail,
+    # nur in der Envelope an den Server → für Empfänger unsichtbar)
+    recipients = [to_email]
+    if bcc and "@" in (bcc or ""):
+        bcc_clean = bcc.strip()
+        if bcc_clean.lower() != to_email.lower():  # nicht doppelt zustellen
+            recipients.append(bcc_clean)
+
     with smtplib.SMTP_SSL(cfg["server"], cfg["port"]) as server:
         server.login(cfg["user"], cfg["password"])
         # Bytes mit explizitem UTF-8 senden, damit auch der HTML-Body sauber bleibt
-        server.sendmail(cfg["from_addr"], to_email, msg.as_bytes())
+        server.sendmail(cfg["from_addr"], recipients, msg.as_bytes())
 
-    logger.info(f"Email sent to {to_email}: {subject}")
+    logger.info(f"Email sent to {to_email}{f' (BCC: {bcc})' if bcc else ''}: {subject}")
 
     # Kopie in Sent-Ordner hochladen (nur wenn imap_settings mitgegeben)
     if imap_settings:
