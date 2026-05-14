@@ -9,9 +9,45 @@ from uuid import uuid4
 
 from database import db, logger
 from auth import get_current_user
+from utils import send_email, get_portal_bcc
 from .auth import get_current_customer
 
 router = APIRouter()
+
+
+async def _notify_admin_inbox(account: dict, sender: str, sender_name: str, text: str):
+    """Schickt eine Kontroll-Kopie an die in den Einstellungen hinterlegte Admin-BCC-Adresse.
+    Fehler werden geloggt aber nicht weitergereicht (Chat darf nicht blockieren)."""
+    try:
+        bcc = await get_portal_bcc()
+        if not bcc:
+            return
+        kunde_email = account.get("email") or "?"
+        kunde_name = account.get("name") or kunde_email
+        if sender == "admin":
+            subject = f"[Portal-Kopie] An {kunde_name}: {text[:60]}"
+            richtung = f"<b>Admin → Kunde</b> ({sender_name})"
+        else:
+            subject = f"[Portal-Kopie] Von {kunde_name}: {text[:60]}"
+            richtung = f"<b>Kunde → Admin</b> ({sender_name})"
+        body = f"""
+            <p>Diese Nachricht wurde im <b>Kundenportal</b> ausgetauscht (nur zur Kontrolle / Analyse).</p>
+            <table style="font-family:sans-serif;font-size:14px;border-collapse:collapse;">
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Richtung:</td><td>{richtung}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Kunde:</td><td>{kunde_name} ({kunde_email})</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Zeit:</td><td>{datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M UTC')}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Portal-ID:</td><td><code>{account.get('id','')}</code></td></tr>
+            </table>
+            <hr style="border:none;border-top:1px solid #ddd;margin:16px 0;">
+            <div style="white-space:pre-wrap;font-family:sans-serif;font-size:14px;line-height:1.5;">{text}</div>
+            <p style="color:#999;font-size:11px;margin-top:24px;">Automatische Kontroll-Kopie – Antworten auf diese Mail kommen NICHT beim Kunden an.
+            Der Kunde sieht und antwortet ausschließlich über das Portal.</p>
+        """
+        # Synchron OK, send_email ist sync — direkt an BCC schicken (nicht "to+bcc", sondern nur "to=bcc")
+        send_email(to_email=bcc, subject=subject, body_html=body)
+        logger.info(f"Portal v4 Kontroll-Kopie an {bcc} (Richtung: {sender}, Kunde: {kunde_email})")
+    except Exception as e:
+        logger.warning(f"Portal v4 Kontroll-Kopie fehlgeschlagen (Chat-Funktion läuft trotzdem): {e}")
 
 
 class MessageCreate(BaseModel):
@@ -59,6 +95,7 @@ async def admin_send_message(account_id: str, body: MessageCreate, user=Depends(
     await db.portal4_messages.insert_one(doc)
     doc.pop("_id", None)
     logger.info(f"Portal v4 Admin-Nachricht an {account.get('email')}")
+    await _notify_admin_inbox(account, "admin", doc["sender_name"], text)
     return doc
 
 
@@ -112,4 +149,5 @@ async def customer_send_message(body: MessageCreate, account=Depends(get_current
         "timestamp": now,
     })
     logger.info(f"Portal v4 Kunden-Nachricht von {account.get('email')}")
+    await _notify_admin_inbox(account, "customer", doc["sender_name"], text)
     return doc

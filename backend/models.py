@@ -341,6 +341,8 @@ class CompanySettings(BaseModel):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
+    # Portal v4: Admin-BCC für Chat-Kontroll-Kopien (Ralph 12.05.2026)
+    portal_bcc_admin: str = ""
     # PDF Layout Settings
     pdf_header_text: str = ""
     pdf_footer_text: str = ""

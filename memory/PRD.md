@@ -64,6 +64,18 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
   - **Backend**: `VALID_DOC_TYPES` + `SELECTION_DOC_TYPES` in `module_textvorlagen/routes.py` um 3 neue Doc-Types erweitert (`aufgabe_titel`, `termin_titel`, `einsatz_betreff`) — Sammlung startet leer, Pflege über UI.
   - E2E (Playwright): Listen sichtbar in allen 4 Modulen ✓, Untertitel zeigen Sortierung ✓, Titel-Input vorhanden in Aufgabe-Dialog ✓.
 
+- **Portal-Kontroll-Kopie (BCC) für Kundenportal-Mails (12.05.2026, Ralph 12.05.2026):**
+  Neue Funktion: zusätzliche Kopie aller Portal-Mail-Aktivität ins Admin-Postfach für Kontrolle/Fehleranalyse, ohne dass der Kunde es sieht.
+  - **`utils.send_email`**: neuer Parameter `bcc` (optional). Wenn gesetzt: Mail-Envelope geht an Empfänger UND BCC, BCC-Header nicht in der Mail → für Empfänger unsichtbar. Doppelte Zustellung wird vermieden.
+  - **`utils.get_portal_bcc()`**: neuer async Helper, liest `company_settings.portal_bcc_admin` aus DB. Leer = keine Kopie.
+  - **Portal v4 Invite-Mail** (`portal_v4/routes_admin.py`): nutzt `bcc=await get_portal_bcc()` → Admin bekommt Kopie der Einladung.
+  - **Portal v4 Chat-Nachrichten** (`portal_v4/messages.py`): da Chat-Nachrichten an Kunden NUR im Portal angezeigt werden (kein direkter E-Mail-Versand), wurde ein neuer `_notify_admin_inbox(account, sender, sender_name, text)`-Helper eingebaut. Er schickt bei JEDER Portal-Nachricht (Admin→Kunde UND Kunde→Admin) eine **Kontroll-Mail** ans Admin-BCC mit Richtung, Kundenname, Zeit, Portal-ID und vollem Nachrichtentext. Subject z.B. `[Portal-Kopie] Von Max Mustermann: Hallo, wann ...`. Fehler im Versand werden geloggt aber nicht weitergereicht → Chat funktioniert immer.
+  - **`CompanySettings`-Model** (`models.py`): neues Feld `portal_bcc_admin: str = ""` ergänzt.
+  - **UI** (Settings → E-Mail → SMTP-Block): neues Feld „Portal-Kontroll-Kopie (BCC)" direkt unter „Absender-Adresse". Beschreibung erklärt, dass der Kunde diese Adresse nicht sieht. Leer = aus.
+  - **Datenschutz/Hinweis im Body**: Kontroll-Mails enthalten Footer „Antworten auf diese Mail kommen NICHT beim Kunden an" — damit klar ist, dass das nur ein Audit-Log ist.
+  - Backend lint + Restart sauber, Setting-Endpoint liefert den neuen Wert.
+  - **Phase 2 offen** (auf Wunsch): gleiche Kontroll-Kopie für Termin-Bestätigungen, Angebots-Mails, normale Outbound-Mails aus dem Inbox-Modul.
+
 - **Titel-Vorschläge Bugfix (12.05.2026, Ralph 12.05.2026):**
   Ralphs vorhandene Termin-/Aufgaben-/Einsatz-Vorlagen lagen unter den **alten Doc-Types** (`termin`, `aufgabe`, `einsatz`), nicht unter den neuen (`termin_titel`, `aufgabe_titel`, `einsatz_betreff`) → Vorschläge zeigten nichts.
   - **`TitleInputWithVorlagen`** um Prop `fallbackDocTypes` erweitert: lädt mehrere Doc-Types parallel, mergt + dedupliziert nach Titel (case-insensitive trim), sortiert alphabetisch.

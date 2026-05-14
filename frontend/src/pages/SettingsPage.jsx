@@ -659,6 +659,14 @@ const EmailTab = ({ settings, setSettings, onSave, saving }) => {
             <label className="block text-sm font-medium mb-1">Absender-Adresse (falls abweichend)</label>
             <Input data-testid="input-smtp-from" value={settings.smtp_from} onChange={(e) => setSettings({ ...settings, smtp_from: e.target.value })} placeholder="Gleich wie Benutzername, wenn leer" />
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Portal-Kontroll-Kopie (BCC) <span className="text-xs text-muted-foreground font-normal">· empfängt automatisch alle Kundenportal-Mails zur Kontrolle/Analyse</span></label>
+            <Input data-testid="input-portal-bcc-admin" value={settings.portal_bcc_admin || ""} onChange={(e) => setSettings({ ...settings, portal_bcc_admin: e.target.value })} placeholder="z.B. info@tischlerei-graupner.de — leer = aus" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Wenn gesetzt: jede Portal-Chat-Nachricht (Admin ↔ Kunde) und die Portal-Einladung werden als Kopie an diese Adresse zugestellt.
+              Der Kunde sieht diese Adresse NICHT (BCC).
+            </p>
+          </div>
         </div>
         <div className="flex gap-3 mt-6">
           <Button data-testid="btn-test-smtp" variant="outline" onClick={handleTestSmtp} disabled={testing}>
@@ -2238,6 +2246,7 @@ const SettingsPage = () => {
     company_address: "", default_due_days: 14, default_quote_validity_days: 30,
     email_signature: "",
     smtp_server: "", smtp_port: 465, smtp_user: "", smtp_password: "", smtp_from: "",
+    portal_bcc_admin: "",
     imap_server: "", imap_port: 993, imap_user: "", imap_password: "", imap_folder: "INBOX", imap_enabled: false,
     pdf_header_text: "", pdf_footer_text: "", pdf_show_logo: true,
     pdf_accent_color: "#1a1a2e", pdf_font_size: "normal", pdf_bemerkung_default: ""

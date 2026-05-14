@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from database import db, logger
 from auth import get_current_user
-from utils import send_email
+from utils import send_email, get_portal_bcc
 from utils.email_signatur import wrap_email_body
 from .models import (
     PortalAccount,
@@ -211,6 +211,7 @@ async def send_invite(account_id: str, request: Request, user=Depends(get_curren
         to_email=account["email"],
         subject=subject,
         body_html=wrapped,
+        bcc=await get_portal_bcc(),
     )
 
     await db.portal4_activity.insert_one({
