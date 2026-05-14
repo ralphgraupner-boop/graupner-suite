@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from database import db, logger
 from auth import get_current_user
 from utils.storage import put_object, get_object
-from utils import send_email
+from utils import send_email, get_portal_bcc
 from datetime import datetime, timezone, timedelta
 import uuid
 import hashlib
@@ -286,6 +286,44 @@ async def _notify_admin(subject: str, body_html: str):
         logger.warning(f"Admin notify failed: {e}")
 
 
+async def _portal_control_copy(portal: dict, direction: str, sender_name: str, text: str, type_label: str = "Nachricht"):
+    """Schickt Kontroll-Kopie an die in den Einstellungen hinterlegte Portal-BCC-Adresse.
+    Aufgerufen bei JEDER Portal-Nachricht (Admin→Kunde / Kunde→Admin / Notizen-Typen).
+    Direction: 'admin' (Admin→Kunde) oder 'customer' (Kunde→Admin)."""
+    try:
+        bcc = await get_portal_bcc()
+        if not bcc:
+            return
+        portal_enriched = await _enrich_portal_with_kunde(dict(portal))
+        portal_enriched.pop("_id", None)
+        kunde_email = portal_enriched.get("customer_email") or "?"
+        kunde_name = portal_enriched.get("customer_name") or kunde_email
+        if direction == "admin":
+            subject = f"[Portal-Kopie] An {kunde_name}: {text[:60]}"
+            richtung = f"<b>Admin → Kunde</b> ({sender_name})"
+        else:
+            subject = f"[Portal-Kopie] Von {kunde_name} ({type_label}): {text[:60]}"
+            richtung = f"<b>Kunde → Admin</b> ({sender_name}) · {type_label}"
+        body = f"""
+            <p>Diese Nachricht wurde im <b>Kundenportal</b> ausgetauscht (nur zur Kontrolle / Analyse).</p>
+            <table style="font-family:sans-serif;font-size:14px;border-collapse:collapse;">
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Richtung:</td><td>{richtung}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Kunde:</td><td>{kunde_name} ({kunde_email})</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Zeit:</td><td>{datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M UTC')}</td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Portal-ID:</td><td><code>{portal.get('id','')}</code></td></tr>
+              <tr><td style="padding:4px 12px 4px 0;color:#666;">Beschreibung:</td><td>{portal.get('description','-')}</td></tr>
+            </table>
+            <hr style="border:none;border-top:1px solid #ddd;margin:16px 0;">
+            <div style="white-space:pre-wrap;font-family:sans-serif;font-size:14px;line-height:1.5;">{text}</div>
+            <p style="color:#999;font-size:11px;margin-top:24px;">Automatische Kontroll-Kopie - Antworten auf diese Mail kommen NICHT beim Kunden an.
+            Der Kunde sieht und antwortet ausschliesslich ueber das Portal.</p>
+        """
+        send_email(to_email=bcc, subject=subject, body_html=body)
+        logger.info(f"Portal Kontroll-Kopie an {bcc} (Richtung: {direction}, Kunde: {kunde_email})")
+    except Exception as e:
+        logger.warning(f"Portal Kontroll-Kopie fehlgeschlagen (Portal-Funktion laeuft trotzdem): {e}")
+
+
 async def _check_rate_limit_or_lock(portal: dict) -> bool:
     """Return True if portal just got auto-locked due to rate limit."""
     now = datetime.now(timezone.utc)
@@ -398,7 +436,7 @@ async def create_portal_from_customer(customer_id: str, body: dict, user=Depends
                 expires_iso=portal["expires_at"],
                 description=portal.get("description", ""),
             )
-            send_email(to_email=customer_email, subject=subject, body_html=html)
+            send_email(to_email=customer_email, subject=subject, body_html=html, bcc=await get_portal_bcc())
             email_sent = True
         except Exception as e:
             logger.error(f"Auto-send portal email failed: {e}")
@@ -533,6 +571,7 @@ async def create_portal_from_anfrage(anfrage_id: str, body: dict, user=Depends(g
                 to_email=customer_email,
                 subject=subject,
                 body_html=html,
+                bcc=await get_portal_bcc(),
             )
             email_sent = True
             logger.info(f"Portal invitation auto-sent to {customer_email}")
@@ -656,6 +695,7 @@ async def admin_upload_file(
                     to_email=cust_mail,
                     subject=f"Neues Dokument in Ihrem Kundenportal · {company}",
                     body_html=html,
+                    bcc=await get_portal_bcc(),
                 )
                 notified = True
             except Exception as e:  # noqa: BLE001
@@ -705,6 +745,7 @@ async def send_portal_email(portal_id: str, body: dict, user=Depends(get_current
             to_email=customer_email,
             subject=subject,
             body_html=html,
+            bcc=await get_portal_bcc(),
         )
         # Cache zurückschreiben + Versand-Audit
         if portal.get("customer_id") and not portal.get("customer_deleted"):
@@ -864,6 +905,9 @@ async def public_add_note(token: str, body: dict):
     except Exception as e:
         logger.warning(f"Admin email notification failed: {e}")
 
+    # Zusätzliche Kontroll-Kopie an Portal-BCC (Ralph 12.05.2026)
+    await _portal_control_copy(portal, "customer", portal.get("customer_name", "Kunde"), text, type_labels.get(note_type, note_type))
+
     return note
 
 
@@ -945,10 +989,14 @@ async def add_admin_note(portal_id: str, body: dict, user=Depends(get_current_us
                     to_email=cust_mail,
                     subject=f"Neue Nachricht in Ihrem Kundenportal · {company}",
                     body_html=html,
+                    bcc=await get_portal_bcc(),
                 )
                 notified = True
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"Notify-customer (note) failed: {e}")
+
+    # Zusätzliche Kontroll-Kopie an Portal-BCC (Ralph 12.05.2026) — auch wenn kein notify_customer
+    await _portal_control_copy(portal, "admin", "Admin", text)
 
     return {**note, "notified": notified}
 
