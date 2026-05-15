@@ -43,9 +43,6 @@ from module_voice_intake import router as voice_intake_router  # Modul-First (07
 # kunden_router ist oben bereits aus module_kunden importiert — alter
 # routes.module_kunden Import wurde im Refactor entfernt.
 from module_rechnungen import router_v2 as rechnungen_v2_router  # Modul-First (07.05.2026)
-from portal_v2 import router as portal_v2_router
-from portal_v3 import router as portal_v3_router
-from portal_v4 import router as portal_v4_router
 from monteur_app import router as monteur_app_router
 from module_duplikate import router as module_duplikate_router
 from module_projekte import router as module_projekte_router
@@ -117,9 +114,6 @@ async def root():
 # Include router and middleware
 app.include_router(api_router)
 app.include_router(rechnungen_v2_router)  # v2-Modul mit eigenem prefix /api/v2
-app.include_router(portal_v2_router)  # Kundenportal v2 – Modul-First, prefix /api/portal-v2
-app.include_router(portal_v3_router)  # Kundenportal v3 (Test/Performance-Sandbox), prefix /api/portal-v3
-app.include_router(portal_v4_router)  # Kundenportal v4 (Dokumente-Anbindung-Sandbox), prefix /api/portal-v4
 app.include_router(monteur_app_router)  # Monteur-App (mobile), prefix /api/monteur
 app.include_router(dokumente_v2_router)  # Dokumente v2 – Modul-First, prefix /api/dokumente-v2
 app.include_router(module_duplikate_router)  # Duplikate-Erkennung & Merge, prefix /api/module-duplikate

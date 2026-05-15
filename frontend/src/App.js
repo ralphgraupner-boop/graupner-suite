@@ -24,19 +24,7 @@ import { InvoicesPage } from "@/pages/InvoicesPage";
 import { MitarbeiterModulPage } from "@/pages/MitarbeiterModulPage";
 import { EinsaetzeModulPage } from "@/pages/EinsaetzeModulPage";
 import { RechnungenV2Page } from "@/pages/RechnungenV2Page";
-import { PortalV2AdminPage } from "@/pages/portal_v2/PortalV2AdminPage";
-import { PortalV2DetailPage } from "@/pages/portal_v2/PortalV2DetailPage";
-import { PortalV2LoginPage } from "@/pages/portal_v2/PortalV2LoginPage";
-import { PortalV2CustomerPage } from "@/pages/portal_v2/PortalV2CustomerPage";
-import { PortalV3AdminPage } from "@/pages/portal_v3/PortalV3AdminPage";
-import { PortalV3DetailPage } from "@/pages/portal_v3/PortalV3DetailPage";
-import { PortalV3LoginPage } from "@/pages/portal_v3/PortalV3LoginPage";
-import { PortalV3CustomerPage } from "@/pages/portal_v3/PortalV3CustomerPage";
-import { PortalV4AdminPage } from "@/pages/portal_v4/PortalV4AdminPage";
-import { PortalV4DetailPage } from "@/pages/portal_v4/PortalV4DetailPage";
-import { PortalV4LoginPage } from "@/pages/portal_v4/PortalV4LoginPage";
 import KundenLinkPage from "@/pages/KundenLinkPage";
-import { PortalV4CustomerPage } from "@/pages/portal_v4/PortalV4CustomerPage";
 import PopupShell from "@/pages/PopupShell";
 import { MonteurAppPage } from "@/pages/monteur_app/MonteurAppPage";
 import { MonteurEinsatzDetailPage } from "@/pages/monteur_app/MonteurEinsatzDetailPage";
@@ -105,18 +93,6 @@ function App() {
         <Routes>
           {/* Kundenportal (oeffentlich) */}
           <Route path="/portal/:token" element={<CustomerPortalPage />} />
-          {/* Kundenportal v2 (oeffentlich) */}
-          <Route path="/portal-v2/login" element={<PortalV2LoginPage />} />
-          <Route path="/portal-v2/login/:token" element={<PortalV2LoginPage />} />
-          <Route path="/portal-v2/app" element={<PortalV2CustomerPage />} />
-          {/* Kundenportal v3 (oeffentlich, Test) */}
-          <Route path="/portal-v3/login" element={<PortalV3LoginPage />} />
-          <Route path="/portal-v3/login/:token" element={<PortalV3LoginPage />} />
-          <Route path="/portal-v3/app" element={<PortalV3CustomerPage />} />
-          {/* Kundenportal v4 (oeffentlich, Test mit Dokumente-Anbindung) */}
-          <Route path="/portal-v4/login" element={<PortalV4LoginPage />} />
-          <Route path="/portal-v4/login/:token" element={<PortalV4LoginPage />} />
-          <Route path="/portal-v4/app" element={<PortalV4CustomerPage />} />
           {/* Mitarbeiter-Kundenlink (oeffentlich, 30 Tage gueltig) */}
           <Route path="/m/:token" element={<KundenLinkPage />} />
           {!isAuthenticated ? (
@@ -156,12 +132,6 @@ function App() {
               <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
               <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
               <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
-              <Route path="/portal-v2" element={<MainLayout onLogout={logout}><PortalV2AdminPage /></MainLayout>} />
-              <Route path="/portal-v2/detail/:id" element={<MainLayout onLogout={logout}><PortalV2DetailPage /></MainLayout>} />
-              <Route path="/portal-v3" element={<MainLayout onLogout={logout}><PortalV3AdminPage /></MainLayout>} />
-              <Route path="/portal-v3/detail/:id" element={<MainLayout onLogout={logout}><PortalV3DetailPage /></MainLayout>} />
-              <Route path="/portal-v4" element={<MainLayout onLogout={logout}><PortalV4AdminPage /></MainLayout>} />
-              <Route path="/portal-v4/detail/:id" element={<MainLayout onLogout={logout}><PortalV4DetailPage /></MainLayout>} />
               {/* Monteur-App (mobile, eigenes Modul) */}
               <Route path="/monteur" element={<MainLayout onLogout={logout}><MonteurAppPage /></MainLayout>} />
               <Route path="/monteur/einsatz/:id" element={<MainLayout onLogout={logout}><MonteurEinsatzDetailPage /></MainLayout>} />
