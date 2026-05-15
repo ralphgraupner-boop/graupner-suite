@@ -2,6 +2,37 @@ from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
 from database import client, logger
 
+# ============================================================
+# ROUTING-ÜBERSICHT
+# ============================================================
+# module_*/ = eigenständige Module (Modul-First-Architektur)
+#             haben eigene Collection, eigenen Router, eigene Tests
+#
+# routes/   = Querschnitts-Dienste (kein eigenes Modul)
+#   auth.py           – JWT-Login/Logout
+#   settings.py       – Firmeneinstellungen
+#   backup.py         – Datenbank-Export/Import
+#   auto_backup.py    – täglicher Backup-Task
+#   email.py          – ausgehende E-Mails (SMTP)
+#   imap.py           – IMAP-Konten verwalten
+#   dashboard.py      – Startseite-Daten
+#   ai.py             – KI-Funktionen
+#   pdf.py            – PDF-Generierung
+#   push.py           – Push-Benachrichtigungen
+#   webhook.py        – eingehende Webhooks
+#   distance.py       – Entfernungsberechnung
+#   mitarbeiter.py    – Mitarbeiterverwaltung
+#   articles.py       – Artikel/Leistungen
+#   services.py       – Dienstleistungen
+#   kalkulation.py    – Kalkulations-Tool
+#   anfragen.py       – Kundenanfragen (legacy)
+#   anfragen_fetcher.py – Anfragen-Abruf
+#   leistungsbloecke.py – Leistungsblöcke
+#   text_templates.py – Textvorlagen (legacy, → module_textvorlagen)
+#   diverses.py       – Diverses/Sonstiges
+#   modules.py        – Modul-Registry
+# ============================================================
+
 # Import all route modules
 from routes.auth import router as auth_router
 from module_kunden import router as kunden_router  # Modul-First (07.05.2026)

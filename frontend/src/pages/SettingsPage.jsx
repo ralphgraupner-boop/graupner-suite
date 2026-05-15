@@ -10,13 +10,12 @@ import { HelpTip } from "@/components/HelpTip";
 
 import { FirmendatenTab } from "./settings/FirmendatenTab";
 import { KalkulationTab } from "./settings/KalkulationTab";
-import { TextbausteineTab } from "./settings/TextbausteineTab";
 import { EmailTab } from "./settings/EmailTab";
 import { BenutzerTab } from "./settings/BenutzerTab";
 import { DokumentVorlagenTab } from "./settings/DokumentVorlagenTab";
-import { EinsatzplanungTab } from "./settings/EinsatzplanungTab";
 import { DiversesTab } from "./settings/DiversesTab";
 import { BackupTab } from "./settings/BackupTab";
+import { ModuleTab } from "./settings/ModuleTab";
 
 // ==================== TAB CONFIG ====================
 const TABS = [
@@ -29,6 +28,7 @@ const TABS = [
   { id: "doc-templates", label: "Angebot/Rechnung-Vorlagen", icon: Package },
   { id: "diverses", label: "Diverses / Info", icon: BookOpen },
   { id: "backup", label: "Backup", icon: Save },
+  { id: "module", label: "Module", icon: Package },
   { id: "hilfe", label: "Hilfe", icon: HelpCircle },
 ];
 
@@ -145,6 +145,7 @@ const SettingsPage = () => {
       )}
       {activeTab === "diverses" && <DiversesTab />}
       {activeTab === "backup" && <BackupTab />}
+      {activeTab === "module" && <ModuleTab />}
       {activeTab === "hilfe" && <HilfeTab />}
     </div>
   );
