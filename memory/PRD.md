@@ -322,3 +322,39 @@ Modulares CRM/ERP für Tischlerei Graupner Hamburg. React + FastAPI + MongoDB, s
   - Bekannter Bug im Migrate-Endpoint: bei kleinem `limit` (z. B. 10) findet er irrtümlich 0 Kandidaten — Workaround `limit=999`. Fix folgt.
   - Files-Endpoint Whitelist: erweitert um `module_kunden/`, da aus Anfragen übernommene Bilder dort liegen (kein Storage-Duplikat beim Übernehmen, nur Referenz). Auth-Pflicht bleibt.
 
+## 🧹 Refactoring R1–R5 (15.05.2026) — Dead Code & Modul-Hygiene
+
+Externer Code-Review (Claude AI auf ZIP-Snapshot) hat 5 strukturelle Schwachstellen identifiziert. Ralph hat exakte Diffs geliefert, Agent hat 1:1 umgesetzt (kein Re-Interpret):
+
+- **R1 — Portal-Versionen archiviert:**
+  - Backend-Imports + `include_router` für `portal_v2/v3/v4` aus `server.py` entfernt
+  - Frontend: 12 Imports + 9 öffentliche Routes + 6 Admin-Routes + 3 Nav-Einträge entfernt
+  - Ordner verschoben nach `backend/_archiv/portal_v[234]/` und `frontend/src/_archiv/portal_v[234]/`
+  - Test-Datei `backend/tests/test_portal_v4.py` gelöscht (Test für toten Code)
+  - `module_portal_v2_backup/` bleibt aktiv (täglicher Backup-Service)
+- **R2 — SettingsPage.jsx aufgeteilt: 2841 → 153 Zeilen (-95 %)**
+  - 8 produktive Tab-Dateien in `frontend/src/pages/settings/`: FirmendatenTab, KalkulationTab, EmailTab (inkl. 5 Helper), BenutzerTab, DokumentVorlagenTab, DiversesTab (inkl. 4 Helper), BackupTab, ModuleTab
+  - **Bug-Fix**: `BackupTab` war als nested function innerhalb `SettingsPage` definiert (React-Anti-Pattern → Re-Render-Cost). Jetzt top-level extrahiert.
+  - **Toter Code entdeckt**: `TextbausteineTab`, `EinsatzplanungTab`, `ModuleTab` waren definiert aber nie im TABS-Switch gerendert. `ModuleTab` aktiv als neuer Settings-Tab eingebunden (zeigt Backend-Modul-Registry). Die anderen 2 nach `frontend/src/_archiv/settings/` verschoben.
+- **R3 — `module_mail_inbox/routes.py` aufgeteilt: 1354 → 5 Sub-Router**
+  - `helpers.py` (150 Z.): _content_hash, _decode, _is_ascii, _build_imap_search_args, _normalize_phone, _find_kunde_duplicates, _tombstone + IMAP-Konstanten
+  - `routes_scan.py` (542 Z.): /scan, /scan-preview, /import-mail
+  - `routes_list.py` (267 Z.): /list, /stats, /mail-detail, /customer-mails
+  - `routes_actions.py` (206 Z.): /accept, /accept-link, /reject, /reject-all-spam, /abschliessen
+  - `routes_delete.py` (120 Z.): /preview-delete, /preview-bulk-delete, /delete-all-spam, DELETE /{id}
+  - `routes_admin.py` (110 Z.): /reevaluate-spam, /migrate-anliegen-to-nachricht
+  - `__init__.py` bindet alle 5 Sub-Router + accounts-Router ein.
+- **R4 — Routing-Übersicht dokumentiert:** Kommentar-Block in `backend/server.py` erklärt, dass `module_*/` für eigenständige Module ist, `routes/` für Querschnitts-Dienste (auth, settings, backup, email, imap, pdf, push, …). Kein Code-Change, nur Doku.
+- **R5 — `_legacy_backup/` archiviert:** 11 alte Page-Dateien (7797 Zeilen, null Imports von außen) verschoben nach `frontend/src/_archiv/legacy_pages/`. Einheitliches Prinzip: nichts wird hart gelöscht, alles ist rückholbar.
+
+### Verifikation (alle grün)
+- ✅ Backend startet ohne ImportError; Lint sauber
+- ✅ Frontend lädt Login/Dashboard/Settings/Mail-Inbox; ESLint clean
+- ✅ Mail-Inbox-Sub-Router-Smoke: /list 200, /stats 200, /scan-preview 200, /reevaluate-spam 200, /accounts 200
+- ✅ Module-Tab im Settings lädt Backend-Registry (6 Module)
+- ✅ Backup-Tab (top-level) lädt 20 Portal-v2-Sicherungen
+
+### Backups
+- `/tmp/SettingsPage.jsx.backup` (2841 Z.) und `/tmp/mail_inbox_routes.py.backup` (1354 Z.) für Diff-Vergleich gegen Ralph's ZIP.
+
+
