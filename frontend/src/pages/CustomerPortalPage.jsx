@@ -261,7 +261,7 @@ const CustomerPortalPage = () => {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Header */}
       <header className="bg-[#14532D] text-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt={firmName} className="h-10 w-10 rounded-lg bg-white object-contain p-1" />
@@ -287,9 +287,9 @@ const CustomerPortalPage = () => {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-5 lg:gap-6 space-y-6 lg:space-y-0">
-        {/* LINKE SPALTE (3/5) – Hauptinhalt */}
-        <div className="lg:col-span-3 space-y-6 min-w-0">
+      <div className="max-w-7xl mx-auto px-4 py-6 lg:grid lg:grid-cols-2 lg:gap-8 space-y-6 lg:space-y-0">
+        {/* LINKE SPALTE (50%) – Hauptinhalt */}
+        <div className="lg:col-span-1 space-y-6 min-w-0">
         {/* Begrüßung */}
         <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#14532D]" data-testid="portal-greeting">
           <h2 className="text-xl font-bold text-slate-800 mb-1">
@@ -519,8 +519,8 @@ const CustomerPortalPage = () => {
         </div>
         {/* /LINKE SPALTE */}
 
-        {/* RECHTE SPALTE (2/5) – Bilder + Dokumente, sticky auf Desktop */}
-        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+        {/* RECHTE SPALTE (50%) – Bilder + Dokumente, sticky auf Desktop */}
+        <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         {/* Upload Section */}
         <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-upload-section">
           <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center justify-between gap-2">
@@ -539,7 +539,7 @@ const CustomerPortalPage = () => {
               data-testid="portal-upload-description"
             />
             <label
-              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-10 cursor-pointer transition-colors ${
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-10 min-h-[200px] cursor-pointer transition-colors ${
                 uploading ? "border-[#14532D]/40 bg-[#EAF3DE]" : "border-[#14532D]/30 hover:border-[#14532D] hover:bg-[#EAF3DE]/50"
               }`}
               data-testid="portal-upload-area"
@@ -615,7 +615,7 @@ const CustomerPortalPage = () => {
               <button
                 onClick={submitPending}
                 disabled={uploading || pending.length === 0}
-                className="mt-3 w-full bg-[#14532D] text-white px-4 py-3 rounded-xl text-sm font-semibold hover:bg-[#14532D]/90 active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                className="mt-3 w-full bg-[#14532D] text-white px-4 py-4 rounded-xl text-sm font-semibold hover:bg-[#14532D]/90 active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 data-testid="portal-submit-upload"
               >
                 {uploading ? (
@@ -653,7 +653,7 @@ const CustomerPortalPage = () => {
                 Von Ihnen
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {customerFiles.map(f => (
                 <PortalFilePreview key={f.id} file={f} />
               ))}
@@ -675,22 +675,22 @@ const CustomerPortalPage = () => {
                 Tischlerei
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
               {businessFiles.map(f => (
                 <a
                   key={f.id}
                   href={`${API}/portal/file/${f.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 border border-emerald-100 bg-emerald-50/40 rounded-lg hover:bg-emerald-50 transition-colors"
+                  className="flex flex-col items-center justify-center gap-2 p-3 h-40 border border-emerald-100 bg-emerald-50/40 rounded-lg hover:bg-emerald-50 transition-colors"
                   data-testid={`business-file-${f.id}`}
                 >
                   {f.content_type?.startsWith("image/") ? (
-                    <Image className="w-5 h-5 text-emerald-600" />
+                    <Image className="w-8 h-8 text-emerald-600" />
                   ) : (
-                    <FileText className="w-5 h-5 text-emerald-600" />
+                    <FileText className="w-8 h-8 text-emerald-600" />
                   )}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 w-full text-center">
                     <p className="text-sm font-medium truncate">{f.original_filename}</p>
                     <p className="text-xs text-slate-400">{new Date(f.created_at).toLocaleDateString("de-DE")}</p>
                   </div>
@@ -705,7 +705,7 @@ const CustomerPortalPage = () => {
       </div>
 
       {/* Bereich UNTERHALB des Grids – volle Breite */}
-      <div className="max-w-6xl mx-auto px-4 pb-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 pb-6 space-y-6">
         {/* Error Display (global) */}
         {error && authenticated && (
           <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3" data-testid="portal-global-error">
@@ -826,14 +826,14 @@ const PortalFilePreview = ({ file }) => {
   return (
     <div className="rounded-lg overflow-hidden border">
       {blobUrl ? (
-        <img src={blobUrl} alt={file.original_filename} className="w-full h-28 object-cover" />
+        <img src={blobUrl} alt={file.original_filename} className="w-full h-40 object-cover" />
       ) : (
         <div className="w-full h-28 bg-slate-100 flex items-center justify-center">
           <Image className="w-6 h-6 text-slate-300" />
         </div>
       )}
       <div className="p-2">
-        <p className="text-xs truncate text-slate-600">{file.description || file.original_filename}</p>
+        <p className="text-sm truncate text-slate-600">{file.description || file.original_filename}</p>
         <p className="text-[10px] text-slate-400">{new Date(file.created_at).toLocaleDateString("de-DE")}</p>
       </div>
     </div>
