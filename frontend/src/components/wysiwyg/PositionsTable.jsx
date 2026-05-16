@@ -1,4 +1,4 @@
-import { GripVertical, Trash2, Plus, Bookmark, X } from "lucide-react";
+import { GripVertical, Trash2, Plus, Bookmark, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 
 const PositionsTable = ({
@@ -52,36 +52,30 @@ const PositionsTable = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="relative flex-1">
-                    <input
-                      value={pos.description}
-                      onChange={(e) => { updatePosition(idx, "description", e.target.value); setTitelDropdownIdx(idx); }}
-                      onFocus={() => setTitelDropdownIdx(idx)}
-                      onBlur={() => setTimeout(() => setTitelDropdownIdx(prev => prev === idx ? null : prev), 150)}
-                      placeholder="Titel eingeben..."
-                      className="w-full border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
-                      data-testid={`mobile-titel-input-${idx}`}
-                    />
-                    {titelDropdownIdx === idx && (() => {
-                      const q = (pos.description || "").trim().toLowerCase();
-                      if (q.length < 2) return null;
-                      const sugg = titelTemplates
-                        .filter(t => (t.content || "").toLowerCase().includes(q) && (t.content || "").toLowerCase() !== q)
-                        .slice(0, 5);
-                      if (sugg.length === 0) return null;
-                      return (
-                        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid={`titel-suggestions-${idx}`}>
-                          {sugg.map(t => (
-                            <button key={t.id} type="button"
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
-                              className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 border-b last:border-b-0">
-                              {t.content}
-                            </button>
-                          ))}
-                        </div>
-                      );
-                    })()}
+                  <input
+                    value={pos.description}
+                    onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                    placeholder="Titel eingeben..."
+                    className="flex-1 border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
+                  />
+                  <div className="relative">
+                    <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
+                      className="p-1.5 text-amber-600 hover:bg-amber-50 rounded border">
+                      <ChevronDown className={`w-4 h-4 transition-transform ${titelDropdownIdx === idx ? "rotate-180" : ""}`} />
+                    </button>
+                    {titelDropdownIdx === idx && (
+                      <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[200px] max-h-40 overflow-y-auto">
+                        {titelTemplates.length > 0 ? titelTemplates.map(t => (
+                          <button key={t.id} type="button"
+                            onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
+                            className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 border-b last:border-b-0">
+                            {t.content}
+                          </button>
+                        )) : (
+                          <p className="px-3 py-2 text-xs text-muted-foreground">Keine Vorlagen</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -180,37 +174,33 @@ const PositionsTable = ({
                   <td className="py-3 text-base font-bold text-primary">{numbering[idx]}</td>
                   <td className="py-2" colSpan={4}>
                     <div className="flex items-center gap-1">
-                      <div className="relative flex-1">
-                        <input
-                          value={pos.description}
-                          onChange={(e) => { updatePosition(idx, "description", e.target.value); setTitelDropdownIdx(idx); }}
-                          onFocus={() => setTitelDropdownIdx(idx)}
-                          onBlur={() => setTimeout(() => setTitelDropdownIdx(prev => prev === idx ? null : prev), 150)}
-                          placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
-                          className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
-                          data-testid={`titel-input-${idx}`}
-                        />
-                        {/* Autocomplete-Vorschlaege (>=2 Zeichen, max 5) */}
-                        {titelDropdownIdx === idx && (() => {
-                          const q = (pos.description || "").trim().toLowerCase();
-                          if (q.length < 2) return null;
-                          const sugg = titelTemplates
-                            .filter(t => (t.content || "").toLowerCase().includes(q) && (t.content || "").toLowerCase() !== q)
-                            .slice(0, 5);
-                          if (sugg.length === 0) return null;
-                          return (
-                            <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid={`titel-suggestions-${idx}`}>
-                              {sugg.map(t => (
-                                <button key={t.id} type="button"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
-                                  className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 transition-colors border-b last:border-b-0">
-                                  {t.content}
-                                </button>
-                              ))}
-                            </div>
-                          );
-                        })()}
+                      <input
+                        value={pos.description}
+                        onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                        placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
+                        className="flex-1 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
+                        data-testid={`titel-input-${idx}`}
+                      />
+                      {/* Titel-Vorlage Dropdown */}
+                      <div className="relative">
+                        <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
+                          className="p-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
+                          title="Titel-Vorlage wählen">
+                          <ChevronDown className={`w-4 h-4 transition-transform ${titelDropdownIdx === idx ? "rotate-180" : ""}`} />
+                        </button>
+                        {titelDropdownIdx === idx && (
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[220px] max-h-48 overflow-y-auto">
+                            {titelTemplates.length > 0 ? titelTemplates.map(t => (
+                              <button key={t.id} type="button"
+                                onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
+                                className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 transition-colors border-b last:border-b-0">
+                                {t.content}
+                              </button>
+                            )) : (
+                              <p className="px-3 py-2 text-xs text-muted-foreground">Keine Titel-Vorlagen vorhanden</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {/* Speichern-Button */}
                       {pos.description?.trim() && !titelTemplates.some(t => t.content === pos.description.trim()) && (
