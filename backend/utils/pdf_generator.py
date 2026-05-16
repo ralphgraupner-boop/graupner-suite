@@ -487,6 +487,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     body_font_size = _font_map.get(str(settings.get("pdf_font_size", "normal")).lower(), 10)
     body_line_height = 0.35 + (body_font_size - 9) * 0.04  # leicht mitwachsen
 
+    # FIX (16.05.2026): Fliesstext-Raender schmaler als Briefkopf-Raender, damit
+    # lange Saetze weniger oft umbrechen. Briefkopf/Adressblock/Tabelle bleiben 2 cm.
+    body_margin_left = 1.5 * cm
+    body_wrap_width = width - 3.0 * cm  # 1.5 cm links + 1.5 cm rechts = 18 cm Textbreite
+
     # === BRIEFKOPF (Letterhead) ===
     # Left: "Tischlerei Graupner seit 1960"
     y = height - 2 * cm
@@ -600,11 +605,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_vt = height - 3.5 * cm
-                y_vt = _draw_rich_text(c, 2 * cm, y_vt, part, width - 4 * cm, font_size=body_font_size, line_height=body_line_height, default_color="#0F172A")
+                y_vt = _draw_rich_text(c, body_margin_left, y_vt, part, body_wrap_width, font_size=body_font_size, line_height=body_line_height, default_color="#0F172A")
         else:
             c.setFont("Helvetica", body_font_size)
             c.setFillColor(text_color)
-            wrap_width = width - 4 * cm
+            wrap_width = body_wrap_width
             segments = vortext.split("\n---\n") if "\n---\n" in vortext else vortext.split("---")
             for i, seg in enumerate(segments):
                 if i > 0:
@@ -617,7 +622,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     c.setFillColor(text_color)
                 for raw_line in seg.split("\n"):
                     for wl in _wrap_text(c, raw_line, "Helvetica", body_font_size, wrap_width):
-                        c.drawString(2 * cm, y_vt, wl)
+                        c.drawString(body_margin_left, y_vt, wl)
                         y_vt -= body_line_height * cm
         y_vt -= 0.2 * cm
 
@@ -803,11 +808,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_pos = height - 3.5 * cm
-                y_pos = _draw_rich_text(c, 2 * cm, y_pos, part, width - 4 * cm, font_size=body_font_size, line_height=body_line_height, default_color="#0F172A")
+                y_pos = _draw_rich_text(c, body_margin_left, y_pos, part, body_wrap_width, font_size=body_font_size, line_height=body_line_height, default_color="#0F172A")
         else:
             c.setFont("Helvetica", body_font_size)
             c.setFillColor(text_color)
-            wrap_width = width - 4 * cm
+            wrap_width = body_wrap_width
             segments = schlusstext.split("\n---\n") if "\n---\n" in schlusstext else schlusstext.split("---")
             for i, seg in enumerate(segments):
                 if i > 0:
@@ -828,7 +833,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                             y_pos = height - 3.5 * cm
                             c.setFont("Helvetica", body_font_size)
                             c.setFillColor(text_color)
-                        c.drawString(2 * cm, y_pos, wl)
+                        c.drawString(body_margin_left, y_pos, wl)
                         y_pos -= body_line_height * cm
 
     # Valid until / Due date
