@@ -113,6 +113,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   useEffect(() => { loadData(); }, [id]);
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const [settingsRes, kontaktRes, modulArtikelRes, kundenModulRes] = await Promise.all([
         api.get("/settings"),
@@ -596,11 +597,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       if (isNew) {
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount }) };
         const res = await api.post(`/${endpoint}`, payload);
-        if (res?.data?.id) { navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); return res.data.id; }
+        if (res?.data?.id) {
+          markPristine();
+          navigateBypassBlocker(`/${endpoint}/${res.data.id}/edit`, { replace: true });
+          return res.data.id;
+        }
         return null;
       } else {
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "invoice" && { deposit_amount: depositAmount }) };
         await api.put(`/${endpoint}/${id}`, payload);
+        markPristine();
         return id;
       }
     } catch { toast.error("Fehler beim Speichern"); return null; } finally { setSaving(false); }
@@ -615,18 +621,95 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     return savedId;
   };
 
-  const handleSaveAndExit = async () => { await handleSave(); navigate(listPaths[type]); };
+  const handleSaveAndExit = async () => { const saved = await handleSave(); if (saved) navigateBypassBlocker(listPaths[type]); };
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const handleExit = () => { setShowExitConfirm(true); };
-  const handleExitWithSave = async () => { setShowExitConfirm(false); await handleSave(); navigate(listPaths[type]); };
-  const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(listPaths[type]); };
+  // ==================== DIRTY-TRACKING (Datenverlust-Schutz) ====================
+  const baselineRef = useRef(null);
+  const bypassBlockerRef = useRef(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const buildSnapshot = useCallback(() => JSON.stringify({
+    selectedCustomerId, positions, notes, vortext, schlusstext, betreff,
+    vatRate, discount, discountType, status, depositAmount,
+    showLohnanteil, lohnanteilCustom,
+  }), [selectedCustomerId, positions, notes, vortext, schlusstext, betreff, vatRate, discount, discountType, status, depositAmount, showLohnanteil, lohnanteilCustom]);
+
+  // Stabile Ref auf die aktuelle Snapshot-Funktion, damit der Baseline-Reset-Effect
+  // nicht bei jeder Feldaenderung erneut feuert.
+  const buildSnapshotRef = useRef(buildSnapshot);
+  useEffect(() => { buildSnapshotRef.current = buildSnapshot; });
+
+  // Nach jedem erfolgreichen Load (loading -> false) Baseline neu setzen.
+  useEffect(() => {
+    if (loading) return;
+    baselineRef.current = buildSnapshotRef.current();
+    setIsDirty(false);
+  }, [loading]);
+
+  // Bei jeder Aenderung der getrackten Felder gegen Baseline diffen.
+  useEffect(() => {
+    if (loading || baselineRef.current == null) return;
+    setIsDirty(buildSnapshot() !== baselineRef.current);
+  }, [buildSnapshot, loading]);
+
+  // Browser-Reload / Tab schliessen abfangen.
+  useEffect(() => {
+    if (!isDirty) return undefined;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  // In-App-Navigation (Sidebar, Browser-Zurueck) blocken.
+  // ACHTUNG: useBlocker erfordert createBrowserRouter (Data-Router). Die App
+  // nutzt aktuell den klassischen <BrowserRouter>, dort wuerde useBlocker
+  // mit einer Invariant-Exception abstuerzen. Wir verwenden deshalb hier nur
+  // den expliziten Bestaetigungsdialog ueber den "Beenden"-Button + die
+  // beforeunload-Sperre fuer Tab-Schliessen/Reload. Fuer echtes In-App-
+  // Navigations-Blocking muss App.js auf createBrowserRouter umgestellt
+  // werden (siehe Hinweis im Chat).
+  const blocker = { state: "unblocked", proceed: () => {}, reset: () => {} };
+
+  const markPristine = useCallback(() => {
+    baselineRef.current = buildSnapshotRef.current();
+    setIsDirty(false);
+  }, []);
+
+  // Programmatische Navigation, die NICHT vom Blocker abgefangen werden soll.
+  const navigateBypassBlocker = useCallback((to, opts) => {
+    bypassBlockerRef.current = true;
+    navigate(to, opts);
+    setTimeout(() => { bypassBlockerRef.current = false; }, 0);
+  }, [navigate]);
+  const handleExit = () => {
+    if (!isDirty) { navigateBypassBlocker(listPaths[type]); return; }
+    setShowExitConfirm(true);
+  };
+  const handleExitWithSave = async () => {
+    setShowExitConfirm(false);
+    const saved = await handleSave();
+    if (!saved) return;  // Save fehlgeschlagen -> Editor offen lassen
+    if (blocker.state === "blocked") blocker.proceed();
+    else navigateBypassBlocker(listPaths[type]);
+  };
+  const handleExitWithoutSave = () => {
+    setShowExitConfirm(false);
+    if (blocker.state === "blocked") blocker.proceed();
+    else navigateBypassBlocker(listPaths[type]);
+  };
+  const handleExitCancel = () => {
+    setShowExitConfirm(false);
+    if (blocker.state === "blocked") blocker.reset();
+  };
 
   const handleDownloadPDF = async () => {
     if (!validateTextFields()) return;
     // Immer zuerst speichern → PDF zeigt dann aktuellen Stand, nicht die alte Version
+    const wasDirty = isDirty;
     const savedId = await persistDocument();
     if (!savedId) return;
+    if (wasDirty) toast.info("Automatisch gespeichert");
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       // Cache-Buster, damit Browser nicht versehentlich eine alte PDF-Version zeigt
@@ -648,8 +731,10 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handlePrint = async () => {
     if (!validateTextFields()) return;
     // Immer zuerst speichern → Druck zeigt aktuellen Stand
+    const wasDirty = isDirty;
     const savedId = await persistDocument();
     if (!savedId) return;
+    if (wasDirty) toast.info("Automatisch gespeichert");
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
@@ -697,10 +782,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
         api.put(`/${endpoint}/${id}`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
       }
-      navigate(listPaths[type]);
+      navigateBypassBlocker(listPaths[type]);
     };
     if (saveFirst) {
+      const wasDirty = isDirty;
       await handleSave();
+      if (wasDirty) toast.info("Automatisch gespeichert");
     }
     doOpen();
     setShowMailDialog(null);
@@ -937,16 +1024,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       {showExitConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="exit-confirm-dialog">
           <div className="bg-card rounded-lg shadow-2xl p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold mb-2">Dokument beenden</h3>
-            <p className="text-sm text-muted-foreground mb-6">Moechten Sie vor dem Beenden speichern?</p>
+            <h3 className="text-lg font-semibold mb-2">Ungespeicherte Änderungen</h3>
+            <p className="text-sm text-muted-foreground mb-6">Sie haben ungespeicherte Änderungen. Möchten Sie vor dem Verlassen speichern?</p>
             <div className="flex flex-col gap-2">
               <button onClick={handleExitWithSave} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" data-testid="btn-exit-save">
-                Speichern und Beenden
+                Speichern und verlassen
               </button>
               <button onClick={handleExitWithoutSave} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm border hover:bg-destructive/10 text-destructive transition-colors" data-testid="btn-exit-no-save">
-                Ohne Speichern beenden
+                Ohne Speichern verlassen
               </button>
-              <button onClick={() => setShowExitConfirm(false)} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm border hover:bg-muted transition-colors" data-testid="btn-exit-cancel">
+              <button onClick={handleExitCancel} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm border hover:bg-muted transition-colors" data-testid="btn-exit-cancel">
                 Abbrechen
               </button>
             </div>
