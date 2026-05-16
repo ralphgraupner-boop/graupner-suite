@@ -14,7 +14,7 @@ const EditorToolbar = ({
     <div className="fixed top-0 left-0 right-0 bg-card border-b z-40 shadow-sm">
       <div className="flex items-center justify-between px-3 lg:px-6 py-2 lg:py-3">
         <div className="flex items-center gap-2 lg:gap-4 min-w-0">
-          <Button variant="ghost" size="sm" onClick={handleExit}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(listPaths[type])}>
             <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
             <span className="hidden sm:inline">Zurück</span>
           </Button>
