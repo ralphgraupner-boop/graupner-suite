@@ -68,6 +68,9 @@ async def get_available_collections(user=Depends(get_current_user)):
         {"id": "module_export_log", "name": "Export-Protokoll", "icon": "📤", "group": "system"},
         {"id": "module_kalender_export_log", "name": "Kalender-Export-Log", "icon": "📅", "group": "system"},
         {"id": "module_kalender_feed_tokens", "name": "Kalender-Feed-Tokens", "icon": "🔑", "group": "system"},
+        {"id": "module_assistent_hinweise", "name": "Assistent Hinweise", "icon": "🧠", "group": "system"},
+        {"id": "module_assistent_log", "name": "Assistent Protokoll", "icon": "📋", "group": "system"},
+        {"id": "module_assistent_settings", "name": "Assistent Einstellungen", "icon": "⚙️", "group": "system"},
         # === MONTEUR-APP ===
         {"id": "monteur_app_settings", "name": "Monteur-App Einstellungen", "icon": "⚙️", "group": "monteur"},
         {"id": "monteur_app_notizen", "name": "Monteur-App Notizen", "icon": "📝", "group": "monteur"},

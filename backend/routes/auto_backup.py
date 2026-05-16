@@ -53,6 +53,7 @@ async def create_backup_data():
             "module_kunde_delete_log", "auto_backup_log",
             "module_health_audit", "module_export_log",
             "module_kalender_export_log", "module_kalender_feed_tokens",
+            "module_assistent_hinweise", "module_assistent_log", "module_assistent_settings",
             # MONTEUR-APP
             "monteur_app_settings", "monteur_app_notizen",
             "monteur_app_fotos", "monteur_app_todos", "monteur_app_feedback",
