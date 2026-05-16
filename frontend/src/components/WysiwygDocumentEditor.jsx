@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useNavigate, useLocation, useParams, useBlocker } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
 import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star } from "lucide-react";
@@ -599,7 +599,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const res = await api.post(`/${endpoint}`, payload);
         if (res?.data?.id) {
           markPristine();
-          navigateBypassBlocker(`/${endpoint}/${res.data.id}/edit`, { replace: true });
+          navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true });
           return res.data.id;
         }
         return null;
@@ -621,12 +621,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     return savedId;
   };
 
-  const handleSaveAndExit = async () => { const saved = await handleSave(); if (saved) navigateBypassBlocker(listPaths[type]); };
+  const handleSaveAndExit = async () => { const saved = await handleSave(); if (saved) navigate(listPaths[type]); };
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   // ==================== DIRTY-TRACKING (Datenverlust-Schutz) ====================
   const baselineRef = useRef(null);
-  const bypassBlockerRef = useRef(false);
   const [isDirty, setIsDirty] = useState(false);
 
   const buildSnapshot = useCallback(() => JSON.stringify({
@@ -653,7 +652,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setIsDirty(buildSnapshot() !== baselineRef.current);
   }, [buildSnapshot, loading]);
 
-  // Browser-Reload / Tab schliessen abfangen.
+  // Browser-Reload / Tab schliessen abfangen (native Browser-Warnung).
   useEffect(() => {
     if (!isDirty) return undefined;
     const handler = (e) => { e.preventDefault(); e.returnValue = ""; };
@@ -661,45 +660,25 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  // In-App-Navigation (Sidebar, Browser-Zurueck) blocken.
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    if (bypassBlockerRef.current) return false;
-    return isDirty && currentLocation.pathname !== nextLocation.pathname;
-  });
-  useEffect(() => {
-    if (blocker.state === "blocked") setShowExitConfirm(true);
-  }, [blocker.state]);
-
   const markPristine = useCallback(() => {
     baselineRef.current = buildSnapshotRef.current();
     setIsDirty(false);
   }, []);
-
-  // Programmatische Navigation, die NICHT vom Blocker abgefangen werden soll.
-  const navigateBypassBlocker = useCallback((to, opts) => {
-    bypassBlockerRef.current = true;
-    navigate(to, opts);
-    setTimeout(() => { bypassBlockerRef.current = false; }, 0);
-  }, [navigate]);
   const handleExit = () => {
-    if (!isDirty) { navigateBypassBlocker(listPaths[type]); return; }
+    if (!isDirty) { navigate(listPaths[type]); return; }
     setShowExitConfirm(true);
   };
   const handleExitWithSave = async () => {
     setShowExitConfirm(false);
     const saved = await handleSave();
-    if (!saved) return;  // Save fehlgeschlagen -> Editor offen lassen
-    if (blocker.state === "blocked") blocker.proceed();
-    else navigateBypassBlocker(listPaths[type]);
+    if (saved) navigate(listPaths[type]);
   };
   const handleExitWithoutSave = () => {
     setShowExitConfirm(false);
-    if (blocker.state === "blocked") blocker.proceed();
-    else navigateBypassBlocker(listPaths[type]);
+    navigate(listPaths[type]);
   };
   const handleExitCancel = () => {
     setShowExitConfirm(false);
-    if (blocker.state === "blocked") blocker.reset();
   };
 
   const handleDownloadPDF = async () => {
@@ -781,7 +760,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
         api.put(`/${endpoint}/${id}`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
       }
-      navigateBypassBlocker(listPaths[type]);
+      navigate(listPaths[type]);
     };
     if (saveFirst) {
       const wasDirty = isDirty;
