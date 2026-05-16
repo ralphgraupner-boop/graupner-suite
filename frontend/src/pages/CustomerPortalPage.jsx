@@ -113,6 +113,7 @@ const CustomerPortalPage = () => {
     setUploading(true);
     setUploadSuccess(false);
     setError("");
+    const anzahl = pending.length;
     try {
       for (const p of pending) {
         const file = await compressImageIfNeeded(p.file);
@@ -121,6 +122,16 @@ const CustomerPortalPage = () => {
         formData.append("password", password);
         formData.append("description", description || file.name);
         await axios.post(`${API}/portal/${token}/upload`, formData);
+      }
+      // Einmalige Sammel-Benachrichtigung nach allen Uploads
+      try {
+        const abschlussForm = new FormData();
+        abschlussForm.append("password", password);
+        abschlussForm.append("anzahl", anzahl);
+        abschlussForm.append("beschreibung", description || "");
+        await axios.post(`${API}/portal/${token}/upload-abgeschlossen`, abschlussForm);
+      } catch (e) {
+        console.warn("Sammel-Benachrichtigung fehlgeschlagen:", e);
       }
       setUploadSuccess(true);
       setDescription("");
@@ -183,25 +194,32 @@ const CustomerPortalPage = () => {
 
   // Login Screen
   if (!authenticated) {
+    const firmName = settings?.company_name || "Tischlerei Graupner";
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-[#F0FDF4] via-slate-50 to-slate-100 flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
+          {/* Logo + Firmenname */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
-              <Lock className="w-8 h-8 text-blue-600" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-sm mb-4 overflow-hidden">
+              {settings?.logo_url ? (
+                <img src={settings.logo_url} alt={firmName} className="w-full h-full object-contain p-2" />
+              ) : (
+                <Lock className="w-9 h-9 text-[#14532D]" />
+              )}
             </div>
-            <h1 className="text-2xl font-bold text-slate-800">Kundenportal</h1>
-            <p className="text-slate-500 mt-1 text-sm">Tischlerei Graupner</p>
+            <h1 className="text-2xl font-bold text-slate-800" data-testid="portal-firmname">{firmName}</h1>
+            <p className="text-slate-500 mt-1 text-sm">Ihr persönliches Kundenportal</p>
           </div>
-          <form onSubmit={handleLogin} className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+          {/* Login-Karte */}
+          <form onSubmit={handleLogin} className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Zugangspasswort</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Passwort eingeben"
+                className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532D] focus:border-transparent"
+                placeholder="Ihr Passwort eingeben"
                 autoFocus
                 data-testid="portal-password-input"
               />
@@ -214,13 +232,17 @@ const CustomerPortalPage = () => {
             )}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="w-full bg-[#14532D] text-white py-3 rounded-xl font-semibold hover:bg-[#14532D]/90 active:scale-[0.98] transition-all"
               data-testid="portal-login-btn"
             >
-              Zugang
+              Anmelden
             </button>
+            {/* Hilfetext */}
+            <p className="text-center text-xs text-slate-500 pt-1">
+              Ihr Passwort haben Sie per E-Mail erhalten.
+            </p>
           </form>
-          <p className="text-center text-xs text-slate-400 mt-4">Tischlerei Graupner &middot; seit 1960</p>
+          <p className="text-center text-xs text-slate-400 mt-4">{firmName} &middot; Wir sind für Sie da</p>
         </div>
       </div>
     );
@@ -228,6 +250,7 @@ const CustomerPortalPage = () => {
 
   // Authenticated Portal View
   const customerCount = files.filter(f => f.uploaded_by === "customer").length;
+  const firmName = settings?.company_name || "Tischlerei Graupner";
   // Sortierung: neueste Nachricht oben (reverse chronological)
   const dialogChronological = [
     ...customerNotes.map(n => ({ ...n, side: "customer" })),
@@ -236,21 +259,30 @@ const CustomerPortalPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header with Logo */}
-      <header className="bg-white border-b shadow-sm sticky top-0 z-10">
+      {/* Header */}
+      <header className="bg-[#14532D] text-white shadow-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {settings?.logo_url ? (
-              <img src={settings.logo_url} alt="Logo" className="h-10 w-auto object-contain" />
-            ) : null}
+              <img src={settings.logo_url} alt={firmName} className="h-10 w-10 rounded-lg bg-white object-contain p-1" />
+            ) : (
+              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-5 h-5 text-white/90" />
+              </div>
+            )}
             <div className="min-w-0">
-              <h1 className="text-lg font-bold text-slate-800 truncate">Tischlerei Graupner</h1>
-              <p className="text-xs text-slate-500">Kundenportal</p>
+              <h1 className="text-lg font-bold truncate" data-testid="portal-header-firmname">{firmName}</h1>
+              <p className="text-xs text-white/80">Kundenportal</p>
             </div>
           </div>
           <div className="text-right min-w-0">
-            <p className="text-sm font-medium text-slate-700 truncate">{portalInfo?.customer_name}</p>
-            {portalInfo?.description && <p className="text-xs text-slate-500 truncate">{portalInfo.description}</p>}
+            <div className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-300" />
+              <p className="text-sm font-medium truncate max-w-[180px]" data-testid="portal-header-kunde">{portalInfo?.customer_name}</p>
+            </div>
+            {portalInfo?.description && (
+              <p className="text-xs text-white/70 truncate mt-1">{portalInfo.description}</p>
+            )}
           </div>
         </div>
       </header>
@@ -258,21 +290,27 @@ const CustomerPortalPage = () => {
       <div className="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
         {/* LINKE SPALTE (2/3) – Hauptinhalt */}
         <div className="lg:col-span-2 space-y-6 min-w-0">
-        {/* Begrüßung / Hinweise */}
-        {(settings?.begruessung || settings?.hinweise) && (
-          <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-primary" data-testid="portal-greeting">
-            {settings?.begruessung && (
-              <div className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed mb-3">
-                {settings.begruessung}
-              </div>
-            )}
-            {settings?.hinweise && (
-              <div className="whitespace-pre-wrap text-slate-600 text-sm leading-relaxed bg-slate-50 rounded-lg p-3">
-                {settings.hinweise}
-              </div>
-            )}
-          </section>
-        )}
+        {/* Begrüßung */}
+        <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#14532D]" data-testid="portal-greeting">
+          <h2 className="text-xl font-bold text-slate-800 mb-1">
+            Guten Tag{portalInfo?.customer_name ? `, ${portalInfo.customer_name.split(" ")[0]}` : ""}!
+          </h2>
+          <p className="text-sm text-slate-500 mb-3">Willkommen in Ihrem persönlichen Bereich</p>
+          {settings?.begruessung ? (
+            <div className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
+              {settings.begruessung}
+            </div>
+          ) : (
+            <div className="text-slate-700 text-sm leading-relaxed">
+              Vielen Dank für Ihr Vertrauen. Laden Sie Fotos Ihrer Anfrage hoch und hinterlassen Sie uns eine Nachricht – wir melden uns zeitnah bei Ihnen.
+            </div>
+          )}
+          {settings?.hinweise && (
+            <div className="whitespace-pre-wrap text-slate-600 text-sm leading-relaxed bg-slate-50 rounded-lg p-3 mt-3">
+              {settings.hinweise}
+            </div>
+          )}
+        </section>
         {/* Ihre Daten */}
         {customerData && (
           <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-customer-data">
@@ -398,13 +436,13 @@ const CustomerPortalPage = () => {
             <div className="space-y-3">
               {dialogChronological.map(note => {
                 const isAdmin = note.side === "admin";
-                const labels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo", absenden: "Abgesendet", admin: "Tischlerei Graupner" };
+                const labels = { korrektur: "Korrektur", hinweis: "Hinweis", termin: "Terminvorschlag", zusatz: "Zusatzinfo", absenden: "Abgesendet", admin: settings?.company_name || "Tischlerei Graupner" };
                 return (
                   <div key={note.id} className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
                     <div className={`max-w-[85%] p-3 rounded-lg ${isAdmin ? "bg-emerald-50 border border-emerald-100" : "bg-blue-50 border border-blue-100"}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs font-medium ${isAdmin ? "text-emerald-700" : "text-blue-700"}`}>
-                          {isAdmin ? "Tischlerei Graupner" : "Sie"} · {labels[note.type] || note.type}
+                          {isAdmin ? (settings?.company_name || "Tischlerei Graupner") : "Sie"} · {labels[note.type] || note.type}
                         </span>
                         <span className="text-xs text-slate-400">{new Date(note.created_at).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                       </div>
@@ -496,25 +534,27 @@ const CustomerPortalPage = () => {
               data-testid="portal-upload-description"
             />
             <label
-              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl py-8 cursor-pointer transition-colors ${
-                uploading ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:border-blue-400 hover:bg-blue-50/50"
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-10 cursor-pointer transition-colors ${
+                uploading ? "border-[#14532D]/40 bg-[#EAF3DE]" : "border-[#14532D]/30 hover:border-[#14532D] hover:bg-[#EAF3DE]/50"
               }`}
               data-testid="portal-upload-area"
             >
               {uploading ? (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <div className="flex items-center gap-2 text-[#14532D]">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#14532D]"></div>
                   <span className="text-sm font-medium">Wird hochgeladen...</span>
                 </div>
               ) : (
                 <>
-                  <Image className="w-10 h-10 text-slate-300 mb-2" />
-                  <span className="text-sm text-slate-500">Tippen um Bilder auszuwählen</span>
-                  <span className="text-xs text-slate-400 mt-1">Max. {MAX_IMAGES_PER_UPLOAD} pro Upload · JPG, PNG, WebP, HEIC</span>
-                  <span className="text-[11px] text-slate-500 mt-1">Sie sehen erst eine Vorschau und können dann hochladen</span>
-                  <span className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
+                  <div className="w-14 h-14 rounded-full bg-[#EAF3DE] flex items-center justify-center mb-3">
+                    <Image className="w-7 h-7 text-[#14532D]" />
+                  </div>
+                  <span className="text-base font-semibold text-slate-800">Fotos auswählen</span>
+                  <span className="text-xs text-slate-500 mt-1">Tippen · Mehrere Fotos auf einmal möglich</span>
+                  <span className="text-[11px] text-slate-400 mt-1">JPG, PNG, HEIC (iPhone) · max. 15 MB pro Foto</span>
+                  <span className="text-[11px] text-emerald-700 mt-2 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
-                    Bilder werden vor dem Upload verkleinert – schont Ihr Datenvolumen
+                    iPhone-Fotos werden automatisch erkannt
                   </span>
                 </>
               )}
@@ -570,7 +610,7 @@ const CustomerPortalPage = () => {
               <button
                 onClick={submitPending}
                 disabled={uploading || pending.length === 0}
-                className="mt-3 w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                className="mt-3 w-full bg-[#14532D] text-white px-4 py-3 rounded-xl text-sm font-semibold hover:bg-[#14532D]/90 active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 data-testid="portal-submit-upload"
               >
                 {uploading ? (
@@ -762,7 +802,7 @@ const CustomerPortalPage = () => {
 
         {/* Footer */}
         <footer className="text-center text-xs text-slate-400 py-4">
-          Gültig bis {portalInfo?.expires_at ? new Date(portalInfo.expires_at).toLocaleDateString("de-DE") : "-"} &middot; Tischlerei Graupner
+          Gültig bis {portalInfo?.expires_at ? new Date(portalInfo.expires_at).toLocaleDateString("de-DE") : "-"} &middot; {settings?.company_name || "Tischlerei Graupner"}
         </footer>
       </div>
     </div>

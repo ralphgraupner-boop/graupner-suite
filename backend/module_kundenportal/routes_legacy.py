@@ -1079,38 +1079,60 @@ async def public_upload_file(
         {"$set": {"customer_has_new_content": True, "last_customer_activity_at": datetime.now(timezone.utc).isoformat()}}
     )
 
-    # Push-Benachrichtigung: Neues Bild
+    # Remaining slots info
+    file_doc["remaining_slots"] = MAX_IMAGES_PER_PORTAL - (total_count + 1)
+    return file_doc
+
+
+@router.post("/portal/{token}/upload-abgeschlossen")
+async def public_upload_abgeschlossen(
+    token: str,
+    password: str = Form(...),
+    anzahl: int = Form(1),
+    beschreibung: str = Form(""),
+):
+    """Einmalige Sammel-Benachrichtigung nach Batch-Upload."""
+    portal = await _verify_portal_access(token, password)
+    kunde_name = portal.get("customer_name", "Kunde")
+    projekt = portal.get("description", "-")
+
+    total = await db.portal_files.count_documents({
+        "portal_id": portal["id"],
+        "is_deleted": False,
+        "uploaded_by": "customer",
+    })
+
+    bilder_text = f"{anzahl} Bild" if anzahl == 1 else f"{anzahl} Bilder"
+
     try:
         from routes.push import send_push_to_all
         await send_push_to_all(
-            title="Kundenportal: Neues Bild",
-            body=f"{portal.get('customer_name', 'Kunde')} hat ein Bild hochgeladen ({file.filename})",
-            url="/portals"
+            title=f"Kundenportal: {bilder_text} von {kunde_name}",
+            body=f"{kunde_name} hat {bilder_text} hochgeladen.",
+            url="/portals",
         )
     except Exception as e:
-        logger.warning(f"Push for upload failed: {e}")
+        logger.warning(f"Push nach Upload-Abschluss fehlgeschlagen: {e}")
 
-    # E-Mail-Benachrichtigung an Admin
     try:
         await _notify_admin(
-            subject=f"Portal: {portal.get('customer_name', 'Kunde')} hat ein Bild hochgeladen",
+            subject=f"Portal: {kunde_name} hat {bilder_text} hochgeladen",
             body_html=f"""
             <div style="font-family: Arial, sans-serif; max-width: 600px;">
-              <h3 style="color: #1a5632;">Neues Bild im Kundenportal</h3>
-              <p><strong>Kunde:</strong> {portal.get('customer_name', 'Kunde')}</p>
-              <p><strong>Projekt:</strong> {portal.get('description', '-')}</p>
-              <p><strong>Dateiname:</strong> {file.filename}</p>
-              {f'<p><strong>Bemerkung:</strong> {description}</p>' if description else ''}
+              <h3 style="color: #1a5632;">Neue Bilder im Kundenportal</h3>
+              <p><strong>Kunde:</strong> {kunde_name}</p>
+              <p><strong>Projekt:</strong> {projekt}</p>
+              <p><strong>Jetzt hochgeladen:</strong> {bilder_text}</p>
+              <p><strong>Gesamt im Portal:</strong> {total} Bilder</p>
+              {f'<p><strong>Bemerkung:</strong> {beschreibung}</p>' if beschreibung else ''}
               <p style="margin-top:20px;">Bitte im Admin-Bereich unter <em>Kundenportale</em> einsehen.</p>
             </div>
             """,
         )
     except Exception as e:
-        logger.warning(f"Admin email for upload failed: {e}")
+        logger.warning(f"Sammel-Mail fehlgeschlagen: {e}")
 
-    # Remaining slots info
-    file_doc["remaining_slots"] = MAX_IMAGES_PER_PORTAL - (total_count + 1)
-    return file_doc
+    return {"ok": True, "total": total}
 
 
 @router.get("/portal/file/{file_id}")
