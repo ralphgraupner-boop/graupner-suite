@@ -104,6 +104,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [showLohnanteil, setShowLohnanteil] = useState(false);
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
+  const [showLohnkosten, setShowLohnkosten] = useState(false);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -717,8 +718,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       </div>
     );
   }
-
-  const [showLohnkosten, setShowLohnkosten] = useState(false);
 
   // ==================== RENDER ====================
   return (
