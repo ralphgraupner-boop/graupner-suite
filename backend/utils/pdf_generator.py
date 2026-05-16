@@ -1,11 +1,24 @@
 from io import BytesIO
 from datetime import datetime, timezone
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
+from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 import re as _re
 from html import unescape as html_unescape
+
+
+# === Briefkopf-Konstanten (FIX 2, 16.05.2026) =================================
+# Zentrale Steuerung der Header-Optik. Aenderungen hier wirken auf alle
+# PDF-Dokumente (Angebot, Auftragsbestaetigung, Rechnung).
+HEADER_FIRMA_FONT_SIZE = 22
+HEADER_FIRMA_COLOR = "#1a1a2e"          # "Tischlerei Graupner" links oben
+HEADER_SEIT_FONT_SIZE = 10
+HEADER_SEIT_COLOR = "#CC0000"           # "seit 1960" Slogan
+HEADER_RECHTS_FONT_SIZE = 9
+HEADER_RECHTS_COLOR = "#1a3a6b"         # rechte Spalte (Firmenanschrift, Kontakt)
+# FIX 3: zusaetzlicher Abstand vor dem grossen Angebots-Nr.-Block
+HEADER_ABSTAND_ANGEBOTSNR = 8 * mm
 
 
 def _strip_html(html_text):
@@ -493,32 +506,36 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     body_wrap_width = width - 3.0 * cm  # 1.5 cm links + 1.5 cm rechts = 18 cm Textbreite
 
     # === BRIEFKOPF (Letterhead) ===
+    # FIX 2 (16.05.2026): zentrale Header-Konstanten oben in der Datei nutzen.
+    header_firma_color = HexColor(HEADER_FIRMA_COLOR)
+    header_seit_color = HexColor(HEADER_SEIT_COLOR)
+    header_rechts_color = HexColor(HEADER_RECHTS_COLOR)
+
     # Left: "Tischlerei Graupner seit 1960"
     y = height - 2 * cm
-    c.setFont("Helvetica-Bold", 22)
-    c.setFillColor(text_color)
+    c.setFont("Helvetica-Bold", HEADER_FIRMA_FONT_SIZE)
+    c.setFillColor(header_firma_color)
     c.drawString(2 * cm, y, "Tischlerei")
-    tischlerei_width = c.stringWidth("Tischlerei", "Helvetica-Bold", 22)
-    c.setFillColor(koenigsblau)
+    tischlerei_width = c.stringWidth("Tischlerei", "Helvetica-Bold", HEADER_FIRMA_FONT_SIZE)
+    c.setFillColor(header_rechts_color)
     c.drawString(2 * cm + tischlerei_width + 2, y, "Graupner")
-    graupner_width = c.stringWidth("Graupner", "Helvetica-Bold", 22)
-    slogan_size = int(settings.get("slogan_font_size", 9) or 9)
-    c.setFont("Helvetica-Bold", slogan_size)
-    c.setFillColor(red_accent)
+    graupner_width = c.stringWidth("Graupner", "Helvetica-Bold", HEADER_FIRMA_FONT_SIZE)
+    c.setFont("Helvetica-Bold", HEADER_SEIT_FONT_SIZE)
+    c.setFillColor(header_seit_color)
     c.drawString(2 * cm + tischlerei_width + graupner_width + 8, y + 2, "seit 1960")
 
     y -= 0.5 * cm
-    c.setFont("Helvetica", slogan_size)
-    c.setFillColor(koenigsblau)
+    c.setFont("Helvetica", HEADER_SEIT_FONT_SIZE)
+    c.setFillColor(header_rechts_color)
     c.drawString(2 * cm, y, "Mitglied der Handwerkskammer Hamburg")
 
     # Right: Company info in blue
     ry = height - 2 * cm
-    c.setFont("Helvetica-Bold", 9)
-    c.setFillColor(koenigsblau)
+    c.setFont("Helvetica-Bold", HEADER_RECHTS_FONT_SIZE)
+    c.setFillColor(header_rechts_color)
     c.drawRightString(width - 2 * cm, ry, company_name)
     ry -= 0.35 * cm
-    c.setFont("Helvetica", 8)
+    c.setFont("Helvetica", HEADER_RECHTS_FONT_SIZE)
     for line in address_lines:
         c.drawRightString(width - 2 * cm, ry, line.strip())
         ry -= 0.35 * cm
@@ -535,8 +552,8 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
     # Right: Kd.-Nr., Datum, Dokument-Nr.
     ry -= 0.2 * cm
-    c.setFont("Helvetica", 8)
-    c.setFillColor(koenigsblau)
+    c.setFont("Helvetica", HEADER_RECHTS_FONT_SIZE)
+    c.setFillColor(header_rechts_color)
     customer_id = data.get("customer_id", "")
     c.drawRightString(width - 2 * cm, ry, f"Kd.-Nr.: {customer_id[:8].upper() if customer_id else '-'}")
     ry -= 0.35 * cm
@@ -546,7 +563,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         datum = datetime.now(timezone.utc).strftime("%d.%m.%Y")
     c.drawRightString(width - 2 * cm, ry, f"Datum: {datum}")
     ry -= 0.35 * cm
-    c.setFont("Helvetica-Bold", 8)
+    c.setFont("Helvetica-Bold", HEADER_RECHTS_FONT_SIZE)
     c.drawRightString(width - 2 * cm, ry, f"{number_labels.get(doc_type, 'Nr.')}: {doc_number}")
 
     # === DIN 5008 Brieffenster (Absenderzeile + Kundenadresse) ===
@@ -576,7 +593,9 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 y_cust -= 0.4 * cm
 
     # === Angebots-Nr. groß in Blau ===
-    y_doc_nr = height - 10.5 * cm
+    # FIX 3 (16.05.2026): zusaetzlicher Abstand HEADER_ABSTAND_ANGEBOTSNR
+    # zwischen Kundenadressblock und der grossen Angebots-Nr.-Zeile.
+    y_doc_nr = height - 10.5 * cm - HEADER_ABSTAND_ANGEBOTSNR
     c.setFont("Helvetica-Bold", 14)
     c.setFillColor(koenigsblau)
     c.drawString(2 * cm, y_doc_nr, f"{number_labels.get(doc_type, 'Nr.')}: {doc_number}")
