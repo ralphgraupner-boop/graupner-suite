@@ -395,4 +395,66 @@ Spec sagte nur „PDF/ICS/Email brauchen keinen Eingriff" — Agent hat verifizi
   - PDF-Inhalt: Name „Graupner", Adresse „Schmiedekoppel/Hamburg", Telefon „01705650539" alle korrekt eingedruckt
   - Neuer Einsatz via `from-kunde` POST → DB-Check: nur `kunde_id`, keine kunde_*-Felder dupliziert
 
+## 🧠 Assistent A1 (15.05.2026) — Stiller Beobachter
+
+Neues Modul `module_assistent` als Backend + Frontend nach Spec `emergent_module_assistent.md`.
+
+### Backend (A1.1)
+- `backend/module_assistent/` neu angelegt mit 5 Check-Modulen:
+  - `check_angebote.py` (Angebote ohne Antwort: 7/14/21 Tage)
+  - `check_termine.py` (Termine ohne GO, Monteur-Überlastung)
+  - `check_kunden.py` (Stammkunden seit 6 Monaten inaktiv)
+  - `check_einsaetze.py` (Einsätze ohne Bericht / ohne Rechnung)
+  - `check_mitarbeiter.py` (Früheinsätze, fehlende Berichte — Default: aus)
+- `routes.py` mit 8 API-Endpoints (`/hinweise`, `/count`, `/lesen`, `/ignorieren`, `/alle-lesen`, `/run`, `/log`, `/settings`)
+- `scheduler.py` für täglichen Lauf um 06:00 UTC
+- 3 neue Collections: `module_assistent_hinweise`, `_log`, `_settings` — in beide Backup-Listen aufgenommen
+- Server-Integration: Router + Scheduler-Start in `server.py`
+- Spec-Lücke gefunden+gefixt: `{"_id": {"$ne": None, "$ne": ""}}` → `{"_id": {"$nin": [None, ""]}}`
+- Datenmasken-Prinzip in allen Checks eingehalten
+
+### Frontend (A1.2)
+- `frontend/src/pages/assistent/AssistentPage.jsx` neu (Spec-JSX war durch Markdown-Stripping kaputt, Funktionalität präzise nachgebaut)
+- Sidebar-Eintrag „Mein Assistent" mit Brain-Icon + ungelesen-Badge
+- `unreadCounts.assistent` in `Navigation.jsx` mit Polling alle 60s
+- `App.js` Route `/module/assistent`
+
+### Bug-Fix Navigation (nach erstem User-Test)
+- `window.location.href` (verursachte Full-Page-Reload → Catch-All → Dashboard) durch `useNavigate` ersetzt
+- Link-Pfade in den Check-Modulen auf real existierende Routen gemappt:
+  - `/angebote/{id}` → `/module/dokumente`
+  - `/rechnungen` → `/rechnungen-v2`
+- 5 bereits gespeicherte Hinweise per DB-Migration auf neue Links umgebogen
+
+## 🎨 Kundenportal P1+P2 Redesign (15.05.2026)
+
+Drei aufeinander aufbauende Specs (`emergent_portal_redesign.md`, `emergent_portal_desktop_layout.md`, manuelle Verbesserungen):
+
+### P1 — Visuelles Redesign (Mobile + Desktop)
+- **Login-Screen** (`CustomerPortalPage.jsx`): grünes Branding (#14532D), Logo-Container (Fallback Lock-Icon), Firmenname dynamisch aus `settings.company_name`, Hilfetext „Ihr Passwort haben Sie per E-Mail erhalten"
+- **Authenticated Header**: grüner Sticky-Header, Logo-Slot links, Kunden-Badge rechts mit grünem Live-Dot
+- **Begrüßung**: „Guten Tag, [Vorname]!" mit grünem Akzentbalken
+- **Upload-Zone**: groß+grün, „Fotos auswählen", iPhone-Hinweis sichtbar
+- **Sammel-Mail nach Upload**: alter Code feuerte 1 Push+Mail PRO Bild. Neue Backend-Route `POST /portal/{token}/upload-abgeschlossen` sendet eine EINZIGE zusammenfassende Mail+Push nach Batch-Upload. Push+Mail aus Einzel-Upload-Route entfernt.
+- **Dynamische Firmenname-Fallbacks** an 5 Stellen statt hartcodiertem „Tischlerei Graupner"
+- DB-Cleanup: `portal_settings.begruessung` + `hinweise` von Test-Werten geleert
+
+### P2 — Desktop-Layout Stufe 1 (5-Spalten-Grid)
+- Mobile blieb einspaltig, Desktop bekam `lg:grid-cols-5` mit Links `lg:col-span-3` (Hauptinhalt) und Rechts `lg:col-span-2` (Upload + Bilder, sticky)
+- Upload-Sektion wanderte von links nach rechts (Python-Skript-basierter Cut+Paste, 118 Zeilen)
+
+### P3 — Desktop-Layout Stufe 2 (50/50, max-w-7xl)
+- Auf User-Wunsch komplette Bildschirmnutzung:
+  - Grid `lg:grid-cols-5` → `lg:grid-cols-2`, gap-6 → gap-8
+  - Links + Rechts je `lg:col-span-1` (50/50)
+  - `max-w-6xl` → `max-w-7xl` an 3 Stellen
+  - Upload-Zone min-h-[200px], Submit-Button py-3 → py-4
+  - Bildvorschau-Tiles h-28 → h-40, Dateiname text-xs → text-sm
+  - „Von uns"-Liste → Grid-Tiles (2 Spalten, h-40, einheitliches Look-&-Feel mit „Ihre Bilder")
+
+### Komprimierungs-Tuning `imageCompress.js`
+- `JPEG_QUALITY` 0.8 → **0.92** (weniger Komprimierung, schärfer)
+- `MAX_DIM` 1920 → **2560** (höhere Auflösung erhalten)
+- Skip-Schwelle 500 KB → **1 MB** (kleine Bilder bleiben original)
+
 
