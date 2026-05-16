@@ -687,7 +687,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     const wasDirty = isDirty;
     const savedId = await persistDocument();
     if (!savedId) return;
-    if (wasDirty) toast.info("Automatisch gespeichert");
+    if (wasDirty) toast.success("Automatisch gespeichert");
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       // Cache-Buster, damit Browser nicht versehentlich eine alte PDF-Version zeigt
@@ -712,7 +712,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     const wasDirty = isDirty;
     const savedId = await persistDocument();
     if (!savedId) return;
-    if (wasDirty) toast.info("Automatisch gespeichert");
+    if (wasDirty) toast.success("Automatisch gespeichert");
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
@@ -765,7 +765,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     if (saveFirst) {
       const wasDirty = isDirty;
       await handleSave();
-      if (wasDirty) toast.info("Automatisch gespeichert");
+      if (wasDirty) toast.success("Automatisch gespeichert");
     }
     doOpen();
     setShowMailDialog(null);
