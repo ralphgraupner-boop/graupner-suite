@@ -47,7 +47,7 @@ async def check_angebote() -> list:
             modul="module_angebote",
             kunde_name=kunde_name,
             aktionen=[
-                {"label": "Angebot öffnen", "link": f"/angebote/{angebot.get('id','')}"},
+                {"label": "Angebot öffnen", "link": "/module/dokumente"},
                 {"label": "Ignorieren", "aktion": "ignorieren"},
             ],
         ))

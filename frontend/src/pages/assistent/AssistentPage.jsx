@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Brain, CheckCircle, X, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -11,7 +12,7 @@ const PRIORITAET_CONFIG = {
   info: { label: "Info", farbe: "bg-blue-100 text-blue-800 border-blue-200" },
 };
 
-const HinweisKarte = ({ hinweis, onLesen, onIgnorieren }) => {
+const HinweisKarte = ({ hinweis, onLesen, onIgnorieren, onOeffnen }) => {
   const cfg = PRIORITAET_CONFIG[hinweis.prioritaet] || PRIORITAET_CONFIG.info;
   const istUngelesen = hinweis.status === "ungelesen";
   return (
@@ -46,10 +47,7 @@ const HinweisKarte = ({ hinweis, onLesen, onIgnorieren }) => {
                   size="sm"
                   variant="primary"
                   data-testid={`hinweis-aktion-${hinweis.id}-${i}`}
-                  onClick={() => {
-                    onLesen(hinweis.id);
-                    window.location.href = aktion.link;
-                  }}
+                  onClick={() => onOeffnen(hinweis.id, aktion.link)}
                 >
                   {aktion.label}
                 </Button>
@@ -93,6 +91,7 @@ const HinweisKarte = ({ hinweis, onLesen, onIgnorieren }) => {
 };
 
 export const AssistentPage = () => {
+  const navigate = useNavigate();
   const [hinweise, setHinweise] = useState([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -129,6 +128,11 @@ export const AssistentPage = () => {
     await api.post("/module-assistent/hinweise/alle-lesen").catch(() => {});
     setHinweise((prev) => prev.map((h) => ({ ...h, status: "gelesen" })));
     toast.success("Alle als gelesen markiert");
+  };
+
+  const handleOeffnen = (id, link) => {
+    handleLesen(id);
+    navigate(link);
   };
 
   const handleRun = async () => {
@@ -235,6 +239,7 @@ export const AssistentPage = () => {
                     hinweis={h}
                     onLesen={handleLesen}
                     onIgnorieren={handleIgnorieren}
+                    onOeffnen={handleOeffnen}
                   />
                 ))}
               </div>
@@ -254,6 +259,7 @@ export const AssistentPage = () => {
                     hinweis={h}
                     onLesen={handleLesen}
                     onIgnorieren={handleIgnorieren}
+                    onOeffnen={handleOeffnen}
                   />
                 ))}
               </div>
@@ -289,6 +295,7 @@ export const AssistentPage = () => {
                   hinweis={h}
                   onLesen={() => {}}
                   onIgnorieren={() => {}}
+                  onOeffnen={handleOeffnen}
                 />
               ))
             )}

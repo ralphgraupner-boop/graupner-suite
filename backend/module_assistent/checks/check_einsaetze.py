@@ -53,7 +53,7 @@ async def check_einsaetze() -> list:
                 modul="module_einsaetze",
                 kunde_name=kunde_name,
                 aktionen=[
-                    {"label": "Rechnung erstellen", "link": "/rechnungen"},
+                    {"label": "Rechnung erstellen", "link": "/rechnungen-v2"},
                     {"label": "Ignorieren", "aktion": "ignorieren"},
                 ],
                 gueltig_tage=14,
