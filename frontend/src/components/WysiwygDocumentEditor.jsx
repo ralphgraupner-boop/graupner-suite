@@ -152,7 +152,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         setVatRate(settingsRes.data.default_vat_rate);
       }
 
-      try { const titelRes = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel" } }); setTitelTemplates(titelRes.data); } catch {}
+      try { const titelRes = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel", doc_type: "allgemein" } }); setTitelTemplates(titelRes.data); } catch {}
       try { const blockRes = await api.get("/leistungsbloecke"); setLeistungsBloecke(blockRes.data); } catch {}
 
       if (!isNew) {
