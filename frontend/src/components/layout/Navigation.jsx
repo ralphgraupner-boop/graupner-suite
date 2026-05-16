@@ -399,14 +399,14 @@ const Sidebar = ({ onLogout }) => {
                     : isSandbox
                     ? "text-amber-700 hover:bg-amber-50 border-l-2 border-dashed border-amber-300"
                     : hasBadge
-                    ? "text-foreground bg-red-50 hover:bg-red-100 animate-pulse-slow"
+                    ? "text-foreground bg-red-50 hover:bg-red-100"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <div className="relative shrink-0">
                   <Icon className={`w-4 h-4 ${hasBadge ? "text-red-600" : isNew ? "text-emerald-600" : ""}`} />
                   {hasBadge && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold animate-pulse ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
@@ -422,7 +422,7 @@ const Sidebar = ({ onLogout }) => {
                   <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 tracking-wider border border-amber-300">TEST</span>
                 )}
                 {hasBadge && !isNew && !isDeprecated && !isSandbox && (
-                  <span className="ml-auto w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                  <span className="ml-auto w-2 h-2 rounded-full bg-red-500" />
                 )}
                 {hasChildren && children.length > 0 && (
                   <button
