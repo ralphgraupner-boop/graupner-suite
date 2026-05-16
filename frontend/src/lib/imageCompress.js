@@ -9,8 +9,8 @@
  * Originaldatei zurückgegeben, der Upload bleibt also funktional.
  */
 
-const MAX_DIM = 1920;
-const JPEG_QUALITY = 0.8;
+const MAX_DIM = 2560;
+const JPEG_QUALITY = 0.92;
 
 /**
  * Komprimiert eine einzelne Datei. PDFs/Non-Images werden unverändert zurückgegeben.
@@ -24,7 +24,7 @@ export async function compressImageIfNeeded(file) {
   // HEIC/HEIF kann der Browser oft nicht lesen → Server macht's
   if (/heic|heif/i.test(file.type)) return file;
   // Sehr kleine Bilder (< 500 KB) bringen wenig Ersparnis
-  if (file.size && file.size < 500 * 1024) return file;
+  if (file.size && file.size < 1000 * 1024) return file;
 
   try {
     const dataUrl = await readAsDataURL(file);
