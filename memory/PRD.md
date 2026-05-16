@@ -357,4 +357,42 @@ Externer Code-Review (Claude AI auf ZIP-Snapshot) hat 5 strukturelle Schwachstel
 ### Backups
 - `/tmp/SettingsPage.jsx.backup` (2841 Z.) und `/tmp/mail_inbox_routes.py.backup` (1354 Z.) für Diff-Vergleich gegen Ralph's ZIP.
 
+## 🛡️ Backup-Hygiene & Datenmasken-Refactor B1+B2 (15.05.2026)
+
+Externer Code-Review hat Lücken in Backup-Collections-Liste und Daten-Duplizierung in `module_projekte`/`module_einsaetze` aufgezeigt. Ralph hat exakte Diffs geliefert (`emergent_backup_und_datenmasken.md`), Agent hat 1:1 umgesetzt mit Spec-Lücken-Korrektur.
+
+### B1 — Backup-Listen aktualisiert (`backend/routes/backup.py` + `backend/routes/auto_backup.py`)
+- `collections`-Liste: 53 → **61 Einträge**, 13 Gruppen (kern, portal, einsaetze, projekte, aufgaben, termine, mail, dokumente, buchhaltung, system, monteur, portal_backup, legacy).
+- `auto_backup.selected`: ~50 → **54 Collections**. Tote Portal-v2/v3/v4-Collections raus, neue Kern-Module rein (module_aufgaben_settings, module_termine_settings, module_feedback_history, einsatz_config, buchhaltung_config, module_kundenlink, etc.).
+- Verifikation: `GET /api/backup/collections` → 61 Items; `POST /backup/auto/trigger` → **861 Dokumente, 23 MB ZIP**, Mail erfolgreich.
+
+### B2.1 — `module_projekte` Datenmasken (4 Code-Stellen + DB-Migration)
+- **Code (`backend/module_projekte/routes.py`)**:
+  - `create_projekt` (POST /): `kunde_name` raus aus Insert, im Response per Helper angehängt
+  - `list_projekte` (GET /): Bulk-`$in`-Join auf `module_kunden` (kein N+1) — einzelner DB-Call für alle Kundennamen
+  - `get_projekt` (GET /{id}): `_kunde_display`-Helper per `find_one` ergänzt
+  - `create_from_kunde` (POST /from-kunde): identisch zu `create_projekt`
+- **Snapshot**: `/tmp/module_projekte_backup_20260516_073533.json` (4 Projekte)
+- **DB-Migration**: `update_many({}, {"$unset": {"kunde_name": ""}})` → 4/4 Projekte bereinigt
+- **Live-Update-Test bestanden**: Kundenname in DB temporär geändert → Projekt-API zeigt sofort neuen Namen → reset → API zeigt Original
+
+### B2.2 — `module_einsaetze` Datenmasken (10 Code-Stellen + DB-Migration)
+Spec sagte nur „PDF/ICS/Email brauchen keinen Eingriff" — Agent hat verifiziert, dass das **nicht stimmt** (PDF-Generator nutzt direkt `einsatz['kunde_name']`), Spec-Lücke an Ralph gemeldet, Option a) gewählt → vollständig durchgezogen.
+- **Code (`backend/module_einsaetze/routes.py`)**:
+  - Neuer Helper `_enrich_einsatz_mit_kunde(einsatz)` (vollständige Live-Anreicherung: kunde_name, kunde_email, kunde_telefon, kunde_adresse)
+  - `POST /einsaetze` (Standard-Create): 4 Felder raus aus Insert
+  - `POST /einsaetze/from-kontakt/{id}`: 4 Felder raus + **`kunde_id=kontakt_id` ergänzt** (war im Original-Code gar nicht gesetzt → Datenmaske hätte sonst nicht greifen können — sinnvolle Korrektur des Bestands-Bugs)
+  - `POST /einsaetze/from-kunde/{id}`: 4 Felder raus, Response live anreichern
+  - `GET /einsaetze` (list): Bulk-`$in`-Join (N+1-frei)
+  - `GET /einsaetze/{id}` (detail): `_enrich` aufgerufen
+  - `POST /einsaetze/{id}/email`: `_enrich` aufgerufen, `customer_name` → `kunde_name` korrigiert
+  - `GET /einsaetze/{id}/ics`: `_enrich` aufgerufen, `_generate_ics` nutzt `kunde_name`
+  - `GET /einsaetze/{id}/reparaturauftrag-pdf`: `_enrich` aufgerufen (nur wenn nicht blanko)
+- **Snapshot**: `/tmp/einsaetze_backup_20260516_074455.json` (2 Einsätze)
+- **DB-Migration**: 4 Felder aus 2 Einsätzen entfernt
+- **Verifikation (alle drei Spec-Tests grün)**:
+  - PDF-Filename: `Reparaturauftrag_Graupner_Thorsten/Digger.pdf` (vorher: `Reparaturauftrag_Kunde.pdf`)
+  - PDF-Inhalt: Name „Graupner", Adresse „Schmiedekoppel/Hamburg", Telefon „01705650539" alle korrekt eingedruckt
+  - Neuer Einsatz via `from-kunde` POST → DB-Check: nur `kunde_id`, keine kunde_*-Felder dupliziert
+
 

@@ -366,18 +366,14 @@ async def create_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
     if not kontakt:
         raise HTTPException(404, "Kontakt nicht gefunden")
     name = f"{kontakt.get('vorname', '')} {kontakt.get('nachname', '')}".strip() or kontakt.get("name", "")
-    adresse = kontakt.get("address", "")
-    if not adresse:
-        parts = [kontakt.get("strasse", ""), kontakt.get("plz", ""), kontakt.get("ort", "")]
-        adresse = ", ".join(p for p in parts if p)
     now = datetime.now(timezone.utc).isoformat()
     bilder = []
     for photo_url in kontakt.get("photos", []):
         bilder.append({"id": str(uuid.uuid4()), "url": photo_url, "filename": "Kundenbild", "kategorie": "kundenanfrage", "created_at": now})
     einsatz = {
-        "id": str(uuid.uuid4()), "kontakt_id": kontakt_id,
-        "kunde_name": name, "kunde_email": kontakt.get("email", ""),
-        "kunde_telefon": kontakt.get("phone", ""), "kunde_adresse": adresse,
+        "id": str(uuid.uuid4()),
+        "kunde_id": kontakt_id,
+        "kontakt_id": kontakt_id,
         "objekt_strasse": kontakt.get("strasse", ""), "objekt_plz": kontakt.get("plz", ""), "objekt_ort": kontakt.get("ort", ""),
         "betreff": f"Anfrage von {name}",
         "beschreibung": kontakt.get("notes", "") or kontakt.get("nachricht", ""),
@@ -394,7 +390,8 @@ async def create_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
     }
     await db.einsaetze.insert_one(einsatz)
     einsatz.pop("_id", None)
-    logger.info(f"Einsatz aus Kontakt: {name}")
+    einsatz = await _enrich_einsatz_mit_kunde(einsatz)
+    logger.info(f"Einsatz aus Kontakt: {einsatz.get('kunde_name', '')}")
     return einsatz
 
 
@@ -404,14 +401,10 @@ async def create_from_kunde(kunde_id: str, data: dict = {}, user=Depends(get_cur
     if not kunde:
         raise HTTPException(404, "Kunde nicht gefunden")
     name = f"{kunde.get('vorname', '')} {kunde.get('nachname', '')}".strip() or kunde.get("name", "")
-    adresse = kunde.get("address", "")
-    if not adresse:
-        parts = [kunde.get("strasse", ""), kunde.get("hausnummer", ""), kunde.get("plz", ""), kunde.get("ort", "")]
-        adresse = ", ".join(p for p in parts if p)
     now = datetime.now(timezone.utc).isoformat()
     einsatz = {
-        "id": str(uuid.uuid4()), "kunde_id": kunde_id, "kunde_name": name,
-        "kunde_email": kunde.get("email", ""), "kunde_telefon": kunde.get("phone", ""), "kunde_adresse": adresse,
+        "id": str(uuid.uuid4()),
+        "kunde_id": kunde_id,
         "objekt_strasse": kunde.get("strasse", ""), "objekt_plz": kunde.get("plz", ""), "objekt_ort": kunde.get("ort", ""),
         "betreff": data.get("betreff", f"Einsatz fuer {name}"),
         "beschreibung": data.get("beschreibung", ""), "reparaturgruppe": data.get("reparaturgruppe", ""),
@@ -426,7 +419,8 @@ async def create_from_kunde(kunde_id: str, data: dict = {}, user=Depends(get_cur
     }
     await db.einsaetze.insert_one(einsatz)
     einsatz.pop("_id", None)
-    logger.info(f"Einsatz aus Kunde: {name}")
+    einsatz = await _enrich_einsatz_mit_kunde(einsatz)
+    logger.info(f"Einsatz aus Kunde: {einsatz.get('kunde_name', '')}")
     return einsatz
 
 
@@ -442,6 +436,7 @@ async def send_einsatz_email(einsatz_id: str, body: dict, user=Depends(get_curre
     einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
     if not einsatz:
         raise HTTPException(404, "Einsatz nicht gefunden")
+    einsatz = await _enrich_einsatz_mit_kunde(einsatz)
 
     to_email = body.get("to_email", "")
     subject = body.get("subject", "")
@@ -480,7 +475,7 @@ async def send_einsatz_email(einsatz_id: str, body: dict, user=Depends(get_curre
             attachments=attachments if attachments else None,
             smtp_config=smtp_cfg
         )
-        await log_email(to_email, subject, "einsatz", einsatz_id, "", einsatz.get("customer_name", ""), "gesendet")
+        await log_email(to_email, subject, "einsatz", einsatz_id, "", einsatz.get("kunde_name", ""), "gesendet")
         return {"message": f"E-Mail an {to_email} gesendet"}
     except Exception as e:
         logger.error(f"Einsatz-Email failed: {e}")
@@ -493,6 +488,7 @@ async def get_einsatz_ics(einsatz_id: str, user=Depends(get_current_user)):
     einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
     if not einsatz:
         raise HTTPException(404, "Einsatz nicht gefunden")
+    einsatz = await _enrich_einsatz_mit_kunde(einsatz)
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     ics = _generate_ics(einsatz, settings)
     return Response(
@@ -519,7 +515,7 @@ def _generate_ics(einsatz: dict, settings: dict) -> str:
     dtend = (dt + timedelta(hours=2)).strftime("%Y%m%dT%H%M%S")
     now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
-    summary = f"Einsatz: {einsatz.get('customer_name', 'Kunde')}"
+    summary = f"Einsatz: {einsatz.get('kunde_name', 'Kunde')}"
     gruppen = einsatz.get("reparaturgruppen", []) or []
     if not gruppen and einsatz.get("reparaturgruppe"):
         gruppen = [einsatz["reparaturgruppe"]]
@@ -566,6 +562,8 @@ async def reparaturauftrag_pdf(einsatz_id: str, blanko: bool = False, token: str
     einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
     if not einsatz:
         raise HTTPException(404, "Einsatz nicht gefunden")
+    if not blanko:
+        einsatz = await _enrich_einsatz_mit_kunde(einsatz)
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     pdf_bytes = _generate_reparaturauftrag_pdf(einsatz if not blanko else {}, settings)
     filename = "Reparaturauftrag_Blanko.pdf" if blanko else f"Reparaturauftrag_{einsatz.get('kunde_name', 'Kunde').replace(' ', '_')}.pdf"
