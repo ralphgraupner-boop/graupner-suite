@@ -764,35 +764,32 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     });
   };
 
-  const onOpenEmailDialog = () => {
-    requireSave(() => setShowEmailDialog(true));
-  };
+  // onOpenEmailDialog entfernt (alter interner E-Mail-Button raus, 16.05.2026)
+  // Die <SendDocumentEmail />-Komponente bleibt im Code-Bestand fuer spaeter.
 
   const [showMailDialog, setShowMailDialog] = useState(null);
 
   const onOpenMailClient = () => {
     if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
-    setShowMailDialog({ open: true });
+    requireSave(() => setShowMailDialog({ open: true }));
   };
 
   const executeMailClient = (withText) => {
     setShowMailDialog(null);
-    requireSave(() => {
-      const to = customer?.email || "";
-      const docTitle = titles[type] || "Dokument";
-      const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
-      const body = withText
-        ? encodeURIComponent(`${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
-        : "";
-      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
-      // Status auf "Versendet" / "Gesendet" setzen falls nicht schon in dem Status
-      if (!isNew && status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
-        const newStatus = type === "quote" ? "Versendet" : type === "order" ? "Gesendet" : "Versendet";
-        const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
-        api.put(`/${endpoint}/${id}`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
-      }
-      navigate(listPaths[type]);
-    });
+    const to = customer?.email || "";
+    const docTitle = titles[type] || "Dokument";
+    const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
+    const body = withText
+      ? encodeURIComponent(`${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
+      : "";
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+    // Status auf "Versendet" / "Gesendet" setzen falls nicht schon in dem Status
+    if (!isNew && status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
+      const newStatus = type === "quote" ? "Versendet" : type === "order" ? "Gesendet" : "Versendet";
+      const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
+      api.put(`/${endpoint}/${id}`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
+    }
+    navigate(listPaths[type]);
   };
 
   // ==================== COMPUTED VALUES ====================
@@ -815,7 +812,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         isRecording={isRecording} aiLoading={aiLoading} saving={saving}
         navigate={navigate} setShowSettings={setShowSettings} startRecording={startRecording} stopRecording={stopRecording}
         handleSave={handleSave} handleExit={handleExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
-        onOpenEmailDialog={onOpenEmailDialog}
         onOpenMailClient={onOpenMailClient}
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
