@@ -687,7 +687,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     const wasDirty = isDirty;
     const savedId = await persistDocument();
     if (!savedId) return;
-    if (wasDirty) toast.success("Automatisch gespeichert");
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       // Cache-Buster, damit Browser nicht versehentlich eine alte PDF-Version zeigt
@@ -699,9 +698,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         // Fallback bei Popup-Blocker → Download
         const link = document.createElement("a"); link.href = url; link.setAttribute("download", `${titles[type]}_${docNumber}.pdf`);
         document.body.appendChild(link); link.click(); link.remove();
-        toast.warning("Popup blockiert - PDF wurde stattdessen heruntergeladen");
+        toast.warning(wasDirty ? "Gespeichert – Popup blockiert, PDF heruntergeladen" : "Popup blockiert - PDF wurde stattdessen heruntergeladen");
       } else {
-        toast.success("PDF wird in neuem Tab geöffnet");
+        toast.success(wasDirty ? "Gespeichert – PDF wird geöffnet" : "PDF wird in neuem Tab geöffnet");
       }
     } catch (e) { console.error("PDF error:", e); toast.error("Fehler beim PDF-Erzeugen: " + (e?.response?.statusText || e?.message || "unbekannt")); }
   };
