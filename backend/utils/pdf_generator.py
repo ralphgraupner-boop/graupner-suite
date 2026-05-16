@@ -577,8 +577,10 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     c.setFillColor(muted_color)
     sender_line = f"{company_name} · {' · '.join(l.strip() for l in address_lines)}"
     c.drawString(2 * cm, y_addr_start + 0.3 * cm, sender_line)
+    # FIX (16.05.2026 v4): Unterstrich endet exakt am Textende, nicht mehr fix bei 9 cm.
+    _sender_width = c.stringWidth(sender_line, "Helvetica", 6.5)
     c.setStrokeColor(HexColor("#D0D0D0"))
-    c.line(2 * cm, y_addr_start + 0.15 * cm, 9 * cm, y_addr_start + 0.15 * cm)
+    c.line(2 * cm, y_addr_start + 0.15 * cm, 2 * cm + _sender_width, y_addr_start + 0.15 * cm)
 
     c.setFillColor(text_color)
     c.setFont("Helvetica", 10)
