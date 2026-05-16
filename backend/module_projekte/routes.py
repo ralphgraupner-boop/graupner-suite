@@ -181,13 +181,27 @@ def _projekt_addr_from_kunde(k: dict) -> str:
 @router.get("/")
 async def list_projekte(kunde_id: Optional[str] = None, status: Optional[str] = None,
                          user=Depends(get_current_user)):
-    """Alle Projekte abrufen, optional gefiltert nach Kunde oder Status."""
+    """Alle Projekte abrufen – kunde_name wird live aus module_kunden geholt (Datenmasken-Prinzip)."""
     query: dict = {}
     if kunde_id:
         query["kunde_id"] = kunde_id
     if status:
         query["status"] = status
     items = await db.module_projekte.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
+
+    # Kundennamen live nachladen (Datenmasken-Prinzip)
+    kunden_ids = list({p["kunde_id"] for p in items if p.get("kunde_id")})
+    kunden_map: dict = {}
+    if kunden_ids:
+        async for k in db.module_kunden.find(
+            {"id": {"$in": kunden_ids}},
+            {"_id": 0, "id": 1, "name": 1, "vorname": 1, "nachname": 1, "firma": 1},
+        ):
+            kunden_map[k["id"]] = _kunde_display(k)
+
+    for item in items:
+        item["kunde_name"] = kunden_map.get(item.get("kunde_id", ""), "(Kunde nicht gefunden)")
+
     return items
 
 
@@ -310,6 +324,15 @@ async def get_projekt(projekt_id: str, user=Depends(get_current_user)):
     p = await db.module_projekte.find_one({"id": projekt_id}, {"_id": 0})
     if not p:
         raise HTTPException(404, "Projekt nicht gefunden")
+    # kunde_name live aus module_kunden (Datenmasken-Prinzip)
+    if p.get("kunde_id"):
+        k = await db.module_kunden.find_one(
+            {"id": p["kunde_id"]},
+            {"_id": 0, "name": 1, "vorname": 1, "nachname": 1, "firma": 1},
+        )
+        p["kunde_name"] = _kunde_display(k) if k else "(Kunde nicht gefunden)"
+    else:
+        p["kunde_name"] = "(kein Kunde)"
     return p
 
 
@@ -347,7 +370,6 @@ async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user))
     projekt = {
         "id": str(uuid.uuid4()),
         "kunde_id": payload.kunde_id,
-        "kunde_name": _kunde_display(k),
         "titel": payload.titel.strip(),
         "beschreibung": (payload.beschreibung or "").strip(),
         "kategorie": payload.kategorie or "Sonstiges",
@@ -364,6 +386,7 @@ async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user))
     }
     await db.module_projekte.insert_one(projekt)
     projekt.pop("_id", None)
+    projekt["kunde_name"] = _kunde_display(k)
     logger.info(f"Projekt erstellt: {projekt['titel']} fuer {projekt['kunde_name']} ({len(bilder)} Bild(er))")
     return projekt
 
@@ -552,7 +575,6 @@ async def create_from_kunde(kunde_id: str, payload: FromKundePayload = FromKunde
     projekt = {
         "id": str(uuid.uuid4()),
         "kunde_id": kunde_id,
-        "kunde_name": _kunde_display(k),
         "titel": titel,
         "beschreibung": (k.get("nachricht") or "").strip(),
         "kategorie": kategorie,
@@ -569,6 +591,7 @@ async def create_from_kunde(kunde_id: str, payload: FromKundePayload = FromKunde
     }
     await db.module_projekte.insert_one(projekt)
     projekt.pop("_id", None)
+    projekt["kunde_name"] = _kunde_display(k)
     logger.info(f"Projekt aus Kunde erstellt: {titel} fuer {projekt['kunde_name']}, "
                 f"{len(bilder)} Bild(er) uebernommen")
     return projekt
