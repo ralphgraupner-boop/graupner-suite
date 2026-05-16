@@ -24,44 +24,45 @@ async def create_backup_data():
         # Auto-Backup: alle aktiven + Legacy-Collections
         # WICHTIG: Bei jedem neuen module_* IMMER hier ergänzen!
         selected = [
-            # Kern
-            "module_kunden", "module_artikel", "module_dokumente", "module_textvorlagen",
-            "module_kontakt", "einsaetze", "mitarbeiter", "anfragen", "settings", "users",
-            # Dokumente v2
-            "dokumente_v2", "dokumente_v2_counters", "dokumente_v2_counter_log", "dokumente_v2_settings",
-            # Portal v2/v3/v4
-            "portal2_accounts", "portal2_messages", "portal2_uploads", "portal2_settings",
-            "portal3_accounts", "portal3_messages", "portal3_uploads", "portal3_settings",
-            "portal4_accounts", "portal4_messages", "portal4_uploads", "portal4_settings",
-            # Portal-Backup-Modul (Snapshots)
-            "module_portal_v2_backup_snapshots", "module_portal_v2_backup_settings",
-            # NEU 26.04.2026 – Projekte/Aufgaben/Termine/Duplikate/Monteur-App
+            # KERN
+            "module_kunden", "module_artikel", "module_textvorlagen",
+            "settings", "users", "mitarbeiter",
+            # KUNDENPORTAL (aktiv)
+            "portals", "portals_klon", "portal_settings", "portal_files",
+            "portal_klon_files", "portal_klon_settings",
+            # EINSÄTZE
+            "einsaetze", "einsatz_config",
+            # PROJEKTE
             "module_projekte", "module_projekte_settings",
+            # AUFGABEN
             "module_aufgaben", "module_aufgaben_settings",
+            # TERMINE
             "module_termine", "module_termine_settings",
-            "module_duplikate", "module_duplikate_settings",
-            "monteur_app_settings", "monteur_app_notizen", "monteur_app_fotos",
-            "monteur_app_todos", "monteur_app_feedback",
-            # NEU 27.04.2026 – User-Prefs (Sidebar-Reihenfolge)
-            "module_user_prefs",
-            # NEU 27.04.2026 – Kalender-Export (ICS-Mail, Audit, Feed-Tokens)
-            "module_kalender_export_log",
-            "module_kalender_feed_tokens",
-            # NEU 29.04.2026 – Export/Import-Audit
-            "module_export_log",
-            # NEU 29.04.2026 – Konsistenz-Audit + Backup-Log
-            "module_health_audit",
-            "auto_backup_log",
-            # NEU 29.04.2026 – Lösch-Audit
-            "module_kunde_delete_log",
-            # NEU 01.05.2026 – Jimdo-Mail-Inbox
-            "module_mail_inbox",
-            # Portal-Klon (Sandbox, separat)
-            "portal_klon_accounts", "portal_klon_messages", "portal_klon_uploads", "portal_klon_settings",
-            # Legacy
-            "customers", "quotes", "orders", "invoices", "articles", "rechnungen_v2",
-            "email_vorlagen", "text_templates", "leistungsbloecke", "diverses", "email_inbox",
-            "portal_files", "portals", "portal_messages",
+            # MAIL-INBOX
+            "module_mail_inbox", "module_mail_inbox_deleted",
+            # DOKUMENTE
+            "module_dokumente", "dokumente_v2", "dokumente_v2_counters",
+            "dokumente_v2_counter_log", "dokumente_v2_settings",
+            # BUCHHALTUNG
+            "buchungen", "buchhaltung_config",
+            # FEEDBACK / NOTIZEN (Ralphs Bugtracker – kritisch!)
+            "module_feedback", "module_feedback_history",
+            # SYSTEM
+            "module_user_prefs", "module_kundenlink",
+            "module_duplikate_settings", "duplikate_ignored", "duplikate_merge_log",
+            "module_kunde_delete_log", "auto_backup_log",
+            "module_health_audit", "module_export_log",
+            "module_kalender_export_log", "module_kalender_feed_tokens",
+            # MONTEUR-APP
+            "monteur_app_settings", "monteur_app_notizen",
+            "monteur_app_fotos", "monteur_app_todos", "monteur_app_feedback",
+            # PORTAL V2 BACKUP SERVICE
+            "portal_v2_backups",
+            # LEGACY
+            "module_kontakt", "anfragen", "customers", "quotes", "orders",
+            "invoices", "articles", "rechnungen_v2", "leistungsbloecke",
+            "text_templates", "email_vorlagen", "diverses", "email_inbox",
+            "portal_messages",
         ]
         
         zip_buffer = io.BytesIO()

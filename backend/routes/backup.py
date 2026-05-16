@@ -15,61 +15,81 @@ router = APIRouter()
 async def get_available_collections(user=Depends(get_current_user)):
     """Liste aller verfügbaren Collections für Backup (inkl. v2/v4-Module, 24.04.2026)"""
     collections = [
-        # === Aktuell in Nutzung ===
+        # === KERN ===
         {"id": "module_kunden", "name": "Kunden (Haupt)", "icon": "👥", "group": "kern"},
         {"id": "module_artikel", "name": "Artikel & Leistungen", "icon": "🛠️", "group": "kern"},
-        {"id": "module_dokumente", "name": "Dokumente (Legacy)", "icon": "📄", "group": "kern"},
-        {"id": "module_textvorlagen", "name": "Textvorlagen", "icon": "📝", "group": "kern"},
-        {"id": "module_kontakt", "name": "Kontakte (Legacy)", "icon": "📇", "group": "kern"},
-        {"id": "einsaetze", "name": "Einsätze", "icon": "🔧", "group": "kern"},
-        {"id": "mitarbeiter", "name": "Mitarbeiter", "icon": "👷", "group": "kern"},
-        {"id": "anfragen", "name": "Anfragen (Legacy)", "icon": "📋", "group": "kern"},
+        {"id": "module_textvorlagen", "name": "Textvorlagen & Auswahlfelder", "icon": "📝", "group": "kern"},
         {"id": "settings", "name": "Einstellungen", "icon": "⚙️", "group": "kern"},
         {"id": "users", "name": "Benutzer", "icon": "🔑", "group": "kern"},
-        # === Dokumente v2 Modul ===
-        {"id": "dokumente_v2", "name": "Dokumente v2", "icon": "📑", "group": "dokumente_v2"},
-        {"id": "dokumente_v2_counters", "name": "Dokumente v2 Nummernzähler", "icon": "🔢", "group": "dokumente_v2"},
-        {"id": "dokumente_v2_counter_log", "name": "Dokumente v2 GoBD-Audit", "icon": "📊", "group": "dokumente_v2"},
-        {"id": "dokumente_v2_settings", "name": "Dokumente v2 Einstellungen", "icon": "⚙️", "group": "dokumente_v2"},
-        # === Kundenportal v2 (LIVE) ===
-        {"id": "portal2_accounts", "name": "Kundenportal v2 Accounts", "icon": "🔐", "group": "portal_v2"},
-        {"id": "portal2_messages", "name": "Kundenportal v2 Nachrichten", "icon": "💬", "group": "portal_v2"},
-        {"id": "portal2_uploads", "name": "Kundenportal v2 Uploads", "icon": "📎", "group": "portal_v2"},
-        {"id": "portal2_settings", "name": "Kundenportal v2 Einstellungen", "icon": "⚙️", "group": "portal_v2"},
-        # === Kundenportal v3 (Sandbox) ===
-        {"id": "portal3_accounts", "name": "Kundenportal v3 Accounts", "icon": "🔐", "group": "portal_v3"},
-        {"id": "portal3_messages", "name": "Kundenportal v3 Nachrichten", "icon": "💬", "group": "portal_v3"},
-        {"id": "portal3_uploads", "name": "Kundenportal v3 Uploads", "icon": "📎", "group": "portal_v3"},
-        {"id": "portal3_settings", "name": "Kundenportal v3 Einstellungen", "icon": "⚙️", "group": "portal_v3"},
-        # === Kundenportal v4 (Sandbox mit Dokumente-Anbindung) ===
-        {"id": "portal4_accounts", "name": "Kundenportal v4 Accounts", "icon": "🔐", "group": "portal_v4"},
-        {"id": "portal4_messages", "name": "Kundenportal v4 Nachrichten", "icon": "💬", "group": "portal_v4"},
-        {"id": "portal4_uploads", "name": "Kundenportal v4 Uploads", "icon": "📎", "group": "portal_v4"},
-        {"id": "portal4_settings", "name": "Kundenportal v4 Einstellungen", "icon": "⚙️", "group": "portal_v4"},
-        # === Monteur-App Modul ===
-        {"id": "monteur_app_settings", "name": "Monteur-App Einstellungen", "icon": "⚙️", "group": "monteur_app"},
-        {"id": "monteur_app_notizen", "name": "Monteur-App Notizen", "icon": "📝", "group": "monteur_app"},
-        {"id": "monteur_app_fotos", "name": "Monteur-App Fotos", "icon": "📷", "group": "monteur_app"},
-        # === Duplikate-Modul ===
-        {"id": "module_duplikate_settings", "name": "Duplikate-Modul Einstellungen", "icon": "⚙️", "group": "module_duplikate"},
-        {"id": "duplikate_ignored", "name": "Duplikate Ignoriert", "icon": "🙈", "group": "module_duplikate"},
-        {"id": "duplikate_merge_log", "name": "Duplikate Merge-Log", "icon": "📑", "group": "module_duplikate"},
-        # === Projekte-Modul ===
-        {"id": "module_projekte", "name": "Projekte", "icon": "🗂️", "group": "module_projekte"},
-        {"id": "module_projekte_settings", "name": "Projekte-Modul Einstellungen", "icon": "⚙️", "group": "module_projekte"},
-        # === Portal-v2-Backup-Modul ===
-        {"id": "portal_v2_backups", "name": "Portal v2 Sicherungen", "icon": "🛡️", "group": "module_portal_v2_backup"},
-        # === Legacy ===
+        {"id": "mitarbeiter", "name": "Mitarbeiter", "icon": "👷", "group": "kern"},
+        # === KUNDENPORTAL (aktiv) ===
+        {"id": "portals", "name": "Kundenportale", "icon": "🌐", "group": "portal"},
+        {"id": "portals_klon", "name": "Kundenportale (Arbeitskopie)", "icon": "🌐", "group": "portal"},
+        {"id": "portal_settings", "name": "Portal-Einstellungen", "icon": "⚙️", "group": "portal"},
+        {"id": "portal_files", "name": "Portal-Dateien", "icon": "📎", "group": "portal"},
+        {"id": "portal_klon_files", "name": "Portal-Dateien (Arbeitskopie)", "icon": "📎", "group": "portal"},
+        {"id": "portal_klon_settings", "name": "Portal-Einstellungen (Arbeitskopie)", "icon": "⚙️", "group": "portal"},
+        # === EINSÄTZE ===
+        {"id": "einsaetze", "name": "Einsätze", "icon": "🔧", "group": "einsaetze"},
+        {"id": "einsatz_config", "name": "Einsätze-Konfiguration", "icon": "⚙️", "group": "einsaetze"},
+        # === PROJEKTE ===
+        {"id": "module_projekte", "name": "Projekte", "icon": "🗂️", "group": "projekte"},
+        {"id": "module_projekte_settings", "name": "Projekte-Einstellungen", "icon": "⚙️", "group": "projekte"},
+        # === AUFGABEN ===
+        {"id": "module_aufgaben", "name": "Aufgaben", "icon": "✅", "group": "aufgaben"},
+        {"id": "module_aufgaben_settings", "name": "Aufgaben-Einstellungen", "icon": "⚙️", "group": "aufgaben"},
+        # === TERMINE ===
+        {"id": "module_termine", "name": "Termine", "icon": "📅", "group": "termine"},
+        {"id": "module_termine_settings", "name": "Termine-Einstellungen", "icon": "⚙️", "group": "termine"},
+        # === MAIL-INBOX ===
+        {"id": "module_mail_inbox", "name": "Mail-Inbox", "icon": "📬", "group": "mail"},
+        {"id": "module_mail_inbox_deleted", "name": "Mail-Inbox Papierkorb", "icon": "🗑️", "group": "mail"},
+        # === DOKUMENTE ===
+        {"id": "module_dokumente", "name": "Dokumente", "icon": "📄", "group": "dokumente"},
+        {"id": "dokumente_v2", "name": "Dokumente v2", "icon": "📑", "group": "dokumente"},
+        {"id": "dokumente_v2_counters", "name": "Dokumente v2 Nummernzähler", "icon": "🔢", "group": "dokumente"},
+        {"id": "dokumente_v2_counter_log", "name": "Dokumente v2 GoBD-Audit", "icon": "📊", "group": "dokumente"},
+        {"id": "dokumente_v2_settings", "name": "Dokumente v2 Einstellungen", "icon": "⚙️", "group": "dokumente"},
+        # === BUCHHALTUNG ===
+        {"id": "buchungen", "name": "Buchungen", "icon": "💰", "group": "buchhaltung"},
+        {"id": "buchhaltung_config", "name": "Buchhaltung-Konfiguration", "icon": "⚙️", "group": "buchhaltung"},
+        # === FEEDBACK / NOTIZEN ===
+        {"id": "module_feedback", "name": "Notizen & Bugs (Ralphs Bugtracker)", "icon": "📌", "group": "system"},
+        {"id": "module_feedback_history", "name": "Notizen-Verlauf", "icon": "📌", "group": "system"},
+        # === SYSTEM ===
+        {"id": "module_user_prefs", "name": "Benutzer-Einstellungen (UI)", "icon": "🎛️", "group": "system"},
+        {"id": "module_kundenlink", "name": "Kunden-Links (Mitarbeiter)", "icon": "🔗", "group": "system"},
+        {"id": "module_duplikate_settings", "name": "Duplikate-Einstellungen", "icon": "⚙️", "group": "system"},
+        {"id": "duplikate_ignored", "name": "Duplikate Ignoriert", "icon": "🙈", "group": "system"},
+        {"id": "duplikate_merge_log", "name": "Duplikate Merge-Log", "icon": "📑", "group": "system"},
+        {"id": "module_kunde_delete_log", "name": "Lösch-Protokoll Kunden", "icon": "🗑️", "group": "system"},
+        {"id": "auto_backup_log", "name": "Backup-Protokoll", "icon": "🛡️", "group": "system"},
+        {"id": "module_health_audit", "name": "Konsistenz-Audit", "icon": "🩺", "group": "system"},
+        {"id": "module_export_log", "name": "Export-Protokoll", "icon": "📤", "group": "system"},
+        {"id": "module_kalender_export_log", "name": "Kalender-Export-Log", "icon": "📅", "group": "system"},
+        {"id": "module_kalender_feed_tokens", "name": "Kalender-Feed-Tokens", "icon": "🔑", "group": "system"},
+        # === MONTEUR-APP ===
+        {"id": "monteur_app_settings", "name": "Monteur-App Einstellungen", "icon": "⚙️", "group": "monteur"},
+        {"id": "monteur_app_notizen", "name": "Monteur-App Notizen", "icon": "📝", "group": "monteur"},
+        {"id": "monteur_app_fotos", "name": "Monteur-App Fotos", "icon": "📷", "group": "monteur"},
+        {"id": "monteur_app_todos", "name": "Monteur-App Todos", "icon": "✅", "group": "monteur"},
+        # === PORTAL V2 BACKUP SERVICE ===
+        {"id": "portal_v2_backups", "name": "Portal-Backup-Snapshots", "icon": "🛡️", "group": "portal_backup"},
+        # === LEGACY (nicht mehr aktiv, aber für Vollständigkeit) ===
+        {"id": "module_kontakt", "name": "Kontakte (Legacy)", "icon": "📇", "group": "legacy"},
+        {"id": "anfragen", "name": "Anfragen (Legacy)", "icon": "📋", "group": "legacy"},
         {"id": "customers", "name": "Kunden (Alt)", "icon": "👥", "group": "legacy"},
         {"id": "quotes", "name": "Angebote (Alt)", "icon": "📄", "group": "legacy"},
         {"id": "orders", "name": "Aufträge (Alt)", "icon": "📦", "group": "legacy"},
         {"id": "invoices", "name": "Rechnungen (Alt)", "icon": "💰", "group": "legacy"},
         {"id": "articles", "name": "Artikel (Alt)", "icon": "🛠️", "group": "legacy"},
-        {"id": "rechnungen_v2", "name": "Rechnungen v2 (Test)", "icon": "🧾", "group": "legacy"},
-        {"id": "email_vorlagen", "name": "E-Mail Vorlagen", "icon": "✉️", "group": "legacy"},
-        {"id": "text_templates", "name": "Textvorlagen (Alt)", "icon": "📝", "group": "legacy"},
+        {"id": "rechnungen_v2", "name": "Rechnungen v2", "icon": "🧾", "group": "legacy"},
         {"id": "leistungsbloecke", "name": "Leistungsblöcke", "icon": "📊", "group": "legacy"},
+        {"id": "text_templates", "name": "Textvorlagen (Alt)", "icon": "📝", "group": "legacy"},
+        {"id": "email_vorlagen", "name": "E-Mail Vorlagen", "icon": "✉️", "group": "legacy"},
         {"id": "diverses", "name": "Diverses/Info", "icon": "ℹ️", "group": "legacy"},
+        {"id": "portal_messages", "name": "Portal-Nachrichten (Alt)", "icon": "💬", "group": "legacy"},
+        {"id": "email_inbox", "name": "E-Mail-Eingang (Alt)", "icon": "📥", "group": "legacy"},
     ]
     
     # Zähle Einträge pro Collection
