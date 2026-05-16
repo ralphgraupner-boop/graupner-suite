@@ -598,9 +598,9 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 y_cust -= 0.4 * cm
 
     # === Angebots-Nr. groß in Blau ===
-    # FIX 3 (16.05.2026): zusaetzlicher Abstand HEADER_ABSTAND_ANGEBOTSNR
-    # zwischen Kundenadressblock und der grossen Angebots-Nr.-Zeile.
-    y_doc_nr = height - 10.5 * cm - HEADER_ABSTAND_ANGEBOTSNR
+    # FIX (16.05.2026 v4): fester Start-Anker 10 cm vom oberen Seitenrand
+    # (Ralph). Alles Folgende (Betreff, Vortext, Tabelle) richtet sich daran aus.
+    y_doc_nr = height - 10 * cm
     c.setFont("Helvetica-Bold", 14)
     c.setFillColor(koenigsblau)
     c.drawString(2 * cm, y_doc_nr, f"{number_labels.get(doc_type, 'Nr.')}: {doc_number}")
