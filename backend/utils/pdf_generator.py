@@ -500,10 +500,11 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     body_font_size = _font_map.get(str(settings.get("pdf_font_size", "normal")).lower(), 10)
     body_line_height = 0.35 + (body_font_size - 9) * 0.04  # leicht mitwachsen
 
-    # FIX (16.05.2026): Fliesstext-Raender schmaler als Briefkopf-Raender, damit
-    # lange Saetze weniger oft umbrechen. Briefkopf/Adressblock/Tabelle bleiben 2 cm.
-    body_margin_left = 1.5 * cm
-    body_wrap_width = width - 3.0 * cm  # 1.5 cm links + 1.5 cm rechts = 18 cm Textbreite
+    # FIX (16.05.2026 v3): Fliesstext und Adressblock haben jetzt SELBEN
+    # linken Rand (2 cm). Vorher startete der Body-Text bei 1.5 cm und stand
+    # damit weiter links als der Kundenadressblock - das sah versetzt aus.
+    body_margin_left = 2 * cm
+    body_wrap_width = width - 4.0 * cm  # 2 cm links + 2 cm rechts = 17 cm Textbreite
 
     # === BRIEFKOPF (Letterhead) ===
     # FIX 2 (16.05.2026): zentrale Header-Konstanten oben in der Datei nutzen.
@@ -530,6 +531,10 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     c.drawString(2 * cm, y, "Mitglied der Handwerkskammer Hamburg")
 
     # Right: Company info in blue
+    # FIX (16.05.2026 v3): rechte Spalte teilt die Grundlinie ("Baseline") mit der
+    # grossen Logo-Zeile links - das ist die saubere typografische Ausrichtung.
+    # Vorher gab es eine Cap-Height-Verschiebung, die den Block zu hoch nach oben
+    # gezogen hat.
     ry = height - 2 * cm
     c.setFont("Helvetica-Bold", HEADER_RECHTS_FONT_SIZE)
     c.setFillColor(header_rechts_color)
@@ -715,39 +720,30 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         # Beschreibung: Breite = von 3cm bis 11.8cm ≈ 8.8cm
         desc = pos.get("description", "") or ""
         desc_lines = desc.split("\n")
-        first_line = desc_lines[0] if desc_lines else ""
-        rest_lines = desc_lines[1:] if len(desc_lines) > 1 else []
         desc_max_width = 11.5 * cm - 3 * cm  # verfügbare Breite in Punkten
 
         row_top_y = y_pos  # Mengen/Preise gehen auf die Höhe der ERSTEN Zeile
 
-        # Erste Zeile fett + Word-Wrap
-        c.setFont("Helvetica-Bold", 9)
-        wrapped_first = _wrap_text(c, first_line, "Helvetica-Bold", 9, desc_max_width)
-        for i, wl in enumerate(wrapped_first):
-            if y_pos < footer_y_limit:
-                _draw_footer(c, width, settings, page_num); c.showPage(); page_num += 1
-                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                y_pos = height - 3.5 * cm
-                c.setFillColor(text_color)
-                c.setFont("Helvetica-Bold", 9)
-            c.drawString(3 * cm, y_pos, wl)
-            if i < len(wrapped_first) - 1:
-                y_pos -= 0.4 * cm
-
-        # Restliche Zeilen normal + Word-Wrap
-        c.setFont("Helvetica", 8.5)
-        for line in rest_lines:
-            wrapped = _wrap_text(c, line, "Helvetica", 8.5, desc_max_width) or [""]
+        # FIX (16.05.2026 v3): gesamte Beschreibung in NORMAL-Schnitt (Helvetica 9 pt).
+        # Vorher war die erste Zeile fett, was bei Daten ohne \n den kompletten
+        # Text fett gemacht hat - sieht "zu fett" aus. Jetzt einheitlich normal.
+        c.setFont("Helvetica", 9)
+        first = True
+        for raw_line in desc_lines:
+            wrapped = _wrap_text(c, raw_line, "Helvetica", 9, desc_max_width) or [""]
             for wl in wrapped:
-                y_pos -= 0.38 * cm
+                if not first:
+                    y_pos -= 0.4 * cm
                 if y_pos < footer_y_limit:
-                    _draw_footer(c, width, settings, page_num); c.showPage(); page_num += 1
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_pos = height - 3.5 * cm
                     c.setFillColor(text_color)
-                    c.setFont("Helvetica", 8.5)
+                    c.setFont("Helvetica", 9)
                 c.drawString(3 * cm, y_pos, wl)
+                first = False
 
         # Menge/Einheit/Preise auf Höhe der ersten Textzeile
         c.setFont("Helvetica", 9)
