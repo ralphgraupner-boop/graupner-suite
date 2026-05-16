@@ -37,6 +37,7 @@ import { ProjekteListe } from "@/pages/projekte/ProjekteListe";
 import ModuleAufgabenPage from "@/pages/aufgaben/ModuleAufgabenPage";
 import ModuleTerminePage from "@/pages/termine/ModuleTerminePage";
 import ModuleFeedbackPage from "@/pages/feedback/ModuleFeedbackPage";
+import AssistentPage from "@/pages/assistent/AssistentPage";
 import { ProjektDetail } from "@/pages/projekte/ProjektDetail";
 import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
@@ -143,6 +144,7 @@ function App() {
               <Route path="/module/aufgaben" element={<MainLayout onLogout={logout}><ModuleAufgabenPage /></MainLayout>} />
               <Route path="/module/termine" element={<MainLayout onLogout={logout}><ModuleTerminePage /></MainLayout>} />
               <Route path="/module/feedback" element={<MainLayout onLogout={logout}><ModuleFeedbackPage /></MainLayout>} />
+              <Route path="/module/assistent" element={<MainLayout onLogout={logout}><AssistentPage /></MainLayout>} />
               <Route path="/module/projekte" element={<MainLayout onLogout={logout}><ProjekteListe /></MainLayout>} />
               <Route path="/module/projekte/werkbank/:kunde_id" element={<MainLayout onLogout={logout}><ProjektWerkbank /></MainLayout>} />
               <Route path="/module/projekte/:id" element={<MainLayout onLogout={logout}><ProjektDetail /></MainLayout>} />

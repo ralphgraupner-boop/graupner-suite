@@ -38,7 +38,7 @@ async def check_mitarbeiter() -> list:
     pipeline = [
         {"$match": {"status": "abgeschlossen", "bericht": {"$exists": False}}},
         {"$group": {"_id": "$monteur_name", "anzahl": {"$sum": 1}}},
-        {"$match": {"anzahl": {"$gte": 3}, "_id": {"$ne": None, "$ne": ""}}},
+        {"$match": {"anzahl": {"$gte": 3}, "_id": {"$nin": [None, ""]}}},
     ]
     async for row in db.einsaetze.aggregate(pipeline):
         name = row["_id"]
