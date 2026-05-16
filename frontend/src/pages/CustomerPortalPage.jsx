@@ -287,9 +287,9 @@ const CustomerPortalPage = () => {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
-        {/* LINKE SPALTE (2/3) – Hauptinhalt */}
-        <div className="lg:col-span-2 space-y-6 min-w-0">
+      <div className="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-5 lg:gap-6 space-y-6 lg:space-y-0">
+        {/* LINKE SPALTE (3/5) – Hauptinhalt */}
+        <div className="lg:col-span-3 space-y-6 min-w-0">
         {/* Begrüßung */}
         <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-[#14532D]" data-testid="portal-greeting">
           <h2 className="text-xl font-bold text-slate-800 mb-1">
@@ -516,6 +516,11 @@ const CustomerPortalPage = () => {
             )}
           </div>
         </section>
+        </div>
+        {/* /LINKE SPALTE */}
+
+        {/* RECHTE SPALTE (2/5) – Bilder + Dokumente, sticky auf Desktop */}
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         {/* Upload Section */}
         <section className="bg-white rounded-xl shadow-sm p-6" data-testid="portal-upload-section">
           <h2 className="text-base font-semibold text-slate-800 mb-4 flex items-center justify-between gap-2">
@@ -634,11 +639,6 @@ const CustomerPortalPage = () => {
             </div>
           )}
         </section>
-        </div>
-        {/* /LINKE SPALTE */}
-
-        {/* RECHTE SPALTE (1/3) – Bilder + Dokumente, sticky auf Desktop */}
-        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         {/* Customer's uploaded images */}
         {customerFiles.length > 0 && (
           <section className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-slate-400" data-testid="portal-customer-files">
