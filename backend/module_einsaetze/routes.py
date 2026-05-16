@@ -9,6 +9,38 @@ import uuid
 router = APIRouter()
 
 
+# ===================== DATENMASKE: Kunde live anreichern =====================
+# Regel (15.05.2026): Einsatz speichert NUR kunde_id, kein kunde_name/_email/_telefon/_adresse.
+# Die Anzeige-Felder werden bei jedem Read live aus module_kunden geholt.
+async def _enrich_einsatz_mit_kunde(einsatz: dict) -> dict:
+    """Hängt Kundendaten live aus module_kunden an den Einsatz."""
+    kunde_id = einsatz.get("kunde_id", "")
+    if not kunde_id:
+        einsatz["kunde_name"] = "(kein Kunde)"
+        einsatz["kunde_email"] = ""
+        einsatz["kunde_telefon"] = ""
+        einsatz["kunde_adresse"] = ""
+        return einsatz
+    k = await db.module_kunden.find_one({"id": kunde_id}, {"_id": 0})
+    if k:
+        vorname = k.get("vorname", "")
+        nachname = k.get("nachname", "")
+        einsatz["kunde_name"] = k.get("name") or f"{vorname} {nachname}".strip() or k.get("firma", "(ohne Name)")
+        einsatz["kunde_email"] = k.get("email", "")
+        einsatz["kunde_telefon"] = k.get("phone", "") or k.get("telefon", "")
+        kontakt = (k.get("kontakte") or [{}])[0] if k.get("kontakte") else {}
+        strasse = kontakt.get("strasse") or k.get("strasse", "")
+        plz = kontakt.get("plz") or k.get("plz", "")
+        ort = kontakt.get("ort") or k.get("ort", "")
+        einsatz["kunde_adresse"] = f"{strasse}, {plz} {ort}".strip(", ")
+    else:
+        einsatz["kunde_name"] = "(Kunde nicht gefunden)"
+        einsatz["kunde_email"] = ""
+        einsatz["kunde_telefon"] = ""
+        einsatz["kunde_adresse"] = ""
+    return einsatz
+
+
 # ===================== KONFIGURATION (Auswahlfelder verwalten) =====================
 # WICHTIG (06.05.2026, Vision-Regel):
 # Reparaturgruppen, Materialien, Prioritäten und Bild-Kategorien werden in
@@ -176,6 +208,31 @@ async def list_einsaetze(status: str = "", user=Depends(get_current_user)):
     elif status == "inaktiv":
         query["status"] = {"$in": ["inaktiv", "abgeschlossen"]}
     items = await db.einsaetze.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+
+    # Kundendaten live nachladen (Datenmasken-Prinzip)
+    kunden_ids = list({e["kunde_id"] for e in items if e.get("kunde_id")})
+    kunden_map: dict = {}
+    if kunden_ids:
+        async for k in db.module_kunden.find({"id": {"$in": kunden_ids}}, {"_id": 0}):
+            kunden_map[k["id"]] = k
+    for e in items:
+        k = kunden_map.get(e.get("kunde_id", ""))
+        if k:
+            vorname = k.get("vorname", "")
+            nachname = k.get("nachname", "")
+            e["kunde_name"] = k.get("name") or f"{vorname} {nachname}".strip() or k.get("firma", "(ohne Name)")
+            e["kunde_email"] = k.get("email", "")
+            e["kunde_telefon"] = k.get("phone", "") or k.get("telefon", "")
+            kontakt = (k.get("kontakte") or [{}])[0] if k.get("kontakte") else {}
+            strasse = kontakt.get("strasse") or k.get("strasse", "")
+            plz = kontakt.get("plz") or k.get("plz", "")
+            ort = kontakt.get("ort") or k.get("ort", "")
+            e["kunde_adresse"] = f"{strasse}, {plz} {ort}".strip(", ")
+        else:
+            e["kunde_name"] = e.get("kunde_name", "(Kunde nicht gefunden)")
+            e["kunde_email"] = e.get("kunde_email", "")
+            e["kunde_telefon"] = e.get("kunde_telefon", "")
+            e["kunde_adresse"] = e.get("kunde_adresse", "")
     return items
 
 
@@ -185,10 +242,6 @@ async def create_einsatz(body: dict, user=Depends(get_current_user)):
     einsatz = {
         "id": str(uuid.uuid4()),
         "kunde_id": body.get("kunde_id", body.get("customer_id", "")),
-        "kunde_name": body.get("kunde_name", body.get("customer_name", "")),
-        "kunde_email": body.get("kunde_email", ""),
-        "kunde_telefon": body.get("kunde_telefon", ""),
-        "kunde_adresse": body.get("kunde_adresse", ""),
         "kontakt_id": body.get("kontakt_id", body.get("anfrage_id", "")),
         "objekt_strasse": body.get("objekt_strasse", ""),
         "objekt_plz": body.get("objekt_plz", ""),
@@ -224,6 +277,8 @@ async def create_einsatz(body: dict, user=Depends(get_current_user)):
     }
     await db.einsaetze.insert_one(einsatz)
     einsatz.pop("_id", None)
+    # Live-Anreicherung für Response + Log
+    einsatz = await _enrich_einsatz_mit_kunde(einsatz)
     logger.info(f"Neuer Einsatz: {einsatz['betreff']} ({einsatz['kunde_name']})")
     return einsatz
 
@@ -233,6 +288,7 @@ async def get_einsatz(einsatz_id: str, user=Depends(get_current_user)):
     item = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
     if not item:
         raise HTTPException(404, "Einsatz nicht gefunden")
+    item = await _enrich_einsatz_mit_kunde(item)
     return item
 
 
