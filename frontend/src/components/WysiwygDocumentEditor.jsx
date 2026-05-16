@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useParams, useBlocker } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
 import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star } from "lucide-react";
@@ -662,14 +662,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   }, [isDirty]);
 
   // In-App-Navigation (Sidebar, Browser-Zurueck) blocken.
-  // ACHTUNG: useBlocker erfordert createBrowserRouter (Data-Router). Die App
-  // nutzt aktuell den klassischen <BrowserRouter>, dort wuerde useBlocker
-  // mit einer Invariant-Exception abstuerzen. Wir verwenden deshalb hier nur
-  // den expliziten Bestaetigungsdialog ueber den "Beenden"-Button + die
-  // beforeunload-Sperre fuer Tab-Schliessen/Reload. Fuer echtes In-App-
-  // Navigations-Blocking muss App.js auf createBrowserRouter umgestellt
-  // werden (siehe Hinweis im Chat).
-  const blocker = { state: "unblocked", proceed: () => {}, reset: () => {} };
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (bypassBlockerRef.current) return false;
+    return isDirty && currentLocation.pathname !== nextLocation.pathname;
+  });
+  useEffect(() => {
+    if (blocker.state === "blocked") setShowExitConfirm(true);
+  }, [blocker.state]);
 
   const markPristine = useCallback(() => {
     baselineRef.current = buildSnapshotRef.current();

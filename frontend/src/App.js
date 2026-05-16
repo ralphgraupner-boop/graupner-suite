@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, createRoutesFromElements, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { subscribeToPush } from "@/lib/push";
@@ -90,79 +90,88 @@ function App() {
       <Toaster position="top-right" richColors />
       <HelpProvider>
       <WindowManagerProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Kundenportal (oeffentlich) */}
-          <Route path="/portal/:token" element={<CustomerPortalPage />} />
-          {/* Mitarbeiter-Kundenlink (oeffentlich, 30 Tage gueltig) */}
-          <Route path="/m/:token" element={<KundenLinkPage />} />
-          {!isAuthenticated ? (
-            <Route path="*" element={<LoginPage onLogin={login} />} />
-          ) : (
-            <>
-              {/* Dashboard */}
-              <Route path="/dashboard" element={<MainLayout onLogout={logout}><DashboardPage /></MainLayout>} />
-
-              {/* Pop-Out-Fenster (eigene Browser-Fenster, ohne Sidebar — multi-monitor) */}
-              <Route path="/popup/:type/:id" element={<PopupShell />} />
-              <Route path="/popup/:type" element={<PopupShell />} />
-
-              {/* Module */}
-              <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />
-              <Route path="/module/kunden" element={<MainLayout onLogout={logout}><KundenModulPage /></MainLayout>} />
-              <Route path="/module/mail-inbox" element={<MainLayout onLogout={logout}><ModuleMailInboxPage /></MainLayout>} />
-              <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
-              <Route path="/module/dokumente" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
-              {/* Sicherungskopie (v6) – verwendet bewusst dieselbe Komponente. Bleibt erhalten,
-                  damit jederzeit ein heiler Stand verfuegbar ist, falls am Hauptpfad weiter
-                  entwickelt wird. Wird per "Alt-Module ausblenden" versteckt. */}
-              <Route path="/module/dokumente-v6" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
-              <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />
-
-              {/* Dokument-Editor (Angebote/Auftraege/Rechnungen) */}
-              <Route path="/quotes/new" element={<WysiwygDocumentEditor type="quote" />} />
-              <Route path="/quotes/edit/:id" element={<WysiwygDocumentEditor type="quote" />} />
-              <Route path="/orders/edit/:id" element={<WysiwygDocumentEditor type="order" />} />
-              <Route path="/invoices/new" element={<WysiwygDocumentEditor type="invoice" />} />
-              <Route path="/invoices/edit/:id" element={<WysiwygDocumentEditor type="invoice" />} />
-
-              {/* E-Mail & Einstellungen */}
-              <Route path="/email" element={<MainLayout onLogout={logout}><EmailPage /></MainLayout>} />
-              <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
-              <Route path="/portals-klon" element={<MainLayout onLogout={logout}><PortalsKlonPage /></MainLayout>} />
-              <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
-              <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
-              <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
-              {/* Monteur-App (mobile, eigenes Modul) */}
-              <Route path="/monteur" element={<MainLayout onLogout={logout}><MonteurAppPage /></MainLayout>} />
-              <Route path="/monteur/einsatz/:id" element={<MainLayout onLogout={logout}><MonteurEinsatzDetailPage /></MainLayout>} />
-              <Route path="/handy-zugang" element={<MainLayout onLogout={logout}><HandyZugangPage /></MainLayout>} />
-              <Route path="/wissen" element={<MainLayout onLogout={logout}><WissenPage /></MainLayout>} />
-              <Route path="/dokumente-v2" element={<MainLayout onLogout={logout}><DokumenteV2Page /></MainLayout>} />
-              <Route path="/dokumente-v2/:id" element={<MainLayout onLogout={logout}><DokumenteV2DetailPage /></MainLayout>} />
-              <Route path="/module/duplikate" element={<MainLayout onLogout={logout}><DuplikateModulPage /></MainLayout>} />
-              <Route path="/module/aufgaben" element={<MainLayout onLogout={logout}><ModuleAufgabenPage /></MainLayout>} />
-              <Route path="/module/termine" element={<MainLayout onLogout={logout}><ModuleTerminePage /></MainLayout>} />
-              <Route path="/module/feedback" element={<MainLayout onLogout={logout}><ModuleFeedbackPage /></MainLayout>} />
-              <Route path="/module/assistent" element={<MainLayout onLogout={logout}><AssistentPage /></MainLayout>} />
-              <Route path="/module/projekte" element={<MainLayout onLogout={logout}><ProjekteListe /></MainLayout>} />
-              <Route path="/module/projekte/werkbank/:kunde_id" element={<MainLayout onLogout={logout}><ProjektWerkbank /></MainLayout>} />
-              <Route path="/module/projekte/:id" element={<MainLayout onLogout={logout}><ProjektDetail /></MainLayout>} />
-              <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterModulPage /></MainLayout>} />
-              <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzeModulPage /></MainLayout>} />
-              <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
-
-              {/* Fallback */}
-              <Route path="/" element={<Navigate to={defaultPage} replace />} />
-              <Route path="*" element={<Navigate to={defaultPage} replace />} />
-            </>
-          )}
-        </Routes>
-      </BrowserRouter>
+      <AppRouter isAuthenticated={isAuthenticated} login={login} logout={logout} defaultPage={defaultPage} />
       </WindowManagerProvider>
       </HelpProvider>
     </div>
   );
 }
+
+// Eigene Router-Komponente: Data-Router (createBrowserRouter) statt klassischem
+// <BrowserRouter>. Das aktiviert useBlocker/usePrompt und damit den
+// Datenverlust-Schutz im WysiwygDocumentEditor. Routes-Definition bleibt 1:1.
+const AppRouter = ({ isAuthenticated, login, logout, defaultPage }) => {
+  const router = useMemo(() => createBrowserRouter(createRoutesFromElements(
+    <Route>
+      {/* Kundenportal (oeffentlich) */}
+      <Route path="/portal/:token" element={<CustomerPortalPage />} />
+      {/* Mitarbeiter-Kundenlink (oeffentlich, 30 Tage gueltig) */}
+      <Route path="/m/:token" element={<KundenLinkPage />} />
+      {!isAuthenticated ? (
+        <Route path="*" element={<LoginPage onLogin={login} />} />
+      ) : (
+        <>
+          {/* Dashboard */}
+          <Route path="/dashboard" element={<MainLayout onLogout={logout}><DashboardPage /></MainLayout>} />
+
+          {/* Pop-Out-Fenster (eigene Browser-Fenster, ohne Sidebar — multi-monitor) */}
+          <Route path="/popup/:type/:id" element={<PopupShell />} />
+          <Route path="/popup/:type" element={<PopupShell />} />
+
+          {/* Module */}
+          <Route path="/module/kontakt" element={<MainLayout onLogout={logout}><KontaktModulPage /></MainLayout>} />
+          <Route path="/module/kunden" element={<MainLayout onLogout={logout}><KundenModulPage /></MainLayout>} />
+          <Route path="/module/mail-inbox" element={<MainLayout onLogout={logout}><ModuleMailInboxPage /></MainLayout>} />
+          <Route path="/module/artikel" element={<MainLayout onLogout={logout}><ArtikelModulPage /></MainLayout>} />
+          <Route path="/module/dokumente" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
+          {/* Sicherungskopie (v6) – verwendet bewusst dieselbe Komponente. Bleibt erhalten,
+              damit jederzeit ein heiler Stand verfuegbar ist, falls am Hauptpfad weiter
+              entwickelt wird. Wird per "Alt-Module ausblenden" versteckt. */}
+          <Route path="/module/dokumente-v6" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
+          <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />
+
+          {/* Dokument-Editor (Angebote/Auftraege/Rechnungen) */}
+          <Route path="/quotes/new" element={<WysiwygDocumentEditor type="quote" />} />
+          <Route path="/quotes/edit/:id" element={<WysiwygDocumentEditor type="quote" />} />
+          <Route path="/orders/edit/:id" element={<WysiwygDocumentEditor type="order" />} />
+          <Route path="/invoices/new" element={<WysiwygDocumentEditor type="invoice" />} />
+          <Route path="/invoices/edit/:id" element={<WysiwygDocumentEditor type="invoice" />} />
+
+          {/* E-Mail & Einstellungen */}
+          <Route path="/email" element={<MainLayout onLogout={logout}><EmailPage /></MainLayout>} />
+          <Route path="/portals" element={<MainLayout onLogout={logout}><PortalsPage /></MainLayout>} />
+          <Route path="/portals-klon" element={<MainLayout onLogout={logout}><PortalsKlonPage /></MainLayout>} />
+          <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
+          <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
+          <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
+          {/* Monteur-App (mobile, eigenes Modul) */}
+          <Route path="/monteur" element={<MainLayout onLogout={logout}><MonteurAppPage /></MainLayout>} />
+          <Route path="/monteur/einsatz/:id" element={<MainLayout onLogout={logout}><MonteurEinsatzDetailPage /></MainLayout>} />
+          <Route path="/handy-zugang" element={<MainLayout onLogout={logout}><HandyZugangPage /></MainLayout>} />
+          <Route path="/wissen" element={<MainLayout onLogout={logout}><WissenPage /></MainLayout>} />
+          <Route path="/dokumente-v2" element={<MainLayout onLogout={logout}><DokumenteV2Page /></MainLayout>} />
+          <Route path="/dokumente-v2/:id" element={<MainLayout onLogout={logout}><DokumenteV2DetailPage /></MainLayout>} />
+          <Route path="/module/duplikate" element={<MainLayout onLogout={logout}><DuplikateModulPage /></MainLayout>} />
+          <Route path="/module/aufgaben" element={<MainLayout onLogout={logout}><ModuleAufgabenPage /></MainLayout>} />
+          <Route path="/module/termine" element={<MainLayout onLogout={logout}><ModuleTerminePage /></MainLayout>} />
+          <Route path="/module/feedback" element={<MainLayout onLogout={logout}><ModuleFeedbackPage /></MainLayout>} />
+          <Route path="/module/assistent" element={<MainLayout onLogout={logout}><AssistentPage /></MainLayout>} />
+          <Route path="/module/projekte" element={<MainLayout onLogout={logout}><ProjekteListe /></MainLayout>} />
+          <Route path="/module/projekte/werkbank/:kunde_id" element={<MainLayout onLogout={logout}><ProjektWerkbank /></MainLayout>} />
+          <Route path="/module/projekte/:id" element={<MainLayout onLogout={logout}><ProjektDetail /></MainLayout>} />
+          <Route path="/mitarbeiter" element={<MainLayout onLogout={logout}><MitarbeiterModulPage /></MainLayout>} />
+          <Route path="/einsaetze" element={<MainLayout onLogout={logout}><EinsaetzeModulPage /></MainLayout>} />
+          <Route path="/settings" element={<MainLayout onLogout={logout}><SettingsPage /></MainLayout>} />
+
+          {/* Fallback */}
+          <Route path="/" element={<Navigate to={defaultPage} replace />} />
+          <Route path="*" element={<Navigate to={defaultPage} replace />} />
+        </>
+      )}
+    </Route>
+  )), [isAuthenticated, login, logout, defaultPage]);
+
+  return <RouterProvider router={router} />;
+};
 
 export default App;
