@@ -681,12 +681,29 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setShowExitConfirm(false);
   };
 
-  const handleDownloadPDF = async () => {
-    if (!validateTextFields()) return;
-    // Immer zuerst speichern → PDF zeigt dann aktuellen Stand, nicht die alte Version
-    const wasDirty = isDirty;
-    const savedId = await persistDocument();
-    if (!savedId) return;
+  // ==================== ACTION-SAVE-DIALOG (PDF / Druck / E-Mail) ====================
+  // pendingAction: { run: async () => void } | null
+  // Wird gesetzt, wenn der User eine Aktion ausloest, die mit gespeichertem
+  // Stand arbeiten muss, das Dokument aber dirty ist. Der Dialog fragt:
+  // "Speichern und fortfahren" oder "Abbrechen".
+  const [pendingAction, setPendingAction] = useState(null);
+  const requireSave = useCallback((run) => {
+    if (!isDirty) { run(); return; }
+    setPendingAction({ run });
+  }, [isDirty]);
+  const handleActionSaveAndContinue = async () => {
+    const action = pendingAction;
+    setPendingAction(null);
+    if (!action) return;
+    const ok = await persistDocument();
+    if (!ok) return;  // Save fehlgeschlagen -> Aktion verwerfen
+    await action.run();
+  };
+  const handleActionCancel = () => {
+    setPendingAction(null);
+  };
+
+  const doDownloadPDF = async (savedId) => {
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       // Cache-Buster, damit Browser nicht versehentlich eine alte PDF-Version zeigt
@@ -695,23 +712,26 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       const url = window.URL.createObjectURL(blob);
       const previewWin = window.open(url, "_blank");
       if (!previewWin) {
-        // Fallback bei Popup-Blocker → Download
         const link = document.createElement("a"); link.href = url; link.setAttribute("download", `${titles[type]}_${docNumber}.pdf`);
         document.body.appendChild(link); link.click(); link.remove();
-        toast.warning(wasDirty ? "Gespeichert – Popup blockiert, PDF heruntergeladen" : "Popup blockiert - PDF wurde stattdessen heruntergeladen");
+        toast.warning("Popup blockiert - PDF wurde stattdessen heruntergeladen");
       } else {
-        toast.success(wasDirty ? "Gespeichert – PDF wird geöffnet" : "PDF wird in neuem Tab geöffnet");
+        toast.success("PDF wird in neuem Tab geöffnet");
       }
     } catch (e) { console.error("PDF error:", e); toast.error("Fehler beim PDF-Erzeugen: " + (e?.response?.statusText || e?.message || "unbekannt")); }
   };
-
-  const handlePrint = async () => {
+  const handleDownloadPDF = () => {
     if (!validateTextFields()) return;
-    // Immer zuerst speichern → Druck zeigt aktuellen Stand
-    const wasDirty = isDirty;
-    const savedId = await persistDocument();
-    if (!savedId) return;
-    if (wasDirty) toast.success("Automatisch gespeichert");
+    requireSave(async () => {
+      // Wenn das Dokument neu ist, brauchen wir auch ohne dirty-Pruefung den Save,
+      // weil sonst keine ID fuer den PDF-Endpoint existiert.
+      const savedId = isNew ? await persistDocument() : id;
+      if (!savedId) return;
+      await doDownloadPDF(savedId);
+    });
+  };
+
+  const doPrint = async (savedId) => {
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
@@ -723,7 +743,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           setTimeout(() => { printWindow.print(); }, 500);
         });
       } else {
-        // Fallback: iframe print
         const iframe = document.createElement("iframe");
         iframe.style.display = "none";
         iframe.src = url;
@@ -733,6 +752,14 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         });
       }
     } catch { toast.error("Fehler beim Drucken"); }
+  };
+  const handlePrint = () => {
+    if (!validateTextFields()) return;
+    requireSave(async () => {
+      const savedId = isNew ? await persistDocument() : id;
+      if (!savedId) return;
+      await doPrint(savedId);
+    });
   };
 
   const onOpenEmailDialog = () => { setShowEmailDialog(true); };
@@ -744,14 +771,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setShowMailDialog({ open: true });
   };
 
-  const executeMailClient = async (withText, saveFirst) => {
-    const to = customer?.email || "";
-    const docTitle = titles[type] || "Dokument";
-    const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
-    const body = withText
-      ? encodeURIComponent(`${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
-      : "";
-    const doOpen = () => {
+  const executeMailClient = (withText) => {
+    setShowMailDialog(null);
+    requireSave(() => {
+      const to = customer?.email || "";
+      const docTitle = titles[type] || "Dokument";
+      const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
+      const body = withText
+        ? encodeURIComponent(`${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
+        : "";
       window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
       // Status auf "Versendet" / "Gesendet" setzen falls nicht schon in dem Status
       if (!isNew && status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
@@ -760,14 +788,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         api.put(`/${endpoint}/${id}`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
       }
       navigate(listPaths[type]);
-    };
-    if (saveFirst) {
-      const wasDirty = isDirty;
-      await handleSave();
-      if (wasDirty) toast.success("Automatisch gespeichert");
-    }
-    doOpen();
-    setShowMailDialog(null);
+    });
   };
 
   // ==================== COMPUTED VALUES ====================
@@ -963,7 +984,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             </div>
             <div className="p-5 space-y-2">
               <button
-                onClick={() => executeMailClient(true, false)}
+                onClick={() => executeMailClient(true)}
                 className="w-full p-3 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-left flex items-start gap-3"
                 data-testid="btn-mail-with-text"
               >
@@ -974,7 +995,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 </div>
               </button>
               <button
-                onClick={() => executeMailClient(false, false)}
+                onClick={() => executeMailClient(false)}
                 className="w-full p-3 rounded-sm border hover:bg-muted/40 text-left flex items-start gap-3"
                 data-testid="btn-mail-without-text"
               >
@@ -1011,6 +1032,23 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 Ohne Speichern verlassen
               </button>
               <button onClick={handleExitCancel} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm border hover:bg-muted transition-colors" data-testid="btn-exit-cancel">
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingAction && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="action-save-confirm-dialog">
+          <div className="bg-card rounded-lg shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-2">Ungespeicherte Änderungen</h3>
+            <p className="text-sm text-muted-foreground mb-6">Sie haben ungespeicherte Änderungen. Soll vor dem Fortfahren gespeichert werden?</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={handleActionSaveAndContinue} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" data-testid="btn-action-save-continue">
+                Speichern und fortfahren
+              </button>
+              <button onClick={handleActionCancel} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm border hover:bg-muted transition-colors" data-testid="btn-action-cancel">
                 Abbrechen
               </button>
             </div>
