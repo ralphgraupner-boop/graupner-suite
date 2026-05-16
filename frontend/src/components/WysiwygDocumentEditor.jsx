@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
-import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star } from "lucide-react";
+import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star, X } from "lucide-react";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
@@ -718,6 +718,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     );
   }
 
+  const [showLohnkosten, setShowLohnkosten] = useState(false);
+
   // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-slate-100">
@@ -731,10 +733,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
         onOpenDocTemplates={() => setShowLoadTemplate(true)}
+        onToggleLohnkosten={() => setShowLohnkosten(v => !v)}
       />
 
       <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-4">
-        <div className="lg:grid lg:grid-cols-[340px_1fr_300px] lg:gap-4 lg:max-w-[1600px] lg:mx-auto">
+        <div className="lg:grid lg:grid-cols-[340px_1fr] lg:gap-4 lg:max-w-[1600px] lg:mx-auto">
 
           <EditorSidebar
             sidebarSearch={sidebarSearch} setSidebarSearch={setSidebarSearch}
@@ -849,17 +852,30 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             </div>
           </div>
 
-          <LohnkostenSidebar
-            positions={positions}
-            vatRate={vatRate}
-            showLohnanteil={showLohnanteil}
-            setShowLohnanteil={setShowLohnanteil}
-            lohnanteilCustom={lohnanteilCustom}
-            setLohnanteilCustom={setLohnanteilCustom}
-          />
-
         </div>
       </div>
+
+      {/* Lohnkosten Slide-Over (nicht-modal, Editor bleibt klickbar) */}
+      {showLohnkosten && (
+        <div className="fixed right-0 top-14 lg:top-20 bottom-0 w-full sm:w-[360px] z-40 bg-card border-l shadow-2xl overflow-y-auto" data-testid="lohnkosten-panel">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <h2 className="text-base font-semibold">Lohnkosten</h2>
+            <button onClick={() => setShowLohnkosten(false)} className="p-1 hover:bg-muted rounded-sm" data-testid="btn-close-lohnkosten" title="Schliessen">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-4">
+            <LohnkostenSidebar
+              positions={positions}
+              vatRate={vatRate}
+              showLohnanteil={showLohnanteil}
+              setShowLohnanteil={setShowLohnanteil}
+              lohnanteilCustom={lohnanteilCustom}
+              setLohnanteilCustom={setLohnanteilCustom}
+            />
+          </div>
+        </div>
+      )}
 
       <SendDocumentEmail
         isOpen={showEmailDialog}
