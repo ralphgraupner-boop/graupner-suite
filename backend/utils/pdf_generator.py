@@ -60,15 +60,24 @@ def _wrap_text(c, text, font_name, font_size, max_width_pt):
 
 def _draw_rich_text(c, x, y, html_text, max_width, font_size=9, line_height=0.35, default_color="#0F172A"):
     """Zeichnet HTML-formatierten Text auf das PDF Canvas.
-    Unterstuetzt: <strong>/<b>, <em>/<i>, <u>, <span style='color:...'> """
+    Unterstuetzt: <strong>/<b>, <em>/<i>, <u>, <span style='color:...'>
+    Absatz-Regel (FIX 1, 16.05.2026):
+      - <p>...</p>  = echter Absatz (Trenner)
+      - <br>        = Leerzeichen innerhalb des Absatzes, kein harter Umbruch
+      - mehrfache leere <p></p> dazwischen = eine Leerzeile
+    """
     if not html_text:
         return y
 
-    # HTML in Zeilen aufteilen
-    text = _re.sub(r'<br\s*/?>', '\n', html_text)
-    text = _re.sub(r'</p>\s*<p[^>]*>', '\n', text)
-    text = _re.sub(r'</?p[^>]*>', '', text)
+    # FIX 1: <p>-Bloecke als Absatztrenner, <br> als Leerzeichen
+    text = _re.sub(r'<br\s*/?>', ' ', html_text)            # <br> wird normaler Space
+    text = _re.sub(r'</p>\s*<p[^>]*>', '\n', text)          # zwischen </p><p> = Absatztrenner
+    text = _re.sub(r'</?p[^>]*>', '', text)                 # restliche <p>-Tags raus
     text = html_unescape(text)
+    # Mehrfach-Whitespaces auf eines reduzieren (verhindert doppelte Spaces durch <br> → " ")
+    text = _re.sub(r'[ \t]+', ' ', text)
+    # Mehrere Leerzeilen auf maximal eine reduzieren
+    text = _re.sub(r'\n{2,}', '\n\n', text)
     lines = text.split('\n')
 
     for line in lines:
