@@ -785,7 +785,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     if (!isNew && status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
       const newStatus = type === "quote" ? "Versendet" : type === "order" ? "Gesendet" : "Versendet";
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
-      api.put(`/${endpoint}/${id}`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
+      api.put(`/${endpoint}/${id}/status`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
     }
     navigate(listPaths[type]);
   };
