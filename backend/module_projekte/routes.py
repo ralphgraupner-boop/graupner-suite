@@ -205,6 +205,13 @@ async def list_projekte(kunde_id: Optional[str] = None, status: Optional[str] = 
     return items
 
 
+@router.get("/count-neu")
+async def count_neu(user=Depends(get_current_user)):
+    """Anzahl neuer Projekte (status='Anfrage') – für Sidebar-Badge."""
+    count = await db.module_projekte.count_documents({"status": "Anfrage"})
+    return {"count": count}
+
+
 @router.get("/counts-by-kunde")
 async def counts_by_kunde(user=Depends(get_current_user)):
     """Liefert {kunde_id: anzahl_projekte} für die Kundenliste-Badges.

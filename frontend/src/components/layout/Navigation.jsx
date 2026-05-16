@@ -10,22 +10,22 @@ const APP_ENV = detectAppEnv();
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
-  { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"], variant: "new" },
-  { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], variant: "new", parentPath: "/settings" },
-  { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], variant: "new" },
-  { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
-  { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"], variant: "new" },
-  { path: "/module/feedback", icon: StickyNote, label: "Notizen & Bugs", roles: ["admin"], variant: "new" },
-  { path: "/module/assistent", icon: Brain, label: "Mein Assistent", roles: ["admin"], variant: "new" },
+  { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"] },
+  { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], parentPath: "/settings" },
+  { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"] },
+  { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"] },
+  { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"] },
+  { path: "/module/feedback", icon: StickyNote, label: "Notizen & Bugs", roles: ["admin"] },
+  { path: "/module/assistent", icon: Brain, label: "Mein Assistent", roles: ["admin"] },
   { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"], parentPath: "/settings" },
-  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], variant: "new" },
+  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
   { path: "/module/dokumente-v6", icon: FileText, label: "Dokumente v6 (Sicherung)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/dokumente-v2", icon: FileText, label: "Dokumente v2 (defekt)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"], parentPath: "/settings" },
   { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
-  { path: "/portals-klon", icon: Globe, label: "Kundenportale (Arbeitskopie)", roles: ["admin"], variant: "new" },
-  { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"], variant: "new" },
+  { path: "/portals-klon", icon: Globe, label: "Kundenportale (Arbeitskopie)", roles: ["admin"], hideByDefault: true },
+  { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"] },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"], parentPath: "/settings" },
   { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"], parentPath: "/settings" },
   { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
@@ -71,7 +71,7 @@ const Sidebar = ({ onLogout }) => {
   const username = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "null"); return typeof u === "object" ? u.username : u; } catch { return ""; } })();
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0, assistent: 0 });
+  const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0, assistent: 0, mail_anfragen: 0, projekte_neu: 0, aufgaben_offen: 0 });
   const prevEmailRef = useRef(0);
   const [openedParents, setOpenedParents] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("nav_opened_parents") || "[]")); } catch { return new Set(); }
@@ -205,6 +205,9 @@ const Sidebar = ({ onLogout }) => {
           api.get("/portals/unread-count").catch(() => ({ data: { count: 0 } })),
           api.get("/module-termine/wartet-auf-go").catch(() => ({ data: { count: 0 } })),
           api.get("/module-assistent/hinweise/count").catch(() => ({ data: { count: 0 } })),
+          api.get("/module-mail-inbox/stats").catch(() => ({ data: { total: { vorschlag: 0 } } })),
+          api.get("/module-projekte/count-neu").catch(() => ({ data: { count: 0 } })),
+          api.get("/module-aufgaben/count-offen").catch(() => ({ data: { count: 0 } })),
         ];
         if (emailModuleEnabled) {
           calls.unshift(api.get("/imap/inbox/stats").catch(() => ({ data: { unread: 0 } })));
@@ -216,6 +219,9 @@ const Sidebar = ({ onLogout }) => {
         const portalCount = results[portalIdx].data?.count || 0;
         const terminGoCount = results[portalIdx + 1].data?.count || 0;
         const assistentCount = results[portalIdx + 2]?.data?.count || 0;
+        const mailAnfragenCount = results[portalIdx + 3]?.data?.total?.vorschlag || 0;
+        const projekteNeuCount = results[portalIdx + 4]?.data?.count || 0;
+        const aufgabenOffenCount = results[portalIdx + 5]?.data?.count || 0;
         // Sound bei neuer Mail spielen (nur wenn Anzahl gestiegen)
         if (emailModuleEnabled && emailCount > prevEmailRef.current && prevEmailRef.current !== 0) {
           try {
@@ -225,7 +231,7 @@ const Sidebar = ({ onLogout }) => {
           } catch { /* ignore */ }
         }
         prevEmailRef.current = emailCount;
-        setUnreadCounts({ email: emailCount, portal: portalCount, termine_go: terminGoCount, assistent: assistentCount });
+        setUnreadCounts({ email: emailCount, portal: portalCount, termine_go: terminGoCount, assistent: assistentCount, mail_anfragen: mailAnfragenCount, projekte_neu: projekteNeuCount, aufgaben_offen: aufgabenOffenCount });
       } catch { /* ignore */ }
     };
     fetchCounts();
@@ -341,7 +347,15 @@ const Sidebar = ({ onLogout }) => {
                 ? unreadCounts.portal
                 : (path === "/module/termine"
                     ? unreadCounts.termine_go
-                    : (path === "/module/assistent" ? unreadCounts.assistent : 0)));
+                    : (path === "/module/assistent"
+                        ? unreadCounts.assistent
+                        : (path === "/module/mail-inbox"
+                            ? unreadCounts.mail_anfragen
+                            : (path === "/module/projekte"
+                                ? unreadCounts.projekte_neu
+                                : (path === "/module/aufgaben"
+                                    ? unreadCounts.aufgaben_offen
+                                    : 0))))));
           const isActive = location.pathname.startsWith(path);
           const hasBadge = badgeCount > 0 && !isActive;
           const helpKey = `nav.${path.split("/").filter(Boolean).pop()}`;

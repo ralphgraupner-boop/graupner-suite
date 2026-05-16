@@ -220,6 +220,14 @@ async def list_aufgaben(
     return items
 
 
+@router.get("/count-offen")
+async def count_offen(user=Depends(get_current_user)):
+    """Anzahl offener Aufgaben (status='offen') – für Sidebar-Badge."""
+    await _require_enabled()
+    count = await db.module_aufgaben.count_documents({"status": "offen"})
+    return {"count": count}
+
+
 @router.get("/{aufgabe_id}")
 async def get_aufgabe(aufgabe_id: str, user=Depends(get_current_user)):
     await _require_enabled()
