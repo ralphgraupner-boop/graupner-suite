@@ -688,7 +688,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   // "Speichern und fortfahren" oder "Abbrechen".
   const [pendingAction, setPendingAction] = useState(null);
   const requireSave = useCallback((run) => {
+    console.log("requireSave called, isDirty:", isDirty);
     if (!isDirty) { run(); return; }
+    console.log("setting pendingAction");
     setPendingAction({ run });
   }, [isDirty]);
   const handleActionSaveAndContinue = async () => {
