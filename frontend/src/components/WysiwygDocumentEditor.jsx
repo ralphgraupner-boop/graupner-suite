@@ -764,7 +764,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     });
   };
 
-  const onOpenEmailDialog = () => { setShowEmailDialog(true); };
+  const onOpenEmailDialog = () => {
+    requireSave(() => setShowEmailDialog(true));
+  };
 
   const [showMailDialog, setShowMailDialog] = useState(null);
 
