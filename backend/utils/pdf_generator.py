@@ -834,18 +834,31 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 y_pos = height - 3.5 * cm
 
             y_pos -= 0.8 * cm
+            # Trennlinie oben
             c.setStrokeColor(HexColor("#E2E8F0"))
             c.line(2 * cm, y_pos + 0.3 * cm, width - 2 * cm, y_pos + 0.3 * cm)
+
+            # Grosse fette Überschrift (12pt)
             c.setFillColor(text_color)
-            c.setFont("Helvetica-Bold", 10)
+            c.setFont("Helvetica-Bold", 12)
             c.drawString(2 * cm, y_pos, "Gewerk-/Titelzusammenstellung")
-            y_pos -= 0.5 * cm
+            y_pos -= 0.7 * cm
+
+            # Spaltenköpfe (9pt, fett, schwarz)
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(2 * cm, y_pos, "Pos")
+            c.drawString(3 * cm, y_pos, "Titel / Bezeichnung")
+            c.drawRightString(width - 2 * cm, y_pos, "Titelsumme")
+            y_pos -= 0.2 * cm
+            c.line(2 * cm, y_pos, width - 2 * cm, y_pos)
+            y_pos -= 0.4 * cm
 
             c.setFont("Helvetica", 9)
             for g in groups:
                 display_titel = "Allgemeine Positionen" if g["titel"] == "__ungrouped" else g["titel"]
-                line_text = f"{g['nr']}  {display_titel}" if g["nr"] else display_titel
-                c.drawString(2 * cm, y_pos, line_text)
+                nr = g["nr"] if g["nr"] else ""
+                c.drawString(2 * cm, y_pos, nr)
+                c.drawString(3 * cm, y_pos, display_titel)
                 c.drawRightString(width - 2 * cm, y_pos, f"{g['sum']:.2f} €")
                 y_pos -= 0.5 * cm
 
