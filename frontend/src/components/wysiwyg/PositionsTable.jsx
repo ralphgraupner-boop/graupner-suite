@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { GripVertical, Trash2, Plus, Bookmark, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,6 +16,15 @@ const PositionsTable = ({
   articles, addFromStamm, services,
   onOpenKalkulation, activeKalkIdx,
 }) => {
+  const [titelAutocompleteIdx, setTitelAutocompleteIdx] = useState(null);
+
+  const filteredTitelSuggestions = (query) =>
+    query && query.trim().length >= 2
+      ? titelTemplates
+          .filter(t => t.content?.toLowerCase().includes(query.trim().toLowerCase()))
+          .slice(0, 5)
+      : [];
+
   const handleRowDrop = (e, idx) => {
     const jsonData = e.dataTransfer.getData("application/json");
     if (jsonData) {
@@ -52,12 +62,35 @@ const PositionsTable = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <input
-                    value={pos.description}
-                    onChange={(e) => updatePosition(idx, "description", e.target.value)}
-                    placeholder="Titel eingeben..."
-                    className="flex-1 border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      value={pos.description}
+                      onChange={(e) => {
+                        updatePosition(idx, "description", e.target.value);
+                        setTitelAutocompleteIdx(e.target.value.trim().length >= 2 ? idx : null);
+                      }}
+                      onFocus={() => {
+                        if (pos.description?.trim().length >= 2) setTitelAutocompleteIdx(idx);
+                      }}
+                      onBlur={() => setTimeout(() => setTitelAutocompleteIdx((cur) => cur === idx ? null : cur), 150)}
+                      placeholder="Titel eingeben..."
+                      className="w-full border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
+                      data-testid={`mobile-titel-input-${idx}`}
+                    />
+                    {titelAutocompleteIdx === idx && filteredTitelSuggestions(pos.description).length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg max-h-48 overflow-y-auto" data-testid={`mobile-titel-autocomplete-${idx}`}>
+                        {filteredTitelSuggestions(pos.description).map(t => (
+                          <button key={t.id} type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => { updatePosition(idx, "description", t.content); setTitelAutocompleteIdx(null); }}
+                            className="block w-full text-left px-3 py-2 text-sm hover:bg-amber-50 border-b last:border-b-0"
+                            data-testid={`mobile-titel-suggestion-${t.id}`}>
+                            {t.content}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="relative">
                     <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
                       className="p-1.5 text-amber-600 hover:bg-amber-50 rounded border">
@@ -174,13 +207,35 @@ const PositionsTable = ({
                   <td className="py-3 text-base font-bold text-primary">{numbering[idx]}</td>
                   <td className="py-2" colSpan={4}>
                     <div className="flex items-center gap-1">
+                    <div className="relative flex-1">
                       <input
                         value={pos.description}
-                        onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                        onChange={(e) => {
+                          updatePosition(idx, "description", e.target.value);
+                          setTitelAutocompleteIdx(e.target.value.trim().length >= 2 ? idx : null);
+                        }}
+                        onFocus={() => {
+                          if (pos.description?.trim().length >= 2) setTitelAutocompleteIdx(idx);
+                        }}
+                        onBlur={() => setTimeout(() => setTitelAutocompleteIdx((cur) => cur === idx ? null : cur), 150)}
                         placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
-                        className="flex-1 bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
+                        className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
                         data-testid={`titel-input-${idx}`}
                       />
+                      {titelAutocompleteIdx === idx && filteredTitelSuggestions(pos.description).length > 0 && (
+                        <div className="absolute left-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[300px] max-h-48 overflow-y-auto" data-testid={`titel-autocomplete-${idx}`}>
+                          {filteredTitelSuggestions(pos.description).map(t => (
+                            <button key={t.id} type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => { updatePosition(idx, "description", t.content); setTitelAutocompleteIdx(null); }}
+                              className="block w-full text-left px-3 py-2 text-sm hover:bg-amber-50 border-b last:border-b-0"
+                              data-testid={`titel-suggestion-${t.id}`}>
+                              {t.content}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                       {/* Titel-Vorlage Dropdown */}
                       <div className="relative">
                         <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
