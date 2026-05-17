@@ -837,7 +837,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             # Trennlinie oben
             c.setStrokeColor(HexColor("#E2E8F0"))
             c.setLineWidth(1.0)
-            c.line(2 * cm, y_pos + 0.3 * cm, width - 2 * cm, y_pos + 0.3 * cm)
+            c.line(2 * cm, y_pos + 0.6 * cm, width - 2 * cm, y_pos + 0.6 * cm)
 
             # Grosse fette Überschrift (12pt)
             c.setFillColor(text_color)
