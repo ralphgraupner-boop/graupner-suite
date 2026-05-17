@@ -4,6 +4,8 @@ const TotalsSection = ({
   type, depositAmount, setDepositAmount, finalAmount,
   showLohnanteil, setShowLohnanteil, effectiveLohnanteil, lohnanteilMwst, lohnanteilBrutto, lohnanteilCustom, setLohnanteilCustom, totalLaborCost,
 }) => {
+  // Anzeigename fuer interne Gruppe "__ungrouped" -> "Allgemeine Positionen"
+  const displayTitel = (t) => (t === "__ungrouped" ? "Allgemeine Positionen" : t);
   return (
     <div className="px-4 lg:px-10 py-4 lg:py-6 border-t">
       {/* Desktop Totals */}
@@ -14,29 +16,29 @@ const TotalsSection = ({
             <>
               <tr>
                 <td className="w-8"></td>
-                <td className="w-12"></td>
+                <td style={{ width: "35px" }}></td>
                 <td colSpan={4} className="py-3 text-sm font-bold text-primary">Gewerk-/Titelzusammenstellung</td>
-                <td style={{ width: "100px" }}></td>
+                <td style={{ width: "75px" }}></td>
                 <td className="w-8"></td>
               </tr>
               {titelGroups.map((g, i) => (
                 <tr key={`tg-${i}`} className="border-b border-slate-100">
                   <td className="w-8"></td>
-                  <td className="w-12"></td>
+                  <td style={{ width: "35px" }}></td>
                   <td colSpan={4} className="py-2 text-sm">
                     <span className="font-semibold mr-2">{g.nr}</span>
-                    {g.titel}
+                    {displayTitel(g.titel)}
                   </td>
-                  <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>{g.sum.toFixed(2)} €</td>
+                  <td className="text-right py-2 font-mono text-sm" style={{ width: "75px" }}>{g.sum.toFixed(2)} €</td>
                   <td className="w-8"></td>
                 </tr>
               ))}
               <tr className="border-t border-slate-300">
                 <td className="w-8"></td>
-                <td className="w-12"></td>
+                <td style={{ width: "35px" }}></td>
                 <td colSpan={3}></td>
-                <td style={{ width: "70px" }}></td>
-                <td style={{ width: "70px" }}></td>
+                <td style={{ width: "45px" }}></td>
+                <td style={{ width: "45px" }}></td>
                 <td className="w-8"></td>
               </tr>
             </>
@@ -44,18 +46,18 @@ const TotalsSection = ({
           {/* Nettosumme */}
           <tr>
             <td className="w-8"></td>
-            <td className="w-12"></td>
+            <td style={{ width: "35px" }}></td>
             <td></td>
-            <td style={{ width: "70px" }}></td>
-            <td style={{ width: "70px" }}></td>
-            <td className="text-right py-2 text-muted-foreground text-sm" style={{ width: "100px" }}>Nettosumme</td>
-            <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>{subtotal.toFixed(2)} €</td>
+            <td style={{ width: "45px" }}></td>
+            <td style={{ width: "45px" }}></td>
+            <td className="text-right py-2 text-muted-foreground text-sm" style={{ width: "70px" }}>Nettosumme</td>
+            <td className="text-right py-2 font-mono text-sm" style={{ width: "75px" }}>{subtotal.toFixed(2)} €</td>
             <td className="w-8"></td>
           </tr>
           {/* Zu-/Abschlag */}
           <tr>
             <td></td><td></td><td></td><td></td><td></td>
-            <td className="text-right py-2 text-sm" style={{ width: "100px" }}>
+            <td className="text-right py-2 text-sm" style={{ width: "70px" }}>
               <div className="flex items-center justify-end gap-1">
                 <span className="text-muted-foreground text-xs">Abschlag</span>
                 <input type="number" step="0.1" value={discount || ""}
@@ -67,7 +69,7 @@ const TotalsSection = ({
                 <span className="text-xs text-muted-foreground">%</span>
               </div>
             </td>
-            <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>
+            <td className="text-right py-2 font-mono text-sm" style={{ width: "75px" }}>
               {discountAmt > 0 ? `-${discountAmt.toFixed(2)} €` : "0,00 €"}
             </td>
             <td></td>
@@ -76,15 +78,15 @@ const TotalsSection = ({
           {discount > 0 && (
             <tr className="border-t border-slate-200">
               <td></td><td></td><td></td><td></td><td></td>
-              <td className="text-right py-2 text-sm font-medium" style={{ width: "100px" }}>Nettobetrag</td>
-              <td className="text-right py-2 font-mono text-sm font-medium" style={{ width: "100px" }}>{netAfterDiscount.toFixed(2)} €</td>
+              <td className="text-right py-2 text-sm font-medium" style={{ width: "70px" }}>Nettobetrag</td>
+              <td className="text-right py-2 font-mono text-sm font-medium" style={{ width: "75px" }}>{netAfterDiscount.toFixed(2)} €</td>
               <td></td>
             </tr>
           )}
           {/* MwSt */}
           <tr>
             <td></td><td></td><td></td><td></td><td></td>
-            <td className="text-right py-2 text-sm" style={{ width: "100px" }}>
+            <td className="text-right py-2 text-sm" style={{ width: "70px" }}>
               <div className="flex items-center justify-end gap-1">
                 <span className="text-muted-foreground">MwSt</span>
                 <select value={vatRate} onChange={(e) => setVatRate(parseFloat(e.target.value))}
@@ -95,7 +97,7 @@ const TotalsSection = ({
                 </select>
               </div>
             </td>
-            <td className="text-right py-2 font-mono text-sm" style={{ width: "100px" }}>{vat.toFixed(2)} €</td>
+            <td className="text-right py-2 font-mono text-sm" style={{ width: "75px" }}>{vat.toFixed(2)} €</td>
             <td></td>
           </tr>
           {/* Brutto / Gesamt */}
@@ -183,7 +185,7 @@ const TotalsSection = ({
                 <p className="text-xs font-bold text-primary mb-2">Gewerk-/Titelzusammenstellung</p>
                 {titelGroups.map((g, i) => (
                   <div key={`mtg-${i}`} className="flex justify-between py-1 text-sm">
-                    <span><span className="font-semibold mr-1">{g.nr}</span> {g.titel}</span>
+                    <span><span className="font-semibold mr-1">{g.nr}</span> {displayTitel(g.titel)}</span>
                     <span className="font-mono">{g.sum.toFixed(2)} €</span>
                   </div>
                 ))}
