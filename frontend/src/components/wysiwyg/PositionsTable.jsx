@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GripVertical, Trash2, Plus, Bookmark, ChevronDown, X } from "lucide-react";
+import { GripVertical, Trash2, Plus, Bookmark, X } from "lucide-react";
 import { toast } from "sonner";
 
 const PositionsTable = ({
@@ -19,21 +19,12 @@ const PositionsTable = ({
   const [titelAutocompleteIdx, setTitelAutocompleteIdx] = useState(null);
 
   const filteredTitelSuggestions = (query) => {
-    const safeQuery = (query || "").trim();
+    const safeQuery = (query || "").trim().toLowerCase();
     const safeTemplates = Array.isArray(titelTemplates) ? titelTemplates : [];
-    const result = safeQuery.length >= 2
-      ? safeTemplates
-          .filter(t => (t?.content || "").toLowerCase().includes(safeQuery.toLowerCase()))
-          .slice(0, 5)
-      : [];
-    // DEBUG LOG (temporär)
-    console.log("[Titel-Autocomplete]", {
-      query: safeQuery,
-      templatesCount: safeTemplates.length,
-      sampleTemplate: safeTemplates[0],
-      matches: result.length,
-    });
-    return result;
+    if (!safeQuery) return safeTemplates.slice(0, 8);
+    return safeTemplates
+      .filter(t => (t?.content || "").toLowerCase().includes(safeQuery))
+      .slice(0, 8);
   };
 
   const handleRowDrop = (e, idx) => {
@@ -78,11 +69,10 @@ const PositionsTable = ({
                       value={pos.description}
                       onChange={(e) => {
                         updatePosition(idx, "description", e.target.value);
-                        setTitelAutocompleteIdx((e.target.value || "").trim().length >= 2 ? idx : null);
+                        setTitelAutocompleteIdx(idx);
                       }}
-                      onFocus={() => {
-                        if ((pos.description || "").trim().length >= 2) setTitelAutocompleteIdx(idx);
-                      }}
+                      onFocus={() => setTitelAutocompleteIdx(idx)}
+                      onBlur={() => setTimeout(() => setTitelAutocompleteIdx((cur) => cur === idx ? null : cur), 150)}
                       placeholder="Titel eingeben..."
                       className="w-full border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
                       data-testid={`mobile-titel-input-${idx}`}
@@ -98,25 +88,6 @@ const PositionsTable = ({
                             {t.content}
                           </button>
                         ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
-                      className="p-1.5 text-amber-600 hover:bg-amber-50 rounded border">
-                      <ChevronDown className={`w-4 h-4 transition-transform ${titelDropdownIdx === idx ? "rotate-180" : ""}`} />
-                    </button>
-                    {titelDropdownIdx === idx && (
-                      <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[200px] max-h-40 overflow-y-auto">
-                        {titelTemplates.length > 0 ? titelTemplates.map(t => (
-                          <button key={t.id} type="button"
-                            onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
-                            className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 border-b last:border-b-0">
-                            {t.content}
-                          </button>
-                        )) : (
-                          <p className="px-3 py-2 text-xs text-muted-foreground">Keine Vorlagen</p>
-                        )}
                       </div>
                     )}
                   </div>
@@ -222,11 +193,10 @@ const PositionsTable = ({
                         value={pos.description}
                         onChange={(e) => {
                           updatePosition(idx, "description", e.target.value);
-                          setTitelAutocompleteIdx((e.target.value || "").trim().length >= 2 ? idx : null);
+                          setTitelAutocompleteIdx(idx);
                         }}
-                        onFocus={() => {
-                          if ((pos.description || "").trim().length >= 2) setTitelAutocompleteIdx(idx);
-                        }}
+                        onFocus={() => setTitelAutocompleteIdx(idx)}
+                        onBlur={() => setTimeout(() => setTitelAutocompleteIdx((cur) => cur === idx ? null : cur), 150)}
                         placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
                         className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
                         data-testid={`titel-input-${idx}`}
@@ -245,27 +215,6 @@ const PositionsTable = ({
                         </div>
                       )}
                     </div>
-                      {/* Titel-Vorlage Dropdown */}
-                      <div className="relative">
-                        <button type="button" onClick={() => setTitelDropdownIdx(titelDropdownIdx === idx ? null : idx)}
-                          className="p-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
-                          title="Titel-Vorlage wählen">
-                          <ChevronDown className={`w-4 h-4 transition-transform ${titelDropdownIdx === idx ? "rotate-180" : ""}`} />
-                        </button>
-                        {titelDropdownIdx === idx && (
-                          <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[220px] max-h-48 overflow-y-auto">
-                            {titelTemplates.length > 0 ? titelTemplates.map(t => (
-                              <button key={t.id} type="button"
-                                onClick={() => { updatePosition(idx, "description", t.content); setTitelDropdownIdx(null); }}
-                                className="block w-full text-left px-3 py-2 text-sm font-medium hover:bg-amber-50 transition-colors border-b last:border-b-0">
-                                {t.content}
-                              </button>
-                            )) : (
-                              <p className="px-3 py-2 text-xs text-muted-foreground">Keine Titel-Vorlagen vorhanden</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
                       {/* Speichern-Button */}
                       {pos.description?.trim() && !titelTemplates.some(t => t.content === pos.description.trim()) && (
                         <button type="button" onClick={() => saveTitelTemplate(pos.description)}
