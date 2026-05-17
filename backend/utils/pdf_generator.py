@@ -833,7 +833,9 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                 y_pos = height - 3.5 * cm
 
-            y_pos -= 0.3 * cm
+            y_pos -= 0.8 * cm
+            c.setStrokeColor(HexColor("#E2E8F0"))
+            c.line(2 * cm, y_pos + 0.3 * cm, width - 2 * cm, y_pos + 0.3 * cm)
             c.setFillColor(text_color)
             c.setFont("Helvetica-Bold", 10)
             c.drawString(2 * cm, y_pos, "Gewerk-/Titelzusammenstellung")
