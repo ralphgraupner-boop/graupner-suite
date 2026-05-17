@@ -12,11 +12,11 @@ from html import unescape as html_unescape
 # Zentrale Steuerung der Header-Optik. Aenderungen hier wirken auf alle
 # PDF-Dokumente (Angebot, Auftragsbestaetigung, Rechnung).
 HEADER_FIRMA_FONT_SIZE = 22
-HEADER_FIRMA_COLOR = "#1a1a2e"          # "Tischlerei Graupner" links oben
+HEADER_FIRMA_COLOR = "#0F2A4E"          # "Tischlerei Graupner" links oben (dunkles Marineblau)
 HEADER_SEIT_FONT_SIZE = 10
 HEADER_SEIT_COLOR = "#CC0000"           # "seit 1960" Slogan
 HEADER_RECHTS_FONT_SIZE = 9
-HEADER_RECHTS_COLOR = "#1a3a6b"         # rechte Spalte (Firmenanschrift, Kontakt)
+HEADER_RECHTS_COLOR = "#003399"         # rechte Spalte + "Graupner" + "Mitglied" (Königsblau)
 # FIX 3: zusaetzlicher Abstand vor dem grossen Angebots-Nr.-Block
 HEADER_ABSTAND_ANGEBOTSNR = 8 * mm
 
