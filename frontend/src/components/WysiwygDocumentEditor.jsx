@@ -224,7 +224,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     if (!name?.trim() || titelTemplates.some(t => t.content === name.trim())) return;
     try {
       await api.post("/modules/textvorlagen/data", { doc_type: "allgemein", text_type: "titel", title: name.trim(), content: name.trim() });
-      const res = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel" } });
+      const res = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel", doc_type: "allgemein" } });
       setTitelTemplates(res.data); toast.success("Titel-Vorlage gespeichert!");
     } catch { toast.error("Fehler beim Speichern"); }
   };
