@@ -681,7 +681,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
     y_pos = _draw_table_header(c, width, y_table, text_color)
 
-    footer_y_limit = 5.5 * cm
+    footer_y_limit = 4.5 * cm
 
     # Compute dynamic numbering
     positions = data.get("positions", [])
