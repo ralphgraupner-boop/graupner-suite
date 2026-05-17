@@ -138,12 +138,12 @@ const PositionsTable = ({
         <thead>
           <tr className="border-b-2 border-primary/30">
             <th className="w-8"></th>
-            <th className="text-left py-3 text-sm font-semibold text-primary w-12">Pos</th>
+            <th className="text-left py-3 text-sm font-semibold text-primary" style={{ width: "35px" }}>Pos</th>
             <th className="text-left py-3 text-sm font-semibold text-primary">Beschreibung</th>
-            <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "55px" }}>Menge</th>
-            <th className="text-left py-3 text-sm font-semibold text-primary pl-2" style={{ width: "55px" }}>Einheit</th>
-            <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "80px" }}>Einzelpreis</th>
-            <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "80px" }}>Gesamt</th>
+            <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "45px" }}>Menge</th>
+            <th className="text-left py-3 text-sm font-semibold text-primary pl-2" style={{ width: "45px" }}>Einheit</th>
+            <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "70px" }}>Einzelpreis</th>
+            <th className="text-right py-3 text-sm font-semibold text-primary" style={{ width: "75px" }}>Gesamt</th>
             <th className="w-8"></th>
           </tr>
         </thead>
