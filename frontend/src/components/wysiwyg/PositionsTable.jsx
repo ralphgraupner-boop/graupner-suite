@@ -18,12 +18,23 @@ const PositionsTable = ({
 }) => {
   const [titelAutocompleteIdx, setTitelAutocompleteIdx] = useState(null);
 
-  const filteredTitelSuggestions = (query) =>
-    query && query.trim().length >= 2
-      ? titelTemplates
-          .filter(t => t.content?.toLowerCase().includes(query.trim().toLowerCase()))
+  const filteredTitelSuggestions = (query) => {
+    const safeQuery = (query || "").trim();
+    const safeTemplates = Array.isArray(titelTemplates) ? titelTemplates : [];
+    const result = safeQuery.length >= 2
+      ? safeTemplates
+          .filter(t => (t?.content || "").toLowerCase().includes(safeQuery.toLowerCase()))
           .slice(0, 5)
       : [];
+    // DEBUG LOG (temporär)
+    console.log("[Titel-Autocomplete]", {
+      query: safeQuery,
+      templatesCount: safeTemplates.length,
+      sampleTemplate: safeTemplates[0],
+      matches: result.length,
+    });
+    return result;
+  };
 
   const handleRowDrop = (e, idx) => {
     const jsonData = e.dataTransfer.getData("application/json");
@@ -67,12 +78,11 @@ const PositionsTable = ({
                       value={pos.description}
                       onChange={(e) => {
                         updatePosition(idx, "description", e.target.value);
-                        setTitelAutocompleteIdx(e.target.value.trim().length >= 2 ? idx : null);
+                        setTitelAutocompleteIdx((e.target.value || "").trim().length >= 2 ? idx : null);
                       }}
                       onFocus={() => {
-                        if (pos.description?.trim().length >= 2) setTitelAutocompleteIdx(idx);
+                        if ((pos.description || "").trim().length >= 2) setTitelAutocompleteIdx(idx);
                       }}
-                      onBlur={() => setTimeout(() => setTitelAutocompleteIdx((cur) => cur === idx ? null : cur), 150)}
                       placeholder="Titel eingeben..."
                       className="w-full border rounded px-2 py-1.5 text-base font-bold text-primary bg-white"
                       data-testid={`mobile-titel-input-${idx}`}
@@ -212,12 +222,11 @@ const PositionsTable = ({
                         value={pos.description}
                         onChange={(e) => {
                           updatePosition(idx, "description", e.target.value);
-                          setTitelAutocompleteIdx(e.target.value.trim().length >= 2 ? idx : null);
+                          setTitelAutocompleteIdx((e.target.value || "").trim().length >= 2 ? idx : null);
                         }}
                         onFocus={() => {
-                          if (pos.description?.trim().length >= 2) setTitelAutocompleteIdx(idx);
+                          if ((pos.description || "").trim().length >= 2) setTitelAutocompleteIdx(idx);
                         }}
-                        onBlur={() => setTimeout(() => setTitelAutocompleteIdx((cur) => cur === idx ? null : cur), 150)}
                         placeholder="Titel eingeben (z.B. Einrüstarbeiten)..."
                         className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-base font-bold text-primary placeholder:font-normal placeholder:text-muted-foreground/50"
                         data-testid={`titel-input-${idx}`}
