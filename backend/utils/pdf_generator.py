@@ -647,6 +647,10 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     c.setFont("Helvetica", body_font_size)
                     c.setFillColor(text_color)
                 for raw_line in seg.split("\n"):
+                    if not raw_line.strip():
+                        # Leerzeile zwischen Absaetzen: vollen Zeilenraum reservieren
+                        y_vt -= body_line_height * cm
+                        continue
                     for wl in _wrap_text(c, raw_line, "Helvetica", body_font_size, wrap_width):
                         c.drawString(body_margin_left, y_vt, wl)
                         y_vt -= body_line_height * cm
