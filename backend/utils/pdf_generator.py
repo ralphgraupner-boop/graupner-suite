@@ -84,13 +84,13 @@ def _draw_rich_text(c, x, y, html_text, max_width, font_size=9, line_height=0.35
 
     # FIX 1: <p>-Bloecke als Absatztrenner, <br> als Leerzeichen
     text = _re.sub(r'<br\s*/?>', ' ', html_text)            # <br> wird normaler Space
-    text = _re.sub(r'</p>\s*<p[^>]*>', '\n', text)          # zwischen </p><p> = Absatztrenner
+    text = _re.sub(r'</p>\s*<p[^>]*>', '\n\n', text)        # zwischen </p><p> = Leerzeile (Absatztrennung)
     text = _re.sub(r'</?p[^>]*>', '', text)                 # restliche <p>-Tags raus
     text = html_unescape(text)
     # Mehrfach-Whitespaces auf eines reduzieren (verhindert doppelte Spaces durch <br> → " ")
     text = _re.sub(r'[ \t]+', ' ', text)
-    # Mehrere Leerzeilen auf maximal eine reduzieren
-    text = _re.sub(r'\n{2,}', '\n\n', text)
+    # Mehrere Leerzeilen auf maximal eine Leerzeile (= 2 \n) reduzieren
+    text = _re.sub(r'\n{3,}', '\n\n', text)
     lines = text.split('\n')
 
     for line in lines:
@@ -933,6 +933,18 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     c.setFont("Helvetica", body_font_size)
                     c.setFillColor(text_color)
                 for raw_line in seg.split("\n"):
+                    if not raw_line.strip():
+                        # Leerzeile zwischen Absaetzen: vollen Zeilenraum reservieren
+                        if y_pos < footer_y_limit:
+                            _draw_footer(c, width, settings, page_num)
+                            c.showPage()
+                            page_num += 1
+                            _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                            y_pos = height - 3.5 * cm
+                            c.setFont("Helvetica", body_font_size)
+                            c.setFillColor(text_color)
+                        y_pos -= body_line_height * cm
+                        continue
                     for wl in _wrap_text(c, raw_line, "Helvetica", body_font_size, wrap_width):
                         if y_pos < footer_y_limit:
                             _draw_footer(c, width, settings, page_num)
