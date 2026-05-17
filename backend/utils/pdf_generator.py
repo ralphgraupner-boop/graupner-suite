@@ -836,6 +836,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             y_pos -= 0.8 * cm
             # Trennlinie oben
             c.setStrokeColor(HexColor("#E2E8F0"))
+            c.setLineWidth(1.0)
             c.line(2 * cm, y_pos + 0.3 * cm, width - 2 * cm, y_pos + 0.3 * cm)
 
             # Grosse fette Überschrift (12pt)
@@ -850,6 +851,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             c.drawString(3 * cm, y_pos, "Titel / Bezeichnung")
             c.drawRightString(width - 2 * cm, y_pos, "Titelsumme")
             y_pos -= 0.2 * cm
+            c.setLineWidth(1.0)
             c.line(2 * cm, y_pos, width - 2 * cm, y_pos)
             y_pos -= 0.4 * cm
 
@@ -863,6 +865,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 y_pos -= 0.5 * cm
 
             c.setStrokeColor(HexColor("#E2E8F0"))
+            c.setLineWidth(1.0)
             c.line(2 * cm, y_pos + 0.1 * cm, width - 2 * cm, y_pos + 0.1 * cm)
             y_pos -= 0.2 * cm
 
