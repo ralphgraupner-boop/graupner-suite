@@ -732,14 +732,6 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
         # Titel-Zeile: "Titel: 1  Entsorgungskosten" fett, linksbündig
         if pos.get("type") == "titel":
-            # Atomar: Titel + erste Folge-Position sollte nicht alleine am Seitenende stehen.
-            # Wir reservieren 1.8 cm (Titel + 1 Zeile Puffer)
-            if y_pos - 1.8 * cm < footer_y_limit:
-                _draw_footer(c, width, settings, page_num)
-                c.showPage()
-                page_num += 1
-                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                y_pos = _draw_table_header(c, width, height - 4.0 * cm, text_color)
             if pos_idx > 0:
                 y_pos -= 0.2 * cm
             c.setFont("Helvetica-Bold", 10)
@@ -750,31 +742,6 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             y_pos -= 0.7 * cm
             continue
 
-        # Beschreibungs-Höhe der Position vorab berechnen (atomare Position)
-        desc = pos.get("description", "") or ""
-        desc_lines = desc.split("\n")
-        desc_max_width = 11.5 * cm - 3 * cm
-
-        total_wrapped_lines = 0
-        for raw_line in desc_lines:
-            wrapped_preview = _wrap_text(c, raw_line, "Helvetica", 9, desc_max_width) or [""]
-            total_wrapped_lines += len(wrapped_preview)
-        if total_wrapped_lines < 1:
-            total_wrapped_lines = 1
-        # Höhe: (n-1) * 0.4 für Folgezeilen + 0.6 Abstand nach Position
-        needed_height = (total_wrapped_lines - 1) * 0.4 * cm + 0.6 * cm
-
-        # Nutzbare Seitenhöhe ohne Header/Footer
-        page_usable = (height - 4.0 * cm) - footer_y_limit
-
-        # Wenn Position auf eine Seite passt UND aktuell nicht genug Platz → Pagebreak VOR Position
-        if needed_height <= page_usable and y_pos - needed_height < footer_y_limit:
-            _draw_footer(c, width, settings, page_num)
-            c.showPage()
-            page_num += 1
-            _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-            y_pos = _draw_table_header(c, width, height - 4.0 * cm, text_color)
-
         # Position-Nummer
         c.setFillColor(text_color)
         c.setFont("Helvetica", 9)
@@ -782,14 +749,20 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
         row_top_y = y_pos  # Mengen/Preise gehen auf die Höhe der ERSTEN Zeile
 
-        # Menge/Einheit/Preise SOFORT zeichnen (atomar mit Position-Nummer)
+        # Menge/Einheit/Preise SOFORT zeichnen (vor Beschreibung) -
+        # so bleiben sie IMMER bei der Position-Nummer, auch wenn die
+        # Beschreibung später über einen Seitenumbruch zerrissen wird.
         c.drawString(12 * cm, row_top_y, str(pos.get("quantity", 1)))
         c.drawString(13.5 * cm, row_top_y, pos.get("unit", "Stück"))
         c.drawRightString(16.5 * cm, row_top_y, f"{pos.get('price_net', 0):.2f} €")
         total = pos.get("quantity", 1) * pos.get("price_net", 0)
         c.drawRightString(width - 2 * cm, row_top_y, f"{total:.2f} €")
 
-        # Beschreibung rendern. Pagebreak nur als Fallback bei sehr langen Beschreibungen.
+        # Beschreibung: Breite = von 3cm bis 11.8cm ≈ 8.8cm
+        desc = pos.get("description", "") or ""
+        desc_lines = desc.split("\n")
+        desc_max_width = 11.5 * cm - 3 * cm
+
         c.setFont("Helvetica", 9)
         first = True
         for raw_line in desc_lines:
