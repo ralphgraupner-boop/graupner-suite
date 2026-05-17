@@ -66,6 +66,27 @@ const EditorToolbar = ({
                     <Eye className="w-4 h-4" /> Vorschau
                   </button>
                 )}
+                {setZoomLevel && (
+                  <>
+                    <div className="border-t my-1" />
+                    <div className="px-3 py-1.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Zoom</div>
+                      <div className="flex items-center border rounded-sm overflow-hidden" data-testid="werkzeuge-zoom-group">
+                        {[75, 100, 125, 150].map(z => (
+                          <button
+                            key={z}
+                            onClick={() => setZoomLevel(z)}
+                            className={`flex-1 px-2 py-1 text-xs font-medium border-l first:border-l-0 ${zoomLevel === z ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                            data-testid={`btn-zoom-${z}`}
+                            title={`Ansicht ${z}%`}
+                          >
+                            {z}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -73,22 +94,6 @@ const EditorToolbar = ({
             <Calculator className="w-4 h-4" />
             <span className="hidden sm:inline">Lohnkosten</span>
           </Button>
-          {/* Zoom-Buttons (nur ab md sichtbar) */}
-          {setZoomLevel && (
-            <div className="hidden md:flex items-center border rounded-sm overflow-hidden" data-testid="zoom-buttons">
-              {[75, 100, 125, 150].map(z => (
-                <button
-                  key={z}
-                  onClick={() => setZoomLevel(z)}
-                  className={`px-2 py-1 text-xs font-medium border-l first:border-l-0 ${zoomLevel === z ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                  data-testid={`btn-zoom-${z}`}
-                  title={`Ansicht ${z}%`}
-                >
-                  {z}%
-                </button>
-              ))}
-            </div>
-          )}
           <Button
             variant={isRecording ? "destructive" : "outline"}
             size="sm"
