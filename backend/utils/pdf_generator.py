@@ -833,7 +833,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                 y_pos = height - 3.5 * cm
 
-            y_pos -= 0.8 * cm
+            y_pos -= 1.5 * cm
             # Trennlinie oben
             c.setStrokeColor(HexColor("#E2E8F0"))
             c.setLineWidth(1.0)
