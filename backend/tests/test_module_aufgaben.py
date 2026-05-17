@@ -6,7 +6,7 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://handwerk-deploy.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://modul-first-app.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api/module-aufgaben"
 
 ADMIN_USER = {"username": "admin", "password": "Graupner!Suite2026"}

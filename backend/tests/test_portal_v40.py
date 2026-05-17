@@ -248,7 +248,7 @@ class TestPortalFromCustomer:
         # Create portal from customer
         response = requests.post(
             f"{BASE_URL}/api/portals/from-customer/{customer['id']}",
-            json={"portal_base_url": "https://handwerk-deploy.preview.emergentagent.com"},
+            json={"portal_base_url": "https://modul-first-app.preview.emergentagent.com"},
             headers=auth_headers
         )
         
