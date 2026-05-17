@@ -695,6 +695,25 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 flat_nr += 1
                 numbering.append(str(flat_nr))
 
+    # Map: pos_idx → zugehöriger titel_idx (None wenn vor erstem Titel)
+    pos_to_titel = {}
+    last_titel_idx = None
+    for p_idx, p in enumerate(positions):
+        if p.get("type") == "titel":
+            last_titel_idx = p_idx
+        else:
+            pos_to_titel[p_idx] = last_titel_idx
+
+    # Letzter pos_idx jeder Titel-Gruppe + Summe pro Gruppe
+    titel_last_pos = {}
+    titel_sums = {}
+    for p_idx, titel_idx in pos_to_titel.items():
+        if titel_idx is not None:
+            titel_last_pos[titel_idx] = p_idx
+            qty = positions[p_idx].get("quantity", 0) or 0
+            price = positions[p_idx].get("price_net", 0) or 0
+            titel_sums[titel_idx] = titel_sums.get(titel_idx, 0.0) + qty * price
+
     for pos_idx, pos in enumerate(positions):
         if y_pos < footer_y_limit:
             _draw_footer(c, width, settings, page_num)
@@ -705,13 +724,16 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             c.setFillColor(text_color)
             c.setFont("Helvetica", 9)
 
-        # Titel-Zeile: fett und über gesamte Breite
+        # Titel-Zeile: "Titel: 1  Entsorgungskosten" fett, linksbündig
         if pos.get("type") == "titel":
+            if pos_idx > 0:
+                y_pos -= 0.2 * cm
             c.setFont("Helvetica-Bold", 10)
-            c.drawString(2 * cm, y_pos, numbering[pos_idx])
-            c.drawString(3 * cm, y_pos, pos.get("description", ""))
+            c.setFillColor(text_color)
+            titel_text = f"Titel: {numbering[pos_idx]}  {pos.get('description', '') or ''}"
+            c.drawString(2 * cm, y_pos, titel_text)
             c.setFont("Helvetica", 9)
-            y_pos -= 0.6 * cm
+            y_pos -= 0.7 * cm
             continue
 
         # Position-Nummer
@@ -756,6 +778,27 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         total = pos.get("quantity", 1) * pos.get("price_net", 0)
         c.drawRightString(width - 2 * cm, row_top_y, f"{total:.2f} €")
         y_pos -= 0.6 * cm
+
+        # Titelsumme nach letzter Position einer Titel-Gruppe
+        my_titel_idx = pos_to_titel.get(pos_idx)
+        if my_titel_idx is not None and titel_last_pos.get(my_titel_idx) == pos_idx:
+            if y_pos < footer_y_limit + 1 * cm:
+                _draw_footer(c, width, settings, page_num)
+                c.showPage()
+                page_num += 1
+                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                y_pos = height - 3.5 * cm
+            c.setStrokeColor(HexColor("#E2E8F0"))
+            c.setLineWidth(0.5)
+            c.line(11 * cm, y_pos + 0.25 * cm, width - 2 * cm, y_pos + 0.25 * cm)
+            titel_num = numbering[my_titel_idx]
+            titel_summe = titel_sums.get(my_titel_idx, 0.0)
+            c.setFont("Helvetica-Oblique", 9)
+            c.setFillColor(text_color)
+            c.drawString(11 * cm, y_pos, f"Titelsumme: {titel_num}")
+            c.drawRightString(width - 2 * cm, y_pos, f"{titel_summe:.2f} €")
+            c.setFont("Helvetica", 9)
+            y_pos -= 0.7 * cm
 
     # === Gewerk-/Titelzusammenstellung (nur wenn Titel vorhanden) ===
     if has_titel:
