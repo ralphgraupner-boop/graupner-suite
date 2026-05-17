@@ -1,4 +1,5 @@
-import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink, Package, Calculator } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink, Package, Calculator, ChevronDown } from "lucide-react";
 import { Button, Badge } from "@/components/common";
 import { HelpTip } from "@/components/HelpTip";
 
@@ -9,7 +10,20 @@ const EditorToolbar = ({
   handleSave, handleExit, handleDownloadPDF, handlePrint,
   onOpenEmailDialog, onOpenMailClient, onToggleVorlagen, onTogglePreview,
   onOpenDocTemplates, onToggleLohnkosten,
+  zoomLevel, setZoomLevel,
 }) => {
+  // Werkzeuge-Dropdown (Einstellungen, Vorlage, Bausteine, Vorschau)
+  const [werkzeugeOffen, setWerkzeugeOffen] = useState(false);
+  const werkzeugeRef = useRef(null);
+  useEffect(() => {
+    if (!werkzeugeOffen) return undefined;
+    const onDown = (e) => {
+      if (werkzeugeRef.current && !werkzeugeRef.current.contains(e.target)) setWerkzeugeOffen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [werkzeugeOffen]);
+
   return (
     <div className="fixed top-0 left-0 right-0 bg-card border-b z-40 shadow-sm">
       <div className="lg:max-w-[1600px] lg:mx-auto flex items-center justify-between px-3 lg:px-4 py-2 lg:py-3">
@@ -29,27 +43,51 @@ const EditorToolbar = ({
           )}
         </div>
         <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)} data-testid="btn-settings-topbar">
-            <Wrench className="w-4 h-4" />
-            <span className="hidden sm:inline">Einstellungen</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={onOpenDocTemplates} data-testid="btn-doc-templates-topbar" className="bg-primary/5 border-primary/30 hover:bg-primary/10 text-primary">
-            <Package className="w-4 h-4" />
-            <span className="hidden sm:inline">Vorlage öffnen</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={onToggleVorlagen} data-testid="btn-vorlagen-topbar">
-            <Bookmark className="w-4 h-4" />
-            <span className="hidden sm:inline">Bausteine</span>
-          </Button>
+          {/* Werkzeuge-Dropdown: Einstellungen, Vorlage oeffnen, Bausteine, Vorschau */}
+          <div className="relative" ref={werkzeugeRef}>
+            <Button variant="outline" size="sm" onClick={() => setWerkzeugeOffen(v => !v)} data-testid="btn-werkzeuge-topbar">
+              <Wrench className="w-4 h-4" />
+              <span className="hidden sm:inline">Werkzeuge</span>
+              <ChevronDown className={`w-3 h-3 ml-0.5 transition-transform ${werkzeugeOffen ? "rotate-180" : ""}`} />
+            </Button>
+            {werkzeugeOffen && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-sm shadow-lg min-w-[200px]" data-testid="werkzeuge-dropdown">
+                <button onClick={() => { setShowSettings(true); setWerkzeugeOffen(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2" data-testid="btn-werkzeuge-settings">
+                  <Wrench className="w-4 h-4" /> Einstellungen
+                </button>
+                <button onClick={() => { onOpenDocTemplates(); setWerkzeugeOffen(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2" data-testid="btn-werkzeuge-templates">
+                  <Package className="w-4 h-4" /> Vorlage öffnen
+                </button>
+                <button onClick={() => { onToggleVorlagen(); setWerkzeugeOffen(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2" data-testid="btn-werkzeuge-bausteine">
+                  <Bookmark className="w-4 h-4" /> Bausteine
+                </button>
+                {!isNew && (
+                  <button onClick={() => { onTogglePreview(); setWerkzeugeOffen(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2" data-testid="btn-werkzeuge-preview">
+                    <Eye className="w-4 h-4" /> Vorschau
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <Button variant="outline" size="sm" onClick={onToggleLohnkosten} data-testid="btn-lohnkosten-topbar" title="Lohnkosten ein-/ausblenden">
             <Calculator className="w-4 h-4" />
             <span className="hidden sm:inline">Lohnkosten</span>
           </Button>
-          {!isNew && (
-            <Button variant="outline" size="sm" onClick={onTogglePreview} data-testid="btn-preview-topbar">
-              <Eye className="w-4 h-4" />
-              <span className="hidden sm:inline">Vorschau</span>
-            </Button>
+          {/* Zoom-Buttons (nur ab md sichtbar) */}
+          {setZoomLevel && (
+            <div className="hidden md:flex items-center border rounded-sm overflow-hidden" data-testid="zoom-buttons">
+              {[75, 100, 125, 150].map(z => (
+                <button
+                  key={z}
+                  onClick={() => setZoomLevel(z)}
+                  className={`px-2 py-1 text-xs font-medium border-l first:border-l-0 ${zoomLevel === z ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  data-testid={`btn-zoom-${z}`}
+                  title={`Ansicht ${z}%`}
+                >
+                  {z}%
+                </button>
+              ))}
+            </div>
           )}
           <Button
             variant={isRecording ? "destructive" : "outline"}

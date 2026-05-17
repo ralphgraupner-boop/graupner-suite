@@ -105,6 +105,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [showLohnanteil, setShowLohnanteil] = useState(false);
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
   const [showLohnkosten, setShowLohnkosten] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
   const listPaths = { quote: "/quotes", order: "/orders", invoice: "/invoices" };
@@ -733,10 +734,20 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         onTogglePreview={() => setShowPreview(true)}
         onOpenDocTemplates={() => setShowLoadTemplate(true)}
         onToggleLohnkosten={() => setShowLohnkosten(v => !v)}
+        zoomLevel={zoomLevel}
+        setZoomLevel={setZoomLevel}
       />
 
-      <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 px-2 lg:px-4">
-        <div className="lg:grid lg:grid-cols-[340px_1fr] lg:gap-4 lg:max-w-[1600px] lg:mx-auto">
+      <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 overflow-x-auto">
+        <div
+          className="mx-auto"
+          style={{
+            width: `${340 + 16 + 794 * (zoomLevel / 100)}px`,
+            display: 'grid',
+            gridTemplateColumns: `340px ${794 * (zoomLevel / 100)}px`,
+            gap: '16px',
+          }}
+        >
 
           <EditorSidebar
             sidebarSearch={sidebarSearch} setSidebarSearch={setSidebarSearch}
@@ -751,7 +762,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             onItemUpdated={loadData}
           />
 
-          <div>
+          <div style={{ width: '794px', transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}>
             {/* Status Dropdown */}
             {!isNew && (
               <div className="mb-3 lg:mb-4">
