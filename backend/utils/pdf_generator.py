@@ -1009,7 +1009,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 def _draw_footer(c, width, settings, page_num=1):
     """Zeichnet die Fußzeile mit Firmendaten, Bankverbindung und Seitenzähler"""
     muted_color = HexColor("#64748B")
-    footer_y = 3.0 * cm
+    footer_y = 2.0 * cm
 
     c.setStrokeColor(HexColor("#E2E8F0"))
     c.line(2 * cm, footer_y + 0.3 * cm, width - 2 * cm, footer_y + 0.3 * cm)
