@@ -757,6 +757,55 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         c.drawRightString(width - 2 * cm, row_top_y, f"{total:.2f} €")
         y_pos -= 0.6 * cm
 
+    # === Gewerk-/Titelzusammenstellung (nur wenn Titel vorhanden) ===
+    if has_titel:
+        groups = []
+        current = None
+        for p_idx, p in enumerate(positions):
+            if p.get("type") == "titel":
+                if current:
+                    groups.append(current)
+                current = {"titel": p.get("description", ""), "nr": numbering[p_idx], "sum": 0.0}
+            else:
+                qty = p.get("quantity", 0) or 0
+                price = p.get("price_net", 0) or 0
+                if current:
+                    current["sum"] += qty * price
+                else:
+                    if not groups or groups[-1].get("titel") != "__ungrouped":
+                        groups.append({"titel": "__ungrouped", "nr": "", "sum": 0.0})
+                    groups[-1]["sum"] += qty * price
+        if current:
+            groups.append(current)
+        groups = [g for g in groups if g["titel"] != "__ungrouped" or g["sum"] > 0]
+
+        if groups:
+            needed_height = 1.0 * cm + len(groups) * 0.5 * cm + 0.5 * cm
+            if y_pos < footer_y_limit + needed_height:
+                _draw_footer(c, width, settings, page_num)
+                c.showPage()
+                page_num += 1
+                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                y_pos = height - 3.5 * cm
+
+            y_pos -= 0.3 * cm
+            c.setFillColor(text_color)
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(2 * cm, y_pos, "Gewerk-/Titelzusammenstellung")
+            y_pos -= 0.5 * cm
+
+            c.setFont("Helvetica", 9)
+            for g in groups:
+                display_titel = "Allgemeine Positionen" if g["titel"] == "__ungrouped" else g["titel"]
+                line_text = f"{g['nr']}  {display_titel}" if g["nr"] else display_titel
+                c.drawString(2 * cm, y_pos, line_text)
+                c.drawRightString(width - 2 * cm, y_pos, f"{g['sum']:.2f} €")
+                y_pos -= 0.5 * cm
+
+            c.setStrokeColor(HexColor("#E2E8F0"))
+            c.line(2 * cm, y_pos + 0.1 * cm, width - 2 * cm, y_pos + 0.1 * cm)
+            y_pos -= 0.2 * cm
+
     # === Totals ===
     y_pos -= 0.5 * cm
     if y_pos < footer_y_limit + 3 * cm:

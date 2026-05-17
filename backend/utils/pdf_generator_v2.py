@@ -157,13 +157,37 @@ def _draw_positions_or_verweis(c, width, height, inv, y_start):
     y -= 0.5 * cm
 
     c.setFillColor(SCHWARZ)
-    for idx, pos in enumerate(inv.get("positions", []), 1):
+    positions = inv.get("positions", [])
+    has_titel = any(p.get("type") == "titel" for p in positions)
+    titel_nr = 0
+    pos_in_titel = 0
+    flat_nr = 0
+    for pos in positions:
         if y < 6 * cm:
             break
+
+        if pos.get("type") == "titel":
+            titel_nr += 1
+            pos_in_titel = 0
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColor(KOENIGSBLAU)
+            c.drawString(2 * cm, y, str(titel_nr))
+            c.drawString(3 * cm, y, pos.get("description", "") or "")
+            c.setFillColor(SCHWARZ)
+            y -= 0.6 * cm
+            continue
+
+        if has_titel:
+            pos_in_titel += 1
+            num_str = f"{titel_nr}.{pos_in_titel}" if titel_nr > 0 else str(pos_in_titel)
+        else:
+            flat_nr += 1
+            num_str = str(flat_nr)
+
         desc = pos.get("description", "") or ""
         first_line, *rest = desc.split("\n")
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(2 * cm, y, str(idx))
+        c.drawString(2 * cm, y, num_str)
         wrapped = _wrap_text(c, first_line, "Helvetica-Bold", 9, 8.5 * cm)
         row_y = y
         for i, wl in enumerate(wrapped):
@@ -186,6 +210,69 @@ def _draw_positions_or_verweis(c, width, height, inv, y_start):
         c.drawRightString(width - 2 * cm, row_y, _fmt_eur(total))
         y -= 0.7 * cm
 
+    return y
+
+
+def _draw_titel_zusammenstellung(c, width, inv, y):
+    """Gewerk-/Titelzusammenstellung vor dem Totals-Block (nur wenn Titel vorhanden)."""
+    positions = inv.get("positions", [])
+    if not any(p.get("type") == "titel" for p in positions):
+        return y
+
+    # Numerierung analog _draw_positions_or_verweis
+    titel_nr = 0
+    pos_in_titel = 0
+    numbering = []
+    for p in positions:
+        if p.get("type") == "titel":
+            titel_nr += 1
+            pos_in_titel = 0
+            numbering.append(str(titel_nr))
+        else:
+            pos_in_titel += 1
+            numbering.append(f"{titel_nr}.{pos_in_titel}" if titel_nr > 0 else str(pos_in_titel))
+
+    groups = []
+    current = None
+    for p_idx, p in enumerate(positions):
+        if p.get("type") == "titel":
+            if current:
+                groups.append(current)
+            current = {"titel": p.get("description", "") or "", "nr": numbering[p_idx], "sum": 0.0}
+        else:
+            qty = p.get("quantity", 0) or 0
+            price = p.get("price_net", 0) or 0
+            if current:
+                current["sum"] += qty * price
+            else:
+                if not groups or groups[-1].get("titel") != "__ungrouped":
+                    groups.append({"titel": "__ungrouped", "nr": "", "sum": 0.0})
+                groups[-1]["sum"] += qty * price
+    if current:
+        groups.append(current)
+    groups = [g for g in groups if g["titel"] != "__ungrouped" or g["sum"] > 0]
+
+    if not groups:
+        return y
+
+    y -= 0.3 * cm
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(KOENIGSBLAU)
+    c.drawString(2 * cm, y, "Gewerk-/Titelzusammenstellung")
+    y -= 0.5 * cm
+
+    c.setFont("Helvetica", 9)
+    c.setFillColor(SCHWARZ)
+    for g in groups:
+        display_titel = "Allgemeine Positionen" if g["titel"] == "__ungrouped" else g["titel"]
+        line_text = f"{g['nr']}  {display_titel}" if g["nr"] else display_titel
+        c.drawString(2 * cm, y, line_text)
+        c.drawRightString(width - 2 * cm, y, _fmt_eur(g["sum"]))
+        y -= 0.5 * cm
+
+    c.setStrokeColor(KOENIGSBLAU)
+    c.line(2 * cm, y + 0.1 * cm, width - 2 * cm, y + 0.1 * cm)
+    y -= 0.2 * cm
     return y
 
 
@@ -290,6 +377,7 @@ def generate_invoice_v2_pdf(inv: dict, settings: dict) -> bytes:
     _draw_title(c, width, height, inv)
 
     y = _draw_positions_or_verweis(c, width, height, inv, y_start=height - 9.8 * cm)
+    y = _draw_titel_zusammenstellung(c, width, inv, y)
     y = _draw_totals(c, width, inv, y)
 
     # Schlusstext
