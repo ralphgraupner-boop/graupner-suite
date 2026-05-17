@@ -26,7 +26,7 @@ const TotalsSection = ({
                   <td className="w-8"></td>
                   <td style={{ width: "35px" }}></td>
                   <td colSpan={4} className="py-2 text-sm">
-                    <span className="font-semibold mr-2">{g.nr}</span>
+                    {g.nr && <span className="font-semibold mr-2">{g.nr}</span>}
                     {displayTitel(g.titel)}
                   </td>
                   <td className="text-right py-2 font-mono text-sm" style={{ width: "75px" }}>{g.sum.toFixed(2)} €</td>
@@ -185,7 +185,7 @@ const TotalsSection = ({
                 <p className="text-xs font-bold text-primary mb-2">Gewerk-/Titelzusammenstellung</p>
                 {titelGroups.map((g, i) => (
                   <div key={`mtg-${i}`} className="flex justify-between py-1 text-sm">
-                    <span><span className="font-semibold mr-1">{g.nr}</span> {displayTitel(g.titel)}</span>
+                    <span>{g.nr && <span className="font-semibold mr-1">{g.nr}</span>}{displayTitel(g.titel)}</span>
                     <span className="font-mono">{g.sum.toFixed(2)} €</span>
                   </div>
                 ))}
