@@ -679,21 +679,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     if y_table > height - 11 * cm:
         y_table = height - 11 * cm
 
-    c.setFillColor(primary_color)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(2 * cm, y_table, "Pos")
-    c.drawString(3 * cm, y_table, "Beschreibung")
-    c.drawString(12 * cm, y_table, "Menge")
-    c.drawString(13.5 * cm, y_table, "Einheit")
-    c.drawString(15.5 * cm, y_table, "Einzelpreis")
-    c.drawRightString(width - 2 * cm, y_table, "Gesamt")
-
-    c.setStrokeColor(HexColor("#E2E8F0"))
-    c.line(2 * cm, y_table - 0.2 * cm, width - 2 * cm, y_table - 0.2 * cm)
-
-    c.setFillColor(text_color)
-    c.setFont("Helvetica", 9)
-    y_pos = y_table - 0.7 * cm
+    y_pos = _draw_table_header(c, width, y_table, text_color)
 
     footer_y_limit = 5.5 * cm
 
@@ -742,7 +728,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
             c.showPage()
             page_num += 1
             _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-            y_pos = _draw_table_header(c, width, height - 3.5 * cm, text_color)
+            y_pos = _draw_table_header(c, width, height - 4.0 * cm, text_color)
 
         # Titel-Zeile: "Titel: 1  Entsorgungskosten" fett, linksbündig
         if pos.get("type") == "titel":
@@ -783,7 +769,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     c.showPage()
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                    y_pos = _draw_table_header(c, width, height - 3.5 * cm, text_color)
+                    y_pos = _draw_table_header(c, width, height - 4.0 * cm, text_color)
                 c.drawString(3 * cm, y_pos, wl)
                 first = False
 
@@ -805,7 +791,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                 c.showPage()
                 page_num += 1
                 _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
-                y_pos = _draw_table_header(c, width, height - 3.5 * cm, text_color)
+                y_pos = _draw_table_header(c, width, height - 4.0 * cm, text_color)
             c.setStrokeColor(HexColor("#E2E8F0"))
             c.setLineWidth(0.5)
             c.line(11 * cm, y_pos + 0.25 * cm, width - 2 * cm, y_pos + 0.25 * cm)
