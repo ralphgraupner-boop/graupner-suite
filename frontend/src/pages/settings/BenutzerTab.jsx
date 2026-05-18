@@ -53,9 +53,16 @@ const BenutzerTab = () => {
     } catch { toast.error("Fehler beim Laden der Berechtigungen"); }
   };
 
+  const currentUsername = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "null");
+      return u?.username || "";
+    } catch { return ""; }
+  })();
+
   const verifyAdminPassword = async () => {
     try {
-      const res = await api.post("/auth/login", { username: "admin", password: authPassword });
+      const res = await api.post("/auth/login", { username: currentUsername, password: authPassword });
       if (res.data.token) {
         const { action, username } = authPrompt;
         setAuthPrompt(null);
@@ -200,11 +207,11 @@ const BenutzerTab = () => {
       </div>
 
 
-      {/* Admin-Passwort Bestätigung */}
-      <Modal isOpen={!!authPrompt} onClose={() => setAuthPrompt(null)} title="Admin-Passwort bestätigen">
+      {/* Passwort-Bestätigung des aktuell eingeloggten Users */}
+      <Modal isOpen={!!authPrompt} onClose={() => setAuthPrompt(null)} title="Passwort bestätigen">
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Bitte geben Sie Ihr Admin-Passwort ein um fortzufahren.
+            Bitte geben Sie das Passwort von <strong>{currentUsername}</strong> ein um fortzufahren.
           </p>
           <div>
             <Input
@@ -212,7 +219,7 @@ const BenutzerTab = () => {
               value={authPassword}
               onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter" && authPassword) verifyAdminPassword(); }}
-              placeholder="Admin-Passwort"
+              placeholder={`Passwort von ${currentUsername}`}
               autoFocus
               data-testid="input-auth-password"
             />
