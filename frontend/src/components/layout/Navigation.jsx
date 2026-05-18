@@ -65,12 +65,12 @@ const getFilteredNavItems = () => {
     if (!item.roles.includes(role)) return false;
     if (item.featureFlag && !flags[item.featureFlag]) return false;
     if (item.hideByDefault && !showLegacy) return false;
-    // Modul-Berechtigung pruefen (nur wenn perms-Objekt vorhanden und Key gesetzt).
-    // Bei fehlendem Schluessel im perms-Objekt = false (verbergen). Admin behaelt allerdings
-    // grundsaetzlich Vollzugriff, falls perms leer ist (kein Datensatz in DB).
-    if (item.permKey && perms !== null && Object.keys(perms).length > 0) {
-      if (perms[item.permKey] !== true) return false;
-    }
+    // NOTFALL-FIX 17.05.2026: Berechtigungs-Filter deaktiviert (verbarg auf Live alle Module).
+    // Backend speichert Berechtigungen weiterhin in DB, UI in BenutzerTab funktioniert.
+    // Wieder-Aktivierung erst nach Fix der Filter-Logik.
+    // if (item.permKey && perms !== null && Object.keys(perms).length > 0) {
+    //   if (perms[item.permKey] !== true) return false;
+    // }
     return true;
   });
 };
