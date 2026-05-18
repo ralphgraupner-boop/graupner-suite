@@ -4,6 +4,7 @@ import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Set
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
+import { colorForUser, initialsOf } from "@/lib/avatarUtils";
 
 const APP_ENV = detectAppEnv();
 
@@ -319,9 +320,15 @@ const Sidebar = ({ onLogout }) => {
             {sortMode ? <Check className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
           </button>
         </div>
-        {role === "buchhaltung" && (
-          <div className="mt-2 text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-sm font-medium" data-testid="role-badge">
-            Buchhaltung – {username}
+        {username && (
+          <div className="mt-2 flex items-center gap-2 px-2 py-1.5 bg-muted/50 rounded-sm" data-testid="user-badge">
+            <span className={`w-8 h-8 rounded-full ${colorForUser(username)?.bg || "bg-slate-400"} text-white text-xs font-bold flex items-center justify-center flex-shrink-0 select-none`}>
+              {initialsOf(username)}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate" title={username}>{username}</div>
+              <div className="text-xs text-muted-foreground capitalize">{role}</div>
+            </div>
           </div>
         )}
         {sortMode && (
