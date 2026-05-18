@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
+import { colorForUser, initialsOf } from "@/lib/avatarUtils";
 
 // Kategorien sind reine Datenmaske aus module_textvorlagen — kein Hardcoding
 // (siehe VISION.md, 06.05.2026). Diese Heuristik liefert nur Icons je
@@ -55,6 +56,7 @@ export default function ModuleAufgabenPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTarget, setSelectedTarget] = useState(null); // {type:'kunde'|'projekt', id, label}
   const [searchFocused, setSearchFocused] = useState(false);
+  const [selectedMitarbeiter, setSelectedMitarbeiter] = useState(new Set());
   const navigate = useNavigate();
 
   const load = async () => {
@@ -151,24 +153,42 @@ export default function ModuleAufgabenPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, kundenMap, projekteMap]);
 
-  // Gefilterte Aufgaben-Liste basierend auf selectedTarget
+  // Gefilterte Aufgaben-Liste basierend auf selectedTarget + Mitarbeiter-Filter
   const filteredAufgaben = useMemo(() => {
-    if (!selectedTarget) return aufgaben;
-    if (selectedTarget.type === "kunde") {
-      // Aufgaben des Kunden + Aufgaben aller seiner Projekte
-      const projektIdsOfKunde = Object.entries(projekteMap)
-        .filter(([, p]) => p.kunde_id === selectedTarget.id)
-        .map(([id]) => id);
-      return aufgaben.filter(a =>
-        a.kunde_id === selectedTarget.id ||
-        (a.projekt_id && projektIdsOfKunde.includes(a.projekt_id))
-      );
+    let base = aufgaben;
+    if (selectedTarget) {
+      if (selectedTarget.type === "kunde") {
+        const projektIdsOfKunde = Object.entries(projekteMap)
+          .filter(([, p]) => p.kunde_id === selectedTarget.id)
+          .map(([id]) => id);
+        base = aufgaben.filter(a =>
+          a.kunde_id === selectedTarget.id ||
+          (a.projekt_id && projektIdsOfKunde.includes(a.projekt_id))
+        );
+      } else if (selectedTarget.type === "projekt") {
+        base = aufgaben.filter(a => a.projekt_id === selectedTarget.id);
+      }
     }
-    if (selectedTarget.type === "projekt") {
-      return aufgaben.filter(a => a.projekt_id === selectedTarget.id);
+    if (selectedMitarbeiter.size > 0) {
+      base = base.filter(a => a.zugewiesen_an && selectedMitarbeiter.has(a.zugewiesen_an));
     }
-    return aufgaben;
-  }, [aufgaben, selectedTarget, projekteMap]);
+    return base;
+  }, [aufgaben, selectedTarget, projekteMap, selectedMitarbeiter]);
+
+  const uniqueMitarbeiter = useMemo(() => {
+    const set = new Set();
+    aufgaben.forEach(a => { if (a.zugewiesen_an) set.add(a.zugewiesen_an); });
+    return Array.from(set).sort();
+  }, [aufgaben]);
+
+  const toggleMitarbeiter = (username) => {
+    setSelectedMitarbeiter(prev => {
+      const next = new Set(prev);
+      if (next.has(username)) next.delete(username);
+      else next.add(username);
+      return next;
+    });
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-4 lg:p-6" data-testid="module-aufgaben-page">
@@ -357,14 +377,50 @@ export default function ModuleAufgabenPage() {
         </div>
       ) : (
         <div className="space-y-2" data-testid="aufgaben-list">
+          {uniqueMitarbeiter.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pb-2 mb-1 border-b" data-testid="mitarbeiter-filter-bar">
+              <span className="text-xs text-muted-foreground font-medium">Mitarbeiter-Filter:</span>
+              {uniqueMitarbeiter.map(u => {
+                const active = selectedMitarbeiter.has(u);
+                const c = colorForUser(u);
+                const label = mitarbeiter.find(m => m.username === u)?.anzeige_name || u;
+                return (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => toggleMitarbeiter(u)}
+                    className={`flex items-center gap-2 px-2 py-1 rounded-full border text-xs transition-all ${active ? `${c.bg} text-white border-transparent shadow` : "bg-background border-border hover:bg-muted"}`}
+                    title={label}
+                    data-testid={`mitarbeiter-filter-${u}`}
+                  >
+                    <span className={`w-5 h-5 rounded-full ${c.bg} text-white text-[10px] font-bold flex items-center justify-center`}>
+                      {initialsOf(u)}
+                    </span>
+                    <span className={active ? "" : "text-foreground"}>{label}</span>
+                  </button>
+                );
+              })}
+              {selectedMitarbeiter.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedMitarbeiter(new Set())}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  data-testid="mitarbeiter-filter-reset"
+                >
+                  <X className="w-3 h-3" /> Alle anzeigen
+                </button>
+              )}
+            </div>
+          )}
           {filteredAufgaben.map(a => {
             const Icon = ICON_HEURISTIK(a.kategorie);
             const StatusIcon = STATUS_STYLES[a.status].icon;
             const mitarbeiterName = mitarbeiter.find(m => m.username === a.zugewiesen_an)?.anzeige_name || a.zugewiesen_an;
+            const mitColor = colorForUser(a.zugewiesen_an);
             return (
               <div
                 key={a.id}
-                className={`border rounded-md p-3 bg-background hover:shadow-sm transition-shadow ${a.status === "erledigt" ? "opacity-70" : ""}`}
+                className={`border border-l-4 rounded-md p-3 bg-background hover:shadow-sm transition-shadow ${mitColor ? mitColor.border : "border-l-transparent"} ${a.status === "erledigt" ? "opacity-70" : ""}`}
                 data-testid={`aufgabe-${a.id}`}
               >
                 <div className="flex items-start gap-3">
@@ -386,7 +442,7 @@ export default function ModuleAufgabenPage() {
                         <span className="text-xs text-muted-foreground">⟳ {WIEDERHOLUNG_LABELS[a.wiederholung]}</span>
                       )}
                     </div>
-                    {a.beschreibung && <p className="text-sm text-muted-foreground mt-1">{a.beschreibung}</p>}
+                    {a.beschreibung && <p className="text-sm text-foreground mt-1" data-testid={`aufgabe-beschreibung-${a.id}`}>{a.beschreibung}</p>}
                     {(a.kunde_id || a.projekt_id) && (
                       <div className="flex items-center gap-2 mt-2 flex-wrap" data-testid={`aufgabe-zuordnung-${a.id}`}>
                         {a.kunde_id && kundeLabel(a.kunde_id) && (
@@ -418,7 +474,14 @@ export default function ModuleAufgabenPage() {
                     )}
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                       <span>{a.kategorie || "—"}</span>
-                      {mitarbeiterName && <span>👤 {mitarbeiterName}</span>}
+                      {a.zugewiesen_an && (
+                        <span className="flex items-center gap-1.5">
+                          <span className={`w-5 h-5 rounded-full ${mitColor.bg} text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0`} title={mitarbeiterName}>
+                            {initialsOf(a.zugewiesen_an)}
+                          </span>
+                          <span>{mitarbeiterName}</span>
+                        </span>
+                      )}
                       {a.faellig_am && <span>📅 fällig: {new Date(a.faellig_am).toLocaleDateString("de-DE")}</span>}
                       {a.erledigt_am && (
                         <span className="text-emerald-700">
