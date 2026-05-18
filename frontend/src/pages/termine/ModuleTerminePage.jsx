@@ -38,6 +38,49 @@ const fmtDate = (s) => {
   catch { return s; }
 };
 
+const AVATAR_PALETTE = [
+  { bg: "bg-blue-500", border: "border-blue-500" },
+  { bg: "bg-emerald-500", border: "border-emerald-500" },
+  { bg: "bg-amber-500", border: "border-amber-500" },
+  { bg: "bg-rose-500", border: "border-rose-500" },
+  { bg: "bg-violet-500", border: "border-violet-500" },
+  { bg: "bg-teal-500", border: "border-teal-500" },
+  { bg: "bg-orange-500", border: "border-orange-500" },
+  { bg: "bg-pink-500", border: "border-pink-500" },
+  { bg: "bg-indigo-500", border: "border-indigo-500" },
+  { bg: "bg-cyan-500", border: "border-cyan-500" },
+  { bg: "bg-lime-600", border: "border-lime-600" },
+  { bg: "bg-fuchsia-500", border: "border-fuchsia-500" },
+];
+
+const colorForUser = (username) => {
+  if (!username) return null;
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) hash = (hash * 31 + username.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+};
+
+const initialsOf = (username) => {
+  if (!username) return "?";
+  const parts = username.split(/[._\s-]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0]?.slice(0, 2) || "?").toUpperCase();
+};
+
+const MonteurAvatar = ({ username, size = "sm", title }) => {
+  const c = colorForUser(username);
+  if (!c) return null;
+  const sizeCls = size === "lg" ? "w-9 h-9 text-sm" : "w-6 h-6 text-[10px]";
+  return (
+    <div
+      className={`${sizeCls} rounded-full ${c.bg} text-white font-bold flex items-center justify-center flex-shrink-0 select-none`}
+      title={title || username}
+    >
+      {initialsOf(username)}
+    </div>
+  );
+};
+
 export default function ModuleTerminePage() {
   const [termine, setTermine] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +91,7 @@ export default function ModuleTerminePage() {
   const [sendingTermin, setSendingTermin] = useState(null);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [selectedMonteure, setSelectedMonteure] = useState(new Set());
 
   // Stammdaten für Auswahl
   const [kunden, setKunden] = useState([]);
@@ -112,18 +156,37 @@ export default function ModuleTerminePage() {
   }, [searchQuery, kunden, projekte]);
 
   const filteredTermine = useMemo(() => {
-    if (!selectedTarget) return termine;
-    if (selectedTarget.type === "kunde") {
-      const projektIdsOfKunde = projekte.filter(p => p.kunde_id === selectedTarget.id).map(p => p.id);
-      return termine.filter(t =>
-        t.kunde_id === selectedTarget.id || (t.projekt_id && projektIdsOfKunde.includes(t.projekt_id))
-      );
+    let base = termine;
+    if (selectedTarget) {
+      if (selectedTarget.type === "kunde") {
+        const projektIdsOfKunde = projekte.filter(p => p.kunde_id === selectedTarget.id).map(p => p.id);
+        base = termine.filter(t =>
+          t.kunde_id === selectedTarget.id || (t.projekt_id && projektIdsOfKunde.includes(t.projekt_id))
+        );
+      } else if (selectedTarget.type === "projekt") {
+        base = termine.filter(t => t.projekt_id === selectedTarget.id);
+      }
     }
-    if (selectedTarget.type === "projekt") {
-      return termine.filter(t => t.projekt_id === selectedTarget.id);
+    if (selectedMonteure.size > 0) {
+      base = base.filter(t => t.monteur_username && selectedMonteure.has(t.monteur_username));
     }
-    return termine;
-  }, [termine, selectedTarget, projekte]);
+    return base;
+  }, [termine, selectedTarget, projekte, selectedMonteure]);
+
+  const uniqueMonteure = useMemo(() => {
+    const set = new Set();
+    termine.forEach(t => { if (t.monteur_username) set.add(t.monteur_username); });
+    return Array.from(set).sort();
+  }, [termine]);
+
+  const toggleMonteur = (username) => {
+    setSelectedMonteure(prev => {
+      const next = new Set(prev);
+      if (next.has(username)) next.delete(username);
+      else next.add(username);
+      return next;
+    });
+  };
 
   const onGo = async (t) => {
     if (!window.confirm(
@@ -330,11 +393,46 @@ export default function ModuleTerminePage() {
         </div>
       ) : (
         <div className="space-y-2" data-testid="termine-list">
+          {uniqueMonteure.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pb-2 mb-1 border-b" data-testid="monteur-filter-bar">
+              <span className="text-xs text-muted-foreground font-medium">Monteur-Filter:</span>
+              {uniqueMonteure.map(u => {
+                const active = selectedMonteure.has(u);
+                const c = colorForUser(u);
+                return (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => toggleMonteur(u)}
+                    className={`flex items-center gap-2 px-2 py-1 rounded-full border text-xs transition-all ${active ? `${c.bg} text-white border-transparent shadow` : "bg-background border-border hover:bg-muted"}`}
+                    title={u}
+                    data-testid={`monteur-filter-${u}`}
+                  >
+                    <span className={`w-5 h-5 rounded-full ${c.bg} text-white text-[10px] font-bold flex items-center justify-center`}>
+                      {initialsOf(u)}
+                    </span>
+                    <span className={active ? "" : "text-foreground"}>{u}</span>
+                  </button>
+                );
+              })}
+              {selectedMonteure.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonteure(new Set())}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  data-testid="monteur-filter-reset"
+                >
+                  <X className="w-3 h-3" /> Alle anzeigen
+                </button>
+              )}
+            </div>
+          )}
           {filteredTermine.map((t, idx) => {
             const styles = STATUS_STYLES[t.status] || STATUS_STYLES.wartet_auf_go;
             const Icon = styles.icon;
             const kundeName = kunden.find(k => k.id === t.kunde_id);
             const projektTitel = projekte.find(p => p.id === t.projekt_id)?.titel;
+            const monteurColor = colorForUser(t.monteur_username);
             return (
               <div
                 key={t.id}
@@ -344,7 +442,7 @@ export default function ModuleTerminePage() {
                 onDragLeave={() => setDragOverIndex(null)}
                 onDrop={() => handleRowDrop(idx)}
                 onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-                className={`border rounded-md p-3 bg-background hover:shadow-sm transition-shadow ${dragOverIndex === idx ? "border-primary/50 bg-primary/5" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
+                className={`border border-l-4 rounded-md p-3 bg-background hover:shadow-sm transition-shadow ${monteurColor ? monteurColor.border : "border-l-transparent"} ${dragOverIndex === idx ? "border-primary/50 bg-primary/5" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
                 data-testid={`termin-${t.id}`}
               >
                 <div className="flex items-start gap-3">
@@ -363,7 +461,7 @@ export default function ModuleTerminePage() {
                       <span className="text-xs text-muted-foreground">{TYP_LABEL[t.typ] || t.typ}</span>
                     </div>
                     {t.beschreibung?.trim() && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2" data-testid={`termin-beschreibung-${t.id}`}>
+                      <p className="text-xs text-foreground/70 mt-1 line-clamp-2" data-testid={`termin-beschreibung-${t.id}`}>
                         {t.beschreibung}
                       </p>
                     )}
@@ -383,7 +481,10 @@ export default function ModuleTerminePage() {
                         <span className="flex items-center gap-1"><Folder className="w-3 h-3" /> {projektTitel}</span>
                       )}
                       {t.monteur_username && (
-                        <span className="flex items-center gap-1"><HardHat className="w-3 h-3" /> {t.monteur_username}</span>
+                        <span className="flex items-center gap-1.5">
+                          <MonteurAvatar username={t.monteur_username} />
+                          <span>{t.monteur_username}</span>
+                        </span>
                       )}
                     </div>
                     {t.status === "abgesagt" && t.abgesagt_grund && (
