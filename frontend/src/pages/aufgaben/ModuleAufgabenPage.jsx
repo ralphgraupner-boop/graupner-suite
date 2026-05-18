@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Wrench, Car, Package, Briefcase, Building2, MoreHorizontal,
-  Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter, User as UserIcon, Folder, Search,
+  Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter, User as UserIcon, Folder, Search, GripVertical,
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
@@ -57,6 +57,8 @@ export default function ModuleAufgabenPage() {
   const [selectedTarget, setSelectedTarget] = useState(null); // {type:'kunde'|'projekt', id, label}
   const [searchFocused, setSearchFocused] = useState(false);
   const [selectedMitarbeiter, setSelectedMitarbeiter] = useState(new Set());
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -120,6 +122,30 @@ export default function ModuleAufgabenPage() {
       load();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
+    }
+  };
+
+  // Drag & Drop Sortierung (analog Termine/Projekte)
+  const handleRowDrop = async (dropIdx) => {
+    if (dragIndex === null || dragIndex === dropIdx) {
+      setDragIndex(null); setDragOverIndex(null);
+      return;
+    }
+    const reordered = [...filteredAufgaben];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(dropIdx, 0, moved);
+
+    const reorderedIds = reordered.map(a => a.id);
+    const others = aufgaben.filter(a => !reorderedIds.includes(a.id));
+    setAufgaben([...reordered, ...others]);
+    setDragIndex(null); setDragOverIndex(null);
+
+    try {
+      await api.patch("/module-aufgaben/reorder", { ids: reorderedIds });
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Sortierung speichern fehlgeschlagen");
+      load();
     }
   };
 
@@ -412,7 +438,7 @@ export default function ModuleAufgabenPage() {
               )}
             </div>
           )}
-          {filteredAufgaben.map(a => {
+          {filteredAufgaben.map((a, idx) => {
             const Icon = ICON_HEURISTIK(a.kategorie);
             const StatusIcon = STATUS_STYLES[a.status].icon;
             const mitarbeiterName = mitarbeiter.find(m => m.username === a.zugewiesen_an)?.anzeige_name || a.zugewiesen_an;
@@ -420,10 +446,19 @@ export default function ModuleAufgabenPage() {
             return (
               <div
                 key={a.id}
-                className={`border border-l-4 rounded-md p-3 bg-background hover:shadow-sm transition-shadow ${mitColor ? mitColor.border : "border-l-transparent"} ${a.status === "erledigt" ? "opacity-70" : ""}`}
+                draggable
+                onDragStart={() => setDragIndex(idx)}
+                onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={() => handleRowDrop(idx)}
+                onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                className={`border border-l-4 rounded-md p-3 bg-background hover:shadow-sm transition-shadow ${mitColor ? mitColor.border : "border-l-transparent"} ${a.status === "erledigt" ? "opacity-70" : ""} ${dragOverIndex === idx ? "border-primary/50 bg-primary/5" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
                 data-testid={`aufgabe-${a.id}`}
               >
                 <div className="flex items-start gap-3">
+                  <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0" title="Zum Sortieren ziehen" data-testid={`drag-handle-${a.id}`}>
+                    <GripVertical className="w-4 h-4" />
+                  </div>
                   <div className={`p-2 rounded-sm border flex-shrink-0 ${STATUS_STYLES[a.status].cls}`}>
                     <Icon className="w-4 h-4" />
                   </div>

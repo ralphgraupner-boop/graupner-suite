@@ -8,7 +8,7 @@ Module-First:
 """
 from uuid import uuid4
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -102,6 +102,10 @@ class AufgabeUpdate(BaseModel):
 
 class StatusUpdate(BaseModel):
     status: str
+
+
+class ReorderPayload(BaseModel):
+    ids: List[str]
 
 
 # ==================== HELPERS ====================
@@ -216,8 +220,25 @@ async def list_aufgaben(
     if projekt_id:
         query["projekt_id"] = projekt_id
 
-    items = await db.module_aufgaben.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    items = await db.module_aufgaben.find(query, {"_id": 0}).sort([("sort_order", 1), ("created_at", -1)]).to_list(2000)
     return items
+
+
+@router.patch("/reorder")
+async def reorder_aufgaben(payload: ReorderPayload, user=Depends(get_current_user)):
+    """Setzt sort_order = 10, 20, 30, … in der gegebenen Reihenfolge."""
+    await _require_enabled()
+    now = datetime.now(timezone.utc).isoformat()
+    updated = 0
+    for idx, aufgabe_id in enumerate(payload.ids):
+        result = await db.module_aufgaben.update_one(
+            {"id": aufgabe_id},
+            {"$set": {"sort_order": (idx + 1) * 10, "updated_at": now}},
+        )
+        if result.modified_count:
+            updated += 1
+    logger.info(f"Aufgaben umsortiert: {updated} Einträge ({(user or {}).get('username', 'unknown')})")
+    return {"updated": updated, "total": len(payload.ids)}
 
 
 @router.get("/count-offen")
@@ -264,6 +285,7 @@ async def create_aufgabe(payload: AufgabeCreate, user=Depends(get_current_user))
         "created_at": now,
         "updated_at": now,
         "created_by": (user or {}).get("username", "unknown"),
+        "sort_order": 0,
     }
     await db.module_aufgaben.insert_one(item)
     item.pop("_id", None)
