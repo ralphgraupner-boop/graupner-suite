@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 import uuid
 
 from database import db, logger
@@ -145,6 +145,10 @@ class ProjektUpdate(BaseModel):
     erledigt_am: Optional[str] = None
 
 
+class ReorderPayload(BaseModel):
+    ids: List[str]
+
+
 # ===================== Helpers =====================
 
 
@@ -187,7 +191,7 @@ async def list_projekte(kunde_id: Optional[str] = None, status: Optional[str] = 
         query["kunde_id"] = kunde_id
     if status:
         query["status"] = status
-    items = await db.module_projekte.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    items = await db.module_projekte.find(query, {"_id": 0}).sort([("sort_order", 1), ("created_at", -1)]).to_list(5000)
 
     # Kundennamen live nachladen (Datenmasken-Prinzip)
     kunden_ids = list({p["kunde_id"] for p in items if p.get("kunde_id")})
@@ -326,6 +330,22 @@ async def migrate_thumbnails(dry_run: bool = True, limit: int = 200, user=Depend
     }
 
 
+@router.patch("/reorder")
+async def reorder_projekte(payload: ReorderPayload, user=Depends(get_current_user)):
+    """Setzt sort_order = 10, 20, 30, … in der gegebenen Reihenfolge."""
+    now = datetime.now(timezone.utc).isoformat()
+    updated = 0
+    for idx, projekt_id in enumerate(payload.ids):
+        result = await db.module_projekte.update_one(
+            {"id": projekt_id},
+            {"$set": {"sort_order": (idx + 1) * 10, "updated_at": now}},
+        )
+        if result.modified_count:
+            updated += 1
+    logger.info(f"Projekte umsortiert: {updated} Einträge ({(user or {}).get('username', 'unknown')})")
+    return {"updated": updated, "total": len(payload.ids)}
+
+
 @router.get("/{projekt_id}")
 async def get_projekt(projekt_id: str, user=Depends(get_current_user)):
     p = await db.module_projekte.find_one({"id": projekt_id}, {"_id": 0})
@@ -390,6 +410,7 @@ async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user))
         "created_by": user.get("username") or user.get("email") or "admin",
         "portal_freigegeben": False,
         "aus_anfrage": aus_anfrage,
+        "sort_order": 0,
     }
     await db.module_projekte.insert_one(projekt)
     projekt.pop("_id", None)
@@ -595,6 +616,7 @@ async def create_from_kunde(kunde_id: str, payload: FromKundePayload = FromKunde
         "created_by": user.get("username") or user.get("email") or "admin",
         "portal_freigegeben": False,
         "aus_anfrage": True,  # Marker fuer "aus Kundenanfrage erstellt"
+        "sort_order": 0,
     }
     await db.module_projekte.insert_one(projekt)
     projekt.pop("_id", None)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Folder, Plus, Search, RefreshCw, ImageIcon, ChevronRight, User as UserIcon, Calendar, MapPin, X } from "lucide-react";
+import { Folder, Plus, Search, RefreshCw, ImageIcon, ChevronRight, User as UserIcon, Calendar, MapPin, X, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api } from "@/lib/api";
@@ -26,6 +26,8 @@ const ProjekteListe = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKunde, setSelectedKunde] = useState(null); // {id, label}
   const [searchFocused, setSearchFocused] = useState(false);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -93,6 +95,30 @@ const ProjekteListe = () => {
     if (statusFilter !== "aktiv" && statusFilter !== "" && p.status !== statusFilter) return false;
     return true;
   });
+
+  const handleRowDrop = async (dropIdx) => {
+    if (dragIndex === null || dragIndex === dropIdx) {
+      setDragIndex(null); setDragOverIndex(null);
+      return;
+    }
+    const reordered = [...filtered];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(dropIdx, 0, moved);
+
+    // Optimistisch: nur die sichtbar gefilterten Projekte umsortieren, Rest bleibt
+    const reorderedIds = reordered.map(p => p.id);
+    const others = projekte.filter(p => !reorderedIds.includes(p.id));
+    setProjekte([...reordered, ...others]);
+    setDragIndex(null); setDragOverIndex(null);
+
+    try {
+      await api.patch("/module-projekte/reorder", { ids: reorderedIds });
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Sortierung speichern fehlgeschlagen");
+      load();
+    }
+  };
 
   return (
     <div data-testid="projekte-liste-page" className="pb-12">
@@ -218,14 +244,28 @@ const ProjekteListe = () => {
         </Card>
       ) : (
         <div className="grid gap-3">
-          {filtered.map(p => (
+          {filtered.map((p, idx) => (
             <Card
               key={p.id}
+              draggable
+              onDragStart={() => setDragIndex(idx)}
+              onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+              onDragLeave={() => setDragOverIndex(null)}
+              onDrop={() => handleRowDrop(idx)}
+              onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
               onClick={() => navigate(`/module/projekte/werkbank/${p.kunde_id}`)}
-              className="p-4 hover:shadow-md transition-shadow cursor-pointer"
+              className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${dragOverIndex === idx ? "border-primary/50 bg-primary/5" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
               data-testid={`projekt-row-${p.id}`}
             >
               <div className="flex items-start justify-between gap-3">
+                <div
+                  className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0"
+                  title="Zum Sortieren ziehen"
+                  onClick={(e) => e.stopPropagation()}
+                  data-testid={`drag-handle-${p.id}`}
+                >
+                  <GripVertical className="w-4 h-4" />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-lg font-semibold">{p.titel}</h3>
