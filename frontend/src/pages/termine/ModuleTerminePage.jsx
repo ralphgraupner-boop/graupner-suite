@@ -461,7 +461,7 @@ export default function ModuleTerminePage() {
                       <span className="text-xs text-muted-foreground">{TYP_LABEL[t.typ] || t.typ}</span>
                     </div>
                     {t.beschreibung?.trim() && (
-                      <p className="text-sm text-foreground/70 mt-1 line-clamp-2" data-testid={`termin-beschreibung-${t.id}`}>
+                      <p className="text-sm text-foreground mt-1 line-clamp-2" data-testid={`termin-beschreibung-${t.id}`}>
                         {t.beschreibung}
                       </p>
                     )}
