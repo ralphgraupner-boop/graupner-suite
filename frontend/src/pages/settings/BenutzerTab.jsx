@@ -14,7 +14,6 @@ const BenutzerTab = () => {
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null);
   const [saving, setSaving] = useState(false);
   const [portals, setPortals] = useState([]);
   const [portalsLoading, setPortalsLoading] = useState(true);
@@ -84,7 +83,15 @@ const BenutzerTab = () => {
         setAuthError("");
         if (action === "perms") loadPerms(username);
         else if (action === "password") { setChangePassword(username); setNewPassword(""); }
-        else if (action === "delete") setConfirmDelete(username);
+        else if (action === "delete") {
+          try {
+            await api.delete(`/users/${username}`);
+            toast.success("Benutzer gelöscht");
+            loadUsers();
+          } catch (err) {
+            toast.error(err.response?.data?.detail || "Löschen fehlgeschlagen");
+          }
+        }
         else if (action === "edit") {
           const user = users.find(u => u.username === username);
           if (user) {
@@ -132,11 +139,6 @@ const BenutzerTab = () => {
     } catch (err) {
       toast.error(err.response?.data?.detail || "Fehler");
     } finally { setSaving(false); }
-  };
-
-  const handleDelete = async (username) => {
-    if (confirmDelete !== username) { setConfirmDelete(username); setTimeout(() => setConfirmDelete(null), 3000); return; }
-    try { await api.delete(`/users/${username}`); toast.success("Benutzer gelöscht"); setConfirmDelete(null); loadUsers(); } catch (err) { toast.error(err.response?.data?.detail || "Fehler"); }
   };
 
   const handlePasswordChange = async () => {
