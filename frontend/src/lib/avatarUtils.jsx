@@ -8,14 +8,14 @@ export const AVATAR_PALETTE = [
   { bg: "bg-emerald-500", border: "border-emerald-500" },
   { bg: "bg-amber-500", border: "border-amber-500" },
   { bg: "bg-rose-500", border: "border-rose-500" },
-  { bg: "bg-violet-500", border: "border-violet-500" },
+  { bg: "bg-blue-700", border: "border-blue-700" },
   { bg: "bg-teal-500", border: "border-teal-500" },
   { bg: "bg-orange-500", border: "border-orange-500" },
   { bg: "bg-pink-500", border: "border-pink-500" },
   { bg: "bg-indigo-500", border: "border-indigo-500" },
   { bg: "bg-cyan-500", border: "border-cyan-500" },
   { bg: "bg-lime-600", border: "border-lime-600" },
-  { bg: "bg-fuchsia-500", border: "border-fuchsia-500" },
+  { bg: "bg-blue-900", border: "border-blue-900" },
 ];
 
 export const colorForUser = (username) => {
