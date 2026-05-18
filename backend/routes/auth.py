@@ -17,6 +17,18 @@ BERECHTIGUNG_KEYS = [
     "mitarbeiter_dokumente",
     "mitarbeiter_fortbildungen",
     "mitarbeiter_anlegen_loeschen",
+    # Modul-Zugriffsrechte (17.05.2026)
+    "modul_mail_anfragen",
+    "modul_kunden",
+    "modul_projekte",
+    "modul_aufgaben",
+    "modul_termine",
+    "modul_einsaetze",
+    "modul_dokumente",
+    "modul_kundenportale",
+    "modul_monteur_app",
+    "modul_buchhaltung",
+    "modul_einstellungen",
 ]
 
 
@@ -32,8 +44,25 @@ def get_default_berechtigungen(role: str) -> dict:
             "mitarbeiter_dokumente": True,
             "mitarbeiter_fortbildungen": True,
             "mitarbeiter_anlegen_loeschen": False,
+            "modul_mail_anfragen": False,
+            "modul_kunden": True,
+            "modul_projekte": True,
+            "modul_aufgaben": True,
+            "modul_termine": False,
+            "modul_einsaetze": False,
+            "modul_dokumente": True,
+            "modul_kundenportale": False,
+            "modul_monteur_app": True,
+            "modul_buchhaltung": True,
+            "modul_einstellungen": False,
         }
-    return {k: False for k in BERECHTIGUNG_KEYS}
+    # mitarbeiter (Default für alle übrigen Rollen)
+    return {
+        **{k: False for k in BERECHTIGUNG_KEYS},
+        "modul_aufgaben": True,
+        "modul_termine": True,
+        "modul_monteur_app": True,
+    }
 
 
 @router.post("/auth/register", response_model=TokenResponse)

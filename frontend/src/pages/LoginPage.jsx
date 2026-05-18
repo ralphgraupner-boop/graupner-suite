@@ -52,7 +52,19 @@ const LoginPage = ({ onLogin }) => {
         ? { username, password, company_name: companyName }
         : { username, password };
       const res = await axios.post(`${API}${endpoint}`, data);
-      onLogin(res.data.token, { username: res.data.username, role: res.data.role });
+      // Berechtigungen mit /auth/me laden und in User-Objekt mergen
+      let berechtigungen = null;
+      try {
+        const meRes = await axios.get(`${API}/auth/me`, {
+          headers: { Authorization: `Bearer ${res.data.token}` },
+        });
+        berechtigungen = meRes.data?.berechtigungen || null;
+      } catch {}
+      onLogin(res.data.token, {
+        username: res.data.username,
+        role: res.data.role,
+        berechtigungen: berechtigungen || {},
+      });
       toast.success(isRegister ? "Registrierung erfolgreich!" : "Willkommen zurück!");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Fehler bei der Anmeldung");

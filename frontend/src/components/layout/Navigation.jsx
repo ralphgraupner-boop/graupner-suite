@@ -10,30 +10,30 @@ const APP_ENV = detectAppEnv();
 
 const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
-  { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"] },
-  { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"] },
+  { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"], permKey: "modul_kunden" },
+  { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"], permKey: "modul_mail_anfragen" },
   { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], parentPath: "/settings" },
-  { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"] },
-  { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"] },
-  { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"] },
+  { path: "/module/projekte", icon: Folder, label: "Projekte", roles: ["admin"], permKey: "modul_projekte" },
+  { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben", roles: ["admin", "mitarbeiter", "buchhaltung"], permKey: "modul_aufgaben" },
+  { path: "/module/termine", icon: Calendar, label: "Termine", roles: ["admin"], permKey: "modul_termine" },
   { path: "/module/feedback", icon: StickyNote, label: "Notizen & Bugs", roles: ["admin"] },
   { path: "/module/assistent", icon: Brain, label: "Mein Assistent", roles: ["admin"] },
-  { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"] },
+  { path: "/einsaetze", icon: Wrench, label: "Einsaetze", roles: ["admin"], permKey: "modul_einsaetze" },
   { path: "/module/artikel", icon: Package, label: "Artikel & Leistungen", roles: ["admin"], parentPath: "/settings" },
-  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"] },
+  { path: "/module/dokumente", icon: FileText, label: "Dokumente", roles: ["admin"], permKey: "modul_dokumente" },
   { path: "/module/dokumente-v6", icon: FileText, label: "Dokumente v6 (Sicherung)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/dokumente-v2", icon: FileText, label: "Dokumente v2 (defekt)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"], parentPath: "/settings" },
-  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"] },
+  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"], permKey: "modul_kundenportale" },
   { path: "/portals-klon", icon: Globe, label: "Kundenportale (Arbeitskopie)", roles: ["admin"], hideByDefault: true },
-  { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"] },
+  { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"], permKey: "modul_monteur_app" },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"], parentPath: "/settings" },
   { path: "/wissen", icon: BookOpen, label: "Wissen & Tipps", roles: ["admin"], parentPath: "/settings" },
-  { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"] },
+  { path: "/buchhaltung", icon: Landmark, label: "Buchhaltung", roles: ["admin", "buchhaltung"], permKey: "modul_buchhaltung" },
   { path: "/invoices", icon: Receipt, label: "Rechnungen", roles: ["admin", "buchhaltung"], hideByDefault: true },
   { path: "/rechnungen-v2", icon: Receipt, label: "Rechnungen (Neu)", roles: ["admin"], featureFlag: "rechnungen_v2", hideByDefault: true },
   { path: "/email", icon: MailOpen, label: "E-Mail", roles: ["admin"], featureFlag: "email_module_enabled" },
-  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"], hasChildren: true },
+  { path: "/settings", icon: Settings, label: "Einstellungen", roles: ["admin"], hasChildren: true, permKey: "modul_einstellungen" },
 ];
 
 const getUserRole = () => {
@@ -44,18 +44,33 @@ const getUserRole = () => {
   } catch { return "admin"; }
 };
 
+const getUserBerechtigungen = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (user && typeof user === "object" && user.berechtigungen && typeof user.berechtigungen === "object") {
+      return user.berechtigungen;
+    }
+    return null; // null = keine Daten vorhanden → nicht filtern (Fallback admin-friendly)
+  } catch { return null; }
+};
+
 const getFilteredNavItems = () => {
   const role = getUserRole();
+  const perms = getUserBerechtigungen();
   let flags = {};
   try { flags = JSON.parse(localStorage.getItem("feature_flags") || "{}"); } catch { /* ignore */ }
-  // Aufgeräumt-Modus: blendet standardmäßig alle Module mit hideByDefault=true aus.
-  // Aktivieren über localStorage.setItem("show_legacy_modules", "1") oder Einstellungen.
   let showLegacy = false;
   try { showLegacy = localStorage.getItem("show_legacy_modules") === "1"; } catch { /* ignore */ }
   return allNavItems.filter(item => {
     if (!item.roles.includes(role)) return false;
     if (item.featureFlag && !flags[item.featureFlag]) return false;
     if (item.hideByDefault && !showLegacy) return false;
+    // Modul-Berechtigung pruefen (nur wenn perms-Objekt vorhanden und Key gesetzt).
+    // Bei fehlendem Schluessel im perms-Objekt = false (verbergen). Admin behaelt allerdings
+    // grundsaetzlich Vollzugriff, falls perms leer ist (kein Datensatz in DB).
+    if (item.permKey && perms !== null && Object.keys(perms).length > 0) {
+      if (perms[item.permKey] !== true) return false;
+    }
     return true;
   });
 };

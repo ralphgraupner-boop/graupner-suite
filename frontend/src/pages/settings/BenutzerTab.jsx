@@ -25,7 +25,7 @@ const BenutzerTab = () => {
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  const PERM_LABELS = {
+  const PERM_LABELS_MITARBEITER = {
     mitarbeiter_stammdaten: "Stammdaten bearbeiten",
     mitarbeiter_lohn: "Lohn & Gehalt",
     mitarbeiter_urlaub: "Urlaub verwalten",
@@ -34,6 +34,20 @@ const BenutzerTab = () => {
     mitarbeiter_fortbildungen: "Fortbildungen",
     mitarbeiter_anlegen_loeschen: "Mitarbeiter anlegen/löschen",
   };
+  const PERM_LABELS_MODULE = {
+    modul_mail_anfragen: "Mail-Anfragen",
+    modul_kunden: "Kunden",
+    modul_projekte: "Projekte",
+    modul_aufgaben: "Aufgaben",
+    modul_termine: "Termine",
+    modul_einsaetze: "Einsätze",
+    modul_dokumente: "Dokumente",
+    modul_kundenportale: "Kundenportale",
+    modul_monteur_app: "Monteur-App",
+    modul_buchhaltung: "Buchhaltung",
+    modul_einstellungen: "Einstellungen",
+  };
+  const PERM_LABELS = { ...PERM_LABELS_MITARBEITER, ...PERM_LABELS_MODULE };
 
   useEffect(() => { loadUsers(); loadPortals(); }, []);
 
@@ -352,9 +366,11 @@ const BenutzerTab = () => {
       {/* Berechtigungen Modal */}
       <Modal isOpen={!!editPerms} onClose={() => setEditPerms(null)} title={`Berechtigungen: ${editPerms}`}>
         <div className="space-y-1">
-          <p className="text-sm text-muted-foreground mb-4">Welche Mitarbeiter-Bereiche darf <strong>{editPerms}</strong> bearbeiten?</p>
-          {Object.entries(PERM_LABELS).map(([key, label]) => (
-            <label key={key} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors" data-testid={`perm-${key}`}>
+          <p className="text-sm text-muted-foreground mb-4">Welche Rechte hat <strong>{editPerms}</strong>?</p>
+
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-2 mb-1">Mitarbeiter-Bereiche</h4>
+          {Object.entries(PERM_LABELS_MITARBEITER).map(([key, label]) => (
+            <label key={key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors" data-testid={`perm-${key}`}>
               <input
                 type="checkbox"
                 checked={perms[key] || false}
@@ -364,6 +380,20 @@ const BenutzerTab = () => {
               <span className="text-sm font-medium">{label}</span>
             </label>
           ))}
+
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Modul-Zugriffsrechte</h4>
+          {Object.entries(PERM_LABELS_MODULE).map(([key, label]) => (
+            <label key={key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors" data-testid={`perm-${key}`}>
+              <input
+                type="checkbox"
+                checked={perms[key] || false}
+                onChange={(e) => setPerms(prev => ({ ...prev, [key]: e.target.checked }))}
+                className="rounded w-4 h-4 accent-primary"
+              />
+              <span className="text-sm font-medium">{label}</span>
+            </label>
+          ))}
+
           <div className="flex justify-between items-center pt-4 border-t mt-4">
             <button onClick={() => { const all = {}; Object.keys(PERM_LABELS).forEach(k => all[k] = true); setPerms(all); }} className="text-xs text-primary hover:underline" data-testid="btn-select-all-perms">Alle auswählen</button>
             <div className="flex gap-2">
