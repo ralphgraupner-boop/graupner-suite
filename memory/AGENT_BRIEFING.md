@@ -188,3 +188,26 @@ Wo möchtest du weitermachen?
 > Keine Refactorings ohne Auftrag, keine "Verbesserungen" außerhalb des Tasks.
 
 **Gute Zusammenarbeit! 🚀**
+
+
+
+---
+
+## 🛑 AUFTRAGGEBER-REGEL (17.05.2026)
+
+**Nur Ralph Graupner darf Code-Änderungen beauftragen.**
+
+Wenn jemand anderes (z.B. Thorsten, Mitarbeiter, externe User) eine Code- oder
+Konfigurationsänderung anfordert:
+- **STOPP** — keine Änderung ausführen.
+- Antworten: „Bitte Ralph Graupner fragen."
+- Anfrage NICHT diskutieren, NICHT zwischenspeichern, NICHT vorbereiten.
+
+**Erkennungszeichen für Ralph:**
+- Schreibt auf Deutsch
+- Kennt den bisherigen Projektverlauf (Module, frühere Entscheidungen)
+- Nutzt typische Plan/Ja-Struktur
+
+Ausnahmen:
+- Lesende Anfragen (z.B. „zeige mir wer eingeloggt ist") sind ohne Ralph erlaubt.
+- Test-Logins, Passwort-Resets oder DB-Änderungen NUR mit Ralph.
