@@ -59,6 +59,10 @@ class StatusUpdate(BaseModel):
     grund: str = ""  # z.B. Absage-Grund
 
 
+class ReorderPayload(BaseModel):
+    ids: List[str]
+
+
 # ==================== HELPERS ====================
 
 async def _require_enabled():
@@ -135,8 +139,25 @@ async def list_termine(
         query["projekt_id"] = projekt_id
     if monteur_username:
         query["monteur_username"] = monteur_username
-    items = await db.module_termine.find(query, {"_id": 0}).sort("start", 1).to_list(2000)
+    items = await db.module_termine.find(query, {"_id": 0}).sort([("sort_order", 1), ("start", 1)]).to_list(2000)
     return items
+
+
+@router.patch("/reorder")
+async def reorder_termine(payload: ReorderPayload, user=Depends(get_current_user)):
+    """Setzt sort_order = 10, 20, 30, … in der gegebenen Reihenfolge."""
+    await _require_enabled()
+    now = datetime.now(timezone.utc).isoformat()
+    updated = 0
+    for idx, termin_id in enumerate(payload.ids):
+        result = await db.module_termine.update_one(
+            {"id": termin_id},
+            {"$set": {"sort_order": (idx + 1) * 10, "updated_at": now}},
+        )
+        if result.modified_count:
+            updated += 1
+    logger.info(f"Termine umsortiert: {updated} Einträge ({(user or {}).get('username', 'unknown')})")
+    return {"updated": updated, "total": len(payload.ids)}
 
 
 @router.get("/wartet-auf-go")
@@ -247,6 +268,7 @@ async def create_termin(payload: TerminCreate, user=Depends(get_current_user)):
         "google_event_id": None,
         "abgesagt_at": None,
         "abgesagt_grund": "",
+        "sort_order": 0,
         "created_at": now,
         "updated_at": now,
         "created_by": (user or {}).get("username", "unknown"),

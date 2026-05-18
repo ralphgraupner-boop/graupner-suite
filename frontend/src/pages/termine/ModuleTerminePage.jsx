@@ -7,6 +7,7 @@ import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
 import {
   Calendar, Plus, Trash2, X, MapPin, User as UserIcon, Folder, Briefcase, HardHat,
   CheckCircle2, Clock, RefreshCw, Filter, AlertTriangle, ChevronRight, XCircle, Search,
+  GripVertical,
 } from "lucide-react";
 
 const STATUS_LABEL = {
@@ -45,6 +46,8 @@ export default function ModuleTerminePage() {
   const [editing, setEditing] = useState(null);
   const [enriched, setEnriched] = useState(null);
   const [sendingTermin, setSendingTermin] = useState(null);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   // Stammdaten für Auswahl
   const [kunden, setKunden] = useState([]);
@@ -158,6 +161,30 @@ export default function ModuleTerminePage() {
       load();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
+    }
+  };
+
+  const handleRowDrop = async (dropIdx) => {
+    if (dragIndex === null || dragIndex === dropIdx) {
+      setDragIndex(null); setDragOverIndex(null);
+      return;
+    }
+    const reordered = [...filteredTermine];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(dropIdx, 0, moved);
+
+    // Optimistisch lokale Reihenfolge in `termine` übernehmen (nur die gefilterten Termine umsortieren)
+    const reorderedIds = reordered.map(t => t.id);
+    const otherTermine = termine.filter(t => !reorderedIds.includes(t.id));
+    setTermine([...reordered, ...otherTermine]);
+    setDragIndex(null); setDragOverIndex(null);
+
+    try {
+      await api.patch("/module-termine/reorder", { ids: reorderedIds });
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Sortierung speichern fehlgeschlagen");
+      load();
     }
   };
 
@@ -303,7 +330,7 @@ export default function ModuleTerminePage() {
         </div>
       ) : (
         <div className="space-y-2" data-testid="termine-list">
-          {filteredTermine.map(t => {
+          {filteredTermine.map((t, idx) => {
             const styles = STATUS_STYLES[t.status] || STATUS_STYLES.wartet_auf_go;
             const Icon = styles.icon;
             const kundeName = kunden.find(k => k.id === t.kunde_id);
@@ -311,10 +338,19 @@ export default function ModuleTerminePage() {
             return (
               <div
                 key={t.id}
-                className="border rounded-md p-3 bg-background hover:shadow-sm transition-shadow"
+                draggable
+                onDragStart={() => setDragIndex(idx)}
+                onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={() => handleRowDrop(idx)}
+                onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                className={`border rounded-md p-3 bg-background hover:shadow-sm transition-shadow ${dragOverIndex === idx ? "border-primary/50 bg-primary/5" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
                 data-testid={`termin-${t.id}`}
               >
                 <div className="flex items-start gap-3">
+                  <div className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0" title="Zum Sortieren ziehen" data-testid={`drag-handle-${t.id}`}>
+                    <GripVertical className="w-4 h-4" />
+                  </div>
                   <div className={`p-2 rounded-sm border flex-shrink-0 ${styles.cls}`}>
                     <Icon className="w-4 h-4" />
                   </div>
@@ -326,6 +362,11 @@ export default function ModuleTerminePage() {
                       </span>
                       <span className="text-xs text-muted-foreground">{TYP_LABEL[t.typ] || t.typ}</span>
                     </div>
+                    {t.beschreibung?.trim() && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2" data-testid={`termin-beschreibung-${t.id}`}>
+                        {t.beschreibung}
+                      </p>
+                    )}
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {fmtDate(t.start)}</span>
                       {t.ende && <span>– {fmtDate(t.ende)}</span>}
