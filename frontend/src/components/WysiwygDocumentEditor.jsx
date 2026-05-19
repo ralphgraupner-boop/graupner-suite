@@ -725,7 +725,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   // ==================== RENDER ====================
   return (
-    <div className="min-h-screen bg-neutral-200 dark:bg-neutral-700">
+    <div className="min-h-screen bg-[#E8E4DE] dark:bg-[#3A3632]">
       <EditorToolbar
         type={type} isNew={isNew} titles={titles} listPaths={listPaths} docNumber={docNumber} status={status}
         isRecording={isRecording} aiLoading={aiLoading} saving={saving}
