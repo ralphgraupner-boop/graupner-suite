@@ -725,7 +725,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   // ==================== RENDER ====================
   return (
-    <div className="min-h-screen bg-stone-200 dark:bg-stone-800">
+    <div className="min-h-screen bg-neutral-200 dark:bg-neutral-700">
       <EditorToolbar
         type={type} isNew={isNew} titles={titles} listPaths={listPaths} docNumber={docNumber} status={status}
         isRecording={isRecording} aiLoading={aiLoading} saving={saving}
@@ -770,7 +770,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             {!isNew && (
               <div className="mb-3 lg:mb-4">
                 <select value={status} onChange={(e) => setStatus(e.target.value)}
-                  className="h-8 lg:h-9 rounded-sm border border-input bg-card px-2 lg:px-3 text-xs lg:text-sm">
+                  className="h-8 lg:h-9 rounded-sm border border-border bg-background text-foreground px-2 lg:px-3 text-xs lg:text-sm">
                   {type === "quote" && (<><option value="Entwurf">Status: Entwurf</option><option value="Gesendet">Status: Gesendet</option><option value="Beauftragt">Status: Beauftragt</option><option value="Abgelehnt">Status: Abgelehnt</option></>)}
                   {type === "order" && (<><option value="Offen">Status: Offen</option><option value="In Arbeit">Status: In Arbeit</option><option value="Abgeschlossen">Status: Abgeschlossen</option></>)}
                   {type === "invoice" && (<><option value="Offen">Status: Offen</option><option value="Gesendet">Status: Gesendet</option><option value="Bezahlt">Status: Bezahlt</option><option value="Überfällig">Status: Überfällig</option></>)}
