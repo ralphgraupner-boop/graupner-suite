@@ -250,7 +250,7 @@ export default function ModuleTerminePage() {
       <div className="mb-4" data-testid="termine-search-section">
         {selectedTarget ? (
           <div className="flex items-center gap-2 p-3 bg-muted/40 border rounded-md" data-testid="termine-selected-target">
-            {selectedTarget.type === "kunde" ? <UserIcon className="w-4 h-4 text-blue-700" /> : <Folder className="w-4 h-4 text-emerald-700" />}
+            {selectedTarget.type === "kunde" ? <UserIcon className="w-4 h-4 text-blue-700 dark:text-blue-300" /> : <Folder className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />}
             <span className="text-sm font-medium">
               {selectedTarget.type === "kunde" ? "Kunde: " : "Projekt: "}{selectedTarget.label}
             </span>
@@ -280,7 +280,7 @@ export default function ModuleTerminePage() {
                     <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50 border-b">Kunden ({searchHits.kunden.length})</div>
                     {searchHits.kunden.map(k => (
                       <button key={`k-${k.id}`} onClick={() => { setSelectedTarget({ type: "kunde", id: k.id, label: k.label }); setSearchQuery(""); }} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0" data-testid={`termine-hit-kunde-${k.id}`}>
-                        <UserIcon className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                        <UserIcon className="w-4 h-4 text-blue-700 dark:text-blue-300 flex-shrink-0" />
                         <span>{k.label}</span>
                       </button>
                     ))}
@@ -320,14 +320,14 @@ export default function ModuleTerminePage() {
               className={`border rounded-md p-3 text-left transition-colors ${
                 filterStatus === key
                   ? STATUS_STYLES[key].cls + " ring-2 ring-offset-1 ring-current"
-                  : "bg-background hover:bg-muted/50"
+                  : "bg-background text-foreground hover:bg-muted/50"
               }`}
               data-testid={`stat-${key}`}
             >
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Icon className="w-3.5 h-3.5" /> {STATUS_LABEL[key]}
               </div>
-              <div className="text-2xl font-bold mt-1">{stats[key]}</div>
+              <div className="text-2xl font-bold mt-1 text-foreground">{stats[key]}</div>
             </button>
           );
         })}
@@ -446,10 +446,10 @@ export default function ModuleTerminePage() {
                       )}
                     </div>
                     {t.status === "abgesagt" && t.abgesagt_grund && (
-                      <p className="text-xs text-red-600 mt-1">Grund: {t.abgesagt_grund}</p>
+                      <p className="text-xs text-red-600 dark:text-red-300 mt-1">Grund: {t.abgesagt_grund}</p>
                     )}
                     {t.status === "im_kalender" && t.google_event_id && (
-                      <p className="text-xs text-emerald-600 mt-1">📅 Google Event ID: {t.google_event_id}</p>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-300 mt-1">📅 Google Event ID: {t.google_event_id}</p>
                     )}
                   </div>
                   <div className="flex flex-col gap-1 flex-shrink-0">
@@ -481,26 +481,26 @@ export default function ModuleTerminePage() {
                     )}
                     <button
                       onClick={() => openEnriched(t)}
-                      className="text-xs px-2 py-1 border rounded-sm hover:bg-muted flex items-center gap-1"
+                      className="text-xs px-2 py-1 border border-border bg-background text-foreground rounded-sm hover:bg-muted flex items-center gap-1"
                       data-testid={`btn-enrich-${t.id}`}
                     >
                       Datenmaske <ChevronRight className="w-3 h-3" />
                     </button>
                     <button
                       onClick={() => setEditing(t)}
-                      className="text-xs px-2 py-1 border rounded-sm hover:bg-muted"
+                      className="text-xs px-2 py-1 border border-border bg-background text-foreground rounded-sm hover:bg-muted"
                       data-testid={`btn-edit-${t.id}`}
                     >
                       Bearbeiten
                     </button>
                     {t.status !== "abgesagt" && (
-                      <button onClick={() => onCancel(t)} className="text-xs px-2 py-1 border border-red-200 text-red-700 rounded-sm hover:bg-red-50">
+                      <button onClick={() => onCancel(t)} className="text-xs px-2 py-1 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 rounded-sm hover:bg-red-50 dark:hover:bg-red-950/40">
                         Absagen
                       </button>
                     )}
                     <button
                       onClick={() => onDelete(t)}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded-sm border border-transparent hover:border-red-200"
+                      className="p-1 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-sm border border-transparent hover:border-red-200 dark:hover:border-red-900"
                       title="Löschen"
                       data-testid={`btn-delete-${t.id}`}
                     >
