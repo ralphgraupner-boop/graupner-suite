@@ -234,19 +234,19 @@ const EditorSidebar = ({
         </div>
 
         {/* Tabs */}
-        <div className="flex rounded-md border border-input overflow-hidden">
+        <div className="flex rounded-md border border-border overflow-hidden">
           <button onClick={() => setSidebarTab("services")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "services" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "services" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
             data-testid="tab-services">
             <Wrench className="w-3.5 h-3.5 inline mr-1" /> Leistungen ({filteredServices.length})
           </button>
           <button onClick={() => setSidebarTab("articles")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "articles" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "articles" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
             data-testid="tab-articles">
             <Package className="w-3.5 h-3.5 inline mr-1" /> Artikel ({filteredArticles.length})
           </button>
           <button onClick={() => setSidebarTab("blocks")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "blocks" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "blocks" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
             data-testid="tab-blocks">
             <Copy className="w-3.5 h-3.5 inline mr-1" /> Blöcke ({leistungsBloecke.length})
           </button>
