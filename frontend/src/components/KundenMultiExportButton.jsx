@@ -59,7 +59,7 @@ export const KundenMultiExportButton = ({ selectedIds = [], totalCount = 0 }) =>
     <button
       onClick={run}
       disabled={busy || (!isMulti && totalCount === 0)}
-      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors disabled:opacity-50"
+      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-muted text-foreground hover:bg-muted/80 border border-border transition-colors disabled:opacity-50"
       data-testid="btn-multi-export"
       title={isMulti ? "Markierte Kunden exportieren" : "Alle Kunden exportieren"}
     >

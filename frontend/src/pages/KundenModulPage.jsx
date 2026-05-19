@@ -294,7 +294,7 @@ const KundenModulPage = () => {
           </Button>
           <KundeImportButton onImported={loadKunden} />
           <KundenMultiExportButton selectedIds={Array.from(selectedIds)} totalCount={kunden.length} />
-          <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`} data-testid="btn-vcf-import-kunden-modul">
+          <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-muted text-foreground hover:bg-muted/80 border border-border'}`} data-testid="btn-vcf-import-kunden-modul">
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">{vcfUploading ? "Importiere..." : "VCF"}</span>
             <input type="file" accept=".vcf" onChange={handleVcfUpload} className="hidden" disabled={vcfUploading} />
@@ -768,16 +768,16 @@ const KundenModulPage = () => {
 // ==================== DUPLICATE DIALOG ====================
 const DuplicateDialog = ({ title, duplicates, onCancel, onOpen, onForce, loading }) => (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-testid="duplicate-dialog">
-    <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+    <div className="bg-card rounded-lg shadow-xl max-w-lg w-full p-6">
       <h3 className="text-lg font-semibold text-amber-700 mb-2">{title || "Kunde koennte bereits existieren"}</h3>
-      <p className="text-sm text-slate-600 mb-4">Folgende Kunden wurden gefunden:</p>
+      <p className="text-sm text-muted-foreground mb-4">Folgende Kunden wurden gefunden:</p>
       <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
         {duplicates.map((d) => (
-          <div key={d.id} className="border rounded p-3 hover:bg-slate-50">
+          <div key={d.id} className="border rounded p-3 hover:bg-muted">
             <div className="font-medium">{d.name || "(ohne Name)"}</div>
-            {d.email && <div className="text-sm text-slate-600">{d.email}</div>}
-            {d.phone && <div className="text-sm text-slate-600">{d.phone}</div>}
-            {d.address && <div className="text-sm text-slate-500">{d.address}</div>}
+            {d.email && <div className="text-sm text-muted-foreground">{d.email}</div>}
+            {d.phone && <div className="text-sm text-muted-foreground">{d.phone}</div>}
+            {d.address && <div className="text-sm text-muted-foreground">{d.address}</div>}
             {onOpen && (
               <button
                 type="button"
@@ -1367,29 +1367,29 @@ const CreateDocPrompt = ({ onQuote, onOrder, onInvoice }) => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl mx-auto px-4">
         <button
           onClick={onQuote}
-          className="group flex flex-col items-center gap-2 p-5 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:shadow-md hover:bg-blue-50 transition-all"
+          className="group flex flex-col items-center gap-2 p-5 bg-card border-2 border-blue-200 dark:border-blue-900 rounded-lg hover:border-blue-400 hover:shadow-md hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all"
           data-testid="choose-quote"
         >
           <FileText className="w-8 h-8 text-blue-600 group-hover:scale-110 transition-transform" />
-          <div className="text-sm font-semibold text-blue-900">Angebot</div>
+          <div className="text-sm font-semibold text-blue-900 dark:text-blue-200">Angebot</div>
           <div className="text-xs text-center text-muted-foreground leading-relaxed">Preisvorschlag an den Kunden. Standard-Startpunkt.</div>
         </button>
         <button
           onClick={onOrder}
-          className="group flex flex-col items-center gap-2 p-5 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:shadow-md hover:bg-purple-50 transition-all"
+          className="group flex flex-col items-center gap-2 p-5 bg-card border-2 border-purple-200 dark:border-purple-900 rounded-lg hover:border-purple-400 hover:shadow-md hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-all"
           data-testid="choose-order"
         >
           <ClipboardCheck className="w-8 h-8 text-purple-600 group-hover:scale-110 transition-transform" />
-          <div className="text-sm font-semibold text-purple-900">Auftragsbestätigung</div>
+          <div className="text-sm font-semibold text-purple-900 dark:text-purple-200">Auftragsbestätigung</div>
           <div className="text-xs text-center text-muted-foreground leading-relaxed">Bestätigt dem Kunden den Auftrag schriftlich.</div>
         </button>
         <button
           onClick={onInvoice}
-          className="group flex flex-col items-center gap-2 p-5 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:shadow-md hover:bg-green-50 transition-all"
+          className="group flex flex-col items-center gap-2 p-5 bg-card border-2 border-green-200 dark:border-green-900 rounded-lg hover:border-green-400 hover:shadow-md hover:bg-green-50 dark:hover:bg-green-950/40 transition-all"
           data-testid="choose-invoice"
         >
           <Receipt className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" />
-          <div className="text-sm font-semibold text-green-900">Rechnung</div>
+          <div className="text-sm font-semibold text-green-900 dark:text-green-200">Rechnung</div>
           <div className="text-xs text-center text-muted-foreground leading-relaxed">Direkte Rechnung ohne vorherigen Auftrag.</div>
         </button>
       </div>

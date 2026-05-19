@@ -93,7 +93,7 @@ const KundenLinkExpiryCheck = () => {
           </h2>
           <button
             onClick={() => setShow(false)}
-            className="p-1 hover:bg-white rounded-sm"
+            className="p-1 hover:bg-amber-100 rounded-sm"
             data-testid="btn-kundenlink-later"
             title="Später entscheiden"
           >
@@ -116,7 +116,7 @@ const KundenLinkExpiryCheck = () => {
               return (
                 <div
                   key={it.id}
-                  className={`border rounded-sm p-3 ${it.expired ? "bg-red-50 border-red-200" : "bg-white"}`}
+                  className={`border rounded-sm p-3 ${it.expired ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900" : "bg-card"}`}
                   data-testid={`expiring-link-${it.id}`}
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">

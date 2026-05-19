@@ -46,7 +46,7 @@ export const KundeDeleteDialog = ({ kunde_id, kunde_name, onClose, onDeleted }) 
             <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
               <Archive className="w-5 h-5" /> In Papierkorb verschieben
             </h2>
-            <button onClick={onClose} className="p-1 hover:bg-white rounded-sm"><X className="w-5 h-5" /></button>
+            <button onClick={onClose} className="p-1 hover:bg-amber-100 rounded-sm"><X className="w-5 h-5" /></button>
           </div>
           <p className="text-sm text-amber-900 mt-1 truncate">{kunde_name}</p>
         </div>

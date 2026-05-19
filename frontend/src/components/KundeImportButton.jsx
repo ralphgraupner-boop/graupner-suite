@@ -50,7 +50,7 @@ export const KundeImportButton = ({ onImported }) => {
     <>
       <button
         onClick={() => { reset(); setOpen(true); }}
-        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
+        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-muted text-foreground hover:bg-muted/80 border border-border transition-colors"
         data-testid="btn-kunde-import"
       >
         <Upload className="w-4 h-4" /> Import
