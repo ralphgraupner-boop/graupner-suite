@@ -60,7 +60,7 @@ const EditorSidebar = ({
         draggable="true"
         onDragStart={(e) => handleDragStart(e, item)}
         onClick={() => { setSelectedItem(selectedItem?.id === item.id ? null : item); if (editItem && editItem !== item.id) cancelEdit(); }}
-        className={`group flex items-start gap-2 p-2.5 rounded-md border cursor-grab active:cursor-grabbing transition-all ${selectedItem?.id === item.id ? "border-primary bg-primary/5 shadow-sm" : "border-input bg-card hover:border-primary/40 hover:shadow-sm"}`}
+        className={`group flex items-start gap-2 p-2.5 rounded-md border cursor-grab active:cursor-grabbing transition-all ${selectedItem?.id === item.id ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/40 hover:shadow-sm"}`}
         data-testid={`draggable-item-${item.id}`}
       >
         <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
@@ -182,14 +182,14 @@ const EditorSidebar = ({
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); startEdit(item); }}
-                  className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-input bg-card text-sm font-medium hover:bg-muted transition-colors"
+                  className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm font-medium hover:bg-muted transition-colors"
                   data-testid={`btn-edit-item-${item.id}`} title="Bearbeiten"
                 >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setDeleteConfirm(deleteConfirm === item.id ? null : item.id); }}
-                  className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-input bg-card text-sm font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+                  className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm font-medium hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
                   data-testid={`btn-delete-item-${item.id}`} title="Löschen"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -225,28 +225,28 @@ const EditorSidebar = ({
 
   return (
     <div className="hidden lg:block">
-      <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pr-1">
+      <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pr-1 bg-[#E7E3DA] dark:bg-[#3A3632]">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
           <input type="text" placeholder="Suchen..." value={sidebarSearch} onChange={(e) => setSidebarSearch(e.target.value)}
-            className="w-full h-9 pl-8 pr-3 rounded-md border border-input bg-card text-sm" data-testid="sidebar-search" />
+            className="w-full h-9 pl-8 pr-3 rounded-md border border-border bg-background text-foreground text-sm" data-testid="sidebar-search" />
         </div>
 
         {/* Tabs */}
         <div className="flex rounded-md border border-border overflow-hidden">
           <button onClick={() => setSidebarTab("services")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "services" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "services" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-muted"}`}
             data-testid="tab-services">
             <Wrench className="w-3.5 h-3.5 inline mr-1" /> Leistungen ({filteredServices.length})
           </button>
           <button onClick={() => setSidebarTab("articles")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "articles" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "articles" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-muted"}`}
             data-testid="tab-articles">
             <Package className="w-3.5 h-3.5 inline mr-1" /> Artikel ({filteredArticles.length})
           </button>
           <button onClick={() => setSidebarTab("blocks")}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "blocks" ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-muted"}`}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${sidebarTab === "blocks" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-muted"}`}
             data-testid="tab-blocks">
             <Copy className="w-3.5 h-3.5 inline mr-1" /> Blöcke ({leistungsBloecke.length})
           </button>
