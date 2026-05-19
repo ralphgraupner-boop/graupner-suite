@@ -779,7 +779,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             )}
 
             {/* Paper Document */}
-            <div className="bg-white shadow-xl rounded-sm border" style={{ minHeight: "600px" }}
+            <div className="bg-white text-slate-800 shadow-xl rounded-sm border [&_input]:bg-white [&_input]:text-slate-800 [&_textarea]:bg-white [&_textarea]:text-slate-800" style={{ minHeight: "600px" }}
               onDragOver={handleDragOver} onDrop={handleDrop} data-testid="document-drop-zone">
 
               <DocumentHeader
@@ -823,7 +823,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               {/* Vortext */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
                 {customer && !customer.anrede && (
-                  <div className="mb-2 flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-sm px-3 py-2" data-testid="anrede-missing-hint">
+                  <div className="mb-2 flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-100 border border-amber-200 dark:border-amber-300 text-amber-800 dark:text-amber-900 rounded-sm px-3 py-2" data-testid="anrede-missing-hint">
                     <span className="text-amber-600">⚠</span>
                     <span>
                       Keine Anrede beim Kunden hinterlegt – im Vortext wird <strong>„Sehr geehrte Damen und Herren"</strong> verwendet.
@@ -882,7 +882,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </div>
 
               {/* Footer */}
-              <div className="px-4 lg:px-10 py-4 lg:py-5 border-t bg-slate-50/50 text-[10px] lg:text-xs text-muted-foreground text-center space-y-1" data-testid="document-footer">
+              <div className="px-4 lg:px-10 py-4 lg:py-5 border-t bg-slate-50/50 text-[10px] lg:text-xs text-slate-600 text-center space-y-1" data-testid="document-footer">
                 <p>{settings.company_name || "Tischlerei Graupner"} {(settings.address || "Erlengrund 129 22453 Hamburg").replace(/\n/g, " ")} Tel. {settings.phone || "040 52530818"} Mail: {settings.email || "Service@tischlerei-graupner.de"}</p>
                 <p>Bankverbindung: {settings.owner_name || "Ralph Graupner"} | {settings.bank_name || "N26"} | IBAN: {settings.iban || "DE33 1001 1001 2028 1390 46"} | BIC: {settings.bic || "NTSBDEB1XXX"} SteuerNr. {settings.tax_id || "45/076/04744"}</p>
               </div>
@@ -967,7 +967,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 className="w-full p-3 rounded-sm border hover:bg-muted/40 text-left flex items-start gap-3"
                 data-testid="btn-mail-without-text"
               >
-                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center flex-shrink-0 font-bold">—</div>
+                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center flex-shrink-0 font-bold">—</div>
                 <div>
                   <div className="font-semibold">Ohne Text (leer)</div>
                   <div className="text-xs text-muted-foreground">E-Mail wird ohne Inhalt vorbereitet - du schreibst selbst</div>
@@ -1126,9 +1126,9 @@ export { WysiwygDocumentEditor };
 
 // ==================== LOAD TEMPLATE DIALOG ====================
 const TYPE_META = {
-  quote: { label: "Angebot", icon: FileText, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
-  order: { label: "Auftragsbestätigung", icon: ClipboardCheck, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
-  invoice: { label: "Rechnung", icon: Receipt, bg: "bg-green-50", text: "text-green-700", border: "border-green-200" },
+  quote: { label: "Angebot", icon: FileText, bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-700 dark:text-blue-300", border: "border-blue-200 dark:border-blue-900" },
+  order: { label: "Auftragsbestätigung", icon: ClipboardCheck, bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-700 dark:text-purple-300", border: "border-purple-200 dark:border-purple-900" },
+  invoice: { label: "Rechnung", icon: Receipt, bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-700 dark:text-green-300", border: "border-green-200 dark:border-green-900" },
 };
 
 const LoadTemplateDialog = ({ preferredType, onClose, onSelect }) => {
@@ -1214,7 +1214,7 @@ const LoadTemplateDialog = ({ preferredType, onClose, onSelect }) => {
             ))}
             <button
               onClick={() => setOnlyFavs(!onlyFavs)}
-              className={`px-3 py-1 rounded-sm text-xs font-medium border flex items-center gap-1 ${onlyFavs ? "bg-amber-100 text-amber-800 border-amber-300" : "hover:bg-muted border-border"}`}
+              className={`px-3 py-1 rounded-sm text-xs font-medium border flex items-center gap-1 ${onlyFavs ? "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700" : "hover:bg-muted border-border"}`}
             >
               <Star className={`w-3 h-3 ${onlyFavs ? "fill-amber-500" : ""}`} /> Favoriten
             </button>
