@@ -60,18 +60,18 @@ const EditorSidebar = ({
         draggable="true"
         onDragStart={(e) => handleDragStart(e, item)}
         onClick={() => { setSelectedItem(selectedItem?.id === item.id ? null : item); if (editItem && editItem !== item.id) cancelEdit(); }}
-        className={`group flex items-start gap-2 p-2.5 rounded-md border cursor-grab active:cursor-grabbing transition-all ${selectedItem?.id === item.id ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/40 hover:shadow-sm"}`}
+        className={`group flex items-start gap-2 p-2.5 rounded-md border cursor-grab active:cursor-grabbing transition-all ${selectedItem?.id === item.id ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-white dark:bg-[#4A4642] hover:border-primary/40 hover:shadow-sm"}`}
         data-testid={`draggable-item-${item.id}`}
       >
         <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary/60 mt-0.5 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-medium truncate">{item.name}</p>
+            <p className="text-sm font-medium truncate text-foreground">{item.name}</p>
             {item.typ === "Fremdleistung" && (
               <span className="text-[9px] bg-orange-100 text-orange-700 px-1 py-0 rounded font-medium shrink-0">Sub</span>
             )}
           </div>
-          {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
+          {item.description && <p className="text-xs text-foreground/70 truncate">{item.description}</p>}
           {item.subunternehmer && <p className="text-[10px] text-orange-600 truncate">{item.subunternehmer}</p>}
           <div className="flex items-center gap-2 mt-1">
             <span className="text-xs font-mono font-semibold text-primary">{item.price_net.toFixed(2)} €</span>
@@ -155,11 +155,11 @@ const EditorSidebar = ({
               <h4 className="font-semibold text-base mb-1">{item.name}</h4>
               {item.description && <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">{item.description}</p>}
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="bg-slate-50 rounded-md p-2.5">
+                <div className="bg-slate-50 dark:bg-slate-700 rounded-md p-2.5">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Preis (Netto)</p>
                   <p className="text-lg font-bold font-mono text-primary">{item.price_net.toFixed(2)} €</p>
                 </div>
-                <div className="bg-slate-50 rounded-md p-2.5">
+                <div className="bg-slate-50 dark:bg-slate-700 rounded-md p-2.5">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Einheit</p>
                   <p className="text-lg font-bold">{item.unit}</p>
                 </div>
