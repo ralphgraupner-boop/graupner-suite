@@ -361,7 +361,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
   return (
     <div className="fixed inset-0 z-50 flex flex-col" data-testid="document-preview-modal">
       {/* ── Toolbar ── */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2.5 bg-white border-b shadow-sm z-10">
+      <div className="shrink-0 flex items-center justify-between px-4 py-2.5 bg-card text-card-foreground border-b shadow-sm z-10">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold">{titles[type]} {docNumber}</h2>
           <Badge variant={doc.status === "Bezahlt" ? "success" : doc.status === "Offen" ? "warning" : "default"}>
@@ -373,12 +373,12 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
         {totalPages > 1 && (
           <div className="flex items-center gap-2">
             <button onClick={() => setCurrentPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0}
-              className="px-3 py-1.5 text-sm font-medium rounded-sm border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors" data-testid="btn-prev-page">
+              className="px-3 py-1.5 text-sm font-medium rounded-sm border border-border bg-background text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors" data-testid="btn-prev-page">
               Zurueck
             </button>
             <span className="text-sm font-semibold min-w-[80px] text-center">Seite {currentPage + 1} / {totalPages}</span>
             <button onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))} disabled={currentPage >= totalPages - 1}
-              className="px-3 py-1.5 text-sm font-medium rounded-sm border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors" data-testid="btn-next-page">
+              className="px-3 py-1.5 text-sm font-medium rounded-sm border border-border bg-background text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors" data-testid="btn-next-page">
               Weiter
             </button>
           </div>

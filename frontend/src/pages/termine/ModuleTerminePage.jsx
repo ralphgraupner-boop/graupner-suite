@@ -19,10 +19,10 @@ const STATUS_LABEL = {
 };
 
 const STATUS_STYLES = {
-  wartet_auf_go: { cls: "bg-amber-50 text-amber-800 border-amber-200", icon: AlertTriangle },
-  bestaetigt: { cls: "bg-blue-50 text-blue-800 border-blue-200", icon: Clock },
-  im_kalender: { cls: "bg-emerald-50 text-emerald-800 border-emerald-200", icon: CheckCircle2 },
-  abgesagt: { cls: "bg-red-50 text-red-700 border-red-200", icon: XCircle },
+  wartet_auf_go: { cls: "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-900", icon: AlertTriangle },
+  bestaetigt: { cls: "bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-900", icon: Clock },
+  im_kalender: { cls: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900", icon: CheckCircle2 },
+  abgesagt: { cls: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-200 border-red-200 dark:border-red-900", icon: XCircle },
 };
 
 const TYP_LABEL = {

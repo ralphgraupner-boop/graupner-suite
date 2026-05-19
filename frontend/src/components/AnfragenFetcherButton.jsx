@@ -66,12 +66,12 @@ const AnfragenFetcherButton = ({ onFetched, size = "sm", variant = "outline", cl
         size={size}
         variant={variant}
         data-testid="btn-fetch-anfragen"
-        className="gap-2"
+        className="gap-2 bg-background text-foreground border-border"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Inbox className="w-4 h-4" />}
         {loading ? "Prüfe..." : "Anfragen abrufen"}
       </Button>
-      <span className="text-xs text-slate-500" data-testid="anfragen-fetcher-last">
+      <span className="text-xs text-muted-foreground" data-testid="anfragen-fetcher-last">
         Letzte Prüfung: {formatLast(lastFetch)}
       </span>
     </div>
