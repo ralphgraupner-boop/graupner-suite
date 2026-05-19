@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain, Sun, Moon, Monitor } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain, Sun, Moon, Monitor, Droplet } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
@@ -82,14 +82,19 @@ const getChildren = (allItems, parentPath) => allItems.filter(i => i.parentPath 
 
 const ThemeToggle = ({ variant = "sidebar" }) => {
   const { theme, cycleTheme } = useTheme();
-  const Icon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
-  const label = theme === "dark" ? "Dunkel" : theme === "light" ? "Hell" : "Automatisch";
-  const next = theme === "light" ? "Dunkel" : theme === "dark" ? "Automatisch" : "Hell";
+  const meta = {
+    light:       { Icon: Sun,     label: "Hell",         next: "Dunkel" },
+    dark:        { Icon: Moon,    label: "Dunkel",       next: "Dunkelblau" },
+    "dark-blue": { Icon: Droplet, label: "Dunkelblau",   next: "Automatisch" },
+    system:      { Icon: Monitor, label: "Automatisch",  next: "Hell" },
+  };
+  const cur = meta[theme] || meta.system;
+  const Icon = cur.Icon;
   return (
     <button
       onClick={cycleTheme}
       data-testid="btn-theme-toggle"
-      title={`Aktuell: ${label} · Klick: ${next}`}
+      title={`Aktuell: ${cur.label} · Klick: ${cur.next}`}
       className={
         variant === "mobile"
           ? "flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm transition-smooth"
@@ -97,7 +102,7 @@ const ThemeToggle = ({ variant = "sidebar" }) => {
       }
     >
       <Icon className="w-4 h-4" />
-      <span>Design: {label}</span>
+      <span>Design: {cur.label}</span>
     </button>
   );
 };
