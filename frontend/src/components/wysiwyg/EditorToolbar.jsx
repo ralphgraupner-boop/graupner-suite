@@ -133,7 +133,7 @@ const EditorToolbar = ({
           )}
           {!isNew && (
             <HelpTip id="doc.btn-pdf" placement="bottom">
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF} data-testid="btn-pdf-document">
+            <Button variant="outline" size="sm" onClick={handleDownloadPDF} data-testid="btn-pdf-document" className="bg-background text-foreground border-border">
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">PDF</span>
             </Button>
@@ -141,12 +141,12 @@ const EditorToolbar = ({
           )}
           <div className="h-6 w-px bg-border hidden sm:block" />
           <HelpTip id="doc.btn-save" placement="bottom">
-          <Button size="sm" onClick={handleSave} disabled={saving} data-testid="btn-save-document">
+          <Button size="sm" onClick={handleSave} disabled={saving} data-testid="btn-save-document" className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Save className="w-4 h-4" />
             <span className="hidden sm:inline">{saving ? "..." : "Speichern"}</span>
           </Button>
           </HelpTip>
-          <Button variant="destructive" size="sm" onClick={handleExit} disabled={saving} data-testid="btn-exit-document">
+          <Button variant="destructive" size="sm" onClick={handleExit} disabled={saving} data-testid="btn-exit-document" className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
             <X className="w-4 h-4" />
             <span className="hidden sm:inline">Beenden</span>
           </Button>
