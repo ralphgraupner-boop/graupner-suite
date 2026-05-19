@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { subscribeToPush } from "@/lib/push";
+import { ThemeProvider } from "@/lib/themeContext";
 import { Sidebar, MobileNav, getUserRole } from "@/components/layout/Navigation";
 import { WysiwygDocumentEditor } from "@/components/WysiwygDocumentEditor";
 import { LoginPage } from "@/pages/LoginPage";
@@ -88,6 +89,7 @@ function App() {
   return (
     <div className="App">
       <Toaster position="top-right" richColors />
+      <ThemeProvider>
       <HelpProvider>
       <WindowManagerProvider>
       <BrowserRouter>
@@ -161,6 +163,7 @@ function App() {
       </BrowserRouter>
       </WindowManagerProvider>
       </HelpProvider>
+      </ThemeProvider>
     </div>
   );
 }

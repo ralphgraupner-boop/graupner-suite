@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain, Sun, Moon, Monitor } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
 import { colorForUser, initialsOf } from "@/lib/avatarUtils";
+import { useTheme } from "@/lib/themeContext";
 
 const APP_ENV = detectAppEnv();
 
@@ -78,6 +79,28 @@ const getFilteredNavItems = () => {
 /** Kinder-Items (parentPath gesetzt) werden aus der Top-Liste herausgefiltert
  *  und stattdessen als Kinder unter ihrem Parent angezeigt. */
 const getChildren = (allItems, parentPath) => allItems.filter(i => i.parentPath === parentPath);
+
+const ThemeToggle = ({ variant = "sidebar" }) => {
+  const { theme, cycleTheme } = useTheme();
+  const Icon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
+  const label = theme === "dark" ? "Dunkel" : theme === "light" ? "Hell" : "Automatisch";
+  const next = theme === "light" ? "Dunkel" : theme === "dark" ? "Automatisch" : "Hell";
+  return (
+    <button
+      onClick={cycleTheme}
+      data-testid="btn-theme-toggle"
+      title={`Aktuell: ${label} · Klick: ${next}`}
+      className={
+        variant === "mobile"
+          ? "flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm transition-smooth"
+          : "flex items-center gap-3 px-4 py-2 w-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm transition-smooth"
+      }
+    >
+      <Icon className="w-4 h-4" />
+      <span>Design: {label}</span>
+    </button>
+  );
+};
 
 const Sidebar = ({ onLogout }) => {
   const location = useLocation();
@@ -503,6 +526,7 @@ const Sidebar = ({ onLogout }) => {
               : "Alt-Module einblenden"}
           </span>
         </button>
+        <ThemeToggle variant="sidebar" />
         <button
           onClick={handleLogoutClick}
           data-testid="btn-logout"
@@ -680,6 +704,9 @@ const MobileNav = ({ onLogout }) => {
               className="flex items-center gap-3 px-4 py-3 w-full text-destructive rounded-sm mt-2 border-t pt-4">
               <LogOut className="w-5 h-5" /><span className="font-medium">Abmelden</span>
             </button>
+            <div className="border-t pt-2 mt-2">
+              <ThemeToggle variant="mobile" />
+            </div>
           </div>
         </div>
       )}
