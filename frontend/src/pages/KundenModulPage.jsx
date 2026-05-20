@@ -887,6 +887,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
   const MAX_FILES_TOTAL = 40;
   const bestehendeAnzahl = (kunde?.photos || []).length;
   const verbleibendeSlots = Math.max(0, MAX_FILES_TOTAL - bestehendeAnzahl - selectedFiles.length);
+  const [isDraggingOverForm, setIsDraggingOverForm] = useState(false);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
@@ -916,7 +917,24 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
           loading={loading}
         />
       )}
-      <form onSubmit={handleSubmit} className="space-y-4" data-testid="kunden-modul-form">
+      <form
+        onSubmit={handleSubmit}
+        className={`space-y-4 relative rounded-sm transition-all ${isDraggingOverForm ? "ring-4 ring-primary/60 ring-offset-2 bg-primary/5" : ""}`}
+        data-testid="kunden-modul-form"
+        onDragEnter={e => { e.preventDefault(); if (e.dataTransfer?.types?.includes("Files") && verbleibendeSlots > 0) setIsDraggingOverForm(true); }}
+        onDragOver={e => { e.preventDefault(); if (e.dataTransfer?.types?.includes("Files") && verbleibendeSlots > 0) setIsDraggingOverForm(true); }}
+        onDragLeave={e => { if (e.currentTarget === e.target) setIsDraggingOverForm(false); }}
+        onDrop={e => { e.preventDefault(); setIsDraggingOverForm(false); if (e.dataTransfer?.files?.length) handleFileSelect({ target: { files: e.dataTransfer.files } }); }}
+      >
+        {isDraggingOverForm && (
+          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm" data-testid="kunden-fullform-dropoverlay">
+            <div className="bg-card border-2 border-dashed border-primary rounded-lg px-8 py-6 text-center shadow-2xl">
+              <Upload className="w-16 h-16 text-primary mx-auto mb-3" />
+              <p className="text-lg font-semibold">Hier loslassen — Dateien hinzufuegen</p>
+              <p className="text-sm text-muted-foreground mt-1">{verbleibendeSlots} Datei(en) moeglich</p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1042,11 +1060,22 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
               </div>
             ))}</div>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => { if (verbleibendeSlots === 0) { toast.error(`Maximum von ${MAX_FILES_TOTAL} Dateien erreicht. Bitte zuerst Dateien loeschen.`); return; } document.getElementById('kunden-modul-file-upload').click(); }}
+            disabled={verbleibendeSlots === 0}
+            className="w-full mb-2 py-3 text-base"
+            data-testid="btn-dateien-waehlen"
+          >
+            <Upload className="w-5 h-5 mr-2" /> Dateien vom Computer waehlen
+          </Button>
           <div onDrop={e => { e.preventDefault(); handleFileSelect({ target: { files: e.dataTransfer.files } }); }} onDragOver={e => e.preventDefault()}
-            className={`border-2 border-dashed rounded-sm p-6 text-center transition-all ${verbleibendeSlots === 0 ? "border-red-300 bg-red-50/30 cursor-not-allowed opacity-60" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 cursor-pointer"}`}
+            className={`border-2 border-dashed rounded-sm p-10 text-center transition-all ${verbleibendeSlots === 0 ? "border-red-300 bg-red-50/30 cursor-not-allowed opacity-60" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 cursor-pointer"}`}
             onClick={() => { if (verbleibendeSlots === 0) { toast.error(`Maximum von ${MAX_FILES_TOTAL} Dateien erreicht. Bitte zuerst Dateien loeschen.`); return; } document.getElementById('kunden-modul-file-upload').click(); }}>
-            <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">{verbleibendeSlots === 0 ? "Maximum erreicht — keine weiteren Dateien moeglich" : "Dateien ablegen oder klicken"}</p>
+            <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-base font-medium">{verbleibendeSlots === 0 ? "Maximum erreicht — keine weiteren Dateien moeglich" : "Bilder oder Dateien hier hineinziehen"}</p>
+            <p className="text-xs text-muted-foreground mt-1">oder oben den Button benutzen &middot; Sie koennen Dateien auch ins ganze Fenster fallen lassen</p>
             <input id="kunden-modul-file-upload" type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx" onChange={handleFileSelect} className="hidden" disabled={verbleibendeSlots === 0} />
           </div>
         </div>
