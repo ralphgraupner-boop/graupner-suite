@@ -875,7 +875,8 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
           retry: () => _doSubmit(true),
         });
       } else {
-        toast.error("Fehler");
+        const detail = err?.response?.data?.detail;
+        toast.error(typeof detail === "string" && detail ? detail : (err?.message || "Fehler beim Speichern"));
       }
     }
     finally { setLoading(false); }
@@ -883,10 +884,24 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
 
   const [duplicateDialog, setDuplicateDialog] = useState(null);
 
+  const MAX_FILES_TOTAL = 40;
+  const bestehendeAnzahl = (kunde?.photos || []).length;
+  const verbleibendeSlots = Math.max(0, MAX_FILES_TOTAL - bestehendeAnzahl - selectedFiles.length);
+
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.some(f => f.size > 10 * 1024 * 1024)) { toast.error("Max 10 MB pro Datei"); return; }
-    setSelectedFiles(prev => [...prev, ...files].slice(0, 10));
+    if (files.length === 0) return;
+    if (files.some(f => f.size > 10 * 1024 * 1024)) { toast.error("Eine Datei ist groesser als 10 MB. Bitte komprimieren oder kleinere Datei waehlen."); return; }
+    const noch_moeglich = Math.max(0, MAX_FILES_TOTAL - bestehendeAnzahl - selectedFiles.length);
+    if (noch_moeglich === 0) {
+      toast.error(`Maximum von ${MAX_FILES_TOTAL} Dateien erreicht. Bitte zuerst Dateien loeschen.`);
+      return;
+    }
+    if (files.length > noch_moeglich) {
+      toast.error(`Sie koennen nur noch ${noch_moeglich} Datei(en) hinzufuegen (Maximum ${MAX_FILES_TOTAL}). ${files.length - noch_moeglich} Datei(en) wurden ignoriert.`);
+    }
+    const akzeptiert = files.slice(0, noch_moeglich);
+    setSelectedFiles(prev => [...prev, ...akzeptiert]);
   };
 
   const popoutUrl = popoutEnabled && kunde?.id ? `/popup/kunde/${kunde.id}` : (popoutEnabled && !kunde ? "/popup/kunde/new" : null);
@@ -1013,7 +1028,12 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
         <div><label className="block text-sm font-medium mb-2">Nachricht / Anliegen</label><Textarea value={form.nachricht || ""} onChange={e => setForm({ ...form, nachricht: e.target.value })} rows={3} placeholder="Was wird benoetigt? Beschreibung des Anliegens..." /></div>
         <div><label className="block text-sm font-medium mb-2">Notizen <span className="text-xs text-muted-foreground">(intern)</span></label><Textarea value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Interne Bemerkungen..." /></div>
         <div>
-          <label className="block text-sm font-medium mb-2">Dateien <span className="text-xs text-muted-foreground">(max 10, je 10 MB)</span></label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">Dateien <span className="text-xs text-muted-foreground">(max {MAX_FILES_TOTAL} insgesamt, je 10 MB)</span></label>
+            <span className={`text-xs font-medium ${verbleibendeSlots === 0 ? "text-red-600" : verbleibendeSlots <= 5 ? "text-amber-600" : "text-muted-foreground"}`} data-testid="kunden-dateien-counter">
+              {bestehendeAnzahl + selectedFiles.length} / {MAX_FILES_TOTAL} &middot; noch {verbleibendeSlots} moeglich
+            </span>
+          </div>
           {selectedFiles.length > 0 && (
             <div className="mb-2 space-y-1">{selectedFiles.map((f, i) => (
               <div key={i} className="flex items-center justify-between p-2 bg-green-50 rounded-sm border border-green-200 text-sm">
@@ -1023,11 +1043,11 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
             ))}</div>
           )}
           <div onDrop={e => { e.preventDefault(); handleFileSelect({ target: { files: e.dataTransfer.files } }); }} onDragOver={e => e.preventDefault()}
-            className="border-2 border-dashed border-muted-foreground/25 rounded-sm p-6 text-center hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
-            onClick={() => document.getElementById('kunden-modul-file-upload').click()}>
+            className={`border-2 border-dashed rounded-sm p-6 text-center transition-all ${verbleibendeSlots === 0 ? "border-red-300 bg-red-50/30 cursor-not-allowed opacity-60" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 cursor-pointer"}`}
+            onClick={() => { if (verbleibendeSlots === 0) { toast.error(`Maximum von ${MAX_FILES_TOTAL} Dateien erreicht. Bitte zuerst Dateien loeschen.`); return; } document.getElementById('kunden-modul-file-upload').click(); }}>
             <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Dateien ablegen oder klicken</p>
-            <input id="kunden-modul-file-upload" type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx" onChange={handleFileSelect} className="hidden" />
+            <p className="text-sm text-muted-foreground">{verbleibendeSlots === 0 ? "Maximum erreicht — keine weiteren Dateien moeglich" : "Dateien ablegen oder klicken"}</p>
+            <input id="kunden-modul-file-upload" type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.xls,.xlsx" onChange={handleFileSelect} className="hidden" disabled={verbleibendeSlots === 0} />
           </div>
         </div>
         <div className="flex justify-end gap-4 pt-4 flex-wrap">

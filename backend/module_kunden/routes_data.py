@@ -361,11 +361,12 @@ async def upload_kunde_files(kunde_id: str, files: List[UploadFile] = File(...),
     kunde = await db.module_kunden.find_one({"id": kunde_id})
     if not kunde:
         raise HTTPException(404, "Kunde nicht gefunden")
-    MAX_FILES = 10
+    MAX_FILES = 40
     MAX_SIZE = 10 * 1024 * 1024
     current_files = kunde.get("photos", [])
     if len(current_files) + len(files) > MAX_FILES:
-        raise HTTPException(400, f"Max {MAX_FILES} Dateien erlaubt")
+        verbleibend = max(0, MAX_FILES - len(current_files))
+        raise HTTPException(400, f"Max {MAX_FILES} Dateien erlaubt. Aktuell {len(current_files)} vorhanden, Sie koennen noch {verbleibend} Datei(en) hochladen.")
     uploaded = []
     try:
         from utils.storage import put_object
