@@ -102,6 +102,27 @@ code, .mono {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Basis-Farben für alle Eingabefelder, die keine eigene Farbe haben */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
+  select,
+  textarea {
+    @apply bg-background text-foreground font-medium;
+  }
+
+  /* Datepicker-/Time-Icons in Datum-/Zeit-Feldern an Theme anpassen */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input[type="week"] {
+    color-scheme: light dark;
+  }
+
+  /* <option>-Items in Dropdowns */
+  select option {
+    @apply bg-background text-foreground;
+  }
 }
 
 /* Custom scrollbar */
