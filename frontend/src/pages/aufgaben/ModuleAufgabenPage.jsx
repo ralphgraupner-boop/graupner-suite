@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
+import { TextareaWithAI } from "@/components/TextareaWithAI";
 import { colorForUser, initialsOf } from "@/lib/avatarUtils";
 
 // Kategorien sind reine Datenmaske aus module_textvorlagen — kein Hardcoding
@@ -650,12 +651,14 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, sel
 
           <div>
             <label className="block text-sm font-medium mb-1">Beschreibung</label>
-            <textarea
-              value={data.beschreibung}
+            <TextareaWithAI
+              value={data.beschreibung || ""}
               onChange={(e) => upd("beschreibung", e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[70px]"
+              rows={3}
               placeholder="Optional: Details, Hinweise, Material …"
-              data-testid="input-beschreibung"
+              feldLabel="Aufgaben-Beschreibung"
+              kontext="aufgabe"
+              testId="aufgabe-beschreibung"
             />
           </div>
 

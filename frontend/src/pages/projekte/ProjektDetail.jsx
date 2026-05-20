@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Trash2, Upload, ImageIcon, X, Camera, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge, Input, Textarea } from "@/components/common";
+import { TextareaWithAI } from "@/components/TextareaWithAI";
 import { api } from "@/lib/api";
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
@@ -171,11 +172,11 @@ const ProjektDetail = () => {
           </div>
           <div className="md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground block mb-1">Beschreibung</label>
-            <Textarea value={projekt.beschreibung || ""} onChange={(e) => updateField("beschreibung", e.target.value)} rows={3} data-testid="input-beschreibung" />
+            <TextareaWithAI value={projekt.beschreibung || ""} onChange={(e) => updateField("beschreibung", e.target.value)} rows={3} data-testid="input-beschreibung" feldLabel="Projekt-Beschreibung" kontext="projekt_beschreibung" testId="projekt-beschreibung" />
           </div>
           <div className="md:col-span-2">
             <label className="text-xs font-medium text-muted-foreground block mb-1">Notizen</label>
-            <Textarea value={projekt.notizen || ""} onChange={(e) => updateField("notizen", e.target.value)} rows={3} placeholder="Interne Notizen…" data-testid="input-notizen" />
+            <TextareaWithAI value={projekt.notizen || ""} onChange={(e) => updateField("notizen", e.target.value)} rows={3} placeholder="Interne Notizen…" data-testid="input-notizen" feldLabel="Projekt-Notizen" kontext="projekt_notizen" testId="projekt-notizen" />
           </div>
         </div>
       </Card>

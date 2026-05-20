@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
+import { TextareaWithAI } from "@/components/TextareaWithAI";
 import {
   Calendar, Plus, Trash2, X, MapPin, User as UserIcon, Folder, Briefcase, HardHat,
   CheckCircle2, Clock, RefreshCw, Filter, AlertTriangle, ChevronRight, XCircle, Search,
@@ -727,12 +728,14 @@ const TerminDialog = ({ termin, kunden, projekte, aufgaben, mitarbeiter, selecte
 
           <div>
             <label className="block text-sm font-medium mb-1">Beschreibung / Arbeitsanweisung</label>
-            <textarea
-              value={data.beschreibung}
+            <TextareaWithAI
+              value={data.beschreibung || ""}
               onChange={(e) => upd("beschreibung", e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[70px]"
+              rows={3}
               placeholder="Optional"
-              data-testid="input-beschreibung"
+              feldLabel="Termin-Beschreibung"
+              kontext="termin"
+              testId="termin-beschreibung"
             />
           </div>
         </div>

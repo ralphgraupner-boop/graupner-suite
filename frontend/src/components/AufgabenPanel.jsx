@@ -5,6 +5,7 @@ import {
   Briefcase, Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, ChevronDown, ChevronUp, Pencil,
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
+import { TextareaWithAI } from "@/components/TextareaWithAI";
 
 const STATUS_STYLES = {
   offen: { cls: "bg-amber-50 text-amber-800 border-amber-200", icon: AlertCircle, label: "Offen" },

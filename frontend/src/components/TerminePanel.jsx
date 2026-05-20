@@ -6,6 +6,7 @@ import {
   AlertTriangle, CheckCircle2, XCircle, HardHat,
 } from "lucide-react";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
+import { TextareaWithAI } from "@/components/TextareaWithAI";
 
 const STATUS = {
   wartet_auf_go: { cls: "bg-amber-50 text-amber-800 border-amber-200", icon: AlertTriangle, label: "Wartet auf GO" },
@@ -369,12 +370,14 @@ const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClos
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Beschreibung / Arbeitsanweisung</label>
-            <textarea
-              value={data.beschreibung}
+            <TextareaWithAI
+              value={data.beschreibung || ""}
               onChange={(e) => upd("beschreibung", e.target.value)}
-              className="w-full border rounded-sm p-2 text-sm min-h-[60px]"
+              rows={3}
               placeholder="optional"
-              data-testid="quick-termin-beschreibung"
+              feldLabel="Termin-Beschreibung"
+              kontext="termin"
+              testId="quick-termin-beschreibung"
             />
           </div>
           <p className="text-xs text-muted-foreground">

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
+import { TextareaWithAI } from "@/components/TextareaWithAI";
 import { api } from "@/lib/api";
 // (CATEGORIES wurde entfernt — Kategorien kommen jetzt aus module_textvorlagen
 // mit doc_type=kunden_kategorie. Siehe useTextvorlagen-Hook unten.)
@@ -1043,8 +1044,8 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
             <div className="col-span-2"><Input placeholder="Ort" value={form.objekt_ort || ""} onChange={e => setForm({ ...form, objekt_ort: e.target.value })} /></div>
           </div>
         </div>
-        <div><label className="block text-sm font-medium mb-2">Nachricht / Anliegen</label><Textarea value={form.nachricht || ""} onChange={e => setForm({ ...form, nachricht: e.target.value })} rows={3} placeholder="Was wird benoetigt? Beschreibung des Anliegens..." /></div>
-        <div><label className="block text-sm font-medium mb-2">Notizen <span className="text-xs text-muted-foreground">(intern)</span></label><Textarea value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Interne Bemerkungen..." /></div>
+        <div><label className="block text-sm font-medium mb-2">Nachricht / Anliegen</label><TextareaWithAI value={form.nachricht || ""} onChange={e => setForm({ ...form, nachricht: e.target.value })} rows={3} placeholder="Was wird benoetigt? Beschreibung des Anliegens..." feldLabel="Anliegen" kontext="kunden_anliegen" testId="kunde-anliegen" /></div>
+        <div><label className="block text-sm font-medium mb-2">Notizen <span className="text-xs text-muted-foreground">(intern)</span></label><TextareaWithAI value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Interne Bemerkungen..." feldLabel="Notizen" kontext="kunden_notizen" testId="kunde-notizen" /></div>
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium">Dateien <span className="text-xs text-muted-foreground">(max {MAX_FILES_TOTAL} insgesamt, je 10 MB)</span></label>
