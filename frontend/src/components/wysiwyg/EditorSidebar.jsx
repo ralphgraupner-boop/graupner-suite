@@ -84,7 +84,7 @@ const EditorSidebar = ({
 
       {/* Expanded Detail / Edit View */}
       {selectedItem?.id === item.id && (
-        <div className="mt-1 rounded-md border border-primary/20 bg-white p-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200" data-testid={`detail-view-${item.id}`}>
+        <div className="mt-1 rounded-md border border-primary/20 bg-white dark:bg-[#4A4642] text-foreground p-4 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200" data-testid={`detail-view-${item.id}`}>
           
           {editItem === item.id ? (
             /* ========= INLINE EDIT MODE ========= */
@@ -98,33 +98,33 @@ const EditorSidebar = ({
               <div>
                 <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Name</label>
                 <input type="text" value={editData.name} onChange={e => setEditData(d => ({ ...d, name: e.target.value }))}
-                  className="w-full h-8 mt-0.5 px-2 border rounded text-sm bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                  className="w-full h-8 mt-0.5 px-2 border border-border bg-slate-50 dark:bg-slate-700 text-foreground rounded text-sm focus:ring-1 focus:ring-primary/30"
                   data-testid="edit-name" />
               </div>
               <div>
                 <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Beschreibung</label>
                 <textarea value={editData.description} onChange={e => setEditData(d => ({ ...d, description: e.target.value }))}
-                  className="w-full mt-0.5 px-2 py-1.5 border rounded text-sm bg-slate-50 focus:ring-1 focus:ring-primary/30 min-h-[60px] resize-y"
+                  className="w-full mt-0.5 px-2 py-1.5 border border-border bg-slate-50 dark:bg-slate-700 text-foreground rounded text-sm focus:ring-1 focus:ring-primary/30 min-h-[60px] resize-y"
                   data-testid="edit-description" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">VK Netto (€)</label>
                   <input type="number" step="0.01" value={editData.price_net} onChange={e => setEditData(d => ({ ...d, price_net: parseFloat(e.target.value) || 0 }))}
-                    className="w-full h-8 mt-0.5 px-2 border rounded text-sm font-mono bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                    className="w-full h-8 mt-0.5 px-2 border border-border bg-slate-50 dark:bg-slate-700 text-foreground rounded text-sm font-mono focus:ring-1 focus:ring-primary/30"
                     data-testid="edit-price" />
                 </div>
                 <div>
                   <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">EK (€)</label>
                   <input type="number" step="0.01" value={editData.ek_preis} onChange={e => setEditData(d => ({ ...d, ek_preis: parseFloat(e.target.value) || 0 }))}
-                    className="w-full h-8 mt-0.5 px-2 border rounded text-sm font-mono bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                    className="w-full h-8 mt-0.5 px-2 border border-border bg-slate-50 dark:bg-slate-700 text-foreground rounded text-sm font-mono focus:ring-1 focus:ring-primary/30"
                     data-testid="edit-ek" />
                 </div>
               </div>
               <div>
                 <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Einheit</label>
                 <select value={editData.unit} onChange={e => setEditData(d => ({ ...d, unit: e.target.value }))}
-                  className="w-full h-8 mt-0.5 px-2 border rounded text-sm bg-slate-50 focus:ring-1 focus:ring-primary/30"
+                  className="w-full h-8 mt-0.5 px-2 border border-border bg-slate-50 dark:bg-slate-700 text-foreground rounded text-sm focus:ring-1 focus:ring-primary/30"
                   data-testid="edit-unit">
                   <option value="Stück">Stück</option>
                   <option value="Stunde">Stunde</option>
