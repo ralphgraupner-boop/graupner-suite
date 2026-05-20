@@ -51,7 +51,7 @@ const LoginPage = ({ onLogin }) => {
       const data = isRegister
         ? { username, password, company_name: companyName }
         : { username, password };
-      const res = await axios.post(`${API}${endpoint}`, data);
+      const res = await axios.post(`${API}${endpoint}`, data, { timeout: 15000 });
       // Berechtigungen mit /auth/me laden und in User-Objekt mergen
       let berechtigungen = null;
       try {
@@ -65,9 +65,31 @@ const LoginPage = ({ onLogin }) => {
         role: res.data.role,
         berechtigungen: berechtigungen || {},
       });
-      toast.success(isRegister ? "Registrierung erfolgreich!" : "Willkommen zurück!");
+      toast.success(isRegister ? "Registrierung erfolgreich!" : "Willkommen zurueck!");
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Fehler bei der Anmeldung");
+      // 1) Echter Auth-Fehler (Passwort/Username falsch oder Konto gesperrt)
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        const detail = err.response?.data?.detail;
+        toast.error(typeof detail === "string" && detail ? detail : "Benutzername oder Passwort falsch");
+      }
+      // 2) Validierung (z. B. fehlende Felder)
+      else if (status === 400 || status === 422) {
+        const detail = err.response?.data?.detail;
+        toast.error(typeof detail === "string" && detail ? detail : "Ungueltige Eingabe");
+      }
+      // 3) Server-Fehler
+      else if (status >= 500) {
+        toast.error("Server-Fehler. Bitte in einigen Minuten erneut versuchen.");
+      }
+      // 4) Kein Status = Netzwerk-/Timeout-Problem = Server schlaeft vermutlich
+      else if (err?.code === "ECONNABORTED" || err?.message === "Network Error" || !err?.response) {
+        toast.error("Server wird gestartet — bitte 10–20 Sekunden warten und nochmal versuchen.", { duration: 6000 });
+      }
+      // 5) Sonstiges Fallback
+      else {
+        toast.error(err.response?.data?.detail || "Fehler bei der Anmeldung");
+      }
     } finally {
       setLoading(false);
     }
