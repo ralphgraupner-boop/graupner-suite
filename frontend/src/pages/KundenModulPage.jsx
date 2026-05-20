@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail, Link as LinkIcon } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail, Link as LinkIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
@@ -848,22 +848,30 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
   const _doSubmit = async (force) => {
     if (!form.vorname && !form.nachname && !form.firma) { toast.error("Vorname, Nachname oder Firma erforderlich"); return; }
     setLoading(true);
+    setUploadPhase("saving");
+    setUploadPct(0);
     try {
       let kundeId = kunde?.id;
       if (kunde) {
         await api.put(`/modules/kunden/data/${kunde.id}`, form);
-        toast.success("Kunde aktualisiert");
       } else {
         const payload = force ? { ...form, force: true } : form;
         const res = await api.post("/modules/kunden/data", payload);
         kundeId = res.data.id;
-        toast.success("Kunde erstellt");
       }
       if (selectedFiles.length > 0 && kundeId) {
+        setUploadPhase("uploading");
+        setUploadPct(0);
         const formData = new FormData();
         selectedFiles.forEach(f => formData.append('files', f));
-        await api.post(`/modules/kunden/data/${kundeId}/upload`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post(`/modules/kunden/data/${kundeId}/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (ev) => {
+            if (ev.total) setUploadPct(Math.round((ev.loaded / ev.total) * 100));
+          },
+        });
       }
+      toast.success(kunde ? "Kunde aktualisiert" : "Kunde erstellt");
       setDuplicateDialog(null);
       broadcast("kunden-changed", { kundeId });
       onSave();
@@ -880,10 +888,12 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
         toast.error(typeof detail === "string" && detail ? detail : (err?.message || "Fehler beim Speichern"));
       }
     }
-    finally { setLoading(false); }
+    finally { setLoading(false); setUploadPhase(null); setUploadPct(0); }
   };
 
   const [duplicateDialog, setDuplicateDialog] = useState(null);
+  const [uploadPhase, setUploadPhase] = useState(null); // null | "saving" | "uploading"
+  const [uploadPct, setUploadPct] = useState(0);
 
   const MAX_FILES_TOTAL = 40;
   const bestehendeAnzahl = (kunde?.photos || []).length;
@@ -909,7 +919,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
   const popoutUrl = popoutEnabled && kunde?.id ? `/popup/kunde/${kunde.id}` : (popoutEnabled && !kunde ? "/popup/kunde/new" : null);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={kunde ? "Kunde bearbeiten" : "Neuer Kunde"} size="lg" popoutUrl={popoutUrl}>
+    <Modal isOpen={isOpen} onClose={loading ? () => {} : onClose} title={kunde ? "Kunde bearbeiten" : "Neuer Kunde"} size="lg" popoutUrl={popoutUrl}>
       {duplicateDialog && (
         <DuplicateDialog
           duplicates={duplicateDialog.duplicates}
@@ -1092,8 +1102,25 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
               <Mail className="w-4 h-4" /> Link für Mitarbeiter
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
-          <Button type="submit" disabled={loading}>{loading ? "Speichern..." : "Speichern"}</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading} data-testid="btn-abbrechen-kunde">Abbrechen</Button>
+          <Button type="submit" disabled={loading} data-testid="btn-save-kunde">
+            {uploadPhase === "uploading" ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {`Lade ${selectedFiles.length} Datei(en) hoch… ${uploadPct}%`}
+              </span>
+            ) : uploadPhase === "saving" ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {selectedFiles.length > 0 ? "Speichere Daten…" : "Speichere…"}
+              </span>
+            ) : loading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Speichern…
+              </span>
+            ) : "Speichern"}
+          </Button>
         </div>
       </form>
 
