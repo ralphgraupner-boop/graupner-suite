@@ -15,16 +15,6 @@ import { api } from "@/lib/api";
  */
 const SESSION_KEY = "graupner_trash_check_done";
 
-const _readUserRole = () => {
-  try {
-    const raw = localStorage.getItem("user");
-    if (!raw) return "";
-    return (JSON.parse(raw)?.role || "").toLowerCase();
-  } catch {
-    return "";
-  }
-};
-
 const TrashStartupCheck = () => {
   const [show, setShow] = useState(false);
   const [items, setItems] = useState([]);
@@ -34,15 +24,23 @@ const TrashStartupCheck = () => {
   const [restoringId, setRestoringId] = useState("");
 
   useEffect(() => {
-    // Pro Session nur einmal prüfen
+    // Pro Session nur einmal pruefen
     if (sessionStorage.getItem(SESSION_KEY) === "1") return;
     if (!localStorage.getItem("token")) return;
-    // Nur Admin-Rolle bekommt die Papierkorb-Erinnerung beim Login zu sehen
-    if (_readUserRole() !== "admin") {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      return;
-    }
     (async () => {
+      // Benachrichtigung-Einstellung lesen (module_benachrichtigungen)
+      try {
+        const pref = await api.get("/module-benachrichtigungen/me");
+        if (!pref.data?.prefs?.popup_papierkorb) {
+          sessionStorage.setItem(SESSION_KEY, "1");
+          return;
+        }
+      } catch {
+        // Wenn das Modul (noch) nicht antwortet, lieber NICHT zeigen.
+        // So bekommen Nicht-Admins nicht versehentlich das Modal.
+        sessionStorage.setItem(SESSION_KEY, "1");
+        return;
+      }
       try {
         const r = await api.get("/module-papierkorb/count");
         const n = r.data?.count || 0;

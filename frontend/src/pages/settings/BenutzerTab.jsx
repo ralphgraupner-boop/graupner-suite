@@ -19,6 +19,7 @@ const BenutzerTab = () => {
   const [portalsLoading, setPortalsLoading] = useState(true);
   const [editPerms, setEditPerms] = useState(null);
   const [perms, setPerms] = useState({});
+  const [notifPrefs, setNotifPrefs] = useState({ popup_papierkorb: false, popup_kundenlink_expiry: false });
   const [permsSaving, setPermsSaving] = useState(false);
   const [authPrompt, setAuthPrompt] = useState(null); // {action: "perms"|"password"|"delete"|"edit", username: "..."}
   const [authPassword, setAuthPassword] = useState("");
@@ -46,6 +47,10 @@ const BenutzerTab = () => {
     modul_buchhaltung: "Buchhaltung",
     modul_einstellungen: "Einstellungen",
   };
+  const PERM_LABELS_BENACHRICHTIGUNGEN = {
+    popup_papierkorb: "Papierkorb-Hinweis beim Login",
+    popup_kundenlink_expiry: "Kunden-Link Ablauf-Hinweis beim Login",
+  };
   const PERM_LABELS = { ...PERM_LABELS_MITARBEITER, ...PERM_LABELS_MODULE };
 
   useEffect(() => { loadUsers(); loadPortals(); }, []);
@@ -60,8 +65,15 @@ const BenutzerTab = () => {
 
   const loadPerms = async (username) => {
     try {
-      const res = await api.get(`/users/${username}/berechtigungen`);
-      setPerms(res.data);
+      const [permsRes, notifRes] = await Promise.all([
+        api.get(`/users/${username}/berechtigungen`),
+        api.get(`/module-benachrichtigungen/${username}`).catch(() => ({ data: { prefs: {} } })),
+      ]);
+      setPerms(permsRes.data);
+      setNotifPrefs({
+        popup_papierkorb: !!notifRes.data?.prefs?.popup_papierkorb,
+        popup_kundenlink_expiry: !!notifRes.data?.prefs?.popup_kundenlink_expiry,
+      });
       setEditPerms(username);
     } catch { toast.error("Fehler beim Laden der Berechtigungen"); }
   };
@@ -108,7 +120,10 @@ const BenutzerTab = () => {
   const savePerms = async () => {
     setPermsSaving(true);
     try {
-      await api.put(`/users/${editPerms}/berechtigungen`, perms);
+      await Promise.all([
+        api.put(`/users/${editPerms}/berechtigungen`, perms),
+        api.put(`/module-benachrichtigungen/${editPerms}`, { prefs: notifPrefs }),
+      ]);
       toast.success("Berechtigungen gespeichert");
       setEditPerms(null);
     } catch (err) { toast.error(err.response?.data?.detail || "Fehler"); }
@@ -390,6 +405,19 @@ const BenutzerTab = () => {
                 type="checkbox"
                 checked={perms[key] || false}
                 onChange={(e) => setPerms(prev => ({ ...prev, [key]: e.target.checked }))}
+                className="rounded w-4 h-4 accent-primary"
+              />
+              <span className="text-sm font-medium">{label}</span>
+            </label>
+          ))}
+
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Benachrichtigungen &amp; Meldungen</h4>
+          {Object.entries(PERM_LABELS_BENACHRICHTIGUNGEN).map(([key, label]) => (
+            <label key={key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 cursor-pointer transition-colors" data-testid={`notif-${key}`}>
+              <input
+                type="checkbox"
+                checked={notifPrefs[key] || false}
+                onChange={(e) => setNotifPrefs(prev => ({ ...prev, [key]: e.target.checked }))}
                 className="rounded w-4 h-4 accent-primary"
               />
               <span className="text-sm font-medium">{label}</span>

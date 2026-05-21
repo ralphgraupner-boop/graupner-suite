@@ -27,6 +27,17 @@ const KundenLinkExpiryCheck = () => {
     if (sessionStorage.getItem(SESSION_KEY) === "1") return;
     if (!localStorage.getItem("token")) return;
     (async () => {
+      // Benachrichtigung-Einstellung lesen
+      try {
+        const pref = await api.get("/module-benachrichtigungen/me");
+        if (!pref.data?.prefs?.popup_kundenlink_expiry) {
+          sessionStorage.setItem(SESSION_KEY, "1");
+          return;
+        }
+      } catch {
+        sessionStorage.setItem(SESSION_KEY, "1");
+        return;
+      }
       try {
         const r = await api.get(`/module-kundenlink/expiring?days=${WARN_DAYS}`);
         const list = r.data || [];
