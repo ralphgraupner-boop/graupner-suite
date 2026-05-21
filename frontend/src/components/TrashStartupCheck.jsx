@@ -15,6 +15,16 @@ import { api } from "@/lib/api";
  */
 const SESSION_KEY = "graupner_trash_check_done";
 
+const _readUserRole = () => {
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw) return "";
+    return (JSON.parse(raw)?.role || "").toLowerCase();
+  } catch {
+    return "";
+  }
+};
+
 const TrashStartupCheck = () => {
   const [show, setShow] = useState(false);
   const [items, setItems] = useState([]);
@@ -27,6 +37,11 @@ const TrashStartupCheck = () => {
     // Pro Session nur einmal prüfen
     if (sessionStorage.getItem(SESSION_KEY) === "1") return;
     if (!localStorage.getItem("token")) return;
+    // Nur Admin-Rolle bekommt die Papierkorb-Erinnerung beim Login zu sehen
+    if (_readUserRole() !== "admin") {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      return;
+    }
     (async () => {
       try {
         const r = await api.get("/module-papierkorb/count");

@@ -28,6 +28,17 @@ from routes.auth import get_current_user
 router = APIRouter()
 
 
+def _require_admin(user):
+    """Wirft 403, wenn der eingeloggte User nicht Admin ist."""
+    role = ""
+    if isinstance(user, dict):
+        role = (user.get("role") or "").lower()
+    else:
+        role = (getattr(user, "role", "") or "").lower()
+    if role != "admin":
+        raise HTTPException(403, "Nur Admin darf den Papierkorb verwalten.")
+
+
 class PurgeRequest(BaseModel):
     password: str
     send_mail: bool = True
@@ -103,7 +114,8 @@ async def trash_list(user=Depends(get_current_user)):
 
 @router.post("/restore/{kunde_id}")
 async def restore(kunde_id: str, user=Depends(get_current_user)):
-    """Holt den Kunden aus dem Papierkorb zurück."""
+    """Holt den Kunden aus dem Papierkorb zurück. Nur Admin."""
+    _require_admin(user)
     r = await db.module_kunden.update_one(
         {"id": kunde_id, "deleted_at": {"$nin": [None, ""]}},
         {"$unset": {"deleted_at": "", "deleted_by": ""}},
@@ -116,7 +128,8 @@ async def restore(kunde_id: str, user=Depends(get_current_user)):
 @router.post("/purge/{kunde_id}")
 async def purge_one(kunde_id: str, body: PurgeRequest, user=Depends(get_current_user)):
     """Endgültiges Löschen eines einzelnen Kunden (Cascade + Backup-Mail).
-    Erfordert Login-Passwort des aktuellen Users."""
+    Erfordert Admin-Rolle + Login-Passwort des aktuellen Users."""
+    _require_admin(user)
     if not await _verify_password(_username_of(user), body.password):
         raise HTTPException(401, "Falsches Passwort.")
     # Reuse cascade-delete von module_kunde_delete
@@ -127,7 +140,8 @@ async def purge_one(kunde_id: str, body: PurgeRequest, user=Depends(get_current_
 
 @router.post("/purge-all")
 async def purge_all(body: PurgeRequest, user=Depends(get_current_user)):
-    """Löscht alles im Papierkorb endgültig. Erfordert Login-Passwort."""
+    """Löscht alles im Papierkorb endgültig. Erfordert Admin-Rolle + Login-Passwort."""
+    _require_admin(user)
     if not await _verify_password(_username_of(user), body.password):
         raise HTTPException(401, "Falsches Passwort.")
 
