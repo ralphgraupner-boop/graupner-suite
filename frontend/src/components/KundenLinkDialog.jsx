@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, Link as LinkIcon, Loader2, Plus, Trash2, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/common";
@@ -9,33 +9,90 @@ import { api } from "@/lib/api";
  * - Zeigt alle bereits erzeugten Links (aktive/abgelaufene/widerrufene)
  * - Neuen Link erzeugen (30 Tage gültig)
  * - Link kopieren / QR-Code anzeigen / widerrufen
+ * - Auto-Erzeugung beim Öffnen, falls KEIN aktiver Link vorhanden ist
+ *   (Sicherheitsnetz: nur für Admin-Rolle, nur einmal pro Dialog-Öffnung)
  * Probezeit-Feature, wird später durch echte Monteur-App ersetzt.
  */
+
+const _readUserRole = () => {
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw) return "";
+    return (JSON.parse(raw)?.role || "").toLowerCase();
+  } catch {
+    return "";
+  }
+};
+
+const _hasActiveLink = (links, projektId) => {
+  const now = new Date();
+  return (links || []).some((l) => {
+    if (l.revoked) return false;
+    try {
+      if (new Date(l.expires_at) < now) return false;
+    } catch { return false; }
+    // Wenn Dialog im Projekt-Kontext geöffnet wurde, nur Links zu diesem Projekt zaehlen
+    if (projektId && l.projekt_id !== projektId) return false;
+    return true;
+  });
+};
+
 const KundenLinkDialog = ({ isOpen, onClose, kunde, projekt = null }) => {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [qrFor, setQrFor] = useState(null);
+  const autoCreatedRef = useRef(false);
 
   const publicBase = typeof window !== "undefined" ? window.location.origin : "";
 
   const load = useCallback(async () => {
-    if (!kunde?.id) return;
+    if (!kunde?.id) return [];
     setLoading(true);
     try {
       const url = projekt?.id
         ? `/module-kundenlink/list/${kunde.id}?projekt_id=${projekt.id}`
         : `/module-kundenlink/list/${kunde.id}`;
       const r = await api.get(url);
-      setLinks(r.data || []);
+      const data = r.data || [];
+      setLinks(data);
+      return data;
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Laden fehlgeschlagen");
+      return [];
     } finally {
       setLoading(false);
     }
   }, [kunde?.id, projekt?.id]);
 
-  useEffect(() => { if (isOpen) load(); }, [isOpen, load]);
+  // Reset Auto-Create-Sperre bei jedem Schliessen oder Wechsel
+  useEffect(() => { if (!isOpen) autoCreatedRef.current = false; }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    (async () => {
+      const data = await load();
+      // Sicherheitsnetz Auto-Create:
+      // - nur Admin
+      // - nur wenn KEIN aktiver Link existiert
+      // - nur einmal pro Dialog-Oeffnung
+      if (autoCreatedRef.current) return;
+      if (_readUserRole() !== "admin") return;
+      if (_hasActiveLink(data, projekt?.id)) return;
+      autoCreatedRef.current = true;
+      try {
+        setCreating(true);
+        const body = projekt?.id ? { projekt_id: projekt.id } : {};
+        await api.post(`/module-kundenlink/create/${kunde.id}`, body);
+        toast.success("Mitarbeiter-Link wurde automatisch erzeugt");
+        await load();
+      } catch (err) {
+        toast.error(err?.response?.data?.detail || "Auto-Erzeugen fehlgeschlagen");
+      } finally {
+        setCreating(false);
+      }
+    })();
+  }, [isOpen, load, kunde?.id, projekt?.id]);
 
   const createLink = async () => {
     setCreating(true);
