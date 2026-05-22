@@ -346,13 +346,13 @@ const KundenLinkPage = () => {
             {data.projekt.beschreibung && (
               <div>
                 <div className="text-[10px] font-semibold text-violet-700 uppercase mb-1">Beschreibung</div>
-                <p className="text-sm whitespace-pre-wrap">{data.projekt.beschreibung}</p>
+                <p className="text-base whitespace-pre-wrap text-slate-900 font-medium leading-relaxed">{data.projekt.beschreibung}</p>
               </div>
             )}
             {data.projekt.notizen && (
               <div>
                 <div className="text-[10px] font-semibold text-violet-700 uppercase mb-1">Notizen / Hinweise</div>
-                <p className="text-sm whitespace-pre-wrap bg-white p-2 border border-violet-200 rounded-sm">
+                <p className="text-base whitespace-pre-wrap text-slate-900 font-medium leading-relaxed bg-white p-2 border border-violet-200 rounded-sm">
                   {data.projekt.notizen}
                 </p>
               </div>
