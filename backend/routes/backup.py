@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 from database import db, logger
 from auth import get_current_user
+from security.admin_check import require_admin
 import json
 import zipfile
 import io
@@ -218,7 +219,7 @@ WICHTIG: Bei der Wiederherstellung werden bestehende Daten ÜBERSCHRIEBEN!
         raise HTTPException(500, f"Backup fehlgeschlagen: {str(e)}")
 
 
-@router.post("/backup/import")
+@router.post("/backup/import", dependencies=[Depends(require_admin)])
 async def import_backup(
     file: UploadFile = File(...),
     mode: str = "merge",  # "merge" oder "replace"

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from database import db, logger
 from auth import get_current_user
+from security.admin_check import require_admin
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime, timezone
@@ -179,7 +180,7 @@ async def get_imap_settings(user=Depends(get_current_user)):
     }
 
 
-@router.post("/imap/test")
+@router.post("/imap/test", dependencies=[Depends(require_admin)])
 async def test_imap(user=Depends(get_current_user)):
     creds = _get_imap_creds()
     if not creds["server"] or not creds["user"] or not creds["password"]:
@@ -203,7 +204,7 @@ async def test_imap(user=Depends(get_current_user)):
 
 # ── Fetch emails to inbox ──
 
-@router.post("/imap/fetch")
+@router.post("/imap/fetch", dependencies=[Depends(require_admin)])
 async def fetch_imap_emails(user=Depends(get_current_user)):
     creds = _get_imap_creds()
     if not creds["server"] or not creds["user"] or not creds["password"]:
@@ -741,7 +742,7 @@ async def get_keywords(user=Depends(get_current_user)):
     return DEFAULT_KEYWORDS
 
 
-@router.put("/imap/keywords")
+@router.put("/imap/keywords", dependencies=[Depends(require_admin)])
 async def update_keywords(body: dict, user=Depends(get_current_user)):
     keywords = [k for k in body.get("keywords", []) if k.strip()]
     await db.settings.update_one(
@@ -865,7 +866,7 @@ class IgnoreListUpdate(BaseModel):
     patterns: List[str]
 
 
-@router.put("/imap/ignore-list")
+@router.put("/imap/ignore-list", dependencies=[Depends(require_admin)])
 async def update_ignore_list(payload: IgnoreListUpdate, user=Depends(get_current_user)):
     """Aktualisiert die Ignore-Liste komplett."""
     cleaned = [p.strip().lower() for p in payload.patterns if p.strip()]
@@ -878,7 +879,7 @@ async def update_ignore_list(payload: IgnoreListUpdate, user=Depends(get_current
     return {"patterns": cleaned, "count": len(cleaned)}
 
 
-@router.post("/imap/ignore-list/cleanup")
+@router.post("/imap/ignore-list/cleanup", dependencies=[Depends(require_admin)])
 async def cleanup_by_ignore_list(user=Depends(get_current_user)):
     """Loescht bereits vorhandene Inbox-Eintraege, die gegen die aktuelle Ignore-Liste matchen."""
     doc = await db.settings.find_one({"id": "email_ignore_list"}, {"_id": 0})

@@ -3,6 +3,7 @@ from typing import List
 from models import TextTemplate
 from database import db
 from auth import get_current_user
+from security.admin_check import require_admin
 
 router = APIRouter()
 
@@ -39,7 +40,7 @@ async def get_placeholders(user=Depends(get_current_user)):
     return PLACEHOLDERS
 
 
-@router.post("/text-templates", response_model=TextTemplate)
+@router.post("/text-templates", response_model=TextTemplate, dependencies=[Depends(require_admin)])
 async def create_template(template: TextTemplate, user=Depends(get_current_user)):
     if template.doc_type not in VALID_DOC_TYPES:
         raise HTTPException(status_code=400, detail=f"doc_type muss einer von {VALID_DOC_TYPES} sein")
@@ -49,7 +50,7 @@ async def create_template(template: TextTemplate, user=Depends(get_current_user)
     return template
 
 
-@router.put("/text-templates/{template_id}", response_model=TextTemplate)
+@router.put("/text-templates/{template_id}", response_model=TextTemplate, dependencies=[Depends(require_admin)])
 async def update_template(template_id: str, template: TextTemplate, user=Depends(get_current_user)):
     existing = await db.text_templates.find_one({"id": template_id})
     if not existing:
@@ -65,7 +66,7 @@ async def update_template(template_id: str, template: TextTemplate, user=Depends
     return updated
 
 
-@router.delete("/text-templates/{template_id}")
+@router.delete("/text-templates/{template_id}", dependencies=[Depends(require_admin)])
 async def delete_template(template_id: str, user=Depends(get_current_user)):
     result = await db.text_templates.delete_one({"id": template_id})
     if result.deleted_count == 0:

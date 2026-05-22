@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 from database import db, logger
 from auth import get_current_user
+from security.admin_check import require_admin
 import uuid
 
 router = APIRouter()
@@ -17,7 +18,7 @@ async def list_diverses(user=Depends(get_current_user)):
     return items
 
 
-@router.post("/diverses")
+@router.post("/diverses", dependencies=[Depends(require_admin)])
 async def create_diverses(data: dict, user=Depends(get_current_user)):
     """Neuen Diverses-Eintrag erstellen"""
     item = {
@@ -37,7 +38,7 @@ async def create_diverses(data: dict, user=Depends(get_current_user)):
     return item
 
 
-@router.put("/diverses/{item_id}")
+@router.put("/diverses/{item_id}", dependencies=[Depends(require_admin)])
 async def update_diverses(item_id: str, data: dict, user=Depends(get_current_user)):
     """Diverses-Eintrag bearbeiten"""
     existing = await db.diverses.find_one({"id": item_id})
@@ -55,7 +56,7 @@ async def update_diverses(item_id: str, data: dict, user=Depends(get_current_use
     return updated
 
 
-@router.delete("/diverses/{item_id}")
+@router.delete("/diverses/{item_id}", dependencies=[Depends(require_admin)])
 async def delete_diverses(item_id: str, user=Depends(get_current_user)):
     """Diverses-Eintrag löschen"""
     result = await db.diverses.delete_one({"id": item_id})
