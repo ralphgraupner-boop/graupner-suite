@@ -15,6 +15,7 @@
 - ~~Monteur-App Filter-Fix Variante c~~ ✅
 
 ### Nächste Session
+- **Kundenmappe-Mail: Variante γ + α** — Checkbox-Dialog beim „Per Mail"-Button im Einsatz-Detail. Default Monteur (Mitarbeiter-Link wie bisher). Optional Checkbox „auch an Kunden" → schickt eine **separate** neutrale Info-Mail an den Kunden (ohne Mitarbeiter-Token, ohne Mappe-Inhalt; nur Termin/Ansprechpartner-Info). Strikte Token-Trennung, kein BCC.
 - Phase 2 Rollen-Konzept: eigene `monteur`-Rolle mit Default-Berechtigungen.
 - Phase 3 Rollen-Konzept: `junior_chef`-Rolle.
 - Monteur-App: nur eigene Aufgaben/Einsätze sehen (Aufgaben-Endpoint analog filtern).
