@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle, FileText, Printer, Folder, User as UserIcon } from "lucide-react";
+import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle, FileText, Printer, Folder, User as UserIcon, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -279,6 +279,8 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
   const [terminText, setTerminText] = useState("");
   const [terminDatum, setTerminDatum] = useState("");
   const [sendingMail, setSendingMail] = useState(false);
+  const [kundenmappeBusy, setKundenmappeBusy] = useState(false);
+  const [mailLinkBusy, setMailLinkBusy] = useState(false);
   const e = einsatz;
   const bilder = e.bilder || [];
   const filteredBilder = bildKat ? bilder.filter(b => b.kategorie === bildKat) : bilder;
@@ -300,6 +302,54 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
       .replace(/\{material\}/g, e.material || "")
       .replace(/\{reparaturgruppe\}/g, e.reparaturgruppe || "")
       .replace(/\{termin_datum\}/g, terminDatum ? new Date(terminDatum).toLocaleDateString("de-DE") : (e.termin ? new Date(e.termin).toLocaleDateString("de-DE") : ""));
+  };
+
+  // ======= Kundenmappe (Mitarbeiter-Link) =======
+  const ensureActiveLink = async () => {
+    if (!e.kunde_id) throw new Error("Kein Kunde zu diesem Einsatz");
+    const list = await api.get(`/module-kundenlink/list/${e.kunde_id}`);
+    const nowIso = new Date().toISOString();
+    const active = (list.data || [])
+      .filter(l => !l.revoked && (l.expires_at || "") > nowIso)
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+    if (active.length > 0) return active[0];
+    const created = await api.post(`/module-kundenlink/create/${e.kunde_id}`, {});
+    return created.data;
+  };
+
+  const openKundenmappe = async () => {
+    if (kundenmappeBusy) return;
+    setKundenmappeBusy(true);
+    try {
+      const link = await ensureActiveLink();
+      window.open(`${window.location.origin}/m/${link.token}`, "_blank", "noopener");
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message || "Kundenmappe konnte nicht geöffnet werden");
+    } finally {
+      setKundenmappeBusy(false);
+    }
+  };
+
+  const sendKundenmappeMail = async () => {
+    if (mailLinkBusy) return;
+    const monteurName = (e.monteur_name || "").trim();
+    if (!monteurName) {
+      toast.error("Diesem Einsatz ist kein Monteur zugewiesen");
+      return;
+    }
+    setMailLinkBusy(true);
+    try {
+      const link = await ensureActiveLink();
+      const res = await api.post(`/module-kundenlink/${link.id}/send-mail`, {
+        recipient_username: monteurName,
+        base_url: window.location.origin,
+      });
+      toast.success(`Link an ${res.data?.sent_to || monteurName} gesendet`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message || "Mail konnte nicht gesendet werden");
+    } finally {
+      setMailLinkBusy(false);
+    }
   };
 
   const applyMailVorlage = (v) => {
@@ -395,6 +445,24 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={onEdit} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Pencil className="w-3.5 h-3.5" /> Bearbeiten</button>
+          <button
+            onClick={openKundenmappe}
+            disabled={kundenmappeBusy}
+            className="flex items-center gap-1 px-3 py-1.5 bg-violet-600 text-white rounded-sm text-sm hover:bg-violet-700 disabled:opacity-60"
+            data-testid="btn-einsatz-kundenmappe-open"
+            title="Kundenmappe (Mitarbeiter-Link) in neuem Tab öffnen"
+          >
+            <BookOpen className="w-3.5 h-3.5" /> {kundenmappeBusy ? "Lädt…" : "Kundenmappe"}
+          </button>
+          <button
+            onClick={sendKundenmappeMail}
+            disabled={mailLinkBusy}
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-white rounded-sm text-sm hover:bg-slate-800 disabled:opacity-60"
+            data-testid="btn-einsatz-kundenmappe-mail"
+            title="Kundenmappe per Mail an den zugewiesenen Monteur senden"
+          >
+            <Send className="w-3.5 h-3.5" /> {mailLinkBusy ? "Sende…" : "Mappe per Mail"}
+          </button>
           {e.kunde_email && <button onClick={() => setShowMailPanel(!showMailPanel)} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Send className="w-3.5 h-3.5" /> E-Mail</button>}
           <button onClick={() => setShowTerminPanel(!showTerminPanel)} className="flex items-center gap-1 px-3 py-1.5 border rounded-sm text-sm hover:bg-muted"><Calendar className="w-3.5 h-3.5" /> Termin</button>
           <button onClick={() => downloadPdf(false)} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-sm text-sm hover:bg-primary/90" data-testid="btn-pdf-filled"><Printer className="w-3.5 h-3.5" /> Reparaturauftrag</button>
