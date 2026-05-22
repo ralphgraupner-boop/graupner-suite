@@ -312,7 +312,7 @@ const KundenLinkPage = () => {
         {k.nachricht && (
           <section className="bg-white border rounded-sm p-3">
             <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Anliegen</h3>
-            <p className="text-sm whitespace-pre-wrap">{k.nachricht}</p>
+            <p className="text-base whitespace-pre-wrap text-slate-900 font-medium leading-relaxed">{k.nachricht}</p>
           </section>
         )}
 
