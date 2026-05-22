@@ -261,18 +261,19 @@ async def extend_link(link_id: str, body: dict, user=Depends(get_current_user)):
 
 @router.post("/{link_id}/send-mail")
 async def send_link_mail(link_id: str, body: dict, user=Depends(get_current_user)):
-    """Sendet den Mitarbeiter-Link per E-Mail an einen Benutzer (z. B. den zugewiesenen Monteur).
-    Body: { recipient_username: str, base_url: str }
-      - recipient_username: Username, dessen E-Mail wir aus der users-Collection holen
-      - base_url: Frontend-Origin (z. B. https://...preview.emergentagent.com),
-                  wird mit /m/{token} zur vollen URL ergänzt.
+    """Sendet den Mitarbeiter-Link per E-Mail an einen Mitarbeiter.
+    Body: { recipient_id?: str, recipient_name?: str, base_url: str }
+      - recipient_id: bevorzugt — Mitarbeiter-ID (= mitarbeiter.id, == einsatz.monteur_id)
+      - recipient_name: Fallback — "Vorname Nachname" für Lookup in mitarbeiter-Collection
+      - base_url: Frontend-Origin, wird mit /m/{token} zur vollen URL ergänzt.
     """
     from utils import send_email
 
-    recipient_username = ((body or {}).get("recipient_username") or "").strip()
+    recipient_id = ((body or {}).get("recipient_id") or "").strip()
+    recipient_name = ((body or {}).get("recipient_name") or "").strip()
     base_url = ((body or {}).get("base_url") or "").strip().rstrip("/")
-    if not recipient_username:
-        raise HTTPException(400, "recipient_username fehlt")
+    if not (recipient_id or recipient_name):
+        raise HTTPException(400, "recipient_id oder recipient_name fehlt")
     if not base_url or not (base_url.startswith("http://") or base_url.startswith("https://")):
         raise HTTPException(400, "base_url fehlt oder ungültig")
 
@@ -282,12 +283,33 @@ async def send_link_mail(link_id: str, body: dict, user=Depends(get_current_user
     if link.get("revoked"):
         raise HTTPException(400, "Link wurde widerrufen")
 
-    recipient = await db.users.find_one({"username": recipient_username}, {"_id": 0, "password": 0})
-    if not recipient:
-        raise HTTPException(404, f"Benutzer '{recipient_username}' nicht gefunden")
-    to_email = (recipient.get("email") or "").strip()
+    # Mitarbeiter-Lookup: bevorzugt per ID, sonst per "Vorname Nachname" (case-sensitiv).
+    mitarbeiter = None
+    if recipient_id:
+        mitarbeiter = await db.mitarbeiter.find_one({"id": recipient_id}, {"_id": 0})
+    if not mitarbeiter and recipient_name:
+        parts = recipient_name.split()
+        if len(parts) >= 2:
+            mitarbeiter = await db.mitarbeiter.find_one(
+                {"vorname": parts[0], "nachname": " ".join(parts[1:])},
+                {"_id": 0},
+            )
+        if not mitarbeiter:
+            mitarbeiter = await db.mitarbeiter.find_one(
+                {"$expr": {"$eq": [{"$concat": ["$vorname", " ", "$nachname"]}, recipient_name]}},
+                {"_id": 0},
+            )
+
+    if not mitarbeiter:
+        ref = recipient_id or recipient_name
+        raise HTTPException(404, f"Mitarbeiter '{ref}' nicht gefunden")
+
+    to_email = (mitarbeiter.get("email") or "").strip()
     if not to_email or "@" not in to_email:
-        raise HTTPException(400, f"Keine E-Mail-Adresse bei '{recipient_username}' hinterlegt")
+        full = f"{mitarbeiter.get('vorname','')} {mitarbeiter.get('nachname','')}".strip()
+        raise HTTPException(400, f"Keine E-Mail-Adresse bei Mitarbeiter '{full or recipient_name}' hinterlegt")
+
+    mitarbeiter_name = f"{mitarbeiter.get('vorname','')} {mitarbeiter.get('nachname','')}".strip() or recipient_name
 
     kunde = await db.module_kunden.find_one(
         {"id": link.get("kunde_id")},
@@ -306,7 +328,7 @@ async def send_link_mail(link_id: str, body: dict, user=Depends(get_current_user
     subject = f"Kundenmappe: {kunde_label}"
     body_html = f"""
     <h2 style="color:#003366;margin-bottom:8px;">Kundenmappe – Tischlerei Graupner</h2>
-    <p>Hallo {recipient_username},</p>
+    <p>Hallo {mitarbeiter_name},</p>
     <p>hier ist der direkte Mitarbeiter-Link zur Kundenmappe für <strong>{kunde_label}</strong>:</p>
     <p style="margin:18px 0;">
       <a href="{full_url}" style="display:inline-block;background:#003366;color:#fff;
@@ -323,7 +345,7 @@ async def send_link_mail(link_id: str, body: dict, user=Depends(get_current_user
     except Exception as e:
         raise HTTPException(500, f"E-Mail konnte nicht gesendet werden: {str(e)}")
 
-    return {"ok": True, "sent_to": to_email}
+    return {"ok": True, "sent_to": to_email, "recipient": mitarbeiter_name}
 
 
 @router.get("/counts")

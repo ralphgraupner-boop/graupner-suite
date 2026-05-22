@@ -341,7 +341,8 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
     try {
       const link = await ensureActiveLink();
       const res = await api.post(`/module-kundenlink/${link.id}/send-mail`, {
-        recipient_username: monteurName,
+        recipient_id: e.monteur_id || "",
+        recipient_name: monteurName,
         base_url: window.location.origin,
       });
       toast.success(`Link an ${res.data?.sent_to || monteurName} gesendet`);
