@@ -70,7 +70,9 @@ const MainLayout = ({ children, onLogout }) => {
 function App() {
   const { login, logout, isAuthenticated } = useAuth();
   const role = getUserRole();
-  const defaultPage = "/dashboard";
+  // Phase 1 Rollen-Konzept: Monteur/Mitarbeiter landen direkt in der Monteur-App,
+  // alle anderen Rollen (admin, buchhaltung, ...) wie bisher auf dem Dashboard.
+  const defaultPage = (role === "monteur" || role === "mitarbeiter") ? "/monteur" : "/dashboard";
 
   // Tab-Titel und Favicon-Hinweis je Umgebung
   useEffect(() => {

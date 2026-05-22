@@ -1,7 +1,11 @@
 # PRD — Graupner Suite (Tischlerei-CRM)
 
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
-> Stand: 20.05.2026 (Tagesabschluss)
+> Stand: 22.05.2026
+
+## Update 22.05.2026 — Phase 1 Rollen-Konzept verifiziert + Login-Redirect nachgezogen
+- **Backend Admin-Härtung** (8/8 Curl-Tests grün): 18 Endpunkte in 6 Routern (Backup, IMAP, Text-Templates, Leistungsblöcke, Services, Diverses) sind via `Depends(require_admin)` aus `backend/security/admin_check.py` geschützt. Non-Admin → 403, Admin → 200, ohne Token → 401. Alle Lints sauber.
+- **Login-Redirect (Phase 1 Frontend)**: In `frontend/src/App.js` Zeile 73 `defaultPage` dynamisch aus `getUserRole()` abgeleitet. Logik: `role === "monteur" || role === "mitarbeiter"` → `/monteur`, sonst `/dashboard`. Auswahl iii+b+x: greift heute schon für `mitarbeiter` (Heike), und automatisch später für `monteur` (Phase 2). Verifiziert: admin-preview → `/dashboard`, Heike Bolanka → `/monteur`.
 
 ## Architekturregeln (Pflicht)
 1. Keine hartcodierten Auswahllisten – live aus `module_textvorlagen`.
