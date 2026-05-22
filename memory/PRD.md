@@ -3,9 +3,31 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 22.05.2026
 
-## Update 22.05.2026 — Phase 1 Rollen-Konzept verifiziert + Login-Redirect nachgezogen
+## Update 22.05.2026 — Phase 1 Rollen-Konzept verifiziert + Login-Redirect + Monteur-Filter-Fix
 - **Backend Admin-Härtung** (8/8 Curl-Tests grün): 18 Endpunkte in 6 Routern (Backup, IMAP, Text-Templates, Leistungsblöcke, Services, Diverses) sind via `Depends(require_admin)` aus `backend/security/admin_check.py` geschützt. Non-Admin → 403, Admin → 200, ohne Token → 401. Alle Lints sauber.
-- **Login-Redirect (Phase 1 Frontend)**: In `frontend/src/App.js` Zeile 73 `defaultPage` dynamisch aus `getUserRole()` abgeleitet. Logik: `role === "monteur" || role === "mitarbeiter"` → `/monteur`, sonst `/dashboard`. Auswahl iii+b+x: greift heute schon für `mitarbeiter` (Heike), und automatisch später für `monteur` (Phase 2). Verifiziert: admin-preview → `/dashboard`, Heike Bolanka → `/monteur`.
+- **Login-Redirect (Phase 1 Frontend)**: In `frontend/src/App.js` Zeile 73 `defaultPage` dynamisch aus `getUserRole()` abgeleitet. Logik: `role === "monteur" || role === "mitarbeiter"` → `/monteur`, sonst `/dashboard`. Verifiziert: admin-preview → `/dashboard`, Heike Bolanka → `/monteur`.
+- **Monteur-App Filter-Fix (Variante c, Sofort-Fix)**: `backend/monteur_app/routes.py` Z. 66–79 + 90–98: Vergleich auf `monteur_name`/`monteur2_name` (+ defensiv `monteur_id`/`monteur2_id`) statt nicht existierender Felder `monteur_1`/`monteur_2`. Tests grün: Admin sieht 5 Einsätze, Heike Bolanka (`mitarbeiter`) sieht 1 (ihren), `h.bolanka` (`buchhaltung`) sieht 0.
+
+## Roadmap (Vorgabe Ralph, 22.05.2026)
+
+### SOFORT (Preview) — DONE
+- ~~Monteur-App Filter-Fix Variante c~~ ✅
+
+### Nächste Session
+- Phase 2 Rollen-Konzept: eigene `monteur`-Rolle mit Default-Berechtigungen.
+- Phase 3 Rollen-Konzept: `junior_chef`-Rolle.
+- Monteur-App: nur eigene Aufgaben/Einsätze sehen (Aufgaben-Endpoint analog filtern).
+- Kundensuche direkt in der Monteur-App.
+- Passwort-Dialog verbessern: Benutzername klar anzeigen.
+- Login-Fehlermeldungen verbessern (nicht nur "Ungültige Anmeldedaten" — z. B. konkretes Konto, Hilfetext).
+
+### Später
+- Variante b Monteur-Filter: `monteur_id` statt Name (saubere Datenmaske, mit Migration alter Einsätze).
+- "Ich bin unterwegs"-Schalter (Meta-Schalter zur Popup-Stummschaltung).
+- Benachrichtigungssteuerung Phase 2/3 (Real-time Mail-Popups, Aufgaben-Erinnerungen).
+- Schwarze Balken im Angebot-Editor.
+- Rechtschreibprüfung.
+- Konflikt-Schutz V1 (Version-Stempel) für Kunden + Projekte.
 
 ## Architekturregeln (Pflicht)
 1. Keine hartcodierten Auswahllisten – live aus `module_textvorlagen`.

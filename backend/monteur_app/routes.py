@@ -70,7 +70,14 @@ def _einsatz_matches_user(einsatz: dict, user: dict) -> bool:
     username = (user or {}).get("username", "")
     if not username:
         return False
-    return einsatz.get("monteur_1") == username or einsatz.get("monteur_2") == username
+    # Sofort-Fix Variante c: aktuelle Einsatz-Felder sind monteur_name / monteur2_name
+    # (zusätzlich monteur_id / monteur2_id defensiv für künftige ID-Variante b).
+    return (
+        einsatz.get("monteur_name") == username
+        or einsatz.get("monteur2_name") == username
+        or einsatz.get("monteur_id") == username
+        or einsatz.get("monteur2_id") == username
+    )
 
 
 # ==================== EINSAETZE (lesend aus Kern-Collection) ====================
@@ -87,10 +94,15 @@ async def list_einsaetze(status: str = "", user=Depends(get_current_user)):
     elif status:
         query["status"] = status
 
-    # Monteur-Filter
+    # Monteur-Filter (Variante c: monteur_name / monteur2_name; +id-Felder defensiv)
     if (user or {}).get("role") != "admin":
         username = (user or {}).get("username", "")
-        query["$or"] = [{"monteur_1": username}, {"monteur_2": username}]
+        query["$or"] = [
+            {"monteur_name": username},
+            {"monteur2_name": username},
+            {"monteur_id": username},
+            {"monteur2_id": username},
+        ]
 
     einsaetze = await db.einsaetze.find(query, {"_id": 0}).sort("termin", 1).to_list(500)
     return einsaetze
