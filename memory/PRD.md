@@ -3,10 +3,11 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 22.05.2026
 
-## Update 22.05.2026 — Phase 1 Rollen-Konzept verifiziert + Login-Redirect + Monteur-Filter-Fix
+## Update 22.05.2026 — Phase 1 Rollen-Konzept verifiziert + Login-Redirect + Monteur-Filter-Fix + Kundenmappe-Button
 - **Backend Admin-Härtung** (8/8 Curl-Tests grün): 18 Endpunkte in 6 Routern (Backup, IMAP, Text-Templates, Leistungsblöcke, Services, Diverses) sind via `Depends(require_admin)` aus `backend/security/admin_check.py` geschützt. Non-Admin → 403, Admin → 200, ohne Token → 401. Alle Lints sauber.
 - **Login-Redirect (Phase 1 Frontend)**: In `frontend/src/App.js` Zeile 73 `defaultPage` dynamisch aus `getUserRole()` abgeleitet. Logik: `role === "monteur" || role === "mitarbeiter"` → `/monteur`, sonst `/dashboard`. Verifiziert: admin-preview → `/dashboard`, Heike Bolanka → `/monteur`.
 - **Monteur-App Filter-Fix (Variante c, Sofort-Fix)**: `backend/monteur_app/routes.py` Z. 66–79 + 90–98: Vergleich auf `monteur_name`/`monteur2_name` (+ defensiv `monteur_id`/`monteur2_id`) statt nicht existierender Felder `monteur_1`/`monteur_2`. Tests grün: Admin sieht 5 Einsätze, Heike Bolanka (`mitarbeiter`) sieht 1 (ihren), `h.bolanka` (`buchhaltung`) sieht 0.
+- **Kundenmappe-Button (Monteur-App Einsatz-Detail)**: Variante b + i/i/i/i. In `MonteurEinsatzDetailPage.jsx` zwei Buttons in der Kontakt-Leiste: „Kundenmappe" (Auto-Create wenn keiner aktiv, öffnet jüngsten aktiven Link in neuem Tab) und „Per Mail" (sendet Link an die E-Mail des in `monteur_name` zugewiesenen Users). Backend: neuer Endpoint `POST /api/module-kundenlink/{link_id}/send-mail` mit Body `{recipient_username, base_url}`. Tests grün: Create + Mail-Versand an `HeikeBolanca@gmail.com` ok, 404 bei unbekanntem User, 400 bei fehlender base_url.
 
 ## Roadmap (Vorgabe Ralph, 22.05.2026)
 

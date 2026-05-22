@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, MapPin, Phone, Mail, Camera, Plus, Eye, Trash2, Edit2, X, Save,
   ClipboardList, HardHat, CheckCircle2, Circle, Smile, Meh, Frown, RefreshCw,
+  BookOpen, Send,
 } from "lucide-react";
 import { useVersionCheck } from "./useVersionCheck";
 import { compressImageIfNeeded } from "@/lib/imageCompress";
@@ -32,6 +33,8 @@ export function MonteurEinsatzDetailPage() {
   const [newTodoText, setNewTodoText] = useState("");
   const [feedbackNotiz, setFeedbackNotiz] = useState("");
   const [feedbackSaving, setFeedbackSaving] = useState(false);
+  const [kundenmappeBusy, setKundenmappeBusy] = useState(false);
+  const [mailLinkBusy, setMailLinkBusy] = useState(false);
   const fileInputRef = useRef(null);
   const { outdated, reload } = useVersionCheck();
 
@@ -50,6 +53,56 @@ export function MonteurEinsatzDetailPage() {
   };
 
   useEffect(() => { load(); }, [id]);  // eslint-disable-line
+
+  // ======= Kundenmappe (Mitarbeiter-Link) =======
+  // Liefert einen aktiven Link (nicht widerrufen, nicht abgelaufen); erstellt einen,
+  // falls keiner existiert. Bevorzugt: jüngster aktiver Link für den Kunden.
+  const ensureActiveLink = async () => {
+    if (!einsatz?.kunde_id) throw new Error("Kein Kunde zu diesem Einsatz");
+    const list = await api.get(`/module-kundenlink/list/${einsatz.kunde_id}`);
+    const nowIso = new Date().toISOString();
+    const active = (list.data || [])
+      .filter(l => !l.revoked && (l.expires_at || "") > nowIso)
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+    if (active.length > 0) return active[0];
+    const created = await api.post(`/module-kundenlink/create/${einsatz.kunde_id}`, {});
+    return created.data;
+  };
+
+  const openKundenmappe = async () => {
+    if (kundenmappeBusy) return;
+    setKundenmappeBusy(true);
+    try {
+      const link = await ensureActiveLink();
+      window.open(`${window.location.origin}/m/${link.token}`, "_blank", "noopener");
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message || "Kundenmappe konnte nicht geöffnet werden");
+    } finally {
+      setKundenmappeBusy(false);
+    }
+  };
+
+  const sendKundenmappeMail = async () => {
+    if (mailLinkBusy) return;
+    const monteurName = (einsatz?.monteur_name || "").trim();
+    if (!monteurName) {
+      toast.error("Diesem Einsatz ist kein Monteur zugewiesen");
+      return;
+    }
+    setMailLinkBusy(true);
+    try {
+      const link = await ensureActiveLink();
+      const res = await api.post(`/module-kundenlink/${link.id}/send-mail`, {
+        recipient_username: monteurName,
+        base_url: window.location.origin,
+      });
+      toast.success(`Link an ${res.data?.sent_to || monteurName} gesendet`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message || "Mail konnte nicht gesendet werden");
+    } finally {
+      setMailLinkBusy(false);
+    }
+  };
 
   const addNotiz = async () => {
     if (!notizText.trim()) return;
@@ -266,6 +319,32 @@ export function MonteurEinsatzDetailPage() {
             </a>
           </div>
         )}
+
+        {/* Kundenmappe (öffentlicher Mitarbeiter-Link) */}
+        <div className="flex items-center gap-2 pt-2 border-t border-dashed">
+          <BookOpen className="w-4 h-4 text-muted-foreground shrink-0" />
+          <span className="flex-1 text-sm">Kundenmappe</span>
+          <button
+            type="button"
+            onClick={openKundenmappe}
+            disabled={kundenmappeBusy}
+            className="px-3 py-1 rounded-lg bg-violet-600 text-white text-xs font-medium disabled:opacity-60"
+            data-testid="btn-kundenmappe-open"
+          >
+            {kundenmappeBusy ? "Lädt…" : "Kundenmappe"}
+          </button>
+          <button
+            type="button"
+            onClick={sendKundenmappeMail}
+            disabled={mailLinkBusy}
+            className="px-3 py-1 rounded-lg bg-slate-700 text-white text-xs font-medium inline-flex items-center gap-1 disabled:opacity-60"
+            data-testid="btn-kundenmappe-mail"
+            title="Link per Mail an den zugewiesenen Monteur senden"
+          >
+            <Send className="w-3 h-3" />
+            {mailLinkBusy ? "Sende…" : "Per Mail"}
+          </button>
+        </div>
       </div>
 
       {/* Auftrag-Kurzinfo (aus Einsatz) */}

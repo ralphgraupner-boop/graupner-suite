@@ -259,6 +259,73 @@ async def extend_link(link_id: str, body: dict, user=Depends(get_current_user)):
     return {"ok": True, "expires_at": _iso(new_exp)}
 
 
+@router.post("/{link_id}/send-mail")
+async def send_link_mail(link_id: str, body: dict, user=Depends(get_current_user)):
+    """Sendet den Mitarbeiter-Link per E-Mail an einen Benutzer (z. B. den zugewiesenen Monteur).
+    Body: { recipient_username: str, base_url: str }
+      - recipient_username: Username, dessen E-Mail wir aus der users-Collection holen
+      - base_url: Frontend-Origin (z. B. https://...preview.emergentagent.com),
+                  wird mit /m/{token} zur vollen URL ergänzt.
+    """
+    from utils import send_email
+
+    recipient_username = ((body or {}).get("recipient_username") or "").strip()
+    base_url = ((body or {}).get("base_url") or "").strip().rstrip("/")
+    if not recipient_username:
+        raise HTTPException(400, "recipient_username fehlt")
+    if not base_url or not (base_url.startswith("http://") or base_url.startswith("https://")):
+        raise HTTPException(400, "base_url fehlt oder ungültig")
+
+    link = await db.module_kundenlink.find_one({"id": link_id}, {"_id": 0})
+    if not link:
+        raise HTTPException(404, "Link nicht gefunden")
+    if link.get("revoked"):
+        raise HTTPException(400, "Link wurde widerrufen")
+
+    recipient = await db.users.find_one({"username": recipient_username}, {"_id": 0, "password": 0})
+    if not recipient:
+        raise HTTPException(404, f"Benutzer '{recipient_username}' nicht gefunden")
+    to_email = (recipient.get("email") or "").strip()
+    if not to_email or "@" not in to_email:
+        raise HTTPException(400, f"Keine E-Mail-Adresse bei '{recipient_username}' hinterlegt")
+
+    kunde = await db.module_kunden.find_one(
+        {"id": link.get("kunde_id")},
+        {"_id": 0, "vorname": 1, "nachname": 1, "name": 1, "firma": 1},
+    ) or {}
+    kunde_label = (
+        kunde.get("firma")
+        or " ".join([s for s in [kunde.get("vorname", ""), kunde.get("nachname", "")] if s]).strip()
+        or kunde.get("name")
+        or "Kunde"
+    )
+
+    full_url = f"{base_url}/m/{link.get('token')}"
+    expires = (link.get("expires_at") or "")[:10]
+
+    subject = f"Kundenmappe: {kunde_label}"
+    body_html = f"""
+    <h2 style="color:#003366;margin-bottom:8px;">Kundenmappe – Tischlerei Graupner</h2>
+    <p>Hallo {recipient_username},</p>
+    <p>hier ist der direkte Mitarbeiter-Link zur Kundenmappe für <strong>{kunde_label}</strong>:</p>
+    <p style="margin:18px 0;">
+      <a href="{full_url}" style="display:inline-block;background:#003366;color:#fff;
+        padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
+        Kundenmappe öffnen
+      </a>
+    </p>
+    <p style="font-size:13px;color:#555;">Link gültig bis {expires}.<br/>
+    Bei Fragen einfach im Büro melden.</p>
+    """
+
+    try:
+        send_email(to_email=to_email, subject=subject, body_html=body_html)
+    except Exception as e:
+        raise HTTPException(500, f"E-Mail konnte nicht gesendet werden: {str(e)}")
+
+    return {"ok": True, "sent_to": to_email}
+
+
 @router.get("/counts")
 async def link_counts(user=Depends(get_current_user)):
     """Liefert pro Kunde die Anzahl der AKTIVEN Mitarbeiter-Links
