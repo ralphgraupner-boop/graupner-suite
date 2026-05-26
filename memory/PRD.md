@@ -3,6 +3,11 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 22.05.2026
 
+## Update 26.05.2026 — Wolken-Modul (interne Kurzkommunikation)
+- **Backend `backend/module_wolke/`** (neu) — eigene Collection `module_wolke`. Endpoints `POST`, `GET /erhalten`, `GET /gesendet`, `GET /count-offen`, `PATCH /{id}/erledigt`, `DELETE /{id}`, `GET /mitarbeiter`. Lookup User↔Mitarbeiter über `vorname+nachname == username` (Fallback email). Memo-Typ wird beim Anlegen sofort als `erledigt` markiert → zählt nicht im Badge. Aufgabe bleibt `offen` bis Empfänger bestätigt. In `server.py` als `/api/module-wolke` registriert.
+- **Frontend `components/wolke/WolkePopover.jsx`** (neu) — Floating Cloud-Icon unten rechts mit roter Badge (Polling 60s). Slide-Over mit Tabs Erhalten/Gesendet/Neu. Neu-Form: Empfänger-Select, Memo/Aufgabe-Toggle, optionale Kundensuche, `TextareaWithAI` (Voice+KI). Karten mit Erledigt-Button (Empfänger) und Lösch-Button (Absender). In `App.js` global im `MainLayout` eingehängt — überall sichtbar, nur für eingeloggte User.
+- **Tests grün**: 8 Curl-Tests (POST Memo/Aufgabe, count-offen, erhalten, erledigt, Permissions). Screenshot mit Heike Bolanka zeigt Badge=2, 4 Karten in Erhalten-Tab inkl. Kunde-Verknüpfung.
+
 ## Update 22.05.2026 — Phase 1 Rollen-Konzept verifiziert + Login-Redirect + Monteur-Filter-Fix + Kundenmappe-Buttons (Monteur-App + Admin-Modul) + monteur_name-Cleanup
 - **Backend Admin-Härtung** (8/8 Curl-Tests grün): 18 Endpunkte in 6 Routern (Backup, IMAP, Text-Templates, Leistungsblöcke, Services, Diverses) sind via `Depends(require_admin)` aus `backend/security/admin_check.py` geschützt. Non-Admin → 403, Admin → 200, ohne Token → 401. Alle Lints sauber.
 - **Login-Redirect (Phase 1 Frontend)**: In `frontend/src/App.js` Zeile 73 `defaultPage` dynamisch aus `getUserRole()` abgeleitet. Logik: `role === "monteur" || role === "mitarbeiter"` → `/monteur`, sonst `/dashboard`. Verifiziert: admin-preview → `/dashboard`, Heike Bolanka → `/monteur`.

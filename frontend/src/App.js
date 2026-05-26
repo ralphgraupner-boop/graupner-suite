@@ -47,6 +47,7 @@ import { HealthBanner } from "@/components/HealthBanner";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import TrashStartupCheck from "@/components/TrashStartupCheck";
 import KundenLinkExpiryCheck from "@/components/KundenLinkExpiryCheck";
+import { WolkePopover } from "@/components/wolke/WolkePopover";
 import { WindowManagerProvider } from "@/components/windows/WindowManager";
 import { detectAppEnv } from "@/lib/env";
 
@@ -59,6 +60,7 @@ const MainLayout = ({ children, onLogout }) => {
       <FeedbackWidget />
       <TrashStartupCheck />
       <KundenLinkExpiryCheck />
+      <WolkePopover />
       <main className="lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0">
         <HealthBanner />
         <div className="px-4 lg:px-8 py-4 lg:py-8">{children}</div>

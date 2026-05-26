@@ -86,6 +86,7 @@ from module_health import router as module_health_router
 from module_kunde_delete import router as module_kunde_delete_router
 from module_papierkorb import router as module_papierkorb_router
 from module_benachrichtigungen import router as module_benachrichtigungen_router
+from module_wolke.routes import router as module_wolke_router
 from module_mail_inbox import router as module_mail_inbox_router
 from module_feedback import router as module_feedback_router
 from module_assistent import router as module_assistent_router
@@ -161,6 +162,7 @@ app.include_router(module_health_router, prefix="/api/module-health", tags=["Hea
 app.include_router(module_kunde_delete_router, prefix="/api/module-kunde-delete", tags=["KundeDelete"])  # Cascade-Delete mit Vorab-Export
 app.include_router(module_papierkorb_router, prefix="/api/module-papierkorb", tags=["Papierkorb"])  # Soft-Delete + Restore + Purge
 app.include_router(module_benachrichtigungen_router, prefix="/api/module-benachrichtigungen", tags=["Benachrichtigungen"])  # Popup- und Meldungs-Steuerung pro User
+app.include_router(module_wolke_router, prefix="/api/module-wolke", tags=["Wolke"])  # Interne Kurz-Kommunikation (Memos + Aufgaben)
 app.include_router(module_mail_inbox_router, prefix="/api/module-mail-inbox", tags=["MailInbox"])  # Jimdo-Anfragen → Kundenvorschlag
 app.include_router(module_feedback_router, prefix="/api/module-feedback", tags=["Feedback"])  # Persönliche Notizen/Bugs/Ideen
 app.include_router(module_assistent_router, prefix="/api/module-assistent", tags=["Assistent"])  # Stiller Beobachter für Ralph
