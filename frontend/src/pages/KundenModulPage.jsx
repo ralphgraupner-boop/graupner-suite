@@ -275,6 +275,12 @@ const KundenModulPage = () => {
   const aktivCount = kunden.filter(k => !ARCHIV_STATES.includes(effStatus(k))).length;
   const archivCount = kunden.filter(k => ARCHIV_STATES.includes(effStatus(k))).length;
 
+  // Counter pro Kategorie — gegen die volle Kundenliste (unabhängig vom Status-Filter).
+  const kategorieCounts = {};
+  KUNDEN_KATEGORIEN_PAGE.forEach(cat => {
+    kategorieCounts[cat] = kunden.filter(k => (k.categories || []).includes(cat)).length;
+  });
+
   return (
     <div data-testid="kunden-modul-page">
       <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-start lg:justify-between gap-3 mb-4 lg:mb-8">
@@ -321,10 +327,14 @@ const KundenModulPage = () => {
 
       {/* Kategorie Filter */}
       <div className="flex flex-wrap gap-2 mb-2">
-        <button onClick={() => setCategoryFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!categoryFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>Alle</button>
+        <button onClick={() => setCategoryFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!categoryFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`} data-testid="kategorie-filter-alle">Alle ({kunden.length})</button>
         {KUNDEN_KATEGORIEN_PAGE.map(cat => (
           <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${categoryFilter === cat ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>{cat}</button>
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${categoryFilter === cat ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+            data-testid={`kategorie-filter-${cat}`}
+          >
+            {cat} ({kategorieCounts[cat] || 0})
+          </button>
         ))}
       </div>
 
