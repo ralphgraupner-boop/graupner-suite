@@ -112,12 +112,14 @@ const WolkeNeuForm = ({ mitarbeiter, onSent }) => {
     if (!text.trim()) { toast.error("Bitte Text oder Sprachnotiz aufnehmen"); return; }
     setSending(true);
     try {
+      const empf = mitarbeiter.find(m => m.id === empfaengerId);
       await api.post("/module-wolke", {
         type, empfaenger_id: empfaengerId, kunde_id: kundeId, text: text.trim(),
       });
-      toast.success(type === "aufgabe" ? "Aufgabe verschickt" : "Memo verschickt");
+      const banner = `${type === "aufgabe" ? "Aufgabe" : "Memo"} an ${empf?.name || "Empfänger"} verschickt`;
+      toast.success(banner);
       setText(""); setKundeId(""); setKundeLabel(""); setKundeSuche("");
-      onSent && onSent();
+      onSent && onSent(banner);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Senden fehlgeschlagen");
     } finally {
@@ -235,6 +237,7 @@ export const WolkePopover = () => {
   const [erhalten, setErhalten] = useState([]);
   const [gesendet, setGesendet] = useState([]);
   const [mitarbeiter, setMitarbeiter] = useState([]);
+  const [banner, setBanner] = useState("");
 
   const reloadCount = useCallback(async () => {
     try {
@@ -351,6 +354,16 @@ export const WolkePopover = () => {
               })}
             </div>
 
+            {banner && (
+              <div
+                className="mx-4 mt-3 px-3 py-2 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-900 text-sm font-medium flex items-center justify-between gap-2"
+                data-testid="wolke-success-banner"
+              >
+                <span className="inline-flex items-center gap-2"><Check className="w-4 h-4" /> {banner}</span>
+                <button onClick={() => setBanner("")} className="text-emerald-700 hover:text-emerald-900" data-testid="wolke-banner-close"><X className="w-4 h-4" /></button>
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {tab === "erhalten" && (
                 erhalten.length === 0
@@ -365,7 +378,12 @@ export const WolkePopover = () => {
               {tab === "neu" && (
                 <WolkeNeuForm
                   mitarbeiter={mitarbeiter}
-                  onSent={async () => { setTab("gesendet"); await Promise.all([reloadListen(), reloadCount()]); }}
+                  onSent={async (bannerText) => {
+                    setBanner(bannerText || "Wolke verschickt");
+                    setTab("gesendet");
+                    await Promise.all([reloadListen(), reloadCount()]);
+                    setTimeout(() => setBanner(""), 5000);
+                  }}
                 />
               )}
             </div>
