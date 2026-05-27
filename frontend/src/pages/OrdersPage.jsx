@@ -12,6 +12,8 @@ const OrdersPage = ({ readOnly = false }) => {
   const [previewOrder, setPreviewOrder] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [invoiceDialog, setInvoiceDialog] = useState(null); // { orderId, dueDays }
+  const [defaultDueDays, setDefaultDueDays] = useState(14);
   const navigate = useNavigate();
 
   const filteredOrders = useMemo(() => {
@@ -26,6 +28,11 @@ const OrdersPage = ({ readOnly = false }) => {
 
   useEffect(() => {
     loadOrders();
+    // Default Zahlungsziel aus Settings vorladen für den Dialog
+    api.get("/settings").then(r => {
+      const d = r.data?.default_due_days;
+      if (Number.isFinite(d)) setDefaultDueDays(d);
+    }).catch(() => {});
   }, []);
 
   const loadOrders = async () => {
@@ -41,13 +48,20 @@ const OrdersPage = ({ readOnly = false }) => {
 
   const handleCreateInvoice = async (orderId, e) => {
     e?.stopPropagation();
+    // Öffnet einen Mini-Dialog mit Zahlungsziel-Eingabe statt sofort zu erstellen.
+    setInvoiceDialog({ orderId, dueDays: defaultDueDays });
+  };
+
+  const confirmCreateInvoice = async () => {
+    if (!invoiceDialog) return;
+    const { orderId, dueDays } = invoiceDialog;
     try {
-      // Kein hardcoded due_days mehr — Backend übernimmt default_due_days aus den Einstellungen.
-      await api.post(`/invoices/from-order/${orderId}`, {});
-      toast.success("Rechnung erstellt");
+      await api.post(`/invoices/from-order/${orderId}`, { due_days: Number(dueDays) });
+      toast.success(`Rechnung erstellt (zahlbar in ${dueDays} Tagen)`);
+      setInvoiceDialog(null);
       loadOrders();
     } catch (err) {
-      toast.error("Fehler beim Erstellen der Rechnung");
+      toast.error(err?.response?.data?.detail || "Fehler beim Erstellen der Rechnung");
     }
   };
 
@@ -254,6 +268,58 @@ const OrdersPage = ({ readOnly = false }) => {
         onDownload={(id, num) => handleDownloadPDF(id, num)}
         onEdit={(o) => handleEdit(o)}
       />
+
+      {invoiceDialog && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setInvoiceDialog(null); }}
+          data-testid="invoice-create-dialog"
+        >
+          <div className="bg-background rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2"><Receipt className="w-5 h-5 text-primary" /> Rechnung erstellen</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Aus diesem Auftrag wird eine Rechnung angelegt. Das Zahlungsziel ist als Vorschlag aus den Einstellungen — jederzeit pro Rechnung anpassbar.
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Zahlungsziel (Tage)</label>
+              <div className="mt-1 flex items-center gap-3">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={invoiceDialog.dueDays}
+                  onChange={(e) => setInvoiceDialog({ ...invoiceDialog, dueDays: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                  className="w-24 px-3 py-2 border rounded-lg bg-background text-right font-mono"
+                  data-testid="invoice-create-due-days"
+                  autoFocus
+                />
+                <span className="text-sm text-muted-foreground">
+                  Zahlbar bis <strong>{new Date(Date.now() + Number(invoiceDialog.dueDays) * 86400000).toLocaleDateString("de-DE")}</strong>
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Standard laut Einstellungen: {defaultDueDays} Tage</p>
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => setInvoiceDialog(null)}
+                className="px-4 py-2 rounded-lg border hover:bg-muted text-sm"
+                data-testid="invoice-create-cancel"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={confirmCreateInvoice}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
+                data-testid="invoice-create-confirm"
+              >
+                Rechnung erstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

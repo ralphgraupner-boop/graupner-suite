@@ -3,7 +3,13 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 22.05.2026
 
-## Update 26.05.2026 — Wolken-Modul (interne Kurzkommunikation)
+## Update 26.05.2026 — Zahlungsziel pro Rechnung überschreibbar (Variante b)
+- **Backend** `models.py`: `InvoiceUpdate` um `due_days` erweitert. `Invoice.due_days` wird beim Anlegen mit gespeichert (für Edit-Rückrechnung).
+- **Backend** `module_rechnungen/routes_v1.py` `update_invoice`: Wenn `due_days` im PUT-Body gesetzt, wird `due_date = created_at + due_days Tage` neu berechnet und in DB gespeichert.
+- **Frontend `WysiwygDocumentEditor.jsx`**: Settings vorgeladen (`default_due_days`). Bei NEU = aus Settings, bei EDIT = aus DB-Wert (Fallback: `due_date - created_at`). `dueDays` als Prop in `TotalsSection`.
+- **Frontend `wysiwyg/TotalsSection.jsx`**: Neue Zeile „Zahlungsziel: X Tage" mit Live-Vorschau „Zahlbar bis TT.MM.JJJJ". Sowohl Desktop- als auch Mobile-Layout.
+- **Frontend `OrdersPage.jsx`**: Beim Klick auf „Rechnung erstellen aus Auftrag" öffnet sich jetzt ein Mini-Dialog mit Eingabefeld „Zahlungsziel (Tage)", vorbelegt aus Settings, Live-Anzeige Zahlbar-bis-Datum, Buttons Abbrechen/Erstellen.
+- **Tests grün**: POST ohne due_days → Settings-Default. POST mit due_days=5 → delta=5. PUT mit due_days=42 → delta=42. Screenshot zeigt Dialog mit „14 Tage / Zahlbar bis 10.6.2026 / Standard laut Einstellungen: 14 Tage".
 - **Backend `backend/module_wolke/`** (neu) — eigene Collection `module_wolke`. Endpoints `POST`, `GET /erhalten`, `GET /gesendet`, `GET /count-offen`, `PATCH /{id}/erledigt`, `DELETE /{id}`, `GET /mitarbeiter`. Lookup User↔Mitarbeiter über `vorname+nachname == username` (Fallback email). Memo-Typ wird beim Anlegen sofort als `erledigt` markiert → zählt nicht im Badge. Aufgabe bleibt `offen` bis Empfänger bestätigt. In `server.py` als `/api/module-wolke` registriert.
 - **Frontend `components/wolke/WolkePopover.jsx`** (neu) — Floating Cloud-Icon unten rechts mit roter Badge (Polling 60s). Slide-Over mit Tabs Erhalten/Gesendet/Neu. Neu-Form: Empfänger-Select, Memo/Aufgabe-Toggle, optionale Kundensuche, `TextareaWithAI` (Voice+KI). Karten mit Erledigt-Button (Empfänger) und Lösch-Button (Absender). In `App.js` global im `MainLayout` eingehängt — überall sichtbar, nur für eingeloggte User.
 - **Tests grün**: 8 Curl-Tests (POST Memo/Aufgabe, count-offen, erhalten, erledigt, Permissions). Screenshot mit Heike Bolanka zeigt Badge=2, 4 Karten in Erhalten-Tab inkl. Kunde-Verknüpfung.

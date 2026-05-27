@@ -72,6 +72,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [discountType, setDiscountType] = useState("percent");
   const [status, setStatus] = useState(type === "quote" ? "Entwurf" : "Offen");
   const [depositAmount, setDepositAmount] = useState(0);
+  const [dueDays, setDueDays] = useState(null); // null = noch nicht aus Settings/DB geladen
   const [docNumber, setDocNumber] = useState("");
   const [createdAt, setCreatedAt] = useState(new Date().toISOString());
   
@@ -156,6 +157,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       if (isNew && settingsRes.data?.default_vat_rate) {
         setVatRate(settingsRes.data.default_vat_rate);
       }
+      // Zahlungsziel beim NEU-Anlegen aus Settings vorbelegen (Default 14)
+      if (isNew && type === "invoice" && dueDays === null) {
+        const def = settingsRes.data?.default_due_days;
+        setDueDays(Number.isFinite(def) ? def : 14);
+      }
 
       try { const titelRes = await api.get("/modules/textvorlagen/data", { params: { text_type: "titel", doc_type: "allgemein" } }); setTitelTemplates(titelRes.data); } catch {}
       try { const blockRes = await api.get("/leistungsbloecke"); setLeistungsBloecke(blockRes.data); } catch {}
@@ -185,6 +191,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         setBetreff(doc.betreff || ""); setVatRate(doc.vat_rate || 19);
         setDiscount(doc.discount || 0); setDiscountType(doc.discount_type || "percent");
         setStatus(doc.status || ""); setDepositAmount(doc.deposit_amount || 0);
+        if (type === "invoice") {
+          // Rückrechnen falls due_days fehlt: due_date - created_at
+          let dd = doc.due_days;
+          if (dd == null && doc.due_date && doc.created_at) {
+            try {
+              const a = new Date(doc.created_at);
+              const b = new Date(doc.due_date);
+              dd = Math.max(0, Math.round((b - a) / 86400000));
+            } catch { dd = 14; }
+          }
+          setDueDays(Number.isFinite(dd) ? dd : 14);
+        }
         setDocNumber(doc.quote_number || doc.order_number || doc.invoice_number);
         setCreatedAt(doc.created_at);
         if (doc.show_lohnanteil) setShowLohnanteil(true);
@@ -599,12 +617,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       if (isNew) {
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { deposit_amount: depositAmount }) };
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         const res = await api.post(`/${endpoint}`, payload);
         if (res?.data?.id) { navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); return res.data.id; }
         return null;
       } else {
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "invoice" && { deposit_amount: depositAmount }) };
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         await api.put(`/${endpoint}/${id}`, payload);
         return id;
       }
@@ -863,6 +881,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 discountAmt={discountAmt} netAfterDiscount={netAfterDiscount}
                 vatRate={vatRate} setVatRate={setVatRate} vat={vat} total={total}
                 type={type} depositAmount={depositAmount} setDepositAmount={setDepositAmount} finalAmount={finalAmount}
+                dueDays={dueDays} setDueDays={setDueDays} createdAt={createdAt}
                 showLohnanteil={showLohnanteil} setShowLohnanteil={setShowLohnanteil}
                 effectiveLohnanteil={effectiveLohnanteil} lohnanteilMwst={lohnanteilMwst} lohnanteilBrutto={lohnanteilBrutto}
                 lohnanteilCustom={lohnanteilCustom} setLohnanteilCustom={setLohnanteilCustom} totalLaborCost={totalLaborCost}

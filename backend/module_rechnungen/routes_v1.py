@@ -171,6 +171,7 @@ async def create_invoice(invoice: InvoiceCreate):
         deposit_amount=round(invoice.deposit_amount, 2),
         final_amount=round(final_amount, 2),
         due_date=due_date,
+        due_days=due_days_effective,
         show_lohnanteil=invoice.show_lohnanteil,
         lohnanteil_custom=invoice.lohnanteil_custom
     )
@@ -203,7 +204,8 @@ async def create_invoice_from_order(order_id: str, due_days: Optional[int] = Bod
         subtotal_net=order["subtotal_net"],
         vat_amount=order["vat_amount"],
         total_gross=order["total_gross"],
-        due_date=due_date
+        due_date=due_date,
+        due_days=due_days_effective
     )
 
     await db.invoices.insert_one(invoice_obj.model_dump())
@@ -293,6 +295,22 @@ async def update_invoice(invoice_id: str, update: InvoiceUpdate):
             update_data["paid_at"] = datetime.now(timezone.utc).isoformat()
         elif update.status == "Offen":
             update_data["paid_at"] = None
+
+    # Zahlungsziel pro Rechnung überschreibbar — wenn due_days gesetzt, due_date neu berechnen.
+    if update.due_days is not None:
+        try:
+            dd = int(update.due_days)
+            if dd < 0:
+                dd = 0
+            base_iso = existing.get("created_at") or datetime.now(timezone.utc).isoformat()
+            try:
+                base_dt = datetime.fromisoformat(base_iso.replace("Z", "+00:00"))
+            except Exception:
+                base_dt = datetime.now(timezone.utc)
+            update_data["due_days"] = dd
+            update_data["due_date"] = (base_dt + timedelta(days=dd)).isoformat()
+        except (TypeError, ValueError):
+            pass
 
     # Kundendaten aktualisieren wenn customer_id mitgeschickt wird
     if update.customer_id:

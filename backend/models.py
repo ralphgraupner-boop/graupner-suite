@@ -448,6 +448,7 @@ class InvoiceUpdate(BaseModel):
     custom_total: Optional[float] = None
     show_lohnanteil: bool = False
     lohnanteil_custom: str = ""
+    due_days: Optional[int] = None  # wenn gesetzt: due_date wird neu berechnet
 
 class PushSubscription(BaseModel):
     endpoint: str

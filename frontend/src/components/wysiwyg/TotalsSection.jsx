@@ -2,10 +2,20 @@ const TotalsSection = ({
   hasTitels, titelGroups, subtotal, discount, setDiscount, discountType,
   discountAmt, netAfterDiscount, vatRate, setVatRate, vat, total,
   type, depositAmount, setDepositAmount, finalAmount,
+  dueDays, setDueDays, createdAt,
   showLohnanteil, setShowLohnanteil, effectiveLohnanteil, lohnanteilMwst, lohnanteilBrutto, lohnanteilCustom, setLohnanteilCustom, totalLaborCost,
 }) => {
   // Anzeigename fuer interne Gruppe "__ungrouped" -> "Allgemeine Positionen"
   const displayTitel = (t) => (t === "__ungrouped" ? "Allgemeine Positionen" : t);
+  // Vorschau-Datum aus dueDays + createdAt (oder heute)
+  const dueDateLabel = (() => {
+    if (type !== "invoice" || dueDays == null) return "";
+    try {
+      const base = createdAt ? new Date(createdAt) : new Date();
+      const d = new Date(base.getTime() + Number(dueDays) * 86400000);
+      return d.toLocaleDateString("de-DE");
+    } catch { return ""; }
+  })();
   return (
     <div className="px-4 lg:px-10 py-4 lg:py-6 border-t">
       {/* Desktop Totals */}
@@ -122,6 +132,26 @@ const TotalsSection = ({
                 </td>
                 <td></td>
               </tr>
+              {setDueDays && (
+                <tr>
+                  <td></td><td></td><td></td>
+                  <td colSpan={2} className="text-right py-2 text-xs text-muted-foreground">
+                    {dueDateLabel && <>Zahlbar bis <strong>{dueDateLabel}</strong></>}
+                  </td>
+                  <td className="text-right py-2 text-muted-foreground text-sm">Zahlungsziel</td>
+                  <td className="text-right py-2">
+                    <div className="flex items-center justify-end">
+                      <input type="number" min="0" step="1"
+                        value={dueDays ?? ""}
+                        onChange={(e) => setDueDays(e.target.value === "" ? null : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                        className="w-16 border rounded px-2 py-1 text-sm text-right font-mono"
+                        data-testid="input-invoice-due-days" />
+                      <span className="ml-1 text-sm">Tage</span>
+                    </div>
+                  </td>
+                  <td></td>
+                </tr>
+              )}
               {depositAmount > 0 && (
                 <tr>
                   <td></td><td></td><td></td><td></td><td></td>
@@ -239,6 +269,21 @@ const TotalsSection = ({
                     <span className="ml-1">€</span>
                   </div>
                 </div>
+                {setDueDays && (
+                  <div className="flex justify-between py-2 items-center">
+                    <span className="text-muted-foreground">
+                      Zahlungsziel{dueDateLabel ? <span className="block text-[10px]">bis {dueDateLabel}</span> : null}
+                    </span>
+                    <div className="flex items-center">
+                      <input type="number" min="0" step="1"
+                        value={dueDays ?? ""}
+                        onChange={(e) => setDueDays(e.target.value === "" ? null : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                        className="w-16 border rounded px-2 py-1 text-sm text-right font-mono"
+                        data-testid="input-invoice-due-days-mobile" />
+                      <span className="ml-1">Tage</span>
+                    </div>
+                  </div>
+                )}
                 {depositAmount > 0 && (
                   <div className="flex justify-between py-2 text-primary font-semibold">
                     <span>Restbetrag</span>
