@@ -41,11 +41,11 @@ def get_email_signature_html():
 
         <!-- DSGVO Hinweis -->
         <div style="margin-top: 20px; padding: 12px 16px; background-color: #f8f9fa; border-left: 3px solid {TIEFBLAU}; font-size: 10px; color: #666666; line-height: 1.5;">
-            <p style="margin: 0 0 8px 0;"><strong style="color: {TIEFBLAU};">Hinweis: DSGVO &ndash; Einverst&auml;ndniserkl&auml;rung Datenverarbeitung</strong></p>
-            <p style="margin: 0 0 8px 0;">Die Datenschutz-Grundverordnung (DSGVO) ist seit ihrer Einf&uuml;hrung im Mai 2018 ein zentrales Thema f&uuml;r Unternehmen in der EU. Ihre Grunds&auml;tze sind darauf ausgelegt, den Schutz personenbezogener Daten zu gew&auml;hrleisten und das Vertrauen zwischen Unternehmen und ihren Kunden zu st&auml;rken.</p>
-            <p style="margin: 0 0 8px 0;"><strong>Datennutzungserkl&auml;rung:</strong> Diese E-Mail enth&auml;lt vertrauliche und/oder rechtlich gesch&uuml;tzte Informationen. Wenn Sie nicht der richtige Adressat sind oder diese E-Mail irrt&uuml;mlich erhalten haben, informieren Sie bitte sofort den Absender und vernichten Sie diese Mail. Das unerlaubte Kopieren sowie die unbefugte Weitergabe dieser Mail ist nicht gestattet.</p>
-            <p style="margin: 0 0 8px 0; font-style: italic;">This e-mail may contain confidential and/or privileged information. If you are not the intended recipient (or have received this e-mail in error) please notify the sender immediately and destroy this e-mail. Any unauthorized copying, disclosure or distribution of the material in this e-mail is strictly forbidden.</p>
-            <p style="margin: 0; font-weight: bold; color: {TIEFBLAU};">Das eigentliche Dokument finden Sie in einer PDF-Datei im Anhang dieser E-Mail!</p>
+            <p style="margin: 0 0 8px 0;"><strong style="color: {TIEFBLAU};">Datenschutz &amp; Vertraulichkeit (DSGVO)</strong></p>
+            <p style="margin: 0 0 8px 0;">Wir verarbeiten Ihre personenbezogenen Daten ausschlie&szlig;lich zur Abwicklung Ihrer Anfrage bzw. unseres Auftragsverh&auml;ltnisses. Eine Weitergabe an Dritte erfolgt nicht. Weitere Informationen finden Sie in unserer Datenschutzerkl&auml;rung unter <a href="https://www.tischlerei-graupner.de/j/privacy" style="color: {TIEFBLAU};">www.tischlerei-graupner.de/j/privacy</a>.</p>
+            <p style="margin: 0 0 8px 0;"><strong>Vertraulichkeit:</strong> Diese E-Mail kann vertrauliche oder rechtlich gesch&uuml;tzte Informationen enthalten. Sollten Sie nicht der vorgesehene Empf&auml;nger sein, informieren Sie uns bitte umgehend und l&ouml;schen Sie diese Nachricht. Eine Weitergabe, Vervielf&auml;ltigung oder Verwendung dieser E-Mail ist in diesem Fall nicht gestattet.</p>
+            <p style="margin: 0 0 8px 0; font-style: italic;">This e-mail may contain confidential or legally protected information. If you are not the intended recipient, please notify us immediately and delete this message. Any disclosure, copying or use is prohibited.</p>
+            <p style="margin: 0; font-weight: bold; color: {TIEFBLAU};">Das eigentliche Dokument finden Sie als PDF im Anhang dieser E-Mail.</p>
         </div>
     </div>
     """

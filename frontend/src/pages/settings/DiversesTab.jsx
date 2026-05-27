@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Plus, Pencil, Trash2, FileText, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Users, Hash } from "lucide-react";
+import { Mail, Save, Plus, Pencil, Trash2, FileText, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Users, Hash, Type } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
@@ -13,6 +13,54 @@ const TYPEN = [
 ];
 
 const DEFAULT_KATEGORIEN = ["Allgemein", "Anweisungen", "Hinweise", "Programmbeschreibung", "Links"];
+const SchriftgroesseCard = () => {
+  const SIZES = [
+    { value: 14, label: "Klein" },
+    { value: 16, label: "Standard" },
+    { value: 18, label: "Groß" },
+    { value: 20, label: "Sehr groß" },
+  ];
+  const [size, setSize] = useState(16);
+
+  useEffect(() => {
+    try {
+      const stored = parseInt(localStorage.getItem("ui_font_size_px"), 10);
+      if (stored && SIZES.some(s => s.value === stored)) setSize(stored);
+    } catch { /* ignore */ }
+  }, []);
+
+  const apply = (newSize) => {
+    setSize(newSize);
+    document.documentElement.style.fontSize = `${newSize}px`;
+    try { localStorage.setItem("ui_font_size_px", String(newSize)); } catch { /* ignore */ }
+    toast.success(`Schriftgröße: ${SIZES.find(s => s.value === newSize)?.label}`);
+  };
+
+  return (
+    <Card className="p-4 lg:p-6" data-testid="schriftgroesse-card">
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <Type className="w-5 h-5 text-primary" /> Schriftgröße
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Stellt die Schriftgröße der gesamten App ein. Wirkt sofort, gilt pro Browser/Gerät.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {SIZES.map(s => (
+          <button
+            key={s.value}
+            onClick={() => apply(s.value)}
+            className={`px-4 py-2 rounded-sm border transition-colors ${size === s.value ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted border-input"}`}
+            data-testid={`btn-font-${s.value}`}
+          >
+            <span style={{ fontSize: `${s.value}px` }}>{s.label}</span>
+            <span className="text-xs opacity-70 ml-2">({s.value}px)</span>
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
 const RechnungsnummernCard = () => {
   const [format, setFormat] = useState("R-{MM}/{YY}-{NNNNN}");
   const [next, setNext] = useState(1);
@@ -313,6 +361,7 @@ const DiversesTab = () => {
 
   return (
     <div className="space-y-4">
+      <SchriftgroesseCard />
       <RechnungsnummernCard />
       <FeatureFlagsCard />
       <PopOutPrefsCard />
