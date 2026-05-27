@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { Wand2, X, Loader2 } from "lucide-react";
+import { Wand2, X, Loader2, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 
 /**
@@ -205,7 +205,7 @@ export const TextKorrekturModal = ({
 
 /**
  * Kleiner „Korrigieren"-Button neben Vortext/Schlusstext/Betreff-Feldern.
- * Sehr leichtgewichtig, nur Trigger fürs Modal.
+ * Einheitlicher ✨-Stil wie KiKorrekturWrapper im restlichen System.
  */
 export const TextKorrekturButton = ({ text, onTrigger, disabled = false, testId }) => {
   const isEmpty = !(text || "").trim();
@@ -214,12 +214,11 @@ export const TextKorrekturButton = ({ text, onTrigger, disabled = false, testId 
       type="button"
       onClick={onTrigger}
       disabled={disabled || isEmpty}
-      className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-sm border border-border bg-muted text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      className="inline-flex items-center justify-center p-1 rounded bg-background hover:bg-primary/10 text-muted-foreground hover:text-primary border border-input shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       title={isEmpty ? "Text ist leer" : "Rechtschreibung und Grammatik mit KI prüfen"}
       data-testid={testId || "btn-textkorrektur"}
     >
-      <Wand2 className="w-3.5 h-3.5" />
-      <span>Korrigieren</span>
+      <Sparkles className="w-3.5 h-3.5" />
     </button>
   );
 };
