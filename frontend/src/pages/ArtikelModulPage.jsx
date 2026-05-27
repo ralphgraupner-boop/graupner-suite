@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
+import { KiKorrekturWrapper } from "@/components/KiKorrekturWrapper";
 
 const TYPE_CONFIG = {
   Artikel: { label: "Artikel", color: "bg-blue-100 text-blue-800", icon: Package },
@@ -355,12 +356,29 @@ const ArtikelFormModal = ({ isOpen, onClose, item, onSave }) => {
 
         <div>
           <label className="block text-sm font-medium mb-2">Bezeichnung *</label>
-          <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required data-testid="input-artikel-name" />
+          <KiKorrekturWrapper
+            value={form.name || ""}
+            onChange={(v) => setForm({ ...form, name: v })}
+            kontext="allgemein"
+            feldLabel="Bezeichnung"
+            testId="btn-ki-artikel-name"
+            iconPosition="top-right"
+          >
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required data-testid="input-artikel-name" className="pr-9" />
+          </KiKorrekturWrapper>
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-2">Beschreibung</label>
-          <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+          <KiKorrekturWrapper
+            value={form.description || ""}
+            onChange={(v) => setForm({ ...form, description: v })}
+            kontext="allgemein"
+            feldLabel="Artikel-Beschreibung"
+            testId="btn-ki-artikel-desc"
+          >
+            <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="pr-9" />
+          </KiKorrekturWrapper>
         </div>
 
         {/* Kalkulation */}
