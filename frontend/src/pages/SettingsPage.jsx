@@ -110,7 +110,7 @@ const SettingsPage = () => {
       <SettingsShortcuts />
 
       {/* Tab Navigation */}
-      <div className="flex gap-1 mb-6 border-b overflow-x-auto pb-px" data-testid="settings-tabs">
+      <div className="flex gap-1 mb-6 border-b flex-wrap pb-px" data-testid="settings-tabs">
         {TABS.map(({ id, label, icon: Icon }) => (
           <HelpTip key={id} id={`settings.tab-${id === "firma" ? "firmendaten" : id === "benutzer" ? "users" : id === "dokumente" ? "briefkopf" : id === "doc-templates" ? "dokument-vorlagen" : id}`} placement="bottom">
           <button
