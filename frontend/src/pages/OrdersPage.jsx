@@ -42,7 +42,8 @@ const OrdersPage = ({ readOnly = false }) => {
   const handleCreateInvoice = async (orderId, e) => {
     e?.stopPropagation();
     try {
-      await api.post(`/invoices/from-order/${orderId}`, { due_days: 14 });
+      // Kein hardcoded due_days mehr — Backend übernimmt default_due_days aus den Einstellungen.
+      await api.post(`/invoices/from-order/${orderId}`, {});
       toast.success("Rechnung erstellt");
       loadOrders();
     } catch (err) {

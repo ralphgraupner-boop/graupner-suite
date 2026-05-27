@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Body
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from models import Invoice, InvoiceCreate, InvoiceUpdate, Position
 from database import db, logger
@@ -7,6 +7,16 @@ from auth import get_current_user
 from module_angebote import find_customer_in_modules
 
 router = APIRouter()
+
+
+async def _get_default_due_days() -> int:
+    """Liest default_due_days aus settings; Fallback 14 wenn settings fehlt."""
+    s = await db.settings.find_one({}, {"_id": 0, "default_due_days": 1})
+    try:
+        v = int((s or {}).get("default_due_days", 14))
+        return v if v >= 0 else 14
+    except (TypeError, ValueError):
+        return 14
 
 
 async def get_next_invoice_number():
@@ -138,7 +148,8 @@ async def create_invoice(invoice: InvoiceCreate):
     total_gross = net_after_discount + vat_amount
     final_amount = total_gross - invoice.deposit_amount
 
-    due_date = (datetime.now(timezone.utc) + timedelta(days=invoice.due_days)).isoformat()
+    due_days_effective = invoice.due_days if invoice.due_days is not None else await _get_default_due_days()
+    due_date = (datetime.now(timezone.utc) + timedelta(days=due_days_effective)).isoformat()
 
     invoice_obj = Invoice(
         invoice_number=invoice_number,
@@ -169,13 +180,14 @@ async def create_invoice(invoice: InvoiceCreate):
 
 
 @router.post("/invoices/from-order/{order_id}", response_model=Invoice)
-async def create_invoice_from_order(order_id: str, due_days: int = Body(14, embed=True)):
+async def create_invoice_from_order(order_id: str, due_days: Optional[int] = Body(None, embed=True)):
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
 
     invoice_number = await get_next_invoice_number()
-    due_date = (datetime.now(timezone.utc) + timedelta(days=due_days)).isoformat()
+    due_days_effective = due_days if due_days is not None else await _get_default_due_days()
+    due_date = (datetime.now(timezone.utc) + timedelta(days=due_days_effective)).isoformat()
 
     invoice_obj = Invoice(
         invoice_number=invoice_number,

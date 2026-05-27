@@ -599,7 +599,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       if (isNew) {
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { due_days: 14, deposit_amount: depositAmount }) };
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { deposit_amount: depositAmount }) };
         const res = await api.post(`/${endpoint}`, payload);
         if (res?.data?.id) { navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); return res.data.id; }
         return null;

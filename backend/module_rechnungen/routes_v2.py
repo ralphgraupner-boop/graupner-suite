@@ -39,7 +39,7 @@ class RechnungV2Create(BaseModel):
     discount_type: Literal["amount", "percent"] = "amount"
     vat_rate: float = 19.0
     deposit_amount: float = 0  # Anzahlung
-    due_days: int = 14
+    due_days: Optional[int] = None  # None = aus settings.default_due_days übernehmen
     show_lohnanteil: bool = True
     lohnanteil_custom: Optional[float] = None
     kleinbetrag: bool = False  # < 250 EUR brutto = weniger Pflichtfelder
@@ -65,6 +65,16 @@ async def _next_invoice_number():
         except Exception:
             pass
     return f"{prefix}0001"
+
+
+async def _get_default_due_days_v2() -> int:
+    """Liest default_due_days aus settings; Fallback 14."""
+    s = await db.settings.find_one({}, {"_id": 0, "default_due_days": 1})
+    try:
+        v = int((s or {}).get("default_due_days", 14))
+        return v if v >= 0 else 14
+    except (TypeError, ValueError):
+        return 14
 
 # ============== CRUD ==============
 
@@ -141,7 +151,7 @@ async def create_rechnung_v2(payload: RechnungV2Create, user=Depends(get_current
         "vat": round(vat, 2),
         "brutto": round(brutto, 2),
         "final_amount": round(final_amount, 2),
-        "due_days": payload.due_days,
+        "due_days": payload.due_days if payload.due_days is not None else await _get_default_due_days_v2(),
         "show_lohnanteil": payload.show_lohnanteil,
         "lohnanteil_custom": payload.lohnanteil_custom,
         "kleinbetrag": payload.kleinbetrag,

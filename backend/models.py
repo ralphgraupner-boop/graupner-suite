@@ -308,7 +308,7 @@ class InvoiceCreate(BaseModel):
     discount_type: str = "percent"
     vat_rate: float = 19
     deposit_amount: float = 0
-    due_days: int = 14
+    due_days: Optional[int] = None  # None = aus settings.default_due_days übernehmen
     show_lohnanteil: bool = False
     lohnanteil_custom: str = ""
 
