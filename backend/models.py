@@ -368,6 +368,10 @@ class CompanySettings(BaseModel):
     kalk_helfer: float = 25.0
     kalk_materialzuschlag: float = 10.0
     kalk_gewinnaufschlag: float = 15.0
+    # Rechnungsnummern-Format (Ralph 26.05.2026)
+    # Platzhalter: {MM}, {YY}, {YYYY}, {NNNN}, {NNNNN}, {NNNNNN}
+    invoice_number_format: str = "R-{MM}/{YY}-{NNNNN}"
+    invoice_number_next: int = 1
 
 
 class WebhookContact(BaseModel):

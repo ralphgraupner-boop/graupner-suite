@@ -20,13 +20,41 @@ async def _get_default_due_days() -> int:
 
 
 async def get_next_invoice_number():
-    counter = await db.counters.find_one_and_update(
-        {"_id": "invoice_number"},
-        {"$inc": {"seq": 1}},
+    """Liest Format und nächste Nummer aus settings; inkrementiert atomar.
+    Platzhalter: {MM}, {YY}, {YYYY}, {NNNN}, {NNNNN}, {NNNNNN}
+    """
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0})
+    if not settings:
+        await db.settings.insert_one({
+            "id": "company_settings",
+            "invoice_number_format": "R-{MM}/{YY}-{NNNNN}",
+            "invoice_number_next": 1,
+        })
+        settings = {"invoice_number_format": "R-{MM}/{YY}-{NNNNN}", "invoice_number_next": 1}
+
+    try:
+        seq = int(settings.get("invoice_number_next") or 1)
+    except (TypeError, ValueError):
+        seq = 1
+    if seq < 1:
+        seq = 1
+    fmt = settings.get("invoice_number_format") or "R-{MM}/{YY}-{NNNNN}"
+
+    await db.settings.update_one(
+        {"id": "company_settings"},
+        {"$set": {"invoice_number_next": seq + 1}},
         upsert=True,
-        return_document=True
     )
-    return f"R-{datetime.now().year}-{str(counter['seq']).zfill(4)}"
+
+    now = datetime.now()
+    out = fmt
+    out = out.replace("{MM}", f"{now.month:02d}")
+    out = out.replace("{YYYY}", str(now.year))
+    out = out.replace("{YY}", f"{now.year % 100:02d}")
+    out = out.replace("{NNNNNN}", f"{seq:06d}")
+    out = out.replace("{NNNNN}", f"{seq:05d}")
+    out = out.replace("{NNNN}", f"{seq:04d}")
+    return out
 
 
 @router.get("/invoices", response_model=List[Invoice])

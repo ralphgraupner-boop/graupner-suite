@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Plus, Pencil, Trash2, FileText, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { Mail, Save, Plus, Pencil, Trash2, FileText, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Users, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
@@ -13,6 +13,111 @@ const TYPEN = [
 ];
 
 const DEFAULT_KATEGORIEN = ["Allgemein", "Anweisungen", "Hinweise", "Programmbeschreibung", "Links"];
+const RechnungsnummernCard = () => {
+  const [format, setFormat] = useState("R-{MM}/{YY}-{NNNNN}");
+  const [next, setNext] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/settings");
+        setSettings(res.data);
+        setFormat(res.data.invoice_number_format || "R-{MM}/{YY}-{NNNNN}");
+        setNext(parseInt(res.data.invoice_number_next) || 1);
+      } catch { /* ignore */ } finally { setLoading(false); }
+    })();
+  }, []);
+
+  const buildPreview = (fmt, n) => {
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = String(now.getFullYear());
+    const yy = yyyy.slice(-2);
+    const seq = parseInt(n) || 0;
+    return (fmt || "")
+      .replace("{MM}", mm)
+      .replace("{YYYY}", yyyy)
+      .replace("{YY}", yy)
+      .replace("{NNNNNN}", String(seq).padStart(6, "0"))
+      .replace("{NNNNN}", String(seq).padStart(5, "0"))
+      .replace("{NNNN}", String(seq).padStart(4, "0"));
+  };
+
+  const handleSave = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      const payload = { ...settings, invoice_number_format: format, invoice_number_next: parseInt(next) || 1 };
+      const res = await api.put("/settings", payload);
+      setSettings(res.data);
+      toast.success("Rechnungsnummern-Format gespeichert");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Fehler beim Speichern");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="p-4 lg:p-6" data-testid="rechnungsnummern-card">
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <Hash className="w-5 h-5 text-primary" /> Rechnungsnummern-Format
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Bestimmt, wie neue Rechnungsnummern automatisch erzeugt werden. Bereits vergebene Nummern bleiben unverändert.
+      </p>
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Lädt...</div>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Format</label>
+              <Input
+                value={format}
+                onChange={(e) => setFormat(e.target.value)}
+                placeholder="R-{MM}/{YY}-{NNNNN}"
+                data-testid="input-invoice-format"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Platzhalter: <code>{"{MM}"}</code> Monat, <code>{"{YY}"}</code> Jahr 2-stellig, <code>{"{YYYY}"}</code> Jahr 4-stellig, <code>{"{NNNN}"}</code> / <code>{"{NNNNN}"}</code> / <code>{"{NNNNNN}"}</code> laufende Nummer.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Nächste laufende Nummer</label>
+              <Input
+                type="number"
+                min="1"
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+                placeholder="125"
+                data-testid="input-invoice-next"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Wird bei jeder neuen Rechnung automatisch um 1 hochgezählt.
+              </p>
+            </div>
+          </div>
+          <div className="p-3 bg-muted/40 rounded-sm border">
+            <p className="text-xs text-muted-foreground mb-1">Vorschau nächste Rechnung:</p>
+            <p className="font-mono text-base font-semibold" data-testid="invoice-format-preview">
+              {buildPreview(format, next) || "—"}
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving} data-testid="btn-save-invoice-format">
+              <Save className="w-4 h-4" /> {saving ? "Speichere..." : "Speichern"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+};
+
 const FeatureFlagsCard = () => {
   const [flags, setFlags] = useState({});
 
@@ -208,6 +313,7 @@ const DiversesTab = () => {
 
   return (
     <div className="space-y-4">
+      <RechnungsnummernCard />
       <FeatureFlagsCard />
       <PopOutPrefsCard />
 
