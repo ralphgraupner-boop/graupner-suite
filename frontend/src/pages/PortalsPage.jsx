@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Share2, Plus, Copy, Trash2, ToggleLeft, ToggleRight, Upload, Image, FileText, X, Eye, Calendar, Lock, User, Search, Send, MessageSquare, Download, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { compressImageIfNeeded } from "@/lib/imageCompress";
+import { KiKorrekturWrapper } from "@/components/KiKorrekturWrapper";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
@@ -755,13 +756,21 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
               </div>
             )}
           </div>
-          <textarea
+          <KiKorrekturWrapper
             value={msgText}
-            onChange={(e) => setMsgText(e.target.value)}
-            className="w-full border rounded-sm p-2 text-sm min-h-[120px] resize-y"
-            placeholder="Nachricht an den Kunden..."
-            data-testid="portal-message-text"
-          />
+            onChange={setMsgText}
+            kontext="allgemein"
+            feldLabel="Nachricht an Kunden"
+            testId="btn-ki-portal2-msg"
+          >
+            <textarea
+              value={msgText}
+              onChange={(e) => setMsgText(e.target.value)}
+              className="w-full border rounded-sm p-2 pr-9 text-sm min-h-[120px] resize-y"
+              placeholder="Nachricht an den Kunden..."
+              data-testid="portal-message-text"
+            />
+          </KiKorrekturWrapper>
           <div className="flex justify-end">
             <button
               onClick={() => setShowPreview(true)}

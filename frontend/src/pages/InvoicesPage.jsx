@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
+import { KiKorrekturWrapper } from "@/components/KiKorrekturWrapper";
 
 const InvoicesPage = ({ readOnly = false }) => {
   const [invoices, setInvoices] = useState([]);
@@ -727,13 +728,21 @@ const InvoicesPage = ({ readOnly = false }) => {
                       ))}
                     </select>
                   </div>
-                  <textarea
-                    data-testid="dunning-text-area"
-                    className="w-full border rounded px-3 py-2 text-sm"
-                    rows={10}
-                    value={dunningEditor.text}
-                    onChange={(e) => setDunningEditor(prev => ({ ...prev, text: e.target.value }))}
-                  />
+                  <KiKorrekturWrapper
+                    value={dunningEditor.text || ""}
+                    onChange={(v) => setDunningEditor(prev => ({ ...prev, text: v }))}
+                    kontext="allgemein"
+                    feldLabel={`Mahnung Stufe ${dunningEditor.level}`}
+                    testId="btn-ki-dunning"
+                  >
+                    <textarea
+                      data-testid="dunning-text-area"
+                      className="w-full border rounded px-3 py-2 pr-9 text-sm"
+                      rows={10}
+                      value={dunningEditor.text}
+                      onChange={(e) => setDunningEditor(prev => ({ ...prev, text: e.target.value }))}
+                    />
+                  </KiKorrekturWrapper>
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-muted-foreground">Platzhalter: {"{rechnungs_nr}"}, {"{betrag}"}, {"{kunde_name}"}, {"{datum}"}</p>
                     {dunningEditor.text && (

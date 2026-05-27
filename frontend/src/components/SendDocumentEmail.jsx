@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Mail, ExternalLink, X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { KiKorrekturWrapper } from "@/components/KiKorrekturWrapper";
 
 const SendDocumentEmail = ({ isOpen, onClose, type, docId, docNumber, customer, settings }) => {
   const [emails, setEmails] = useState([]);
@@ -184,8 +185,17 @@ const SendDocumentEmail = ({ isOpen, onClose, type, docId, docNumber, customer, 
           {/* Betreff */}
           <div>
             <label className="block text-sm font-medium mb-1.5">Betreff</label>
-            <input value={subject} onChange={e => setSubject(e.target.value)}
-              className="w-full border rounded-sm px-3 py-2.5 text-sm font-medium" data-testid="email-subject" />
+            <KiKorrekturWrapper
+              value={subject}
+              onChange={setSubject}
+              kontext="betreff"
+              feldLabel="E-Mail-Betreff"
+              testId="btn-ki-send-betreff"
+              iconPosition="top-right"
+            >
+              <input value={subject} onChange={e => setSubject(e.target.value)}
+                className="w-full border rounded-sm px-3 py-2.5 pr-9 text-sm font-medium" data-testid="email-subject" />
+            </KiKorrekturWrapper>
           </div>
 
           {/* Nachricht */}
@@ -200,8 +210,16 @@ const SendDocumentEmail = ({ isOpen, onClose, type, docId, docNumber, customer, 
                 </select>
               )}
             </div>
-            <textarea value={message} onChange={e => setMessage(e.target.value)}
-              placeholder="Optionale Nachricht..." rows={4} className="w-full border rounded-sm px-3 py-2.5 text-sm resize-none" />
+            <KiKorrekturWrapper
+              value={message}
+              onChange={setMessage}
+              kontext="allgemein"
+              feldLabel="E-Mail-Nachricht"
+              testId="btn-ki-send-message"
+            >
+              <textarea value={message} onChange={e => setMessage(e.target.value)}
+                placeholder="Optionale Nachricht..." rows={4} className="w-full border rounded-sm px-3 py-2.5 pr-9 text-sm resize-none" />
+            </KiKorrekturWrapper>
             {message && (
               <button onClick={saveAsTemplate} className="text-xs text-primary hover:underline mt-1">Als Vorlage speichern</button>
             )}

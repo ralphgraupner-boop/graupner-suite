@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { GripVertical, Trash2, Plus, Bookmark, X } from "lucide-react";
 import { toast } from "sonner";
+import { KiKorrekturWrapper } from "@/components/KiKorrekturWrapper";
 
 const PositionsTable = ({
   positions, numbering, type,
@@ -109,16 +110,25 @@ const PositionsTable = ({
                 <Trash2 className="w-3.5 h-3.5 text-destructive" />
               </button>
             </div>
-            <textarea
-              value={pos.description}
-              onChange={(e) => updatePosition(idx, "description", e.target.value)}
-              placeholder="Beschreibung..."
-              rows={1}
-              className="w-full border rounded px-2 py-1.5 text-sm mb-2 resize-none overflow-hidden"
-              style={{ minHeight: "36px" }}
-              onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(36, e.target.scrollHeight) + "px"; }}
-              ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(36, el.scrollHeight) + "px"; } }}
-            />
+            <KiKorrekturWrapper
+              value={pos.description || ""}
+              onChange={(v) => updatePosition(idx, "description", v)}
+              kontext="allgemein"
+              feldLabel={`Position ${numbering[idx]}`}
+              testId={`btn-ki-pos-m-${idx}`}
+              className="mb-2"
+            >
+              <textarea
+                value={pos.description}
+                onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                placeholder="Beschreibung..."
+                rows={1}
+                className="w-full border rounded px-2 py-1.5 pr-8 text-sm resize-none overflow-hidden"
+                style={{ minHeight: "36px" }}
+                onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(36, e.target.scrollHeight) + "px"; }}
+                ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(36, el.scrollHeight) + "px"; } }}
+              />
+            </KiKorrekturWrapper>
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-[10px] text-muted-foreground block">Menge</label>
@@ -257,16 +267,24 @@ const PositionsTable = ({
               </td>
               <td className="py-3 text-sm text-muted-foreground align-top">{numbering[idx]}</td>
               <td className="py-2">
-                <textarea value={pos.description}
-                  onChange={(e) => updatePosition(idx, "description", e.target.value)}
-                  onBlur={() => checkStammChange(idx)}
-                  placeholder="Beschreibung eingeben..."
-                  rows={1}
-                  className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 text-sm resize-none overflow-hidden [&::first-line]:font-bold"
-                  style={{ minHeight: "32px" }}
-                  onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(32, e.target.scrollHeight) + "px"; }}
-                  ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(32, el.scrollHeight) + "px"; } }}
-                />
+                <KiKorrekturWrapper
+                  value={pos.description || ""}
+                  onChange={(v) => updatePosition(idx, "description", v)}
+                  kontext="allgemein"
+                  feldLabel={`Position ${numbering[idx]}`}
+                  testId={`btn-ki-pos-${idx}`}
+                >
+                  <textarea value={pos.description}
+                    onChange={(e) => updatePosition(idx, "description", e.target.value)}
+                    onBlur={() => checkStammChange(idx)}
+                    placeholder="Beschreibung eingeben..."
+                    rows={1}
+                    className="w-full bg-transparent border-0 focus:ring-2 focus:ring-primary/20 rounded px-2 py-1 pr-8 text-sm resize-none overflow-hidden [&::first-line]:font-bold"
+                    style={{ minHeight: "32px" }}
+                    onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.max(32, e.target.scrollHeight) + "px"; }}
+                    ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = Math.max(32, el.scrollHeight) + "px"; } }}
+                  />
+                </KiKorrekturWrapper>
                 {pos.artikel_nr && <span className="text-[10px] text-muted-foreground font-mono px-2">{pos.artikel_nr}</span>}
                 {/* Stammdaten-Änderung übernehmen */}
                 {stammChangeIdx === idx && (

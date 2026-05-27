@@ -6,6 +6,7 @@ import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
+import { KiKorrekturWrapper } from "@/components/KiKorrekturWrapper";
 
 const PortalsKlonPage = () => {
   const location = useLocation();
@@ -680,13 +681,21 @@ const PortalDetail = ({ portal, files, onBack, onUpload, onDeleteFile, onToggle,
               </div>
             )}
           </div>
-          <textarea
+          <KiKorrekturWrapper
             value={msgText}
-            onChange={(e) => setMsgText(e.target.value)}
-            className="w-full border rounded-sm p-2 text-sm min-h-[120px] resize-y"
-            placeholder="Nachricht an den Kunden..."
-            data-testid="portal-message-text"
-          />
+            onChange={setMsgText}
+            kontext="allgemein"
+            feldLabel="Nachricht an Kunden"
+            testId="btn-ki-portal-msg"
+          >
+            <textarea
+              value={msgText}
+              onChange={(e) => setMsgText(e.target.value)}
+              className="w-full border rounded-sm p-2 pr-9 text-sm min-h-[120px] resize-y"
+              placeholder="Nachricht an den Kunden..."
+              data-testid="portal-message-text"
+            />
+          </KiKorrekturWrapper>
           <div className="flex justify-end">
             <button
               onClick={() => setShowPreview(true)}

@@ -2,6 +2,7 @@ import { Mail, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/common";
 import { api } from "@/lib/api";
+import { KiKorrekturWrapper } from "@/components/KiKorrekturWrapper";
 
 const EmailDialog = ({ type, titles, docNumber, customer, settings, emailForm, setEmailForm, emailTemplates, setEmailTemplates, sendingEmail, onSend, onClose }) => {
   // Alle E-Mail-Adressen des Kunden sammeln
@@ -45,8 +46,18 @@ const EmailDialog = ({ type, titles, docNumber, customer, settings, emailForm, s
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground">Betreff</label>
-            <input value={emailForm.subject} onChange={e => setEmailForm(f => ({ ...f, subject: e.target.value }))}
-              placeholder={defaultSubject} className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-subject-input" />
+            <KiKorrekturWrapper
+              value={emailForm.subject || ""}
+              onChange={(v) => setEmailForm(f => ({ ...f, subject: v }))}
+              kontext="betreff"
+              feldLabel="E-Mail-Betreff"
+              testId="btn-ki-email-betreff"
+              className="mt-1"
+              iconPosition="top-right"
+            >
+              <input value={emailForm.subject} onChange={e => setEmailForm(f => ({ ...f, subject: e.target.value }))}
+                placeholder={defaultSubject} className="w-full border rounded px-3 py-2 pr-9 text-sm" data-testid="email-subject-input" />
+            </KiKorrekturWrapper>
           </div>
           <div>
             <div className="flex items-center justify-between">
@@ -74,8 +85,17 @@ const EmailDialog = ({ type, titles, docNumber, customer, settings, emailForm, s
                 ))}
               </select>
             </div>
-            <textarea value={emailForm.message} onChange={e => setEmailForm(f => ({ ...f, message: e.target.value }))}
-              placeholder="Nachricht eingeben oder Vorlage waehlen..." rows={5} className="w-full border rounded px-3 py-2 text-sm mt-1" data-testid="email-message-input" />
+            <KiKorrekturWrapper
+              value={emailForm.message || ""}
+              onChange={(v) => setEmailForm(f => ({ ...f, message: v }))}
+              kontext="allgemein"
+              feldLabel="E-Mail-Nachricht"
+              testId="btn-ki-email-message"
+              className="mt-1"
+            >
+              <textarea value={emailForm.message} onChange={e => setEmailForm(f => ({ ...f, message: e.target.value }))}
+                placeholder="Nachricht eingeben oder Vorlage waehlen..." rows={5} className="w-full border rounded px-3 py-2 pr-9 text-sm" data-testid="email-message-input" />
+            </KiKorrekturWrapper>
             {emailForm.message && (
               <button
                 className="text-xs text-primary hover:underline mt-1"
