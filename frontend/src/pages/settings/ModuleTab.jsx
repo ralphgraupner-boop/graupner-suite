@@ -1,8 +1,73 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, Download, Link2, Database, Package } from "lucide-react";
+import { ChevronDown, Download, Link2, Database, Package, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/common";
 import { api } from "@/lib/api";
+
+// Lokale Feature-Flags (gleiche Quelle wie Sidebar/Navigation)
+const RV2_FLAG_KEY = "rechnungen_v2";
+
+const RV2FeatureCard = () => {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    try {
+      const flags = JSON.parse(localStorage.getItem("feature_flags") || "{}");
+      setEnabled(!!flags[RV2_FLAG_KEY]);
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggle = () => {
+    let flags = {};
+    try { flags = JSON.parse(localStorage.getItem("feature_flags") || "{}"); } catch { /* ignore */ }
+    const next = !enabled;
+    flags[RV2_FLAG_KEY] = next;
+    localStorage.setItem("feature_flags", JSON.stringify(flags));
+    setEnabled(next);
+    toast.success(
+      next
+        ? "Rechnungen (Neu) aktiviert — erscheint nach Reload in der Sidebar"
+        : "Rechnungen (Neu) deaktiviert"
+    );
+    setTimeout(() => window.location.reload(), 1200);
+  };
+
+  return (
+    <div className="border rounded-lg overflow-hidden mb-4" data-testid="module-rv2-card">
+      <div className="flex items-center gap-4 p-4">
+        <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <Receipt className="w-6 h-6" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold">Rechnungen (Neu) — RV2</h3>
+            <span className={`text-xs px-2 py-0.5 rounded-full border ${enabled ? "bg-green-100 text-green-700 border-green-300" : "bg-gray-100 text-gray-600 border-gray-300"}`}>
+              {enabled ? "aktiv" : "inaktiv"}
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              BETA
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            GoBD-konformes Rechnungsmodul mit Verweis auf Angebot/Auftragsbestätigung,
+            unveränderbarer Druck-Sperre, eigenem Nummernkreis (RV2-…) und Kunden-Snapshot.
+            Standard: AUS. Wenn aktiviert, erscheint „Rechnungen (Neu)" in der Sidebar.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant={enabled ? "outline" : "default"}
+            size="sm"
+            onClick={toggle}
+            data-testid="btn-rv2-toggle"
+          >
+            {enabled ? "Deaktivieren" : "Aktivieren"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ModuleTab = () => {
   const [modules, setModules] = useState([]);
@@ -71,6 +136,8 @@ const ModuleTab = () => {
           </p>
         </div>
       </div>
+
+      <RV2FeatureCard />
 
       <div className="grid gap-4">
         {modules.map((modul) => (
