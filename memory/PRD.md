@@ -1,7 +1,53 @@
 # PRD — Graupner Suite (Tischlerei-CRM)
 
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
-> Stand: 22.05.2026
+> Stand: 28.05.2026
+
+## 🎯 DESIGN-PRINZIPIEN (verbindlich seit 28.05.2026 — Ralph)
+
+**Leitmotiv:** Modern · Professionell · Zukunftsweisend · Handy-optimiert · KI-ready · Sprache-first
+
+**Gilt für JEDE neue oder geänderte Komponente. Keine Ausnahmen.**
+
+### UI-Regeln
+- **Kein Vollbild für kleine Aktionen.** Snooze, Bestätigungen, Quick-Picks → kompaktes Modal, niemals eigene Seite.
+- **Kompakte elegante Popups/Modals** statt überladene Seiten.
+- **Bottom-Sheet auf Handy, zentriertes Modal auf Desktop.** Drag-Indikator oben, dunkler Backdrop mit Blur.
+- **Klare Typografie**, konsistente Hierarchie, ruhige Whitespaces.
+- **Konsistentes Design überall** — gleiche Icons (Lucide), gleiche Farben, gleicher Modal-Stil.
+- **Schnell und reaktionsschnell** — Animationen ≤ 200 ms, kein Layout-Geruckel.
+
+### Mobile-First (ohne Ausnahme)
+- **Tap-Flächen ≥ 44×44 px** auf allen interaktiven Elementen.
+- **Kein horizontales Scrollen** außer in echten Tabellen.
+- **Bottom-Sheets** für alle Schnellaktionen (Snooze, Bestätigen, Auswahl).
+- **Hand-zone bedacht**: wichtige Buttons im unteren Drittel.
+
+### KI- & Sprache-First
+- **Jedes Textfeld** (Input, Textarea) bekommt das ✨-Icon für GPT-Rechtschreibung (`KiKorrekturWrapper` oder `TextKorrekturButton`).
+- **Jedes längere Textfeld** bekommt zusätzlich Mikrofon-Icon (`TextareaWithAI`) für Whisper-Diktat.
+- Backend-Modell: GPT-5.2 + Whisper via Emergent LLM Key — bereits installiert, immer wiederverwenden.
+
+### Komponenten-Pflicht
+- Modals/Sheets: zentral wiederverwendbar (kein einmaliger Eigenbau).
+- Bei Snooze-/Bestätigungs-/Auswahl-Dialogen: immer Backdrop-Klick zum Schließen, Escape-Taste optional.
+- Icons aus `lucide-react`, keine Emojis im UI (außer Statushinweisen im Notification-Popup).
+
+---
+
+## Update 28.05.2026 — Push-Snooze als elegantes Modal (statt Vollbild-Seite)
+- **Frontend `pages/SnoozePage.jsx`** komplett überarbeitet: fixed-overlay, dunkler Backdrop mit Blur, kompaktes Sheet (max-w-sm) zentriert auf Desktop, Bottom-Sheet auf Mobile mit Drag-Indikator. 4 Buttons (1h/2h/4h/8h) im 4-Spalten-Grid, Schließen-X, Backdrop-Klick zum Verwerfen, Animations-Einblendung 200 ms, Auto-Close nach 1,8 s.
+- **Service Worker `public/sw.js`**: Push-Popup zeigt nur noch 2 Action-Buttons („📂 Öffnen", „⏰ Später"). „Erledigt" wurde auf Wunsch entfernt — wird in der App nach Öffnen erledigt.
+
+## Update 26.05.2026 — Mehrere kleine Verbesserungen
+- **Rechnungsnummer-Format einstellbar** (`R-MM/JJ-NNNNN`, Counter in `settings`). UI in Einstellungen → Diverses.
+- **Schriftgröße-Slider** in Einstellungen → Diverses (4 Stufen, `localStorage`-basiert).
+- **Kundenportal-Einladungstexte** Umlaute repariert + DSGVO-Fußzeile professionalisiert.
+- **9 kaputte `module_textvorlagen`-Einträge** per DB-Migration korrigiert.
+- **Einstellungs-Tabs `flex-wrap`** statt versteckter Scroll-Leiste — alle Tabs immer sichtbar.
+- **KI-Rechtschreibprüfung flächendeckend ausgerollt** (Position, E-Mail, Mahnung, Portal-Antworten, Artikel-Katalog Bezeichnung+Beschreibung). Einheitliches ✨-Icon. Zentrale Komponente `components/KiKorrekturWrapper.jsx`.
+- **RV2-Modul** in Einstellungen → Module aktivierbar (Standard AUS, Feature-Flag `rechnungen_v2`).
+- **Push-Benachrichtigungen mit Action-Buttons**: Subscription bekommt `push_token`; Quick-Action-Endpoint `POST /api/push/quick-action` für `done` und `snooze`. Snooze-Stunden 1/2/4/8.
 
 ## Update 26.05.2026 — Zahlungsziel pro Rechnung überschreibbar (Variante b)
 - **Backend** `models.py`: `InvoiceUpdate` um `due_days` erweitert. `Invoice.due_days` wird beim Anlegen mit gespeichert (für Edit-Rückrechnung).
