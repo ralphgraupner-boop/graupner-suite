@@ -128,6 +128,7 @@ self.addEventListener('push', (event) => {
       data.body = event.data.text();
     }
   }
+  const hasEntity = !!(data.entity_type && data.entity_id);
   const options = {
     body: data.body || 'Neue Nachricht',
     icon: '/icon-192.png',
@@ -136,7 +137,16 @@ self.addEventListener('push', (event) => {
     tag: 'graupner-' + Date.now(),
     renotify: true,
     requireInteraction: true,
-    data: { url: data.url || '/' }
+    data: {
+      url: data.url || '/',
+      entity_type: data.entity_type || null,
+      entity_id: data.entity_id || null,
+      push_token: data.push_token || null,
+    },
+    actions: hasEntity ? [
+      { action: 'open', title: '📂 Öffnen' },
+      { action: 'done', title: '✓ Erledigt' },
+    ] : [],
   };
   event.waitUntil(
     self.registration.showNotification(data.title || 'Graupner Suite', options)
@@ -144,8 +154,43 @@ self.addEventListener('push', (event) => {
 });
 
 self.addEventListener('notificationclick', (event) => {
+  const d = event.notification.data || {};
+  const action = event.action;
+
+  if (action === 'done' && d.entity_type && d.entity_id && d.push_token) {
+    // Quick-Action: ohne UI als erledigt markieren
+    event.notification.close();
+    event.waitUntil(
+      fetch('/api/push/quick-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          push_token: d.push_token,
+          entity_type: d.entity_type,
+          entity_id: d.entity_id,
+          action: 'done',
+        }),
+      })
+        .then(() => self.registration.showNotification('✓ Als erledigt markiert', {
+          body: 'Eintrag wurde erfolgreich erledigt.',
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'graupner-done-' + Date.now(),
+          requireInteraction: false,
+        }))
+        .catch(() => self.registration.showNotification('⚠ Fehler', {
+          body: 'Eintrag konnte nicht erledigt werden. Bitte App öffnen.',
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'graupner-err-' + Date.now(),
+        }))
+    );
+    return;
+  }
+
+  // Standardklick oder 'open'-Action → Seite öffnen
   event.notification.close();
-  const url = event.notification.data?.url || '/';
+  const url = d.url || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {

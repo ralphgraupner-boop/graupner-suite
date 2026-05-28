@@ -134,8 +134,17 @@ async def check_due_invoices(user=Depends(get_current_user)):
     if due_soon:
         body = f"{len(due_soon)} Rechnung(en) in den nächsten 3 Tagen fällig"
         if len(due_soon) == 1:
-            body = f"Rechnung {due_soon[0].get('invoice_number','')} an {due_soon[0].get('customer_name','')} bald fällig"
-        await send_push_to_all(title="Fälligkeits-Warnung", body=body, url="/invoices")
+            inv1 = due_soon[0]
+            body = f"Rechnung {inv1.get('invoice_number','')} an {inv1.get('customer_name','')} bald fällig"
+            await send_push_to_all(
+                title="Fälligkeits-Warnung",
+                body=body,
+                url=f"/invoices/edit/{inv1.get('id','')}",
+                entity_type="invoice",
+                entity_id=inv1.get("id"),
+            )
+        else:
+            await send_push_to_all(title="Fälligkeits-Warnung", body=body, url="/invoices")
         notifications_sent += 1
 
     if overdue:

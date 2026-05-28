@@ -101,8 +101,17 @@ async def check_followup_quotes(user=Depends(get_current_user)):
     if followup:
         body = f"{len(followup)} Angebot(e) zur Wiedervorlage fällig"
         if len(followup) == 1:
-            body = f"Angebot {followup[0].get('quote_number','')} an {followup[0].get('customer_name','')} nachfassen"
-        await send_push_to_all(title="Angebots-Wiedervorlage", body=body, url="/quotes")
+            q1 = followup[0]
+            body = f"Angebot {q1.get('quote_number','')} an {q1.get('customer_name','')} nachfassen"
+            await send_push_to_all(
+                title="Angebots-Wiedervorlage",
+                body=body,
+                url=f"/quotes/edit/{q1.get('id','')}",
+                entity_type="quote",
+                entity_id=q1.get("id"),
+            )
+        else:
+            await send_push_to_all(title="Angebots-Wiedervorlage", body=body, url="/quotes")
 
     return {"followup_count": len(followup), "quotes": followup}
 
