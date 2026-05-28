@@ -3,6 +3,36 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 28.05.2026
 
+## 🤖 INTELLIGENTER ASSISTENT — Roadmap (verbindlich seit 28.05.2026 — Ralph)
+
+**Vision:** Ein KI-Agent direkt in der Graupner Suite, der den Alltag aktiv unterstützt — sprachgesteuert, immer verfügbar, ausführbar.
+
+**Endausbau (Vision):**
+- Aktive Fragen: „Es liegen 3 Erinnerungen vor — soll ich sie zeigen?"
+- Sprache: „Erledigt" · „Erinnere mich in 2 Stunden" · „Zeig alle offenen Angebote"
+- Aktionen: Angebote erstellen, Termine anlegen, Wolken-Nachrichten senden
+- Immer verfügbar oben in der Toolbar
+
+### Phase 1 — Push-Quick-Assistent (Stand 28.05.2026)
+- **Ort:** `/snooze?type=...&id=...&token=...` (über Service-Worker-Push geöffnet)
+- **UI:** Bottom-Sheet (Mobile) / zentriertes Modal (Desktop)
+- **Begrüßung:** „Hallo Ralph 👋 — soll ich dich erinnern, oder ist das erledigt?"
+- **Mikrofon prominent** — 80×80 px in der Mitte. Whisper-Transkription. Lokales Keyword-Mapping interpretiert „erledigt"/„in X Stunden"/„später" → ruft direkt die Aktion auf.
+- **Quick-Actions (5):** ✅ Erledigt · ⏰ 1h · 2h · 4h · 8h
+- **Backend:** `POST /api/push/voice` (Whisper via Emergent LLM Key, Auth über push_token).
+- **Architektur-ready:** Voice-Interpreter in eigener Funktion `interpretVoiceCommand` ausgelagert — kann später durch LLM-Intent-Endpoint ersetzt werden, ohne UI anzufassen.
+
+### Phase 2 (geplant)
+- Globaler Assistent-Button oben in der Toolbar
+- Aktive Hinweise im Dashboard („3 Erinnerungen offen")
+- Befehle für Angebote/Termine/Wolke
+
+### Phase 3 (geplant)
+- LLM-Intent-Parsing statt Keyword-Matching
+- Multi-Turn-Dialoge
+
+---
+
 ## 🎯 DESIGN-PRINZIPIEN (verbindlich seit 28.05.2026 — Ralph)
 
 **Leitmotiv:** Modern · Professionell · Zukunftsweisend · Handy-optimiert · KI-ready · Sprache-first

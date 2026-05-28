@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 import json
 from uuid import uuid4
 from models import PushSubscription, PushUnsubscribe
@@ -169,3 +169,27 @@ async def push_quick_action(data: dict):
     if res.matched_count == 0:
         raise HTTPException(404, "Eintrag nicht gefunden")
     return {"ok": True, "message": f"Erinnerung in {hours} Std", "snooze_until": snooze_until}
+
+
+# ============== VOICE TRANSCRIPTION (für Mein Assistent) ==============
+# Anonymer Endpoint, Auth über push_token. Nutzt Whisper.
+
+@router.post("/push/voice")
+async def push_voice(
+    audio: UploadFile = File(...),
+    token: str = Form(...),
+    language: str = Form("de"),
+):
+    """Transkribiert Audio für den Assistent. Auth über push_token."""
+    sub = await db.push_subscriptions.find_one({"push_token": token}, {"_id": 0})
+    if not sub:
+        raise HTTPException(401, "Ungültiger Push-Token")
+    data = await audio.read()
+    if not data:
+        raise HTTPException(400, "Leere Datei")
+    if len(data) > 25 * 1024 * 1024:
+        raise HTTPException(400, "Datei zu groß (max 25 MB)")
+    # Importiert hier um Zirkel-Imports zu vermeiden
+    from module_voice_intake.routes import _transcribe_bytes
+    text = await _transcribe_bytes(data, audio.filename or "aufnahme.webm", language)
+    return {"text": text}
