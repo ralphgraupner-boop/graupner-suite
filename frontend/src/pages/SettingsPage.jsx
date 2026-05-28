@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Save, FileText, Building2, Users, Palette, Package, Calculator, BookOpen, HardHat, HelpCircle, Smartphone } from "lucide-react";
+import { Mail, Save, FileText, Building2, Users, Palette, Package, Calculator, BookOpen, HardHat, HelpCircle, Smartphone, FolderTree } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
@@ -16,6 +16,7 @@ import { DokumentVorlagenTab } from "./settings/DokumentVorlagenTab";
 import { DiversesTab } from "./settings/DiversesTab";
 import { BackupTab } from "./settings/BackupTab";
 import { ModuleTab } from "./settings/ModuleTab";
+import { KategorienGruppenTab } from "./settings/KategorienGruppenTab";
 
 // ==================== TAB CONFIG ====================
 const TABS = [
@@ -26,6 +27,7 @@ const TABS = [
   { id: "mitarbeiter", label: "Mitarbeiter", icon: HardHat },
   { id: "dokumente", label: "Dokument-Vorlagen", icon: Palette },
   { id: "doc-templates", label: "Angebot/Rechnung-Vorlagen", icon: Package },
+  { id: "kategorien", label: "Kategorien & Gruppen", icon: FolderTree },
   { id: "diverses", label: "Diverses / Info", icon: BookOpen },
   { id: "backup", label: "Backup", icon: Save },
   { id: "module", label: "Module", icon: Package },
@@ -144,6 +146,7 @@ const SettingsPage = () => {
         </div>
       )}
       {activeTab === "diverses" && <DiversesTab />}
+      {activeTab === "kategorien" && <KategorienGruppenTab />}
       {activeTab === "backup" && <BackupTab />}
       {activeTab === "module" && <ModuleTab />}
       {activeTab === "hilfe" && <HilfeTab />}
