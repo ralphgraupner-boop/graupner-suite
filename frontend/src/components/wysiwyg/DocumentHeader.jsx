@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Search } from "lucide-react";
+import { KundeQuickActions } from "@/components/KundeQuickActions";
 
 const DocumentHeader = ({
   settings, customer, customers, selectedCustomerId,
@@ -77,13 +78,15 @@ const DocumentHeader = ({
             ) : (
               <div className="min-h-[70px]">
                 <div className="flex items-start justify-between">
-                  <div className="text-sm leading-relaxed">
-                    <p className="font-semibold text-slate-900">{(customer.vorname || customer.nachname) ? `${customer.vorname || ""} ${customer.nachname || ""}`.trim() : customer.name}</p>
-                    {customer.firma && <p className="text-slate-600">{customer.firma}</p>}
-                    {customer.address && (
-                      <p className="whitespace-pre-line text-slate-800">{customer.address.split(/,\s*/).join("\n")}</p>
-                    )}
-                  </div>
+                  <KundeQuickActions customerId={customer.id || selectedCustomerId} testId="editor-customer-quickactions">
+                    <div className="text-sm leading-relaxed">
+                      <p className="font-semibold text-slate-900">{(customer.vorname || customer.nachname) ? `${customer.vorname || ""} ${customer.nachname || ""}`.trim() : customer.name}</p>
+                      {customer.firma && <p className="text-slate-600">{customer.firma}</p>}
+                      {customer.address && (
+                        <p className="whitespace-pre-line text-slate-800">{customer.address.split(/,\s*/).join("\n")}</p>
+                      )}
+                    </div>
+                  </KundeQuickActions>
                   <button
                     onClick={() => { handleCustomerChange(""); }}
                     className="text-xs text-slate-500 hover:text-slate-800 ml-2 mt-0.5"
