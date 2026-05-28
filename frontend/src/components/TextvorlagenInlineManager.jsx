@@ -32,8 +32,12 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
   const [loading, setLoading] = useState(false);
   const [editId, setEditId] = useState("");
   const [editTitle, setEditTitle] = useState("");
+  const [editParent, setEditParent] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [busy, setBusy] = useState("");
+
+  // Parent-Auswahl nur für Kategorien sinnvoll
+  const supportsGroups = docType === "kunden_kategorie";
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -79,6 +83,7 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
   const startEdit = (item) => {
     setEditId(item.id);
     setEditTitle(item.title || "");
+    setEditParent(item.parent_category || "");
   };
 
   const saveEdit = async () => {
@@ -86,18 +91,34 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
     if (!t) return;
     setBusy(`edit:${editId}`);
     try {
-      await api.put(`/modules/textvorlagen/data/${editId}`, { title: t });
+      const payload = { title: t };
+      if (supportsGroups) payload.parent_category = editParent.trim() || null;
+      await api.put(`/modules/textvorlagen/data/${editId}`, payload);
       setEditId("");
       setEditTitle("");
+      setEditParent("");
       await reload();
       onChanged?.();
-      toast.success("Umbenannt");
+      toast.success("Gespeichert");
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Fehler beim Speichern");
     } finally {
       setBusy("");
     }
   };
+
+  // Vorschlag für Gruppen-Dropdown: bereits verwendete parent_categories + items die selbst Gruppen sein könnten
+  const groupOptions = (() => {
+    const used = new Set();
+    items.forEach((it) => {
+      if (it.parent_category) used.add(it.parent_category);
+    });
+    // Auch die Top-Level-Einträge (ohne parent) als mögliche Gruppen anbieten
+    items.forEach((it) => {
+      if (!it.parent_category && it.id !== editId) used.add(it.title);
+    });
+    return Array.from(used).sort();
+  })();
 
   const remove = async (item) => {
     if (!window.confirm(`„${item.title}" wirklich löschen? Bestehende Kunden mit diesem Wert behalten ihn — nur die Auswahl in Dropdowns verschwindet.`)) return;
@@ -168,6 +189,21 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
                         className="flex-1 h-8 rounded-sm border border-input bg-background px-2 text-sm"
                         data-testid={`input-edit-${item.id}`}
                       />
+                      {supportsGroups && (
+                        <input
+                          list={`parent-options-${item.id}`}
+                          value={editParent}
+                          onChange={(e) => setEditParent(e.target.value)}
+                          placeholder="Gruppe (optional)"
+                          className="w-40 h-8 rounded-sm border border-input bg-background px-2 text-xs"
+                          data-testid={`input-parent-${item.id}`}
+                        />
+                      )}
+                      {supportsGroups && (
+                        <datalist id={`parent-options-${item.id}`}>
+                          {groupOptions.map((g) => <option key={g} value={g} />)}
+                        </datalist>
+                      )}
                       <button onClick={saveEdit} disabled={!!busy} className="p-1.5 hover:bg-emerald-50 rounded-sm text-emerald-700" title="Speichern" data-testid={`btn-save-${item.id}`}>
                         {busy === `edit:${item.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                       </button>
@@ -177,8 +213,15 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
                     </>
                   ) : (
                     <>
-                      <div className="flex-1 truncate">{item.title}</div>
-                      <button onClick={() => startEdit(item)} className="p-1.5 hover:bg-muted rounded-sm" title="Umbenennen" data-testid={`btn-edit-${item.id}`}>
+                      <div className="flex-1 truncate flex items-center gap-2">
+                        <span>{item.title}</span>
+                        {item.parent_category && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20" title={`Gruppe: ${item.parent_category}`}>
+                            ▶ {item.parent_category}
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => startEdit(item)} className="p-1.5 hover:bg-muted rounded-sm" title="Bearbeiten" data-testid={`btn-edit-${item.id}`}>
                         <Pencil className="w-3.5 h-3.5 text-slate-600" />
                       </button>
                       <button onClick={() => remove(item)} disabled={!!busy} className="p-1.5 hover:bg-destructive/10 rounded-sm text-red-600" title="Löschen" data-testid={`btn-del-${item.id}`}>
