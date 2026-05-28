@@ -706,3 +706,41 @@ async def seed_projekt_vorlagen(user=Depends(get_current_user)):
 
     return {"inserted": inserted, "skipped": skipped, "details": details}
 
+
+
+# ==================== Migration: Kategorie-Gruppen ====================
+# Einmalige Migration für Live: ordnet bestehende PSK-/Hebeschiebetür-Unter-
+# kategorien automatisch ihrer parent_category zu. Admin-only.
+
+@router.post("/modules/textvorlagen/migrate-category-groups")
+async def migrate_category_groups(user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Nur Admin")
+
+    GROUPS = {
+        "PSK": ["PSK Alu", "PSK Kunstoff", "PSK Kunststoff", "PSK-Holz", "PSK Holz"],
+        "Hebeschiebetür": [
+            "Hebeschiebetür Holz", "Hebeschiebetür Kunstoff",
+            "Hebeschiebetür Kunststoff", "Hebeschiebetür Alu",
+        ],
+    }
+    updated_total = 0
+    details = []
+    for parent, members in GROUPS.items():
+        for m in members:
+            res = await db.module_textvorlagen.update_many(
+                {
+                    "doc_type": "kunden_kategorie",
+                    "title": m,
+                    "$or": [
+                        {"parent_category": {"$exists": False}},
+                        {"parent_category": None},
+                        {"parent_category": ""},
+                    ],
+                },
+                {"$set": {"parent_category": parent}},
+            )
+            if res.modified_count:
+                details.append({"title": m, "parent": parent, "count": res.modified_count})
+                updated_total += res.modified_count
+    return {"updated": updated_total, "details": details}
