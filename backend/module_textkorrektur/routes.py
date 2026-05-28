@@ -9,7 +9,7 @@ Module-First:
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
 from database import EMERGENT_LLM_KEY, logger
 from routes.auth import get_current_user
@@ -92,3 +92,94 @@ async def check_text(payload: CheckPayload, user=Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Textkorrektur fehlgeschlagen ({payload.kontext}): {e}")
         raise HTTPException(500, f"KI-Korrektur fehlgeschlagen: {e}")
+
+
+# ==================== Batch (Dokument prüfen) ====================
+
+class DocumentField(BaseModel):
+    id: str
+    label: str
+    text: str
+    kontext: Optional[Literal["betreff", "vortext", "schlusstext", "allgemein"]] = "allgemein"
+
+
+class DocumentCheckPayload(BaseModel):
+    fields: List[DocumentField]
+
+
+class FieldResult(BaseModel):
+    id: str
+    label: str
+    original: str
+    corrected: str
+    changed: bool
+
+
+class DocumentCheckResponse(BaseModel):
+    results: List[FieldResult]
+
+
+async def _correct_single(text: str) -> str:
+    """Ein Lektorat-Call für einen Text. Gibt korrigierten Text zurück."""
+    if not text.strip():
+        return text
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"textkorrektur-{uuid.uuid4()}",
+        system_message=SYSTEM_PROMPT,
+    ).with_model("openai", "gpt-5.2")
+    corrected = (await chat.send_message(UserMessage(text=text)) or "").strip()
+    if (corrected.startswith('"') and corrected.endswith('"')) or (
+        corrected.startswith("„") and corrected.endswith("“")
+    ):
+        corrected = corrected[1:-1].strip()
+    return corrected or text
+
+
+@router.post("/check-document", response_model=DocumentCheckResponse)
+async def check_document(payload: DocumentCheckPayload, user=Depends(get_current_user)):
+    """Prüft alle Textfelder eines Dokuments parallel und gibt Korrekturen zurück."""
+    import asyncio
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(500, "EMERGENT_LLM_KEY nicht konfiguriert")
+    if not payload.fields:
+        return DocumentCheckResponse(results=[])
+    # Nur Felder mit Inhalt prüfen — leere Felder werden 1:1 durchgereicht.
+    tasks = []
+    for f in payload.fields:
+        txt = (f.text or "").strip()
+        if not txt or len(txt) > 8000:
+            tasks.append(None)
+        else:
+            tasks.append(_correct_single(f.text))
+
+    corrected_list = []
+    coros = [t for t in tasks if t is not None]
+    try:
+        gathered = await asyncio.gather(*coros, return_exceptions=True)
+    except Exception as e:
+        logger.error(f"Batch-Korrektur fehlgeschlagen: {e}")
+        raise HTTPException(500, f"KI-Korrektur fehlgeschlagen: {e}")  # noqa: B904
+
+    gathered_iter = iter(gathered)
+    for f, t in zip(payload.fields, tasks):
+        if t is None:
+            corrected_list.append(f.text)
+        else:
+            r = next(gathered_iter)
+            if isinstance(r, Exception):
+                logger.warning(f"Feld {f.id} Korrektur fehlgeschlagen: {r}")
+                corrected_list.append(f.text)
+            else:
+                corrected_list.append(r)
+
+    results = []
+    for f, corrected in zip(payload.fields, corrected_list):
+        results.append(FieldResult(
+            id=f.id,
+            label=f.label,
+            original=f.text,
+            corrected=corrected,
+            changed=(corrected != f.text),
+        ))
+    return DocumentCheckResponse(results=results)

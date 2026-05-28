@@ -18,6 +18,8 @@ import { SendDocumentEmail } from "@/components/SendDocumentEmail";
 import { SettingsSlideOver } from "@/components/wysiwyg/SettingsSlideOver";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { TextKorrekturModal, TextKorrekturButton } from "@/components/wysiwyg/TextKorrekturModal";
+import { DocumentCheckModal } from "@/components/wysiwyg/DocumentCheckModal";
+import { validateDocument } from "@/lib/documentValidator";
 
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const navigate = useNavigate();
@@ -109,6 +111,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [showLohnanteil, setShowLohnanteil] = useState(false);
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
   const [showLohnkosten, setShowLohnkosten] = useState(false);
+  const [showDocCheck, setShowDocCheck] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
@@ -755,6 +758,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         onTogglePreview={() => setShowPreview(true)}
         onOpenDocTemplates={() => setShowLoadTemplate(true)}
         onToggleLohnkosten={() => setShowLohnkosten(v => !v)}
+        onOpenDocCheck={() => setShowDocCheck(true)}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
@@ -1053,6 +1057,45 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           onClose={() => setKorrekturTarget(null)}
         />
       )}
+
+      {showDocCheck && (() => {
+        const docFields = [
+          { id: "betreff", label: "Betreff", text: betreff, kontext: "betreff" },
+          { id: "vortext", label: "Vortext", text: vortext, kontext: "vortext" },
+          { id: "schlusstext", label: "Schlusstext", text: schlusstext, kontext: "schlusstext" },
+          { id: "notes", label: "Bemerkung", text: notes, kontext: "allgemein" },
+          ...positions.map((p, i) => ({
+            id: `position-${i}`,
+            label: `Position ${i + 1}`,
+            text: p?.description || "",
+            kontext: "allgemein",
+          })).filter(f => f.text.trim()),
+        ];
+        const issues = validateDocument({
+          customer, betreff, positions, type,
+          dueDays, anzahlungProzent: depositAmount, abschlag: discount, mwstSatz: vatRate,
+        });
+        const applyOne = (r) => {
+          if (r.id === "betreff") setBetreff(r.corrected);
+          else if (r.id === "vortext") setVortext(r.corrected);
+          else if (r.id === "schlusstext") setSchlusstext(r.corrected);
+          else if (r.id === "notes") setNotes(r.corrected);
+          else if (r.id.startsWith("position-")) {
+            const idx = parseInt(r.id.split("-")[1], 10);
+            updatePosition(idx, "description", r.corrected);
+          }
+        };
+        return (
+          <DocumentCheckModal
+            isOpen={true}
+            onClose={() => setShowDocCheck(false)}
+            fields={docFields}
+            issues={issues}
+            onApply={applyOne}
+            onApplyAll={(items) => items.forEach(applyOne)}
+          />
+        );
+      })()}
     </div>
   );
 };
