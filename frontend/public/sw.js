@@ -145,7 +145,6 @@ self.addEventListener('push', (event) => {
     },
     actions: hasEntity ? [
       { action: 'open', title: '📂 Öffnen' },
-      { action: 'done', title: '✓ Erledigt' },
       { action: 'snooze', title: '⏰ Später' },
     ] : [],
   };
