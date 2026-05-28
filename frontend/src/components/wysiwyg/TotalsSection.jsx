@@ -88,15 +88,15 @@ const TotalsSection = ({
           {discount > 0 && (
             <tr className="border-t border-slate-200">
               <td></td><td></td><td></td><td></td><td></td>
-              <td className="text-right py-2 text-sm font-medium" style={{ width: "70px" }}>Nettobetrag</td>
-              <td className="text-right py-2 font-mono text-sm font-medium" style={{ width: "75px" }}>{netAfterDiscount.toFixed(2)} €</td>
+              <td className="text-right py-2 text-sm font-medium" style={{ width: "84px" }}>Nettobetrag</td>
+              <td className="text-right py-2 font-mono text-sm font-medium" style={{ width: "105px" }}>{netAfterDiscount.toFixed(2)} €</td>
               <td></td>
             </tr>
           )}
           {/* MwSt */}
           <tr>
             <td></td><td></td><td></td><td></td><td></td>
-            <td className="text-right py-2 text-sm" style={{ width: "70px" }}>
+            <td className="text-right py-2 text-sm" style={{ width: "84px" }}>
               <div className="flex items-center justify-end gap-1">
                 <span className="text-muted-foreground">MwSt</span>
                 <select value={vatRate} onChange={(e) => setVatRate(parseFloat(e.target.value))}
@@ -107,14 +107,14 @@ const TotalsSection = ({
                 </select>
               </div>
             </td>
-            <td className="text-right py-2 font-mono text-sm" style={{ width: "75px" }}>{vat.toFixed(2)} €</td>
+            <td className="text-right py-2 font-mono text-sm" style={{ width: "105px" }}>{vat.toFixed(2)} €</td>
             <td></td>
           </tr>
-          {/* Brutto / Gesamt */}
-          <tr className="border-t-2 border-primary">
+          {/* Brutto / Gesamt — schwarze Linie wie PDF, leicht eingerückt */}
+          <tr className="border-t-2 border-slate-900">
             <td></td><td></td><td></td><td></td><td></td>
-            <td className="text-right py-3 font-bold text-lg">Brutto</td>
-            <td className="text-right py-3 font-mono font-bold text-lg">{total.toFixed(2)} €</td>
+            <td className="text-right py-3 font-bold text-base" style={{ width: "84px" }}>Brutto</td>
+            <td className="text-right py-3 font-mono font-bold text-base" style={{ width: "105px" }}>{total.toFixed(2)} €</td>
             <td></td>
           </tr>
           {type === "invoice" && (

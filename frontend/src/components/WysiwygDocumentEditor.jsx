@@ -19,6 +19,7 @@ import { SettingsSlideOver } from "@/components/wysiwyg/SettingsSlideOver";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { TextKorrekturModal, TextKorrekturButton } from "@/components/wysiwyg/TextKorrekturModal";
 import { DocumentCheckModal } from "@/components/wysiwyg/DocumentCheckModal";
+import { PdfPreviewModal } from "@/components/wysiwyg/PdfPreviewModal";
 import { validateDocument } from "@/lib/documentValidator";
 
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
@@ -112,6 +113,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
   const [showLohnkosten, setShowLohnkosten] = useState(false);
   const [showDocCheck, setShowDocCheck] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
 
   const titles = { quote: "Angebot", order: "Auftragsbestätigung", invoice: "Rechnung" };
@@ -759,6 +761,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         onOpenDocTemplates={() => setShowLoadTemplate(true)}
         onToggleLohnkosten={() => setShowLohnkosten(v => !v)}
         onOpenDocCheck={() => setShowDocCheck(true)}
+        onOpenPdfPreview={() => setShowPdfPreview(true)}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
@@ -904,10 +907,29 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={setSchlusstext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
 
-              {/* Footer */}
-              <div className="px-4 lg:px-10 py-4 lg:py-5 border-t bg-slate-50/50 text-[10px] lg:text-xs text-slate-600 text-center space-y-1" data-testid="document-footer">
-                <p>{settings.company_name || "Tischlerei Graupner"} {(settings.address || "Erlengrund 129 22453 Hamburg").replace(/\n/g, " ")} Tel. {settings.phone || "040 52530818"} Mail: {settings.email || "Service@tischlerei-graupner.de"}</p>
-                <p>Bankverbindung: {settings.owner_name || "Ralph Graupner"} | {settings.bank_name || "N26"} | IBAN: {settings.iban || "DE33 1001 1001 2028 1390 46"} | BIC: {settings.bic || "NTSBDEB1XXX"} SteuerNr. {settings.tax_id || "45/076/04744"}</p>
+              {/* Footer (3-spaltig wie PDF: Firma+Inhaber+Adresse · Kontakt+St.-Nr. · Bank) */}
+              <div className="px-4 lg:px-10 py-3 lg:py-4 border-t text-[9px] lg:text-[10px] text-slate-600" data-testid="document-footer">
+                <div className="border-t border-slate-200 pt-2 grid grid-cols-3 gap-4 leading-tight">
+                  <div>
+                    <p className="font-bold text-slate-700">{settings.company_name || "Tischlerei Graupner"}</p>
+                    {settings.owner_name && <p>Inh. {settings.owner_name}</p>}
+                    {(settings.address || "").split("\n").slice(0, 2).map((line, i) => (
+                      <p key={i}>{line.trim()}</p>
+                    ))}
+                  </div>
+                  <div>
+                    {settings.phone && <p>Tel: {settings.phone}</p>}
+                    {settings.email && <p>{settings.email}</p>}
+                    {settings.website && <p>{settings.website}</p>}
+                    {settings.tax_id && <p>St.-Nr.: {settings.tax_id}</p>}
+                  </div>
+                  <div>
+                    {settings.bank_name && <p>{settings.bank_name}</p>}
+                    {settings.iban && <p>IBAN: {settings.iban}</p>}
+                    {settings.bic && <p>BIC: {settings.bic}</p>}
+                  </div>
+                </div>
+                <div className="text-right text-[8px] text-slate-400 mt-1">Seite 1</div>
               </div>
             </div>
           </div>
@@ -1055,6 +1077,22 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           feldLabel={korrekturTarget.label}
           onAccept={(corrected) => korrekturTarget.setter(corrected)}
           onClose={() => setKorrekturTarget(null)}
+        />
+      )}
+
+      {showPdfPreview && (
+        <PdfPreviewModal
+          isOpen={true}
+          onClose={() => setShowPdfPreview(false)}
+          filename={`${titles[type]}_${docNumber}.pdf`}
+          getPdfBlob={async () => {
+            if (!validateTextFields()) return null;
+            const savedId = await persistDocument();
+            if (!savedId) return null;
+            const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
+            const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
+            return new Blob([res.data], { type: "application/pdf" });
+          }}
         />
       )}
 

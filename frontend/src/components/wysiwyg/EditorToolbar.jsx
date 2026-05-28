@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink, Package, Calculator, ChevronDown, FileCheck2 } from "lucide-react";
+import { ArrowLeft, Wrench, Mic, MicOff, Mail, Printer, Download, Save, X, Bookmark, Eye, ExternalLink, Package, Calculator, ChevronDown, FileCheck2, FileSearch } from "lucide-react";
 import { Button, Badge } from "@/components/common";
 import { HelpTip } from "@/components/HelpTip";
 
@@ -9,7 +9,7 @@ const EditorToolbar = ({
   navigate, setShowSettings, startRecording, stopRecording,
   handleSave, handleExit, handleDownloadPDF, handlePrint,
   onOpenEmailDialog, onOpenMailClient, onToggleVorlagen, onTogglePreview,
-  onOpenDocTemplates, onToggleLohnkosten, onOpenDocCheck,
+  onOpenDocTemplates, onToggleLohnkosten, onOpenDocCheck, onOpenPdfPreview,
   zoomLevel, setZoomLevel,
 }) => {
   // Werkzeuge-Dropdown (Einstellungen, Vorlage, Bausteine, Vorschau)
@@ -97,6 +97,10 @@ const EditorToolbar = ({
           <Button variant="outline" size="sm" onClick={onOpenDocCheck} data-testid="btn-doccheck-topbar" title="Dokument prüfen (Rechtschreibung + Plausibilität)" className="bg-background text-foreground border-border">
             <FileCheck2 className="w-4 h-4" />
             <span className="hidden sm:inline">Prüfen</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={onOpenPdfPreview} data-testid="btn-pdfpreview-topbar" title="PDF-Vorschau (so wird gedruckt)" className="bg-background text-foreground border-border">
+            <FileSearch className="w-4 h-4" />
+            <span className="hidden sm:inline">Vorschau</span>
           </Button>
           <Button
             variant={isRecording ? "destructive" : "outline"}

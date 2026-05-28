@@ -28,9 +28,9 @@ const DocumentHeader = ({
         {/* Left: Briefkopf + Brieffenster */}
         <div>
           <div className="flex items-baseline gap-0.5 mb-0.5">
-            <span className="text-2xl lg:text-4xl font-bold tracking-tight" style={{ color: "#1a1a1a" }}>Tischlerei</span>
+            <span className="text-2xl lg:text-4xl font-bold tracking-tight" style={{ color: "#0F2A4E" }}>Tischlerei</span>
             <span className="text-2xl lg:text-4xl font-bold tracking-tight" style={{ color: "#003399" }}>Graupner</span>
-            <span className="text-xs lg:text-sm font-semibold ml-1.5" style={{ color: "#cc0000" }}>seit 1960</span>
+            <span className="text-xs lg:text-sm font-semibold ml-1.5" style={{ color: "#CC0000" }}>seit 1960</span>
           </div>
           <p className="text-xs lg:text-sm font-medium tracking-wide mb-3" style={{ color: "#003399" }}>Mitglied der Handwerkskammer Hamburg</p>
           {/* Abstand für Brieffenster-Höhe */}
