@@ -12,6 +12,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { EmailPage } from "@/pages/EmailPage";
 import CustomerPortalPage from "@/pages/CustomerPortalPage";
+import SnoozePage from "@/pages/SnoozePage";
 import { KontaktModulPage } from "@/pages/KontaktModulPage";
 import { ArtikelModulPage } from "@/pages/ArtikelModulPage";
 import { DokumenteModulPage } from "@/pages/DokumenteModulPage";
@@ -102,6 +103,8 @@ function App() {
           <Route path="/portal/:token" element={<CustomerPortalPage />} />
           {/* Mitarbeiter-Kundenlink (oeffentlich, 30 Tage gueltig) */}
           <Route path="/m/:token" element={<KundenLinkPage />} />
+          {/* Snooze-Seite (oeffentlich, Auth via push_token) */}
+          <Route path="/snooze" element={<SnoozePage />} />
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLogin={login} />} />
           ) : (

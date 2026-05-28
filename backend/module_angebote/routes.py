@@ -82,6 +82,13 @@ async def check_followup_quotes(user=Depends(get_current_user)):
         return {"followup_count": 0, "quotes": [], "push_disabled": True}
     now = datetime.now(timezone.utc)
     threshold = now - timedelta(days=followup_days)
+
+    # Snooze-Wake-up: Angebote, deren Snooze abgelaufen ist, wieder fällig machen
+    await db.quotes.update_many(
+        {"snooze_until": {"$lte": now.isoformat()}},
+        {"$unset": {"snooze_until": "", "followup_sent": ""}}
+    )
+
     quotes = await db.quotes.find(
         {"status": {"$in": ["Entwurf", "Gesendet"]}, "followup_sent": {"$ne": True}},
         {"_id": 0}

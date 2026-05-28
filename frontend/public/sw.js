@@ -146,6 +146,7 @@ self.addEventListener('push', (event) => {
     actions: hasEntity ? [
       { action: 'open', title: '📂 Öffnen' },
       { action: 'done', title: '✓ Erledigt' },
+      { action: 'snooze', title: '⏰ Später' },
     ] : [],
   };
   event.waitUntil(
@@ -185,6 +186,14 @@ self.addEventListener('notificationclick', (event) => {
           tag: 'graupner-err-' + Date.now(),
         }))
     );
+    return;
+  }
+
+  if (action === 'snooze' && d.entity_type && d.entity_id && d.push_token) {
+    // Snooze: kleine Seite öffnen, die die Stundenzahl abfragt
+    event.notification.close();
+    const snoozeUrl = `/snooze?type=${encodeURIComponent(d.entity_type)}&id=${encodeURIComponent(d.entity_id)}&token=${encodeURIComponent(d.push_token)}`;
+    event.waitUntil(clients.openWindow(snoozeUrl));
     return;
   }
 

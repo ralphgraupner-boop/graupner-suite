@@ -111,7 +111,7 @@ async def send_push_to_all(title: str, body: str, url: str = "/", entity_type: s
 
 @router.post("/push/quick-action")
 async def push_quick_action(data: dict):
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     token = data.get("push_token")
     entity_type = data.get("entity_type")
     entity_id = data.get("entity_id")
@@ -124,44 +124,48 @@ async def push_quick_action(data: dict):
     if not sub:
         raise HTTPException(401, "Ungültiger Push-Token")
 
-    if action != "done":
+    if action not in ("done", "snooze"):
         raise HTTPException(400, "Unbekannte Aktion")
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
 
+    # Collection-Mapping
+    COL = {
+        "quote": ("quotes", {"followup_sent": True, "followup_done_at": now_iso}),
+        "invoice": ("invoices", {"followup_seen": True, "followup_seen_at": now_iso}),
+        "task": ("module_aufgaben", {"status": "erledigt", "erledigt_am": now_iso}),
+        "termin": ("module_termine", {"status": "erledigt", "erledigt_am": now_iso}),
+    }
+    if entity_type not in COL:
+        raise HTTPException(400, f"Unbekannter entity_type: {entity_type}")
+    coll_name, done_update = COL[entity_type]
+    coll = db[coll_name]
+
+    if action == "done":
+        res = await coll.update_one({"id": entity_id}, {"$set": done_update})
+        if res.matched_count == 0:
+            raise HTTPException(404, "Eintrag nicht gefunden")
+        return {"ok": True, "message": "Als erledigt markiert"}
+
+    # SNOOZE
+    try:
+        hours = int(data.get("snooze_hours", 2))
+    except (TypeError, ValueError):
+        hours = 2
+    if hours not in (1, 2, 4, 8):
+        raise HTTPException(400, "snooze_hours muss 1, 2, 4 oder 8 sein")
+
+    snooze_until = (now + timedelta(hours=hours)).isoformat()
+    # followup_sent/seen=True versteckt den Eintrag aus der Prüfung,
+    # snooze_until wird beim nächsten Check geprüft und zurückgesetzt
+    update_doc = {"snooze_until": snooze_until}
     if entity_type == "quote":
-        res = await db.quotes.update_one(
-            {"id": entity_id},
-            {"$set": {"followup_sent": True, "followup_done_at": now}}
-        )
-        if res.matched_count == 0:
-            raise HTTPException(404, "Angebot nicht gefunden")
-        return {"ok": True, "message": "Wiedervorlage als erledigt markiert"}
+        update_doc["followup_sent"] = True
+    elif entity_type == "invoice":
+        update_doc["followup_seen"] = True
 
-    if entity_type == "invoice":
-        # Fälligkeits-Warnung quittieren (nicht „bezahlt"!)
-        await db.invoices.update_one(
-            {"id": entity_id},
-            {"$set": {"followup_seen": True, "followup_seen_at": now}}
-        )
-        return {"ok": True, "message": "Hinweis quittiert"}
-
-    if entity_type == "task":
-        res = await db.module_aufgaben.update_one(
-            {"id": entity_id},
-            {"$set": {"status": "erledigt", "erledigt_am": now}}
-        )
-        if res.matched_count == 0:
-            raise HTTPException(404, "Aufgabe nicht gefunden")
-        return {"ok": True, "message": "Aufgabe erledigt"}
-
-    if entity_type == "termin":
-        res = await db.module_termine.update_one(
-            {"id": entity_id},
-            {"$set": {"status": "erledigt", "erledigt_am": now}}
-        )
-        if res.matched_count == 0:
-            raise HTTPException(404, "Termin nicht gefunden")
-        return {"ok": True, "message": "Termin erledigt"}
-
-    raise HTTPException(400, f"Unbekannter entity_type: {entity_type}")
+    res = await coll.update_one({"id": entity_id}, {"$set": update_doc})
+    if res.matched_count == 0:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    return {"ok": True, "message": f"Erinnerung in {hours} Std", "snooze_until": snooze_until}

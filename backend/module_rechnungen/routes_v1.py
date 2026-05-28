@@ -113,7 +113,14 @@ async def check_due_invoices(user=Depends(get_current_user)):
     from routes.push import send_push_to_all
     now = datetime.now(timezone.utc)
     in_3_days = now + timedelta(days=3)
-    invoices = await db.invoices.find({"status": {"$in": ["Offen", "Gesendet"]}}, {"_id": 0}).to_list(1000)
+
+    # Snooze-Wake-up: Rechnungen, deren Snooze abgelaufen ist, wieder anzeigen
+    await db.invoices.update_many(
+        {"snooze_until": {"$lte": now.isoformat()}},
+        {"$unset": {"snooze_until": "", "followup_seen": ""}}
+    )
+
+    invoices = await db.invoices.find({"status": {"$in": ["Offen", "Gesendet"]}, "followup_seen": {"$ne": True}}, {"_id": 0}).to_list(1000)
 
     due_soon = []
     overdue = []
