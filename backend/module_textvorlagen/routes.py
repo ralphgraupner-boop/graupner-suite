@@ -103,6 +103,7 @@ async def create_textvorlage(data: dict, user=Depends(get_current_user)):
         "doc_type": data["doc_type"],
         "text_type": data["text_type"],
         "keywords": _normalize_keywords(data.get("keywords")),
+        "parent_category": data.get("parent_category") or None,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -116,7 +117,7 @@ async def update_textvorlage(item_id: str, data: dict, user=Depends(get_current_
     existing = await db.module_textvorlagen.find_one({"id": item_id})
     if not existing:
         raise HTTPException(404, "Nicht gefunden")
-    update = {k: v for k, v in data.items() if k in ("title", "content", "doc_type", "text_type") and v is not None}
+    update = {k: v for k, v in data.items() if k in ("title", "content", "doc_type", "text_type", "parent_category") and v is not None}
     if "keywords" in data:
         update["keywords"] = _normalize_keywords(data.get("keywords"))
     update["updated_at"] = datetime.now(timezone.utc).isoformat()

@@ -10,6 +10,7 @@ import { api } from "@/lib/api";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
 import { KundeExportButton } from "@/components/KundeExportButton";
+import { GroupedFilterBar, buildGroupedItems } from "@/components/GroupedFilterBar";
 import { KundeImportButton } from "@/components/KundeImportButton";
 import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
@@ -62,6 +63,30 @@ const useTextvorlagen = (docType, fallback) => {
   return items;
 };
 
+const useTextvorlagenRaw = (docType) => {
+  const [items, setItems] = useState([]);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const onChanged = (e) => {
+      if (!e?.detail?.docType || e.detail.docType === docType) setTick(t => t + 1);
+    };
+    window.addEventListener("textvorlagen-changed", onChanged);
+    return () => window.removeEventListener("textvorlagen-changed", onChanged);
+  }, [docType]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.get(`/modules/textvorlagen/data?doc_type=${docType}`);
+        const sorted = (r.data || []).sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999) || (a.title || "").localeCompare(b.title || ""));
+        if (!cancelled) setItems(sorted);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [docType, tick]);
+  return items;
+};
+
 const STATUS_COLORS = {
   Anfrage: { dot: "bg-blue-500", badge: "bg-blue-100 text-blue-700", border: "border-l-blue-500" },
   Neu: { dot: "bg-red-500 animate-pulse", badge: "bg-red-100 text-red-700", border: "border-l-red-500" },
@@ -92,6 +117,7 @@ const KundenModulPage = () => {
   const [projektCounts, setProjektCounts] = useState({});  // {kunde_id: count_projekte}
   const [neuesProjektFuer, setNeuesProjektFuer] = useState(null);  // Kunde-Objekt für Schnell-Projekt-Dialog
   const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
+  const KUNDEN_KATEGORIEN_RAW = useTextvorlagenRaw("kunden_kategorie");
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
   const navigate = useNavigate();
   const location = useLocation();
@@ -325,46 +351,46 @@ const KundenModulPage = () => {
         </div>
       </Card>
 
-      {/* Kategorie Filter */}
-      <div className="flex flex-wrap gap-2 mb-2">
-        <button onClick={() => setCategoryFilter("")} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${!categoryFilter ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`} data-testid="kategorie-filter-alle">Alle ({kunden.length})</button>
-        {KUNDEN_KATEGORIEN_PAGE.map(cat => (
-          <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? "" : cat)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${categoryFilter === cat ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-            data-testid={`kategorie-filter-${cat}`}
-          >
-            {cat} ({kategorieCounts[cat] || 0})
-          </button>
-        ))}
+      {/* Kategorie Filter - gruppiert */}
+      <div className="mb-2">
+        <GroupedFilterBar
+          items={buildGroupedItems(KUNDEN_KATEGORIEN_RAW, kategorieCounts)}
+          value={categoryFilter}
+          onChange={(v) => setCategoryFilter(v.startsWith("_group_") ? v.slice(7) : v)}
+          allLabel="Alle"
+          allCount={kunden.length}
+          testIdPrefix="kategorie-filter"
+        />
       </div>
 
-      {/* Status Filter */}
+      {/* Status Filter - "Aktiv" als Gruppe (alle Live-Stati zusammengefasst) */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <button
-          onClick={() => setStatusFilter("aktiv")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === "aktiv" ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-          data-testid="status-filter-aktiv"
-        >
-          <span className={`w-2 h-2 rounded-full ${statusFilter === "aktiv" ? "bg-white" : "bg-primary"}`} />
-          Aktiv ({aktivCount})
-        </button>
-        {KUNDEN_STATUSES.filter(st => !ARCHIV_STATES.includes(st)).map(st => (
-          <button key={st} onClick={() => setStatusFilter(statusFilter === st ? "aktiv" : st)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === st ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-            data-testid={`status-filter-${st}`}
-          >
-            <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[st]?.dot?.replace(" animate-pulse", "") || "bg-gray-400"}`} />
-            {st} ({statusCounts[st] || 0})
-          </button>
-        ))}
-        <button
-          onClick={() => setStatusFilter(statusFilter === "archiv" ? "aktiv" : "archiv")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === "archiv" ? "bg-gray-600 text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-          data-testid="status-filter-archiv"
-        >
-          <span className="w-2 h-2 rounded-full bg-gray-500" />
-          Archiv ({archivCount})
-        </button>
+        <GroupedFilterBar
+          items={[
+            {
+              value: "aktiv",
+              label: "Aktiv",
+              dotClass: "bg-primary",
+              count: aktivCount,
+              children: KUNDEN_STATUSES.filter(st => !ARCHIV_STATES.includes(st)).map(st => ({
+                value: st,
+                label: st,
+                count: statusCounts[st] || 0,
+                dotClass: STATUS_COLORS[st]?.dot?.replace(" animate-pulse", "") || "bg-gray-400",
+              })),
+            },
+            {
+              value: "archiv",
+              label: "Archiv",
+              dotClass: "bg-gray-500",
+              count: archivCount,
+              accentClass: "bg-gray-600 text-white",
+            },
+          ]}
+          value={statusFilter === "aktiv" ? "" : statusFilter}
+          onChange={(v) => setStatusFilter(v || "aktiv")}
+          testIdPrefix="status-filter"
+        />
       </div>
       {search.trim() && statusFilter && (
         <div className="text-xs text-muted-foreground -mt-2 mb-3">
