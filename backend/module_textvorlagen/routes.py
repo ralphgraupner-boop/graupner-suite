@@ -3,6 +3,12 @@ from database import db, logger
 from auth import get_current_user
 from datetime import datetime, timezone
 from uuid import uuid4
+import re
+
+
+def _re_escape(s: str) -> str:
+    """Escape user input für sichere $regex-Verwendung (kein Regex-Injection)."""
+    return re.escape(s or "")
 
 router = APIRouter()
 
@@ -96,9 +102,22 @@ async def create_textvorlage(data: dict, user=Depends(get_current_user)):
         raise HTTPException(400, f"doc_type muss einer von {VALID_DOC_TYPES} sein")
     if data.get("text_type") not in VALID_TEXT_TYPES:
         raise HTTPException(400, f"text_type muss einer von {VALID_TEXT_TYPES} sein")
+
+    # Duplikat-Prüfung: gleiche (doc_type, text_type, title) case-insensitive
+    title_clean = data["title"].strip()
+    if not title_clean:
+        raise HTTPException(400, "Titel erforderlich")
+    dup = await db.module_textvorlagen.find_one({
+        "doc_type": data["doc_type"],
+        "text_type": data["text_type"],
+        "title": {"$regex": f"^{_re_escape(title_clean)}$", "$options": "i"},
+    })
+    if dup:
+        raise HTTPException(409, f'Eintrag „{title_clean}" existiert bereits')
+
     item = {
         "id": str(uuid4()),
-        "title": data["title"],
+        "title": title_clean,
         "content": data.get("content", ""),
         "doc_type": data["doc_type"],
         "text_type": data["text_type"],
@@ -117,6 +136,21 @@ async def update_textvorlage(item_id: str, data: dict, user=Depends(get_current_
     existing = await db.module_textvorlagen.find_one({"id": item_id})
     if not existing:
         raise HTTPException(404, "Nicht gefunden")
+
+    # Duplikat-Prüfung beim Umbenennen
+    if "title" in data and data["title"]:
+        new_title = data["title"].strip()
+        if new_title.lower() != (existing.get("title") or "").lower():
+            dup = await db.module_textvorlagen.find_one({
+                "doc_type": existing.get("doc_type"),
+                "text_type": existing.get("text_type"),
+                "title": {"$regex": f"^{_re_escape(new_title)}$", "$options": "i"},
+                "id": {"$ne": item_id},
+            })
+            if dup:
+                raise HTTPException(409, f'Eintrag „{new_title}" existiert bereits')
+        data["title"] = new_title
+
     update = {k: v for k, v in data.items() if k in ("title", "content", "doc_type", "text_type", "parent_category") and v is not None}
     if "keywords" in data:
         update["keywords"] = _normalize_keywords(data.get("keywords"))
