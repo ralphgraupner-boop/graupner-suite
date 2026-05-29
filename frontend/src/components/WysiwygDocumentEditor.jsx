@@ -17,7 +17,6 @@ import { RightSidebar } from "@/components/wysiwyg/RightSidebar";
 import { SendDocumentEmail } from "@/components/SendDocumentEmail";
 import { SettingsSlideOver } from "@/components/wysiwyg/SettingsSlideOver";
 import { DocumentPreview } from "@/components/DocumentPreview";
-import { TextKorrekturModal, TextKorrekturButton } from "@/components/wysiwyg/TextKorrekturModal";
 import { DocumentCheckModal } from "@/components/wysiwyg/DocumentCheckModal";
 import { PdfPreviewModal } from "@/components/wysiwyg/PdfPreviewModal";
 import { validateDocument } from "@/lib/documentValidator";
@@ -68,8 +67,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [vortext, setVortext] = useState("");
   const [schlusstext, setSchlusstext] = useState("");
   const [betreff, setBetreff] = useState("");
-  // KI-Textkorrektur: aktives Feld {kontext, label, text, setter} oder null
-  const [korrekturTarget, setKorrekturTarget] = useState(null);
   const [vatRate, setVatRate] = useState(19);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState("percent");
@@ -834,13 +831,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
               {/* Betreff */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
-                <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="mb-1">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Betreff</span>
-                  <TextKorrekturButton
-                    text={betreff}
-                    onTrigger={() => setKorrekturTarget({ kontext: "betreff", label: "Betreff", text: betreff, setter: setBetreff })}
-                    testId="btn-korrektur-betreff"
-                  />
                 </div>
                 <TextTemplateSelect docType={docTypeMap[type]} textType="betreff" value={betreff} onChange={setBetreff} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
@@ -856,13 +848,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     </span>
                   </div>
                 )}
-                <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="mb-1">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Vortext</span>
-                  <TextKorrekturButton
-                    text={vortext}
-                    onTrigger={() => setKorrekturTarget({ kontext: "vortext", label: "Vortext", text: vortext, setter: setVortext })}
-                    testId="btn-korrektur-vortext"
-                  />
                 </div>
                 <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={setVortext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
@@ -896,13 +883,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
               {/* Schlusstext */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-t">
-                <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="mb-1">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Schlusstext</span>
-                  <TextKorrekturButton
-                    text={schlusstext}
-                    onTrigger={() => setKorrekturTarget({ kontext: "schlusstext", label: "Schlusstext", text: schlusstext, setter: setSchlusstext })}
-                    testId="btn-korrektur-schlusstext"
-                  />
                 </div>
                 <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={setSchlusstext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
               </div>
@@ -1069,17 +1051,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         />
       )}
 
-      {korrekturTarget && (
-        <TextKorrekturModal
-          isOpen={true}
-          original={korrekturTarget.text}
-          kontext={korrekturTarget.kontext}
-          feldLabel={korrekturTarget.label}
-          onAccept={(corrected) => korrekturTarget.setter(corrected)}
-          onClose={() => setKorrekturTarget(null)}
-        />
-      )}
-
       {showPdfPreview && (
         <PdfPreviewModal
           isOpen={true}
@@ -1123,12 +1094,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             updatePosition(idx, "description", r.corrected);
           }
         };
+        const kontextInfo = [
+          `${titles[type]}${docNumber ? " " + docNumber : ""}`,
+          customer ? `Kunde: ${(customer.name || customer.firma || "").trim()}` : null,
+          positions?.length ? `${positions.length} Position(en)` : null,
+        ].filter(Boolean).join(", ");
         return (
           <DocumentCheckModal
             isOpen={true}
             onClose={() => setShowDocCheck(false)}
             fields={docFields}
             issues={issues}
+            kontextInfo={kontextInfo}
             onApply={applyOne}
             onApplyAll={(items) => items.forEach(applyOne)}
           />

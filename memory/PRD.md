@@ -3,6 +3,16 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 28.05.2026
 
+## 🆕 Letzte Änderungen (29.05.2026 — nur Preview)
+
+**Dokument-Editor: KI-Prüfung & PDF-Vorschau überarbeitet (Freigabe Ralph, Plan 1c + 2b)**
+- **PDF-Vorschau (`PdfPreviewModal.jsx`):** großes, bildschirmfüllendes Fenster (`w-96vw / h-94vh`, max 1400px) + Zoom-Steuerung (Breite/Auto, 75–150 %, −/+). Zoom via PDF-Viewer-Fragment (`#view=FitH` / `#zoom=`).
+- **„Prüfen" (`DocumentCheckModal.jsx` + Backend):** ganzes Dokument wird jetzt KONTEXTBEWUSST in EINEM GPT-5.2-Aufruf geprüft (statt Feld-für-Feld). Backend `POST /api/module-textkorrektur/check-document` nimmt zusätzlich `kontext_info` (Doc-Typ, Kunde, Positionen) und liefert per-Feld-Korrekturen via JSON. Neue 1-Klick-Aktion „Alle übernehmen & schließen".
+- **Aufräumen:** Inline-✨-Einzelfeld-Korrektur im Dokument-Editor (Betreff/Vortext/Schlusstext) ENTFERNT — KI-Korrektur läuft dort nur noch über „Prüfen".
+  - ⚠️ **Bewusste Ausnahme zu Design-Prinzip „✨ in jedem Textfeld"** (Zeile ~57): gilt im Dokument-Editor nicht mehr feldweise, sondern gebündelt über „Prüfen". Per-Feld-✨ bleibt in allen anderen Formularen (`KiKorrekturWrapper`/`TextareaWithAI`) erhalten.
+- Status: in Preview umgesetzt & getestet (curl + UI-Screenshot). NICHT auf Live.
+
+
 ## 🤖 INTELLIGENTER ASSISTENT — Roadmap (verbindlich seit 28.05.2026 — Ralph)
 
 **Vision:** Ein KI-Agent direkt in der Graupner Suite, der den Alltag aktiv unterstützt — sprachgesteuert, immer verfügbar, ausführbar.
