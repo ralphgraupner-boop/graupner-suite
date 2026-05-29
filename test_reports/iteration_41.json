@@ -56,7 +56,7 @@
   },
   "standalone_html_form": {
     "file": "/app/landing_page/kontaktformular.html",
-    "form_action": "https://modul-first-app.preview.emergentagent.com/api/kontakt/submit",
+    "form_action": "https://graupner-crm.preview.emergentagent.com/api/kontakt/submit",
     "status": "Correctly configured to submit to API"
   }
 }

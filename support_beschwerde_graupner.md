@@ -12,7 +12,7 @@
 **E-Mail:** ralph.graupner@gmail.com  
 **Projekt:** Graupner Suite (Handwerker-/Tischlerei-Verwaltung)  
 **Live-URL:** https://code-import-flow-1.emergent.host  
-**Preview-URL:** https://modul-first-app.preview.emergentagent.com  
+**Preview-URL:** https://graupner-crm.preview.emergentagent.com  
 **Job-ID:** 3fb2b81c-d9d9-4eed-86d8-31e26fc8ef45  
 **Aktueller Credit-Stand:** ca. 120 Credits (Stand 21.04.2026)
 

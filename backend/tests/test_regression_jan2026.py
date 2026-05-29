@@ -10,7 +10,7 @@ import sys
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://modul-first-app.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://graupner-crm.preview.emergentagent.com").rstrip("/")
 ADMIN_USER = "admin-preview"
 ADMIN_PASS = "HamburgPreview2026!"
 

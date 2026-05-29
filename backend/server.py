@@ -267,7 +267,7 @@ app.add_middleware(
         "*",  # Temporarily allow all for development
         "https://anfrage.schiebetür-reparatur-hamburg.de",  # IONOS Subdomain
         "https://anfrage.xn--schiebetr-reparatur-hamburg-fic.de",  # IONOS Subdomain (IDN encoded)
-        "https://modul-first-app.preview.emergentagent.com",  # Preview URL
+        "https://graupner-crm.preview.emergentagent.com",  # Preview URL
         "https://code-import-flow-1.emergent.host",  # Final Deployment URL
     ],
     allow_methods=["*"],

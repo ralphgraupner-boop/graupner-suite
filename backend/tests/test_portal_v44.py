@@ -7,7 +7,7 @@ import pytest
 import requests
 from PIL import Image
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://modul-first-app.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://graupner-crm.preview.emergentagent.com').rstrip('/')
 API = f"{BASE_URL}/api"
 
 

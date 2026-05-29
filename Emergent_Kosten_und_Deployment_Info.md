@@ -66,7 +66,7 @@
 
 ### Option B: Preview-URL nutzen
 - Kostenlos für Tests
-- Temporäre URL: `https://modul-first-app.preview.emergentagent.com`
+- Temporäre URL: `https://graupner-crm.preview.emergentagent.com`
 - Später jederzeit Deployment möglich
 
 ### Option C: Standalone-Formular verbinden

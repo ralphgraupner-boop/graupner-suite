@@ -9,7 +9,7 @@ import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://modul-first-app.preview.emergentagent.com"
+    BASE_URL = "https://graupner-crm.preview.emergentagent.com"
 
 # Test credentials
 TEST_USER = "admin"

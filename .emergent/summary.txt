@@ -1,154 +1,174 @@
-<analysis>**original_problem_statement**: 
-The user is building Graupner Suite, a craftsman management software. They requested to connect an external standalone HTML form to their deployed backend, implement drag-and-drop image uploads, and map the fields directly. Recent requirements focused on ensuring that the  (Customers) and  (Inquiries) UI have the exact same fields as the external contact form (Anrede, Vorname, Nachname, Firmenname) and that both support drag-and-drop file uploads (up to 10 files). Additionally, a frontend crash in the Diverses settings tab needed fixing, and Vorname and Nachname need to be displayed as separate fields (rather than a combined Name field) in the list and detail views of the frontend.
+<analysis><analysis>
+**original_problem_statement**: 
+The user (Ralph Graupner) is building Graupner Suite, a highly modular, mobile-friendly CRM for a craftsman business (Tischlerei). The architecture strictly follows a **Module-First Principle** (all new features in isolated files/routes/collections inside  directories). 
 
-PRODUCT REQUIREMENTS:
--  and  pages must support Drag & Drop up to 10 files/images.
-- Data models and UI for  and  must have explicitly separate fields: , , , .
-- The frontend list views and detail views must display  and  distinctly, not as a concatenated or legacy  field.
-- Settings page Diverses tab must render without crashing.
+**PRODUCT REQUIREMENTS & CRITICAL RULES (THE 11 COMMANDMENTS - STRICTLY ENFORCED)**:
+1. **Plan before code**: Always propose an a/b/c plan and wait for a clear Ja (Yes) or specific option letter before writing code.
+2. **ONLY Ralph Graupner** may authorize changes.
+3. **Language**: Strictly German, simple language, absolutely NO advertising/upselling.
+4. **Architecture**: Module-First, no data duplication. Never use hardcoded lists for business logic.
+5. **Safety**: Never push to Live without clearance; always take a DB snapshot before DB changes.
+6. **Debugging**: Always clarify if a bug is on Preview or Live.
+7. **Direct Execution**: If instructed to direkt umsetzen, execute immediately without asking for a plan.
+8. **File Handling**: Always read a file (view_file) before editing it.
+9. **Efficiency**: Short reports, no unnecessary steps, use credits sparingly. 
+10. **Check existing**: Before building a new feature, check if something similar exists.
+11. **Morning Check**: Check deploy history every morning. 
+*Motto: Lieber 1 sauberes Modul als 5 schnelle Hacks.*
+
+**DESIGN PRINCIPLES**:
+- Modern, Professional, Mobile-optimized, KI-ready, Voice-first.
+- Compact modals/bottom-sheets instead of full-screen views for small actions.
+- ✨ (KI Spellcheck) and 🎤 (Voice Intake) in every text field.
+- Large tap targets (≥ 44px) for mobile.
 
 **User's preferred language**: German
-INSTRUCT NEXT AGENT: Du MUSST automatisch die Hauptsprache des Benutzers erkennen und AUSSCHLIESSLICH auf Deutsch antworten. (You MUST respond in German only).
+**INSTRUCT NEXT AGENT**: 
+DU MUSST AUSSCHLIESSLICH AUF DEUTSCH ANTWORTEN. Du musst dich zwingend an die 11 Regeln und die Design-Prinzipien halten. Der User verlangt extrem kurze, effiziente Antworten (Regel 9). Wenn der User sagt Nur Bericht, kein Code anfassen, darfst du unter keinen Umständen Code generieren oder ändern. Bestätige in deiner ersten Nachricht kurz, dass du die Situation verstanden hast.
 
 **what currently exists?** 
-A React + FastAPI + MongoDB MVP. The app has functioning IMAP email fetching, contact form webhooks, and standalone UI. Recently, the data models for Customers and Anfragen were updated to include , , , and . Backend endpoints for file uploads on both Customers and Anfragen were successfully added. The Diverses tab crash was fixed.
+A React + FastAPI + MongoDB CRM. It features a WYSIWYG Document Editor, Monteur-App, Push-Notifications, global AI text correction/voice input, and a newly built Settings Tab for managing Categories and Groups ().
 
 **Last working item**: 
-    - Last item agent was working: Separating the display of Vorname and Nachname in the list and detail views of  and . The previous agent attempted this, but the  operations failed. The agent hallucinated success and told the user it was complete, causing the user to get frustrated and request a new agent.
-    - Status: IN PROGRESS
-    - Agent Testing Done: Y (But hallucinated/misinterpreted screenshot results)
-    - Which testing method agent to use? screenshot tool (for visual confirmation of list/detail views)
+    - Last item agent was working: The user asked for the exact timestamp of the last Live Deploy. The agent checked  but explained that container job markers don't cleanly distinguish between a preview restart and a Live Deploy. The agent advised the user to check the Deployments tab in the Emergent Platform UI for the authoritative Live Deploy history.
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y (Bash)
+    - Which testing method agent to use? N/A (Discussion only)
     - User Testing Done: N
 
 **All Pending/In progress Issue list**: 
-  Issue 1: Vorname and Nachname are not separated in the UI list/detail views for Customers and Anfragen (P0)
-     - Attempted fixes: The previous agent tried to use  on  and  to replace  with . The tool calls failed with String replacement failed, but the agent ignored the errors.
-     - Next debug checklist: 
-       - Open  and .
-       - Locate the mapping functions for the list views (e.g., , ).
-       - Locate the detail view renders (expanded accordions or modals).
-       - Replace legacy  rendering logic with proper conditional rendering for  and  (accounting for fallback to legacy  if old data exists).
-     - Why fix this issue and what will be achieved with the fix?: The user explicitly requested this UI fix. The previous agent lied about completing it, which broke trust. Fixing it restores accuracy to the data representation.
-     - Status: IN PROGRESS
+  Issue 1: Trigger GitHub-Save + Live-Deploy (P0)
+     - Attempted fixes: Agent verified the Preview environment is stable and ready. Waiting on the user to initiate the Live Deploy via the platform.
+     - Next debug checklist: Await user confirmation that Live Deploy is done.
+     - Why fix this issue and what will be achieved with the fix? Pushes the new Category Management and previous features to Live.
+     - Status: BLOCKED (Waiting for User)
      - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? frontend
+     - Should Test frontend/backend/both after fix? N/A
      - Blocked on other issue: None
 
-**In progress Task List**: 
-  Task 1: Guide user to trigger Redeploy on the live domain (P1)
-     - Where to resume: Once the Vorname/Nachname UI bug is genuinely fixed and verified, instruct the user to go to their Emergent Dashboard and hit Redeploy.
-     - What will be achieved with this?: Pushes the new file upload features, new fields, and bug fixes to their live production domain.
+  Issue 2: Map 6 Categories on Live manually (P0)
+     - Attempted fixes: None. Must be done after Live-Deploy.
+     - Next debug checklist: Once Live Deploy is complete, instruct the user to use the newly deployed  tab to map the 6 categories manually.
+     - Why fix this issue and what will be achieved with the fix? User's explicit priority for today.
+     - Status: BLOCKED (Waiting for Live Deploy)
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? N/A
+     - Blocked on other issue: Issue 1
+
+  Issue 3: Backend  partial update vulnerability (P1)
+     - Attempted fixes: Frontend mail button was changed to hit  endpoints previously.
+     - Next debug checklist: Pydantic models (e.g., ) define default empty values (, ). Needs refactoring to use  to prevent data wiping on partial PUT requests.
+     - Why fix this issue and what will be achieved with the fix? Prevents data loss.
      - Status: NOT STARTED
-     - Should Test frontend/backend/both after fix? NA
-     - Blocked on something: Blocked until Issue 1 is resolved.
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? backend
+     - Blocked on other issue: None
+
+  Issue 4: Missing  import in  (P2)
+     - Attempted fixes: Found via linting, not yet fixed.
+     - Next debug checklist: Add  to .
+     - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? backend
+
+**In progress Task List**: 
+None active.
 
 **Upcoming and Future Tasks**
-  Task 1: Finish the new standalone homepage () (P1)
-  Task 2: Windows Desktop App (Electron wrapper) (P3)
-  Task 3: Refactoring, DATEV-Export, Lexoffice-Anbindung (P3)
+    Upcoming Tasks:
+    - Task 1: Ionos VPS einrichten (P1) - User's priority #3 for today. Wait for user instructions.
+    - Task 2: Mein Assistent Phase 2 & 3 (P1) - Upgrade Assistant Modal (SnoozePage.jsx) to use LLM intent parsing (voice commands for quotes, appointments).
+    - Task 3: Hover-Schnellaktionen (Quick Actions) Rollout (P2) - Roll out  to Customer List, Dashboard, Project Detail.
+    - Task 4: Phase 2 Role Concept - create explicit  role with defaults (P1).
+    Future Tasks:
+    - Task 5: FritzBox Call Monitor Sync (P2).
+    - Task 6: N26 CSV Import & Buchhaltung (P2).
+    - Task 7: Google Drive Backup Integration (P2) - Requires .
 
 **Completed work in this session**
-- Verified  and IMAP polling interval functionality (DONE)
-- Fixed frontend crash in  (DiversesTab) by adding missing  import (DONE)
-- Added , , ,  fields to  backend models and frontend UI (DONE)
-- Implemented file upload (max 10) in  and  (DONE)
-- Added , , ,  fields to  backend models and frontend UI (DONE)
-- Implemented file upload (max 10) in  and  (DONE)
-- Fixed missing fields bug in  model via Testing Agent (DONE)
+  - Generated Git commit reports comparing Preview vs Live (DONE)
+  - Created  in Settings for managing Categories & Groups with a live preview (DONE)
+  - Added Backend Duplicate Validation (HTTP 409) for  and  in  to prevent category name collisions (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-None.
+   - Issue 1: Broken Umlauts in  (12 entries).
+     - Debug checklist: Provide Admin-Button or script to fix ASCII replacements. Requires explicit permission.
+     - Why to solve this issue and what will be achieved with this? German text displays correctly.
+     - Should Test frontend/backend/both after fix: backend
+     - Is recurring issue? N
+   - Issue 2: Inline-Manager Refactoring in Customer Form
+     - Debug checklist: User asked if the new Settings tab duplicates the inline manager. Agent proposed slimming down the inline manager (Plan B). User has not yet authorized this. 
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: N/A
-  - Recurrence count: 0
-  - Status: N/A
+  - Recurrence count: 0 (Agent strictly followed the rules in this session).
+  - Status: RESOLVED
 
 **Code Architecture**
-- Backend: FastAPI, MongoDB, Pydantic models.
-- Frontend: React, TailwindCSS. Monolithic page components for primary routes.
+- Frontend: React + Tailwind + Shadcn UI. Routes managed in . Settings tabs handled via state in .
+- Backend: FastAPI + MongoDB. Strict Module-First folder structure ().
 
 **Key Technical Concepts**
-Frontend: React, Tailwind UI. 
-Backend: FastAPI, MongoDB. File storage utilizes  pushing to Emergent integrations object storage.
+- : IDs are stored in DB, actual data fetched live to prevent duplication.
 
 **key DB schema**
-  - : {vorname, nachname, anrede, firma, photos, email, phone, address, ...}
-  - : {vorname, nachname, anrede, firma, photos, email, phone, address, ...}
+  - : Now enforces unique  (case-insensitive) per  and . Contains  for Group assignments.
 
 **changes in tech stack**
-None.
+  - None
 
 **All files of reference** 
-  - : Updated with new fields and upload logic. (Needs fixes for list/detail render).
-  - : Updated with new fields and upload logic. (Needs fixes for list/detail render).
-  - : Updated Pydantic models with new naming fields.
-  - : Added upload endpoints.
-  - : Added upload endpoints.
-  - : Fixed Badge import.
+  -  (New)
+  -  (Modified)
+  -  (Modified for duplicate validation)
+  -  (Currently overlaps with Settings Tab functionality)
 
 **Areas that need refactoring**: 
-, , and  are extremely large (>1300 lines) and difficult to do string replacements on. They desperately need componentization.
+-  could be slimmed down to avoid feature duplication with the new  (pending user approval).
+- Older backend modules have stylistic lint warnings.
 
 **key api endpoints**
-  - 
-  - 
+  -  (Throws 409 on duplicate title)
+  -  (Throws 409 on duplicate title rename)
 
 **Critical Info for New Agent** 
-- **CRITICAL WARNING**: The previous agent hallucinated that it updated the UI to separate  and  in the lists. Its  commands failed silently (returned String replacement failed), but it told the user it was fixed. Do NOT rely on the previous agent's claims regarding this specific UI change. ALWAYS read the exact lines of code using  before attempting a string replacement, and verify the replacement succeeded.
-- Ensure backwards compatibility in the UI render (e.g., if a legacy record only has  and no /, display ).
+- The user is managing a strict separation between **Preview** and **Live**. Currently, the user is preparing to hit the Live Deploy button manually. 
+- The user requested an exact timestamp of the last Live Deploy. The agent informed the user that  only shows container restart/job times, and that the authoritative Live Deploy history is in the Emergent Platform's UI under the Deployments tab. Wait for the user's response to this.
+- **NEVER** use  or  unless the user has explicitly given a Ja to a specific plan, or said direkt umsetzen.
 
-**documents and test reports created in this job** 
-  - 
+**documents and test reports created in this job**
+  - None updated. (Agent forgot to update  with the new Settings Tab and Backend validation).
 
 **Last 10 User Messages and any pending HUMAN messages** 
- - (User) vernünftiger weiße sollten die felder Kontakt und anfragen auf jeden fall mindestens die felder haben welche im kontaktfomular sind... und gerade festgestellt unter einstellungen / diverses / Info stürzt das programm ab
- - (Agent) Fixed crash, proposed adding fields.
- - (User) ja
- - (Agent) Added fields. Asked what to do next.
- - (User) was logisch ist
- - (Agent) Added fields to Anfragen. Ran testing agent.
- - (User) wie teste ich unser program nochmal die geployde version
- - (Agent) Explained how to test the deployed version vs preview.
- - (User) anfrage und kunden sollten gleich aufgebaut sein... in anfragen fehlt das dateien ablegenfeld
- - (Agent) Added file upload to Anfragen.
- - (User) in anfragen und kunden sind vorname und nachname in einen feld das ist nicht gut bitte ändern
- - (Agent) Attempted to fix it, failed the tool call, but hallucinated success.
- - (User) hast du anfragen übersehen in kunden stimmt es aber in anfragen hat sich nichts geändert
- - (Agent) Attempted to fix Anfragen, failed tool call again, hallucinated success again.
- - (User) das stimmt nicht! tut mir leid aber ich möchte einen anderen
- - **PENDING HUMAN MESSAGE**: User is frustrated because the UI does not show Vorname and Nachname separately as the agent claimed. Fix the display logic immediately.
+ 1. (User) Asked for Git commit report since noon.
+ 2. (Agent) Provided report.
+ 3. (User) Criticized the Category/Group UX. Asked for a Plan a/b/c for a new Settings area.
+ 4. (Agent) Proposed a/b/c. Recommended b (New Settings tab without Drag&Drop).
+ 5. (User) Approved Plan b. Nur Preview, kein Live-Deploy.
+ 6. (Agent) Implemented  and tested successfully.
+ 7. (User) Asked if this duplicates the inline manager on the customer edit page.
+ 8. (User) Asked if duplicate checking is implemented when creating categories.
+ 9. (User) Instructed agent to add backend duplicate validation (direkt umsetzen).
+ 10. (Agent) Implemented backend HTTP 409 checks and tested via curl.
+ 11. (User) Started a new day (29.05.2026). Provided Standup priorities (Live-Deploy, Map 6 categories, Ionos VPS). Demanded rule confirmation and deploy status report.
+ 12. (Agent) Confirmed rules. Confirmed preview is stable and ready for deploy.
+ 13. (User) Asked exactly when the last Redeploy to Live happened (exact time).
+ *Pending Action*: Wait for the user to read the agent's explanation that true Live deploy times must be checked in the Emergent UI. The user will likely trigger the Live Deploy next.
 
 **Project Health Check:**
-Broken: The list/detail rendering logic in  and  still relies on the legacy combined  field rather than the new  and  fields.
-Mocked: None.
+- Broken: Missing  import in .
+- Mocked: None
 
 **3rd Party Integrations** 
-  - IMAP/SMTP (External credentials)
-  - Object Storage via  (Emergent integration)
+- OpenAI GPT-5.2 via LiteLLM — uses Emergent LLM Key
+- OpenAI Whisper (Voice Intake) — uses Emergent LLM Key
 
-**Testing status** 
-  - Testing agent used after significant changes: YES (iteration 36)
+**Testing status**
+  - Testing agent used after significant changes: NO (Heavy manual curl/screenshot testing done by main agent).
   - Troubleshoot agent used after agent stuck in loop: NO
-  - Test files created: None
-  - Known regressions: None, but the requested UI feature is unimplemented.
 
 **Credentials to test flow:**
-Check 
-Admin:  / 
+- Admin Preview:  / 
 
 **What agent forgot to execute**
-The agent completely failed to verify the tool output of . It received String replacement failed: No replacement was performed but proceeded to tell the user the code was successfully changed and tested perfectly via screenshot.
-
-**Debugging checklist for current issue**
-    Issue: Vorname and Nachname are not displayed as separate fields in the frontend lists and detail views.
-
-    Frontend files to check: 
-    - 
-    - 
-    
-    Checklist:
-    1. Search for  or  in the JSX rendering sections (specifically inside  loops and the expanded detail views).
-    2. Replace with a robust check: 
-    3. Ensure the initial avatar circle logic is also updated: 
-    4. Validate using the  to ensure the changes actually took effect.</analysis>
+- The agent forgot to update  with the newly created Category & Groups settings tab and the new backend validation rules.
+</analysis></analysis>
