@@ -91,6 +91,19 @@ const ThemeToggle = ({ variant = "sidebar" }) => {
   };
   const cur = meta[theme] || meta.system;
   const Icon = cur.Icon;
+  if (variant === "sidebar-compact") {
+    return (
+      <button
+        onClick={cycleTheme}
+        data-testid="btn-theme-toggle"
+        title={`Design: ${cur.label} · Klick: ${cur.next}`}
+        aria-label={`Design wechseln (aktuell: ${cur.label})`}
+        className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm transition-smooth"
+      >
+        <Icon className="w-4 h-4" />
+      </button>
+    );
+  }
   return (
     <button
       onClick={cycleTheme}
@@ -514,26 +527,27 @@ const Sidebar = ({ onLogout }) => {
         })}
       </nav>
       <div className="p-4 border-t space-y-1">
-        <button
-          onClick={() => {
-            try {
-              const cur = localStorage.getItem("show_legacy_modules") === "1";
-              localStorage.setItem("show_legacy_modules", cur ? "0" : "1");
-              window.location.reload();
-            } catch { /* ignore */ }
-          }}
-          data-testid="btn-toggle-legacy"
-          className="flex items-center gap-3 px-4 py-2 w-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm transition-smooth"
-          title="Alt-Module (Dokumente alt, Kundenportale alt, Sandbox v3/v4) ein-/ausblenden"
-        >
-          <Eye className="w-4 h-4" />
-          <span>
-            {typeof window !== "undefined" && window.localStorage?.getItem("show_legacy_modules") === "1"
+      <div className="px-3 pb-2">
+        <div className="flex items-center gap-1 mb-1">
+          <button
+            onClick={() => {
+              try {
+                const cur = localStorage.getItem("show_legacy_modules") === "1";
+                localStorage.setItem("show_legacy_modules", cur ? "0" : "1");
+                window.location.reload();
+              } catch { /* ignore */ }
+            }}
+            data-testid="btn-toggle-legacy"
+            className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-sm transition-smooth"
+            title={typeof window !== "undefined" && window.localStorage?.getItem("show_legacy_modules") === "1"
               ? "Alt-Module ausblenden"
-              : "Alt-Module einblenden"}
-          </span>
-        </button>
-        <ThemeToggle variant="sidebar" />
+              : "Alt-Module einblenden (Dokumente alt, Kundenportale alt, Sandbox v3/v4)"}
+            aria-label="Alt-Module umschalten"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <ThemeToggle variant="sidebar-compact" />
+        </div>
         <button
           onClick={() => setAssistantOpen(true)}
           data-testid="btn-sidebar-assistant"
@@ -551,6 +565,7 @@ const Sidebar = ({ onLogout }) => {
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Abmelden</span>
         </button>
+      </div>
       </div>
     </aside>
 

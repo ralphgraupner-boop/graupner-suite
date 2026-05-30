@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Mic, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Mic, MicOff, X } from "lucide-react";
 import { VoiceIntakeRecorder } from "@/components/VoiceIntakeRecorder";
 import { toast } from "sonner";
 
@@ -19,6 +19,8 @@ import { toast } from "sonner";
  *   onClose: () => void
  */
 export const GlobalAssistantSheet = ({ open, onClose }) => {
+  const [micAvailable, setMicAvailable] = useState(true);
+
   // ESC schließt
   useEffect(() => {
     if (!open) return;
@@ -26,6 +28,15 @@ export const GlobalAssistantSheet = ({ open, onClose }) => {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // Mikrofon-Verfügbarkeit beim Öffnen prüfen
+  useEffect(() => {
+    if (!open) return;
+    const hasApi = typeof window !== "undefined"
+      && !!navigator?.mediaDevices?.getUserMedia
+      && !!window.MediaRecorder;
+    setMicAvailable(hasApi);
+  }, [open]);
 
   if (!open) return null;
 
@@ -68,6 +79,18 @@ export const GlobalAssistantSheet = ({ open, onClose }) => {
 
         {/* Inhalt */}
         <div className="p-4">
+          {!micAvailable && (
+            <div
+              className="mb-3 flex items-start gap-2 rounded-sm border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs"
+              data-testid="assistant-no-mic-banner"
+            >
+              <MicOff className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <b>Mikrofon nicht verfügbar.</b><br />
+                Dein Browser oder Gerät lässt keine Sprachaufnahme zu — du kannst deine Notiz aber jederzeit eintippen.
+              </div>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground mb-3">
             Sprich los — Notizen, Erinnerungen oder Fragen. (Befehlsausführung folgt in Phase 2.)
           </p>
