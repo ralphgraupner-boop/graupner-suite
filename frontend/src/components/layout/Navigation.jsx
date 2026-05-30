@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain, Sun, Moon, Monitor, Droplet } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain, Sun, Moon, Monitor, Droplet, Mic } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
 import { colorForUser, initialsOf } from "@/lib/avatarUtils";
 import { useTheme } from "@/lib/themeContext";
+import { GlobalAssistantSheet } from "@/components/GlobalAssistantSheet";
 
 const APP_ENV = detectAppEnv();
 
@@ -115,6 +116,7 @@ const Sidebar = ({ onLogout }) => {
   const username = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "null"); return typeof u === "object" ? u.username : u; } catch { return ""; } })();
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0, assistent: 0, mail_anfragen: 0, projekte_neu: 0, aufgaben_offen: 0 });
   const prevEmailRef = useRef(0);
   const [openedParents, setOpenedParents] = useState(() => {
@@ -533,6 +535,15 @@ const Sidebar = ({ onLogout }) => {
         </button>
         <ThemeToggle variant="sidebar" />
         <button
+          onClick={() => setAssistantOpen(true)}
+          data-testid="btn-sidebar-assistant"
+          className="flex items-center gap-3 px-4 py-3 w-full text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-sm transition-smooth"
+          title="Mein Assistent — Sprachaufnahme"
+        >
+          <Mic className="w-5 h-5" />
+          <span className="font-medium">Assistent</span>
+        </button>
+        <button
           onClick={handleLogoutClick}
           data-testid="btn-logout"
           className="flex items-center gap-3 px-4 py-3 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-sm transition-smooth"
@@ -590,6 +601,7 @@ const Sidebar = ({ onLogout }) => {
         </div>
       </div>
     )}
+    <GlobalAssistantSheet open={assistantOpen} onClose={() => setAssistantOpen(false)} />
   </>
   );
 };
@@ -599,6 +611,7 @@ const MobileNav = ({ onLogout }) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const navItems = getFilteredNavItems();
   const role = getUserRole();
 
@@ -690,6 +703,10 @@ const MobileNav = ({ onLogout }) => {
             <Icon className="w-5 h-5" /><span className="text-[10px] font-medium">{label}</span>
           </Link>
         ))}
+        <button onClick={() => setAssistantOpen(true)} data-testid="mobile-nav-assistant"
+          className="flex flex-col items-center gap-0.5 py-2 px-3 min-w-[64px] text-muted-foreground">
+          <Mic className="w-5 h-5" /><span className="text-[10px] font-medium">Assistent</span>
+        </button>
         <button onClick={() => setMoreOpen(!moreOpen)} data-testid="mobile-nav-more"
           className={`flex flex-col items-center gap-0.5 py-2 px-3 min-w-[64px] ${moreOpen ? "text-primary" : "text-muted-foreground"}`}>
           <Menu className="w-5 h-5" /><span className="text-[10px] font-medium">Mehr</span>
@@ -763,6 +780,7 @@ const MobileNav = ({ onLogout }) => {
           </div>
         </div>
       )}
+      <GlobalAssistantSheet open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </>
   );
 };
