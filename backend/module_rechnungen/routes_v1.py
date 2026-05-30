@@ -109,15 +109,29 @@ async def get_due_soon_invoices(user=Depends(get_current_user)):
 
 @router.post("/invoices/check-due")
 async def check_due_invoices(user=Depends(get_current_user)):
-    """Prüft fällige Rechnungen und sendet Push-Benachrichtigungen"""
+    """Prüft fällige Rechnungen und sendet Push-Benachrichtigungen.
+    Push pro Rechnung max. 1× alle 24 h (Throttle).
+    """
     from routes.push import send_push_to_all
     now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
     in_3_days = now + timedelta(days=3)
+    throttle_iso = (now - timedelta(hours=24)).isoformat()
 
-    # Snooze-Wake-up: Rechnungen, deren Snooze abgelaufen ist, wieder anzeigen
+    # 1) Snooze-Reset: NUR snooze_until entfernen
     await db.invoices.update_many(
-        {"snooze_until": {"$lte": now.isoformat()}},
-        {"$unset": {"snooze_until": "", "followup_seen": ""}}
+        {"snooze_until": {"$lte": now_iso}},
+        {"$unset": {"snooze_until": ""}}
+    )
+
+    # 2) Throttle-Wake-up: followup_seen zurück, wenn letzter Push älter als 24h
+    await db.invoices.update_many(
+        {
+            "followup_seen": True,
+            "followup_pushed_at": {"$lt": throttle_iso},
+            "snooze_until": {"$exists": False},
+        },
+        {"$unset": {"followup_seen": ""}}
     )
 
     invoices = await db.invoices.find({"status": {"$in": ["Offen", "Gesendet"]}, "followup_seen": {"$ne": True}}, {"_id": 0}).to_list(1000)
@@ -138,6 +152,8 @@ async def check_due_invoices(user=Depends(get_current_user)):
                 pass
 
     notifications_sent = 0
+    pushed_ids = []
+
     if due_soon:
         body = f"{len(due_soon)} Rechnung(en) in den nächsten 3 Tagen fällig"
         if len(due_soon) == 1:
@@ -152,6 +168,7 @@ async def check_due_invoices(user=Depends(get_current_user)):
             )
         else:
             await send_push_to_all(title="Fälligkeits-Warnung", body=body, url="/invoices")
+        pushed_ids.extend([i.get("id") for i in due_soon if i.get("id")])
         notifications_sent += 1
 
     if overdue:
@@ -160,7 +177,15 @@ async def check_due_invoices(user=Depends(get_current_user)):
                 await db.invoices.update_one({"id": inv["id"]}, {"$set": {"status": "Überfällig"}})
         body = f"{len(overdue)} Rechnung(en) überfällig!"
         await send_push_to_all(title="Überfällige Rechnungen", body=body, url="/invoices")
+        pushed_ids.extend([i.get("id") for i in overdue if i.get("id")])
         notifications_sent += 1
+
+    # 3) NACH dem Push: followup_seen + followup_pushed_at für versendete Rechnungen
+    if pushed_ids:
+        await db.invoices.update_many(
+            {"id": {"$in": pushed_ids}},
+            {"$set": {"followup_seen": True, "followup_pushed_at": now_iso}}
+        )
 
     return {
         "due_soon": len(due_soon),

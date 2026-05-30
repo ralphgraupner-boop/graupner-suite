@@ -74,19 +74,34 @@ async def get_followup_quotes(user=Depends(get_current_user)):
 
 @router.post("/quotes/check-followup")
 async def check_followup_quotes(user=Depends(get_current_user)):
-    """Prüft Angebote für automatische Wiedervorlage und sendet Push"""
+    """Prüft Angebote für automatische Wiedervorlage und sendet Push.
+    Push wird pro Quote max. 1× alle 24 h ausgelöst (Throttle).
+    """
     from routes.push import send_push_to_all
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     followup_days = settings.get("followup_days", 7)
     if settings.get("followup_push_enabled") in (False, "false"):
         return {"followup_count": 0, "quotes": [], "push_disabled": True}
     now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
     threshold = now - timedelta(days=followup_days)
+    throttle_iso = (now - timedelta(hours=24)).isoformat()
 
-    # Snooze-Wake-up: Angebote, deren Snooze abgelaufen ist, wieder fällig machen
+    # 1) Snooze-Reset: NUR snooze_until entfernen — followup_sent bleibt
     await db.quotes.update_many(
-        {"snooze_until": {"$lte": now.isoformat()}},
-        {"$unset": {"snooze_until": "", "followup_sent": ""}}
+        {"snooze_until": {"$lte": now_iso}},
+        {"$unset": {"snooze_until": ""}}
+    )
+
+    # 2) Throttle-Wake-up: followup_sent zurück, wenn letzter Push älter als 24h
+    #    UND kein Snooze aktiv
+    await db.quotes.update_many(
+        {
+            "followup_sent": True,
+            "followup_pushed_at": {"$lt": throttle_iso},
+            "snooze_until": {"$exists": False},
+        },
+        {"$unset": {"followup_sent": ""}}
     )
 
     quotes = await db.quotes.find(
@@ -119,6 +134,14 @@ async def check_followup_quotes(user=Depends(get_current_user)):
             )
         else:
             await send_push_to_all(title="Angebots-Wiedervorlage", body=body, url="/quotes")
+
+        # 3) NACH dem Push: followup_sent + followup_pushed_at für alle versendeten Quotes
+        ids = [q.get("id") for q in followup if q.get("id")]
+        if ids:
+            await db.quotes.update_many(
+                {"id": {"$in": ids}},
+                {"$set": {"followup_sent": True, "followup_pushed_at": now_iso}}
+            )
 
     return {"followup_count": len(followup), "quotes": followup}
 

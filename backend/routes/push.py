@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 import json
 from uuid import uuid4
 from models import PushSubscription, PushUnsubscribe
 from database import db, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, logger
 from pywebpush import webpush, WebPushException
+from auth import get_current_user
 
 router = APIRouter()
 
@@ -67,14 +68,38 @@ async def push_test():
     return {"success": True, "message": f"Push an {len(subs)} Gerät(e) gesendet", "subscribers": len(subs)}
 
 
+async def _cleanup_dead_subscriptions(days: int = 30) -> int:
+    """Löscht Push-Subscriptions, die seit `days` Tagen nicht mehr erneuert wurden.
+    'last_activity' = updated_at falls vorhanden, sonst created_at.
+    Gibt Anzahl gelöschter Einträge zurück.
+    """
+    from datetime import datetime, timezone, timedelta
+    cutoff_iso = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    candidates = await db.push_subscriptions.find(
+        {}, {"_id": 1, "updated_at": 1, "created_at": 1}
+    ).to_list(10000)
+    dead = [c["_id"] for c in candidates
+            if (c.get("updated_at") or c.get("created_at") or "") < cutoff_iso]
+    if dead:
+        await db.push_subscriptions.delete_many({"_id": {"$in": dead}})
+        logger.info(f"push_cleanup: {len(dead)} tote Subscriptions entfernt (älter als {days}d)")
+    return len(dead)
+
+
 async def send_push_to_all(title: str, body: str, url: str = "/", entity_type: str = None, entity_id: str = None):
     """Push-Benachrichtigung an alle Abonnenten senden.
     Wenn entity_type+entity_id gesetzt sind, zeigt der Service Worker
     zwei Action-Buttons („Öffnen" / „Erledigt") an.
+    Vor dem Versand werden tote Subscriptions (>30d ohne Update) entfernt.
     """
     if not VAPID_PRIVATE_KEY:
         logger.warning("VAPID keys not configured, skipping push")
         return
+    # Tote Subscriptions vor jedem Versand wegputzen
+    try:
+        await _cleanup_dead_subscriptions(days=30)
+    except Exception as e:
+        logger.warning(f"push_cleanup übersprungen: {e}")
     subscriptions = await db.push_subscriptions.find({}, {"_id": 0}).to_list(100)
     logger.info(f"Sending push to {len(subscriptions)} subscribers: {title}")
     for sub in subscriptions:
@@ -193,3 +218,14 @@ async def push_voice(
     from module_voice_intake.routes import _transcribe_bytes
     text = await _transcribe_bytes(data, audio.filename or "aufnahme.webm", language)
     return {"text": text}
+
+
+@router.post("/push/cleanup")
+async def push_cleanup(days: int = 30, user=Depends(get_current_user)):
+    """Manueller Cleanup: löscht Push-Subscriptions älter als `days` Tage.
+    Gibt Vorher/Nachher-Zahlen zur Kontrolle zurück.
+    """
+    before = await db.push_subscriptions.count_documents({})
+    removed = await _cleanup_dead_subscriptions(days=days)
+    after = await db.push_subscriptions.count_documents({})
+    return {"before": before, "removed": removed, "after": after, "cutoff_days": days}
