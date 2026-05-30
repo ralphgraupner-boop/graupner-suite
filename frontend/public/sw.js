@@ -189,10 +189,21 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   if (action === 'snooze' && d.entity_type && d.entity_id && d.push_token) {
-    // Snooze: kleine Seite öffnen, die die Stundenzahl abfragt
+    // Snooze: bestehendes App-Fenster fokussieren + Sheet via URL-Param öffnen
     event.notification.close();
-    const snoozeUrl = `/snooze?type=${encodeURIComponent(d.entity_type)}&id=${encodeURIComponent(d.entity_id)}&token=${encodeURIComponent(d.push_token)}`;
-    event.waitUntil(clients.openWindow(snoozeUrl));
+    const params = `assistant=snooze&type=${encodeURIComponent(d.entity_type)}&id=${encodeURIComponent(d.entity_id)}&token=${encodeURIComponent(d.push_token)}`;
+    const targetUrl = `/dashboard?${params}`;
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) {
+          if ('focus' in client && 'navigate' in client) {
+            try { client.navigate(targetUrl); } catch { /* fallback unten */ }
+            return client.focus();
+          }
+        }
+        return clients.openWindow(targetUrl);
+      })
+    );
     return;
   }
 

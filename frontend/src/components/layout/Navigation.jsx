@@ -130,7 +130,27 @@ const Sidebar = ({ onLogout }) => {
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantSnoozeContext, setAssistantSnoozeContext] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0, assistent: 0, mail_anfragen: 0, projekte_neu: 0, aufgaben_offen: 0 });
+
+  // URL-Param-Trigger: ?assistant=snooze&type=…&id=…&token=… öffnet das Sheet im Snooze-Modus
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("assistant") === "snooze") {
+        const ctx = {
+          entity_type: params.get("type"),
+          entity_id: params.get("id"),
+          push_token: params.get("token"),
+        };
+        if (ctx.entity_type && ctx.entity_id && ctx.push_token) {
+          setAssistantSnoozeContext(ctx);
+          setAssistantOpen(true);
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
   const prevEmailRef = useRef(0);
   const [openedParents, setOpenedParents] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("nav_opened_parents") || "[]")); } catch { return new Set(); }
@@ -616,7 +636,7 @@ const Sidebar = ({ onLogout }) => {
         </div>
       </div>
     )}
-    <GlobalAssistantSheet open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+    <GlobalAssistantSheet open={assistantOpen} onClose={() => { setAssistantOpen(false); setAssistantSnoozeContext(null); }} snoozeContext={assistantSnoozeContext} />
   </>
   );
 };
@@ -627,8 +647,28 @@ const MobileNav = ({ onLogout }) => {
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantSnoozeContext, setAssistantSnoozeContext] = useState(null);
   const navItems = getFilteredNavItems();
   const role = getUserRole();
+
+  // URL-Param-Trigger (siehe Sidebar) — auch hier nötig, damit auf Mobile das Sheet öffnet
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("assistant") === "snooze") {
+        const ctx = {
+          entity_type: params.get("type"),
+          entity_id: params.get("id"),
+          push_token: params.get("token"),
+        };
+        if (ctx.entity_type && ctx.entity_id && ctx.push_token) {
+          setAssistantSnoozeContext(ctx);
+          setAssistantOpen(true);
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const handleLogoutClick = () => {
     setMoreOpen(false);
@@ -795,7 +835,7 @@ const MobileNav = ({ onLogout }) => {
           </div>
         </div>
       )}
-      <GlobalAssistantSheet open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      <GlobalAssistantSheet open={assistantOpen} onClose={() => { setAssistantOpen(false); setAssistantSnoozeContext(null); }} snoozeContext={assistantSnoozeContext} />
     </>
   );
 };
