@@ -99,55 +99,54 @@ async def update_order_status(order_id: str, status: str = Body(..., embed=True)
 
 @router.put("/orders/{order_id}", response_model=Order)
 async def update_order(order_id: str, update: OrderUpdate):
-    """Auftrag bearbeiten mit optionaler Gesamtsummen-Anpassung"""
+    """Auftrag bearbeiten — partielle Updates schreiben nur explizit gesendete Felder."""
     existing = await db.orders.find_one({"id": order_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
 
-    positions = update.positions
+    sent = update.model_dump(exclude_unset=True)
+    update_data = {}
 
-    if update.custom_total is not None and update.custom_total > 0:
-        current_total = sum(p.quantity * p.price_net for p in positions)
-        if current_total > 0:
-            target_net = update.custom_total / (1 + update.vat_rate / 100)
-            factor = target_net / current_total
-            for p in positions:
-                p.price_net = round(p.price_net * factor, 2)
+    if "positions" in sent and update.positions is not None:
+        positions = update.positions
+        vat_rate = sent.get("vat_rate", existing.get("vat_rate", 19)) or 0
+        discount = sent.get("discount", existing.get("discount", 0)) or 0
+        discount_type = sent.get("discount_type", existing.get("discount_type", "percent"))
 
-    subtotal_net = sum(p.quantity * p.price_net for p in positions if p.type != "titel")
-    discount_amt = subtotal_net * (update.discount / 100) if update.discount_type == "percent" else update.discount
-    net_after_discount = subtotal_net - discount_amt
-    vat_amount = net_after_discount * (update.vat_rate / 100) if update.vat_rate > 0 else 0
-    total_gross = net_after_discount + vat_amount
+        if update.custom_total is not None and update.custom_total > 0:
+            current_total = sum(p.quantity * p.price_net for p in positions)
+            if current_total > 0:
+                target_net = update.custom_total / (1 + vat_rate / 100)
+                factor = target_net / current_total
+                for p in positions:
+                    p.price_net = round(p.price_net * factor, 2)
 
-    update_data = {
-        "positions": [p.model_dump() for p in positions],
-        "notes": update.notes,
-        "vortext": update.vortext,
-        "schlusstext": update.schlusstext,
-        "betreff": update.betreff,
-        "discount": update.discount,
-        "discount_type": update.discount_type,
-        "vat_rate": update.vat_rate,
-        "subtotal_net": round(subtotal_net, 2),
-        "vat_amount": round(vat_amount, 2),
-        "total_gross": round(total_gross, 2),
-        "show_lohnanteil": update.show_lohnanteil,
-        "lohnanteil_custom": update.lohnanteil_custom
-    }
+        subtotal_net = sum(p.quantity * p.price_net for p in positions if p.type != "titel")
+        discount_amt = subtotal_net * (discount / 100) if discount_type == "percent" else discount
+        net_after_discount = subtotal_net - discount_amt
+        vat_amount = net_after_discount * (vat_rate / 100) if vat_rate > 0 else 0
+        total_gross = net_after_discount + vat_amount
 
-    if update.status:
-        update_data["status"] = update.status
+        update_data["positions"] = [p.model_dump() for p in positions]
+        update_data["subtotal_net"] = round(subtotal_net, 2)
+        update_data["vat_amount"] = round(vat_amount, 2)
+        update_data["total_gross"] = round(total_gross, 2)
 
-    # Kundendaten aktualisieren wenn customer_id mitgeschickt wird
-    if update.customer_id:
+    for field in ("notes", "vortext", "schlusstext", "betreff",
+                  "discount", "discount_type", "vat_rate",
+                  "status", "show_lohnanteil", "lohnanteil_custom"):
+        if field in sent:
+            update_data[field] = sent[field]
+
+    if "customer_id" in sent and update.customer_id:
         customer = await find_customer_in_modules(update.customer_id)
         if customer:
             update_data["customer_id"] = update.customer_id
             update_data["customer_name"] = customer["name"]
             update_data["customer_address"] = customer.get("address", "")
 
-    await db.orders.update_one({"id": order_id}, {"$set": update_data})
+    if update_data:
+        await db.orders.update_one({"id": order_id}, {"$set": update_data})
     updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
     return updated
 

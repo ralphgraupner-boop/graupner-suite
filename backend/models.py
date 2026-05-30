@@ -409,49 +409,49 @@ class AIQuoteRequest(BaseModel):
 
 class QuoteUpdate(BaseModel):
     customer_id: Optional[str] = None
-    positions: List[Position] = []
-    notes: str = ""
-    vortext: str = ""
-    schlusstext: str = ""
-    betreff: str = ""
-    discount: float = 0
-    discount_type: str = "percent"
-    vat_rate: float = 19
-    status: str = ""
+    positions: Optional[List[Position]] = None
+    notes: Optional[str] = None
+    vortext: Optional[str] = None
+    schlusstext: Optional[str] = None
+    betreff: Optional[str] = None
+    discount: Optional[float] = None
+    discount_type: Optional[str] = None
+    vat_rate: Optional[float] = None
+    status: Optional[str] = None
     custom_total: Optional[float] = None
-    show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    show_lohnanteil: Optional[bool] = None
+    lohnanteil_custom: Optional[str] = None
 
 class OrderUpdate(BaseModel):
     customer_id: Optional[str] = None
-    positions: List[Position] = []
-    notes: str = ""
-    vortext: str = ""
-    schlusstext: str = ""
-    betreff: str = ""
-    discount: float = 0
-    discount_type: str = "percent"
-    vat_rate: float = 19
-    status: str = ""
+    positions: Optional[List[Position]] = None
+    notes: Optional[str] = None
+    vortext: Optional[str] = None
+    schlusstext: Optional[str] = None
+    betreff: Optional[str] = None
+    discount: Optional[float] = None
+    discount_type: Optional[str] = None
+    vat_rate: Optional[float] = None
+    status: Optional[str] = None
     custom_total: Optional[float] = None
-    show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    show_lohnanteil: Optional[bool] = None
+    lohnanteil_custom: Optional[str] = None
 
 class InvoiceUpdate(BaseModel):
     customer_id: Optional[str] = None
-    positions: List[Position] = []
-    notes: str = ""
-    vortext: str = ""
-    schlusstext: str = ""
-    betreff: str = ""
-    discount: float = 0
-    discount_type: str = "percent"
-    vat_rate: float = 19
-    status: str = ""
-    deposit_amount: float = 0
+    positions: Optional[List[Position]] = None
+    notes: Optional[str] = None
+    vortext: Optional[str] = None
+    schlusstext: Optional[str] = None
+    betreff: Optional[str] = None
+    discount: Optional[float] = None
+    discount_type: Optional[str] = None
+    vat_rate: Optional[float] = None
+    status: Optional[str] = None
+    deposit_amount: Optional[float] = None
     custom_total: Optional[float] = None
-    show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    show_lohnanteil: Optional[bool] = None
+    lohnanteil_custom: Optional[str] = None
     due_days: Optional[int] = None  # wenn gesetzt: due_date wird neu berechnet
 
 class PushSubscription(BaseModel):
