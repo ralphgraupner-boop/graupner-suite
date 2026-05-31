@@ -5,23 +5,27 @@
 
 ## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
 
+### Nachmittag (~16:15 MEZ):
+- **Live-Counts in Projekt-Tabs** (Werkbank): Aufgaben- und Termine-Tab zeigen Anzahl + orangen Dot wenn Offenes liegt. Beispiel: „Aufgaben (1) ●".
+- **Backend:** `/module-aufgaben/stats/uebersicht` und `/module-termine/stats/uebersicht` akzeptieren jetzt optional `projekt_id` und `kunde_id` (Match-Stage in Aggregate). Lint sauber.
+- **Frontend:** `ProjektKarte` lädt beim Expand parallel beide Stats, refetcht bei Tab-Wechsel. Dot-Logik: Aufgaben `offen+in_arbeit > 0`, Termine `wartet_auf_go > 0`.
+
 ### Nachmittag (~15:58 MEZ):
-- **Tab-System in ProjektKarte (Werkbank):** expanded-Bereich hat jetzt 4 Tabs **Details · Aufgaben · Termine · Bilder**. Aufgaben/Termine sind Projekt-spezifisch (`projekt_id={p.id}`). Bilder zeigt Anzahl im Tab-Label.
-- **Kunden-Ebene Aufgaben/Termine:** umbenannt in „Aufgaben/Termine ohne Projekt-Bezug" + neue Prop `onlyWithoutProjekt` an `AufgabenPanel`/`TerminePanel` (clientseitiges Filter `.filter(x => !x.projekt_id)`). Spontane Aufgaben ohne Projekt-Bezug bleiben sichtbar.
+- **Tab-System in ProjektKarte** (Details/Aufgaben/Termine/Bilder).
+- **Kunden-Ebene umbenannt:** „Aufgaben/Termine ohne Projekt-Bezug" + Prop `onlyWithoutProjekt` in `AufgabenPanel`/`TerminePanel`.
 
 ### Nachmittag (~15:35 MEZ):
-- **Projektwerkbank wird zentraler Arbeitsbereich:** `CustomerDocumentsPanel` ausgelagert. Werkbank-Sticky-Header mit Mailverlauf/Kundenportal/Einsatz erstellen. Dokumenten-Hub direkt unter Header. „Angebot"-Button in Projekt-Karte mit `&projekt_id=`. Einsatz-Button via `navigate()` statt `window.location.href`.
+- **Projektwerkbank wird Zentrale:** CustomerDocumentsPanel ausgelagert, Sticky-Header mit Mailverlauf/Portal/Einsatz, MailHistoryModal integriert.
 
 ### Nachmittag (~14:55 MEZ):
-- **Backend-Fix Hilfe-Textvorlagen:** `VALID_DOC_TYPES` + `VALID_TEXT_TYPES` erweitert.
+- **Backend-Fix Hilfe-Textvorlagen.**
 
 ### Nachmittag (~14:30 MEZ):
-- **AufgabenPanel: gesamte Zeile klickbar.**
-- **F1-Hilfe-System** mit Slide-Over rechts, kontextspezifisch für 5 Module.
+- **AufgabenPanel zeilenweise klickbar.**
+- **F1-Hilfe-System global.**
 
 ### Vormittag (~11:50 MEZ):
-- **Anrede-Vorschlag-Box** im Dokumenten-Editor.
-- **Revert AnredeQuickEditModal.**
+- **Anrede-Vorschlag-Box.**
 
 ## 🤖 INTELLIGENTER ASSISTENT — Roadmap (verbindlich seit 28.05.2026 — Ralph)
 

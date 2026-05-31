@@ -235,6 +235,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
   const [uploadKategorie, setUploadKategorie] = useState("schaden");
   const [uploading, setUploading] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [tabStats, setTabStats] = useState({ aufgaben: null, termine: null });
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
@@ -247,6 +248,23 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
 
   // Wenn der Outer-projekt-prop sich aendert (nach load): synchronisieren
   useEffect(() => { setData(projekt); }, [projekt]);
+
+  // Tab-Stats: laden beim Expand und beim Tab-Wechsel (refetch sorgt fuer frische Counts nach Mutation)
+  useEffect(() => {
+    if (!expanded) return;
+    let cancelled = false;
+    const loadStats = async () => {
+      try {
+        const [a, t] = await Promise.all([
+          api.get("/module-aufgaben/stats/uebersicht", { params: { projekt_id: data.id } }).then(r => r.data).catch(() => null),
+          api.get("/module-termine/stats/uebersicht", { params: { projekt_id: data.id } }).then(r => r.data).catch(() => null),
+        ]);
+        if (!cancelled) setTabStats({ aufgaben: a, termine: t });
+      } catch { /* ignore */ }
+    };
+    loadStats();
+    return () => { cancelled = true; };
+  }, [expanded, activeTab, data.id]);
 
   const update = (field, value) => setData(d => ({ ...d, [field]: value }));
 
@@ -352,22 +370,39 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
         <div className="border-t bg-muted/10 p-4 space-y-4">
           {/* Tab-Strip */}
           <div className="flex gap-1 border-b" data-testid={`tabs-projekt-${data.id}`}>
-            {[
-              { id: "details", label: "Details" },
-              { id: "aufgaben", label: "Aufgaben" },
-              { id: "termine", label: "Termine" },
-              { id: "bilder", label: `Bilder (${bilder.length})` },
-            ].map(t => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id)}
-                data-testid={`tab-${t.id}-${data.id}`}
-                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-              >
-                {t.label}
-              </button>
-            ))}
+            {(() => {
+              const aufgOpen = (tabStats.aufgaben?.offen || 0) + (tabStats.aufgaben?.in_arbeit || 0);
+              const aufgTotal = tabStats.aufgaben?.gesamt ?? null;
+              const termOpen = (tabStats.termine?.wartet_auf_go || 0);
+              const termTotal = tabStats.termine?.gesamt ?? null;
+              const tabs = [
+                { id: "details", label: "Details" },
+                { id: "aufgaben", label: "Aufgaben", count: aufgTotal, hasOffen: aufgOpen > 0 },
+                { id: "termine", label: "Termine", count: termTotal, hasOffen: termOpen > 0 },
+                { id: "bilder", label: `Bilder (${bilder.length})` },
+              ];
+              return tabs.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id)}
+                  data-testid={`tab-${t.id}-${data.id}`}
+                  className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors inline-flex items-center gap-1 ${activeTab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                >
+                  <span>{t.label}</span>
+                  {t.count != null && t.count > 0 && (
+                    <span className="text-xs text-muted-foreground">({t.count})</span>
+                  )}
+                  {t.hasOffen && (
+                    <span
+                      className="inline-block w-2 h-2 rounded-full bg-orange-500"
+                      title="Offene Eintraege"
+                      data-testid={`tab-${t.id}-${data.id}-dot`}
+                    />
+                  )}
+                </button>
+              ));
+            })()}
           </div>
 
           {/* Tab: Details */}

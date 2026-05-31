@@ -389,10 +389,18 @@ async def delete_termin(termin_id: str, user=Depends(get_current_user)):
 # ==================== STATS ====================
 
 @router.get("/stats/uebersicht")
-async def stats_uebersicht(user=Depends(get_current_user)):
-    """Status-Counts für Dashboard / Sidebar."""
+async def stats_uebersicht(projekt_id: str = "", kunde_id: str = "", user=Depends(get_current_user)):
+    """Status-Counts für Dashboard / Sidebar. Optional gefiltert nach projekt_id / kunde_id."""
     await _require_enabled()
-    pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
+    match: dict = {}
+    if projekt_id:
+        match["projekt_id"] = projekt_id
+    if kunde_id:
+        match["kunde_id"] = kunde_id
+    pipeline = []
+    if match:
+        pipeline.append({"$match": match})
+    pipeline.append({"$group": {"_id": "$status", "count": {"$sum": 1}}})
     result = {s: 0 for s in VALID_STATUS}
     result["gesamt"] = 0
     async for r in db.module_termine.aggregate(pipeline):
