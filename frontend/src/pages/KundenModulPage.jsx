@@ -5,12 +5,12 @@ import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
 import { api } from "@/lib/api";
+import { useF1Help } from "@/lib/useF1Help";
 // (CATEGORIES wurde entfernt — Kategorien kommen jetzt aus module_textvorlagen
 // mit doc_type=kunden_kategorie. Siehe useTextvorlagen-Hook unten.)
 import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
-import { KundeExportButton } from "@/components/KundeExportButton";
-import { GroupedFilterBar, buildGroupedItems } from "@/components/GroupedFilterBar";
+import { KundeExportButton } from "@/components/KundeExportButton";import { GroupedFilterBar, buildGroupedItems } from "@/components/GroupedFilterBar";
 import { KundeImportButton } from "@/components/KundeImportButton";
 import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
@@ -98,6 +98,7 @@ const STATUS_COLORS = {
 };
 
 const KundenModulPage = () => {
+  useF1Help("hilfe_kunden");
   const [kunden, setKunden] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

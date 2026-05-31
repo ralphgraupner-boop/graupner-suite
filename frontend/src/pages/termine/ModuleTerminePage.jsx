@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
-import { toast } from "sonner";
+import { useF1Help } from "@/lib/useF1Help";import { toast } from "sonner";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
@@ -41,6 +41,7 @@ const fmtDate = (s) => {
 };
 
 export default function ModuleTerminePage() {
+  useF1Help("hilfe_termine");
   const [termine, setTermine] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("");

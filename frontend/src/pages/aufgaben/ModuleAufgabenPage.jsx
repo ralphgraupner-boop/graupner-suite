@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
-import { toast } from "sonner";
+import { useF1Help } from "@/lib/useF1Help";import { toast } from "sonner";
 import {
   Wrench, Car, Package, Briefcase, Building2, MoreHorizontal,
   Plus, Trash2, X, AlertCircle, CheckCircle2, Clock, RefreshCw, Filter, User as UserIcon, Folder, Search, GripVertical,
@@ -43,6 +43,7 @@ const WIEDERHOLUNG_LABELS = {
 };
 
 export default function ModuleAufgabenPage() {
+  useF1Help("hilfe_aufgaben");
   const [aufgaben, setAufgaben] = useState([]);
   const [meta, setMeta] = useState(null);
   const [mitarbeiter, setMitarbeiter] = useState([]);

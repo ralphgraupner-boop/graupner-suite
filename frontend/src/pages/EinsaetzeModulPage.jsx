@@ -3,6 +3,7 @@ import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Cal
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
+import { useF1Help } from "@/lib/useF1Help";
 import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
 
 const BILD_KAT_LABELS = {
@@ -12,6 +13,7 @@ const BILD_KAT_LABELS = {
 };
 
 const EinsaetzeModulPage = () => {
+  useF1Help("hilfe_einsaetze");
   const [einsaetze, setEinsaetze] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("aktiv");

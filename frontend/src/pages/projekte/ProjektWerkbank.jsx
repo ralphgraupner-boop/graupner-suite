@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import { useF1Help } from "@/lib/useF1Help";
 import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
@@ -28,6 +29,7 @@ const STATUS_COLORS = {
  *   - aus Projekte-Modul: Projekt-Karte -> springt auf werkbank/<kunde_id>?projekt=<id>
  */
 const ProjektWerkbank = () => {
+  useF1Help("hilfe_projekte");
   const { kunde_id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);

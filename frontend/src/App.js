@@ -44,6 +44,7 @@ import { ProjektDetail } from "@/pages/projekte/ProjektDetail";
 import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
 import { HelpToggle } from "@/components/HelpToggle";
+import { HelpSlideOver } from "@/components/HelpSlideOver";
 import { HealthBanner } from "@/components/HealthBanner";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import TrashStartupCheck from "@/components/TrashStartupCheck";
@@ -58,6 +59,7 @@ const MainLayout = ({ children, onLogout }) => {
       <Sidebar onLogout={onLogout} />
       <MobileNav onLogout={onLogout} />
       <HelpToggle />
+      <HelpSlideOver />
       <FeedbackWidget />
       <TrashStartupCheck />
       <KundenLinkExpiryCheck />

@@ -131,7 +131,8 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
               return (
                 <div
                   key={a.id}
-                  className={`border rounded-sm p-2 flex items-start gap-2 ${a.status === "erledigt" ? "opacity-60" : ""}`}
+                  onClick={() => setEditing(a)}
+                  className={`border rounded-sm p-2 flex items-start gap-2 cursor-pointer hover:bg-muted/40 transition-colors ${a.status === "erledigt" ? "opacity-60" : ""}`}
                   data-testid={`panel-aufgabe-${a.id}`}
                 >
                   <div className={`p-1 rounded-sm border ${sty.cls} flex-shrink-0`}>
@@ -153,7 +154,8 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <select
                       value={a.status}
-                      onChange={(e) => setStatus(a, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => { e.stopPropagation(); setStatus(a, e.target.value); }}
                       className="text-xs border rounded-sm px-1.5 py-0.5 bg-background"
                       data-testid={`panel-status-${a.id}`}
                     >
@@ -162,7 +164,7 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
                       <option value="erledigt">Erledigt</option>
                     </select>
                     <button
-                      onClick={() => setEditing(a)}
+                      onClick={(e) => { e.stopPropagation(); setEditing(a); }}
                       className="p-1 text-muted-foreground hover:bg-muted rounded-sm"
                       title="Bearbeiten"
                       data-testid={`panel-edit-${a.id}`}
@@ -170,7 +172,7 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
                       <Pencil className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={() => remove(a)}
+                      onClick={(e) => { e.stopPropagation(); remove(a); }}
                       className="p-1 text-red-500 hover:bg-red-50 rounded-sm"
                       title="Löschen"
                       data-testid={`panel-delete-${a.id}`}

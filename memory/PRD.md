@@ -4,14 +4,22 @@
 > Stand: 31.05.2026
 
 ## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
-- **Anrede-Vorschlag-Box im Dokumenten-Editor (NEU):**
-  - In `WysiwygDocumentEditor.jsx` erscheint über dem Vortext eine blaue Vorschlag-Box, sobald ein Kunde mit gepflegter `anrede` gewählt ist.
-  - Inhalt: „💡 Vorgeschlagene Anrede: ‚Sehr geehrter Herr Müller,'" + Button **Übernehmen**.
-  - Klick → setzt den Vortext auf die Briefanrede (bzw. stellt sie bestehendem Vortext voran).
-  - Logik nutzt die bereits vorhandene `getAnredeBrief()` aus `TextTemplateSelect.jsx` (jetzt exportiert) — eine Quelle der Wahrheit, keine Duplikation.
-  - Bei Kunden **ohne** Anrede: gelber Warnhinweis bleibt unverändert (nicht-klickbar).
-- **Revert AnredeQuickEditModal:** Komplett zurückgebaut (Datei gelöscht, Imports/State/JSX entfernt). Begründung: Redundant zum bestehenden Kunden-Bearbeitungsformular.
-- Ungenutzter `Pencil`-Import aus `WysiwygDocumentEditor.jsx` entfernt.
+
+### Nachmittag (~14:30 MEZ):
+- **AufgabenPanel: gesamte Zeile klickbar** — `AufgabenPanel.jsx`. Klick auf eine Aufgaben-Zeile öffnet direkt den Edit-Dialog. Status-Select, Edit-Icon und Trash-Icon haben `stopPropagation`, damit sie isoliert funktionieren. Wirkung automatisch in Kunden- UND Projekt-Ansicht (gleiche Komponente).
+- **F1-Hilfe-System global eingeführt:**
+  - Neue Datei `lib/useF1Help.js` — Hook, der pro Seite einen Hilfe-Kontext registriert
+  - Neue Datei `components/HelpSlideOver.jsx` — Slide-Over rechts (420px), Backdrop-Blur, ESC + X schließt
+  - Neue Datei `lib/helpContent.js` — Default-Hilfetexte für 5 Kontexte (Kunden, Projekte, Aufgaben, Termine, Einsätze)
+  - `App.js` rendert `<HelpSlideOver />` global im MainLayout
+  - 5 Modul-Seiten angebunden: `KundenModulPage`, `ProjekteListe`, `ProjektWerkbank`, `ModuleAufgabenPage`, `ModuleTerminePage`, `EinsaetzeModulPage`
+  - **Hilfetexte editierbar:** lädt aus `module_textvorlagen` mit `doc_type=hilfe_<context>`, `text_type=hilfe`. Bei leerem Bestand: Defaults aus `helpContent.js` + Button „Als Vorlage speichern (zum Anpassen)" für einmaliges Seeding
+  - F1-Browser-Default unterdrückt (`e.preventDefault()`)
+  - E2E getestet: F1 öffnet Slide-Over mit 3 Default-Items für „Hilfe: Aufgaben", ESC schließt
+
+### Vormittag (~11:50 MEZ):
+- **Anrede-Vorschlag-Box im Dokumenten-Editor:** blaue Hinweis-Box mit „💡 Vorgeschlagene Anrede" + Button „Übernehmen" über dem Vortext, sobald ein Kunde mit gepflegter `anrede` gewählt ist. Nutzt `getAnredeBrief()` aus `TextTemplateSelect.jsx` (jetzt exportiert).
+- **Revert AnredeQuickEditModal** (war redundant): Datei gelöscht, Imports/State/JSX entfernt, gelber Warnhinweis bleibt als nicht-klickbarer Text.
 
 ## 🤖 INTELLIGENTER ASSISTENT — Roadmap (verbindlich seit 28.05.2026 — Ralph)
 

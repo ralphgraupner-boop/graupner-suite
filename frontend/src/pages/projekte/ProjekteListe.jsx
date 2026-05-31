@@ -4,6 +4,7 @@ import { Folder, Plus, Search, RefreshCw, ImageIcon, ChevronRight, User as UserI
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api } from "@/lib/api";
+import { useF1Help } from "@/lib/useF1Help";
 import { openInPopup, useBroadcast } from "@/lib/windowSync";
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
@@ -17,6 +18,7 @@ const STATUS_COLORS = {
 };
 
 const ProjekteListe = () => {
+  useF1Help("hilfe_projekte");
   const [projekte, setProjekte] = useState([]);
   const [kundenMap, setKundenMap] = useState({});
   const [loading, setLoading] = useState(true);
