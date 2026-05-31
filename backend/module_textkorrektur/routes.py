@@ -6,6 +6,7 @@ Module-First:
 - Keine eigene Collection (stateless)
 - Nutzt Emergent-LLM-Key + GPT-5.2 (gleiche Infra wie routes/ai.py)
 """
+import json
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -105,6 +106,9 @@ class DocumentField(BaseModel):
 
 class DocumentCheckPayload(BaseModel):
     fields: List[DocumentField]
+    # Optionaler Dokument-Kontext, damit die KI das Schreiben als Einheit versteht
+    # (z. B. "Angebot für Kunde Müller, 3 Positionen, Gesamt 1.234,00 €").
+    kontext_info: Optional[str] = None
 
 
 class FieldResult(BaseModel):
@@ -119,62 +123,83 @@ class DocumentCheckResponse(BaseModel):
     results: List[FieldResult]
 
 
-async def _correct_single(text: str) -> str:
-    """Ein Lektorat-Call für einen Text. Gibt korrigierten Text zurück."""
-    if not text.strip():
-        return text
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"textkorrektur-{uuid.uuid4()}",
-        system_message=SYSTEM_PROMPT,
-    ).with_model("openai", "gpt-5.2")
-    corrected = (await chat.send_message(UserMessage(text=text)) or "").strip()
-    if (corrected.startswith('"') and corrected.endswith('"')) or (
-        corrected.startswith("„") and corrected.endswith("“")
-    ):
-        corrected = corrected[1:-1].strip()
-    return corrected or text
+DOC_SYSTEM_PROMPT = (
+    "Du bist ein professioneller deutscher Lektor für Geschäftskorrespondenz "
+    "einer Tischlerei.\n\n"
+    "Du erhältst MEHRERE Textfelder EINES zusammenhängenden Dokuments "
+    "(z. B. ein Angebot, einen Auftrag oder eine Rechnung). Betrachte alle "
+    "Felder als Einheit: gleiche Anrede, gleicher Stil, einheitliche "
+    "Fachbegriffe über das ganze Dokument hinweg.\n\n"
+    "Aufgabe: Korrigiere ausschließlich Rechtschreibung, Zeichensetzung und "
+    "Grammatik jedes Feldes.\n\n"
+    "Strikte Regeln:\n"
+    "- Behalte Stil, Tonalität und Anrede 1:1 bei.\n"
+    "- Verändere KEINE Eigennamen, Firmennamen, Marken, Produktnamen oder Adressen.\n"
+    "- Verändere KEINE Zahlen, Beträge, Datumsangaben, IBAN, Telefonnummern.\n"
+    "- Behalte alle Zeilenumbrüche und Absätze exakt bei.\n"
+    "- Füge KEINE neuen Sätze, Erklärungen oder Anführungszeichen hinzu.\n"
+    "- Ist ein Feld bereits korrekt, gib es unverändert zurück.\n"
+    "- Halte Fachbegriffe über alle Felder hinweg einheitlich.\n\n"
+    "Antworte AUSSCHLIESSLICH mit gültigem JSON in genau diesem Format:\n"
+    '{"results": [{"id": "<feld-id>", "corrected": "<korrigierter text>"}]}\n'
+    "Kein Markdown, keine Code-Fences, keine Erklärungen."
+)
 
 
 @router.post("/check-document", response_model=DocumentCheckResponse)
 async def check_document(payload: DocumentCheckPayload, user=Depends(get_current_user)):
-    """Prüft alle Textfelder eines Dokuments parallel und gibt Korrekturen zurück."""
-    import asyncio
+    """Prüft alle Textfelder eines Dokuments KONTEXTBEWUSST in EINEM KI-Aufruf.
+
+    Die KI sieht das gesamte Dokument (inkl. optionalem Kontext) auf einmal und
+    korrigiert alle Felder einheitlich. Das ersetzt die frühere Feld-für-Feld-Prüfung.
+    """
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "EMERGENT_LLM_KEY nicht konfiguriert")
     if not payload.fields:
         return DocumentCheckResponse(results=[])
-    # Nur Felder mit Inhalt prüfen — leere Felder werden 1:1 durchgereicht.
-    tasks = []
-    for f in payload.fields:
-        txt = (f.text or "").strip()
-        if not txt or len(txt) > 8000:
-            tasks.append(None)
-        else:
-            tasks.append(_correct_single(f.text))
 
-    corrected_list = []
-    coros = [t for t in tasks if t is not None]
-    try:
-        gathered = await asyncio.gather(*coros, return_exceptions=True)
-    except Exception as e:
-        logger.error(f"Batch-Korrektur fehlgeschlagen: {e}")
-        raise HTTPException(500, f"KI-Korrektur fehlgeschlagen: {e}")  # noqa: B904
+    # Nur Felder mit Inhalt an die KI geben; leere/zu lange werden 1:1 durchgereicht.
+    to_check = [f for f in payload.fields if (f.text or "").strip() and len(f.text) <= 8000]
 
-    gathered_iter = iter(gathered)
-    for f, t in zip(payload.fields, tasks):
-        if t is None:
-            corrected_list.append(f.text)
-        else:
-            r = next(gathered_iter)
-            if isinstance(r, Exception):
-                logger.warning(f"Feld {f.id} Korrektur fehlgeschlagen: {r}")
-                corrected_list.append(f.text)
-            else:
-                corrected_list.append(r)
+    corrected_map: dict[str, str] = {}
+    if to_check:
+        lines: List[str] = []
+        if payload.kontext_info:
+            lines.append(f"Dokument-Kontext: {payload.kontext_info}\n")
+        lines.append("Zu prüfende Felder:")
+        for f in to_check:
+            lines.append(f"--- Feld-ID: {f.id} ({f.label}) ---")
+            lines.append(f.text)
+        user_text = "\n".join(lines)
+
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=f"textkorrektur-doc-{uuid.uuid4()}",
+                system_message=DOC_SYSTEM_PROMPT,
+            ).with_model("openai", "gpt-5.2")
+            raw = (await chat.send_message(UserMessage(text=user_text)) or "").strip()
+        except Exception as e:
+            logger.error(f"Kontextbewusste Dokumentprüfung fehlgeschlagen: {e}")
+            raise HTTPException(500, "KI-Korrektur fehlgeschlagen")  # noqa: B904
+
+        # Robustes JSON-Extrakt: evtl. Code-Fences/Begleittext der KI tolerieren.
+        try:
+            start = raw.find("{")
+            end = raw.rfind("}")
+            if start != -1 and end != -1:
+                parsed = json.loads(raw[start:end + 1])
+                for item in parsed.get("results", []):
+                    fid = item.get("id")
+                    corr = item.get("corrected")
+                    if fid is not None and isinstance(corr, str):
+                        corrected_map[fid] = corr.strip()
+        except Exception as e:
+            logger.warning(f"Antwort der KI nicht als JSON lesbar: {e}")
 
     results = []
-    for f, corrected in zip(payload.fields, corrected_list):
+    for f in payload.fields:
+        corrected = corrected_map.get(f.id) or f.text
         results.append(FieldResult(
             id=f.id,
             label=f.label,

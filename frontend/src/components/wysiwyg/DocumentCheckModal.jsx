@@ -25,7 +25,7 @@ const renderDiff = (orig, corr) => {
   return out;
 };
 
-export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, onApplyAll }) => {
+export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, onApplyAll, kontextInfo }) => {
   const [tab, setTab] = useState("rechtschreibung");
   const [results, setResults] = useState(null); // [{id, label, original, corrected, changed}]
   const [loading, setLoading] = useState(false);
@@ -44,6 +44,7 @@ export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, o
     try {
       const res = await api.post("/module-textkorrektur/check-document", {
         fields: fields.map((f) => ({ id: f.id, label: f.label, text: f.text || "", kontext: f.kontext || "allgemein" })),
+        kontext_info: kontextInfo || undefined,
       });
       setResults(res.data?.results || []);
     } catch (e) {
@@ -58,11 +59,12 @@ export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, o
     setAppliedIds((s) => new Set([...s, r.id]));
     toast.success(`${r.label}: Übernommen`);
   };
-  const applyAll = () => {
+  const applyAll = (close = false) => {
     const stillOpen = changedResults.filter((r) => !appliedIds.has(r.id));
     onApplyAll?.(stillOpen);
     setAppliedIds((s) => new Set([...s, ...stillOpen.map((r) => r.id)]));
     toast.success(`${stillOpen.length} Korrektur(en) übernommen`);
+    if (close) onClose?.();
   };
 
   if (!isOpen) return null;
@@ -137,11 +139,16 @@ export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, o
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between gap-2 mb-3">
                         <p className="text-sm">{changedResults.length} Vorschlag/-schläge</p>
-                        <button onClick={applyAll} className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90" data-testid="btn-docchk-apply-all">
-                          Alle übernehmen
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => applyAll(false)} className="text-sm px-3 py-1.5 rounded-md border hover:bg-muted" data-testid="btn-docchk-apply-all">
+                            Alle übernehmen
+                          </button>
+                          <button onClick={() => applyAll(true)} className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90" data-testid="btn-docchk-apply-all-close">
+                            Alle übernehmen &amp; schließen
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-3">
                         {changedResults.map((r) => {

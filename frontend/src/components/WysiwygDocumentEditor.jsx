@@ -1123,12 +1123,18 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             updatePosition(idx, "description", r.corrected);
           }
         };
+        const kontextInfo = [
+          `${titles[type]}${docNumber ? " " + docNumber : ""}`,
+          customer ? `Kunde: ${(customer.name || customer.firma || "").trim()}` : null,
+          positions?.length ? `${positions.length} Position(en)` : null,
+        ].filter(Boolean).join(", ");
         return (
           <DocumentCheckModal
             isOpen={true}
             onClose={() => setShowDocCheck(false)}
             fields={docFields}
             issues={issues}
+            kontextInfo={kontextInfo}
             onApply={applyOne}
             onApplyAll={(items) => items.forEach(applyOne)}
           />
