@@ -5,21 +5,26 @@
 
 ## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
 
+### Nachmittag (~15:35 MEZ):
+- **Projektwerkbank wird zentraler Arbeitsbereich** (Strategiewechsel Ralph):
+  - `CustomerDocumentsPanel` + `CreateDocPrompt` aus `KundenModulPage.jsx` in neue Datei `components/CustomerDocumentsPanel.jsx` ausgelagert. KundenModulPage um ~237 Zeilen schlanker.
+  - Props erweitert: `customerId, projektId` (optional) → Anhängen von `&projekt_id=` an „Neu"-URLs vorbereitet. Backend kennt Param noch nicht (Option c separater Auftrag).
+  - `ProjektWerkbank.jsx` Sticky-Block bekommt 3 neue Buttons: Mailverlauf, Kundenportal, Einsatz erstellen.
+  - `MailHistoryModal` integriert.
+  - `CustomerDocumentsPanel` als zentraler Hub für Angebote/Aufträge/Rechnungen.
+  - In jeder Projekt-Karte: neuer „Angebot"-Button mit `?customer={id}&projekt_id={projekt.id}`.
+  - Einsatz-Button nutzt `navigate("/einsaetze")` statt `window.location.href` → Browser-History intakt für späteren „Zurück-zu-Kunde"-Patch.
+
+### Nachmittag (~14:55 MEZ):
+- **Backend-Fix für Hilfe-Textvorlagen:** `VALID_DOC_TYPES` um 5 `hilfe_*`-Typen erweitert, `VALID_TEXT_TYPES` um `"hilfe"` erweitert. Frontend `DOC_TYPE_LABELS`/`TEXT_TYPE_LABELS` ebenfalls. „Als Vorlage speichern" im HelpSlideOver funktioniert jetzt.
+
 ### Nachmittag (~14:30 MEZ):
-- **AufgabenPanel: gesamte Zeile klickbar** — `AufgabenPanel.jsx`. Klick auf eine Aufgaben-Zeile öffnet direkt den Edit-Dialog. Status-Select, Edit-Icon und Trash-Icon haben `stopPropagation`, damit sie isoliert funktionieren. Wirkung automatisch in Kunden- UND Projekt-Ansicht (gleiche Komponente).
-- **F1-Hilfe-System global eingeführt:**
-  - Neue Datei `lib/useF1Help.js` — Hook, der pro Seite einen Hilfe-Kontext registriert
-  - Neue Datei `components/HelpSlideOver.jsx` — Slide-Over rechts (420px), Backdrop-Blur, ESC + X schließt
-  - Neue Datei `lib/helpContent.js` — Default-Hilfetexte für 5 Kontexte (Kunden, Projekte, Aufgaben, Termine, Einsätze)
-  - `App.js` rendert `<HelpSlideOver />` global im MainLayout
-  - 5 Modul-Seiten angebunden: `KundenModulPage`, `ProjekteListe`, `ProjektWerkbank`, `ModuleAufgabenPage`, `ModuleTerminePage`, `EinsaetzeModulPage`
-  - **Hilfetexte editierbar:** lädt aus `module_textvorlagen` mit `doc_type=hilfe_<context>`, `text_type=hilfe`. Bei leerem Bestand: Defaults aus `helpContent.js` + Button „Als Vorlage speichern (zum Anpassen)" für einmaliges Seeding
-  - F1-Browser-Default unterdrückt (`e.preventDefault()`)
-  - E2E getestet: F1 öffnet Slide-Over mit 3 Default-Items für „Hilfe: Aufgaben", ESC schließt
+- **AufgabenPanel: gesamte Zeile klickbar** — Klick auf Aufgaben-Zeile öffnet Edit-Dialog. Status-Select/Edit/Trash mit `stopPropagation`.
+- **F1-Hilfe-System global eingeführt:** Slide-Over rechts, Lädt aus `module_textvorlagen` (`doc_type=hilfe_<context>, text_type=hilfe`), Fallback auf Defaults, „Als Vorlage speichern"-Button. 5 Modul-Seiten angebunden (Kunden, Projekte, Aufgaben, Termine, Einsätze).
 
 ### Vormittag (~11:50 MEZ):
-- **Anrede-Vorschlag-Box im Dokumenten-Editor:** blaue Hinweis-Box mit „💡 Vorgeschlagene Anrede" + Button „Übernehmen" über dem Vortext, sobald ein Kunde mit gepflegter `anrede` gewählt ist. Nutzt `getAnredeBrief()` aus `TextTemplateSelect.jsx` (jetzt exportiert).
-- **Revert AnredeQuickEditModal** (war redundant): Datei gelöscht, Imports/State/JSX entfernt, gelber Warnhinweis bleibt als nicht-klickbarer Text.
+- **Anrede-Vorschlag-Box** im Dokumenten-Editor mit „Übernehmen"-Button.
+- **Revert AnredeQuickEditModal** (war redundant).
 
 ## 🤖 INTELLIGENTER ASSISTENT — Roadmap (verbindlich seit 28.05.2026 — Ralph)
 

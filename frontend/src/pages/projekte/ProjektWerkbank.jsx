@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, User as UserIcon, MapPin, Phone, Mail, Edit, Plus,
   Folder, Image as ImageIcon, Upload, Trash2, X, Save, Sparkles,
-  ChevronDown, ChevronUp, Calendar, Edit3,
+  ChevronDown, ChevronUp, Calendar, Edit3, Globe, Wrench, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common";
@@ -14,6 +14,8 @@ import { TerminePanel } from "@/components/TerminePanel";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog, { useTextvorlagen } from "@/components/NewProjektDialog";
 import ProjektBild from "@/components/ProjektBild";
+import MailHistoryModal from "@/components/MailHistoryModal";
+import { CustomerDocumentsPanel } from "@/components/CustomerDocumentsPanel";
 
 const STATUS_COLORS = {
   "Anfrage": "bg-blue-100 text-blue-700 border-blue-300",
@@ -35,6 +37,7 @@ const ProjektWerkbank = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [mailHistoryFor, setMailHistoryFor] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -101,6 +104,66 @@ const ProjektWerkbank = () => {
             </Button>
           </div>
         </div>
+
+        {/* === Aktionsleiste === */}
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          {kunde.email && (
+            <button
+              onClick={() => setMailHistoryFor({
+                email: kunde.email,
+                name: kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim() || kunde.email,
+              })}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors"
+              data-testid="btn-werkbank-mail-history"
+              title="Alle Mails von/an diesen Kunden aus IMAP anzeigen"
+            >
+              <Mail className="w-4 h-4" /> Mailverlauf
+            </button>
+          )}
+          <button
+            onClick={async () => {
+              try {
+                const res = await api.get(`/portals/for-customer/${kunde_id}`);
+                if (res.data?.exists && res.data?.portal?.id) {
+                  navigate(`/portals?portal=${res.data.portal.id}`);
+                } else {
+                  if (!kunde.email) { toast.error("Kunde hat keine E-Mail – erst ergänzen"); return; }
+                  if (!window.confirm(`Neues Kundenportal für ${kunde.vorname || ""} ${kunde.nachname || ""}${kunde.firma ? ` (${kunde.firma})` : ""} anlegen?`)) return;
+                  const created = await api.post(`/portals/from-customer/${kunde_id}`, {});
+                  const newId = created.data?.id;
+                  toast.success("Portal erstellt");
+                  navigate(newId ? `/portals?portal=${newId}` : `/portals`);
+                }
+              } catch (err) {
+                toast.error(err?.response?.data?.detail || "Fehler");
+              }
+            }}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+            data-testid="btn-werkbank-portal"
+          >
+            <Globe className="w-4 h-4" /> Kundenportal öffnen / anlegen
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                await api.post(`/einsaetze/from-kunde/${kunde_id}`);
+                toast.success("Einsatz erstellt");
+                navigate("/einsaetze");
+              } catch (err) {
+                toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
+              }
+            }}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
+            data-testid="btn-werkbank-einsatz"
+          >
+            <Wrench className="w-4 h-4" /> Einsatz erstellen
+          </button>
+        </div>
+      </div>
+
+      {/* Dokumente & Vorgaenge */}
+      <div className="mb-4">
+        <CustomerDocumentsPanel customerId={kunde_id} />
       </div>
 
       {/* Aufgaben + Termine (Kunden-Ebene) */}
@@ -152,6 +215,13 @@ const ProjektWerkbank = () => {
           onCreated={() => { setShowNew(false); load(); }}
         />
       )}
+
+      <MailHistoryModal
+        isOpen={!!mailHistoryFor}
+        onClose={() => setMailHistoryFor(null)}
+        email={mailHistoryFor?.email || ""}
+        kundeName={mailHistoryFor?.name || ""}
+      />
     </div>
   );
 };
@@ -346,6 +416,16 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
               <Trash2 className="w-4 h-4" /> Löschen
             </Button>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/quotes/new?customer=${kundeId}&projekt_id=${data.id}`)}
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                data-testid={`btn-projekt-angebot-${data.id}`}
+                title="Angebot fuer dieses Projekt erstellen"
+              >
+                <FileText className="w-4 h-4" /> Angebot
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
