@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star, X } from "lucide-react";
 import { api, API } from "@/lib/api";
-import { TextTemplateSelect } from "@/components/TextTemplateSelect";
+import { TextTemplateSelect, getAnredeBrief } from "@/components/TextTemplateSelect";
 
 // Sub-components
 import { EditorToolbar } from "@/components/wysiwyg/EditorToolbar";
@@ -858,6 +858,34 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     </span>
                   </div>
                 )}
+                {customer && customer.anrede && (() => {
+                  const vorschlag = `${getAnredeBrief(customer)},`;
+                  const schonDrin = (vortext || "").trim().startsWith(vorschlag);
+                  if (schonDrin) return null;
+                  return (
+                    <div
+                      className="mb-2 flex items-center gap-2 text-xs bg-blue-50 dark:bg-blue-100 border border-blue-200 dark:border-blue-300 text-blue-900 rounded-sm px-3 py-2"
+                      data-testid="anrede-vorschlag-box"
+                    >
+                      <span className="text-blue-600 flex-shrink-0">💡</span>
+                      <span className="flex-1">
+                        Vorgeschlagene Anrede: <strong>„{vorschlag}"</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const rest = (vortext || "").trim();
+                          setVortext(rest ? `${vorschlag}\n\n${rest}` : vorschlag);
+                          toast.success("Anrede uebernommen");
+                        }}
+                        data-testid="btn-anrede-uebernehmen"
+                        className="px-2.5 py-1 rounded-sm bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors flex-shrink-0"
+                      >
+                        Übernehmen
+                      </button>
+                    </div>
+                  );
+                })()}
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Vortext</span>
                   <TextKorrekturButton

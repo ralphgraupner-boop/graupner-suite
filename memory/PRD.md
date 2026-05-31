@@ -1,7 +1,17 @@
 # PRD — Graupner Suite (Tischlerei-CRM)
 
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
-> Stand: 28.05.2026
+> Stand: 31.05.2026
+
+## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
+- **Anrede-Vorschlag-Box im Dokumenten-Editor (NEU):**
+  - In `WysiwygDocumentEditor.jsx` erscheint über dem Vortext eine blaue Vorschlag-Box, sobald ein Kunde mit gepflegter `anrede` gewählt ist.
+  - Inhalt: „💡 Vorgeschlagene Anrede: ‚Sehr geehrter Herr Müller,'" + Button **Übernehmen**.
+  - Klick → setzt den Vortext auf die Briefanrede (bzw. stellt sie bestehendem Vortext voran).
+  - Logik nutzt die bereits vorhandene `getAnredeBrief()` aus `TextTemplateSelect.jsx` (jetzt exportiert) — eine Quelle der Wahrheit, keine Duplikation.
+  - Bei Kunden **ohne** Anrede: gelber Warnhinweis bleibt unverändert (nicht-klickbar).
+- **Revert AnredeQuickEditModal:** Komplett zurückgebaut (Datei gelöscht, Imports/State/JSX entfernt). Begründung: Redundant zum bestehenden Kunden-Bearbeitungsformular.
+- Ungenutzter `Pencil`-Import aus `WysiwygDocumentEditor.jsx` entfernt.
 
 ## 🤖 INTELLIGENTER ASSISTENT — Roadmap (verbindlich seit 28.05.2026 — Ralph)
 

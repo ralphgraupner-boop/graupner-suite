@@ -488,4 +488,4 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
   );
 };
 
-export { TextTemplateSelect, resolvePlaceholders, PLACEHOLDERS };
+export { TextTemplateSelect, resolvePlaceholders, PLACEHOLDERS, getAnredeBrief };
