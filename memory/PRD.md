@@ -188,6 +188,7 @@
 - Konflikt-Schutz Phase 2: Aufgaben, Termine, Quotes/Orders/Invoices.
 
 ## P2 – Future / Vision
+- **Sidebar Offen-Indikatoren pro Sub-Sektion** — am aktuell geöffneten Modul ein Mini-Indikator (kleiner Dot) pro Sub-Sektion, ergänzend zu den globalen Sidebar-Zahlen. Aufgenommen am 31.05.2026 16:20 MEZ.
 - Umlaut-Fix Migration `module_textvorlagen` (12 Einträge).
 - `migrate-thumbnails` Break-Bug bei kleinem `limit`.
 - FritzBox Call Monitor.
