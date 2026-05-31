@@ -25,7 +25,7 @@ const PRIO_STYLES = {
  *
  * Datenmaske: liest und schreibt nur in module_aufgaben, vorgefiltert auf den Kontext.
  */
-export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgaben", defaultCollapsed = false, compact = false }) => {
+export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgaben", defaultCollapsed = false, compact = false, onlyWithoutProjekt = false }) => {
   const [aufgaben, setAufgaben] = useState([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -45,7 +45,7 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
         api.get("/module-aufgaben", { params }),
         mitarbeiter.length ? Promise.resolve({ data: mitarbeiter }) : api.get("/module-aufgaben/mitarbeiter").catch(() => ({ data: [] })),
       ]);
-      setAufgaben(Array.isArray(r.data) ? r.data : []);
+      setAufgaben(Array.isArray(r.data) ? (onlyWithoutProjekt ? r.data.filter(a => !a.projekt_id) : r.data) : []);
       if (!mitarbeiter.length) setMitarbeiter(Array.isArray(m.data) ? m.data : []);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Aufgaben konnten nicht geladen werden");

@@ -33,7 +33,7 @@ const fmtDateTime = (s) => {
  * Wiederverwendbares Termine-Panel.
  * Datenmaske: liest und schreibt nur in module_termine, gefiltert auf Kunde oder Projekt.
  */
-export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine", defaultCollapsed = true, compact = true }) => {
+export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine", defaultCollapsed = true, compact = true, onlyWithoutProjekt = false }) => {
   const [termine, setTermine] = useState([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -54,7 +54,7 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
         api.get("/module-termine", { params }),
         mitarbeiter.length ? Promise.resolve({ data: mitarbeiter }) : api.get("/module-aufgaben/mitarbeiter").catch(() => ({ data: [] })),
       ]);
-      setTermine(Array.isArray(r.data) ? r.data : []);
+      setTermine(Array.isArray(r.data) ? (onlyWithoutProjekt ? r.data.filter(t => !t.projekt_id) : r.data) : []);
       if (!mitarbeiter.length) setMitarbeiter(Array.isArray(m.data) ? m.data : []);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Termine konnten nicht geladen werden");

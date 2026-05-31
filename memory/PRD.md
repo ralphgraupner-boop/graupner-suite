@@ -5,26 +5,23 @@
 
 ## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
 
+### Nachmittag (~15:58 MEZ):
+- **Tab-System in ProjektKarte (Werkbank):** expanded-Bereich hat jetzt 4 Tabs **Details · Aufgaben · Termine · Bilder**. Aufgaben/Termine sind Projekt-spezifisch (`projekt_id={p.id}`). Bilder zeigt Anzahl im Tab-Label.
+- **Kunden-Ebene Aufgaben/Termine:** umbenannt in „Aufgaben/Termine ohne Projekt-Bezug" + neue Prop `onlyWithoutProjekt` an `AufgabenPanel`/`TerminePanel` (clientseitiges Filter `.filter(x => !x.projekt_id)`). Spontane Aufgaben ohne Projekt-Bezug bleiben sichtbar.
+
 ### Nachmittag (~15:35 MEZ):
-- **Projektwerkbank wird zentraler Arbeitsbereich** (Strategiewechsel Ralph):
-  - `CustomerDocumentsPanel` + `CreateDocPrompt` aus `KundenModulPage.jsx` in neue Datei `components/CustomerDocumentsPanel.jsx` ausgelagert. KundenModulPage um ~237 Zeilen schlanker.
-  - Props erweitert: `customerId, projektId` (optional) → Anhängen von `&projekt_id=` an „Neu"-URLs vorbereitet. Backend kennt Param noch nicht (Option c separater Auftrag).
-  - `ProjektWerkbank.jsx` Sticky-Block bekommt 3 neue Buttons: Mailverlauf, Kundenportal, Einsatz erstellen.
-  - `MailHistoryModal` integriert.
-  - `CustomerDocumentsPanel` als zentraler Hub für Angebote/Aufträge/Rechnungen.
-  - In jeder Projekt-Karte: neuer „Angebot"-Button mit `?customer={id}&projekt_id={projekt.id}`.
-  - Einsatz-Button nutzt `navigate("/einsaetze")` statt `window.location.href` → Browser-History intakt für späteren „Zurück-zu-Kunde"-Patch.
+- **Projektwerkbank wird zentraler Arbeitsbereich:** `CustomerDocumentsPanel` ausgelagert. Werkbank-Sticky-Header mit Mailverlauf/Kundenportal/Einsatz erstellen. Dokumenten-Hub direkt unter Header. „Angebot"-Button in Projekt-Karte mit `&projekt_id=`. Einsatz-Button via `navigate()` statt `window.location.href`.
 
 ### Nachmittag (~14:55 MEZ):
-- **Backend-Fix für Hilfe-Textvorlagen:** `VALID_DOC_TYPES` um 5 `hilfe_*`-Typen erweitert, `VALID_TEXT_TYPES` um `"hilfe"` erweitert. Frontend `DOC_TYPE_LABELS`/`TEXT_TYPE_LABELS` ebenfalls. „Als Vorlage speichern" im HelpSlideOver funktioniert jetzt.
+- **Backend-Fix Hilfe-Textvorlagen:** `VALID_DOC_TYPES` + `VALID_TEXT_TYPES` erweitert.
 
 ### Nachmittag (~14:30 MEZ):
-- **AufgabenPanel: gesamte Zeile klickbar** — Klick auf Aufgaben-Zeile öffnet Edit-Dialog. Status-Select/Edit/Trash mit `stopPropagation`.
-- **F1-Hilfe-System global eingeführt:** Slide-Over rechts, Lädt aus `module_textvorlagen` (`doc_type=hilfe_<context>, text_type=hilfe`), Fallback auf Defaults, „Als Vorlage speichern"-Button. 5 Modul-Seiten angebunden (Kunden, Projekte, Aufgaben, Termine, Einsätze).
+- **AufgabenPanel: gesamte Zeile klickbar.**
+- **F1-Hilfe-System** mit Slide-Over rechts, kontextspezifisch für 5 Module.
 
 ### Vormittag (~11:50 MEZ):
-- **Anrede-Vorschlag-Box** im Dokumenten-Editor mit „Übernehmen"-Button.
-- **Revert AnredeQuickEditModal** (war redundant).
+- **Anrede-Vorschlag-Box** im Dokumenten-Editor.
+- **Revert AnredeQuickEditModal.**
 
 ## 🤖 INTELLIGENTER ASSISTENT — Roadmap (verbindlich seit 28.05.2026 — Ralph)
 

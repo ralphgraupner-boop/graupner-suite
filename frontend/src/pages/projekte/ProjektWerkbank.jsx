@@ -166,10 +166,10 @@ const ProjektWerkbank = () => {
         <CustomerDocumentsPanel customerId={kunde_id} />
       </div>
 
-      {/* Aufgaben + Termine (Kunden-Ebene) */}
+      {/* Aufgaben + Termine ohne Projekt-Bezug (Kunden-Ebene) */}
       <div className="mb-4 space-y-2">
-        <AufgabenPanel kunde_id={kunde_id} title="Aufgaben für diesen Kunden" defaultCollapsed={true} compact={true} />
-        <TerminePanel kunde_id={kunde_id} title="Termine für diesen Kunden" defaultCollapsed={true} compact={true} />
+        <AufgabenPanel kunde_id={kunde_id} onlyWithoutProjekt title="Aufgaben ohne Projekt-Bezug" defaultCollapsed compact />
+        <TerminePanel kunde_id={kunde_id} onlyWithoutProjekt title="Termine ohne Projekt-Bezug" defaultCollapsed compact />
       </div>
 
       {/* === Projekte === */}
@@ -229,6 +229,7 @@ const ProjektWerkbank = () => {
 // ==================== Projekt-Karte (inline editierbar) ====================
 const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
   const [expanded, setExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
   const [data, setData] = useState(projekt);
   const [saving, setSaving] = useState(false);
   const [uploadKategorie, setUploadKategorie] = useState("schaden");
@@ -349,67 +350,108 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
       {/* Detail (ausgeklappt) */}
       {expanded && (
         <div className="border-t bg-muted/10 p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Titel *</label>
-              <Input value={data.titel || ""} onChange={(e) => update("titel", e.target.value)} data-testid={`input-titel-${data.id}`} />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Status</label>
-              <select value={data.status} onChange={(e) => update("status", e.target.value)} className="w-full border rounded px-2 py-2 text-sm" data-testid={`select-status-${data.id}`}>
-                {statusList.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Kategorie</label>
-              <select value={data.kategorie || (kategorieList[0] || "")} onChange={(e) => update("kategorie", e.target.value)} className="w-full border rounded px-2 py-2 text-sm">
-                {kategorieList.map(k => <option key={k} value={k}>{k}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Adresse (überschreibt Kunde)</label>
-              <Input value={data.adresse || ""} onChange={(e) => update("adresse", e.target.value)} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Beschreibung</label>
-              <Textarea value={data.beschreibung || ""} onChange={(e) => update("beschreibung", e.target.value)} rows={3} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Notizen (intern)</label>
-              <Textarea value={data.notizen || ""} onChange={(e) => update("notizen", e.target.value)} rows={2} />
-            </div>
+          {/* Tab-Strip */}
+          <div className="flex gap-1 border-b" data-testid={`tabs-projekt-${data.id}`}>
+            {[
+              { id: "details", label: "Details" },
+              { id: "aufgaben", label: "Aufgaben" },
+              { id: "termine", label: "Termine" },
+              { id: "bilder", label: `Bilder (${bilder.length})` },
+            ].map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                data-testid={`tab-${t.id}-${data.id}`}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          {/* Bilder */}
-          <div className="border-t pt-3">
-            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-              <h4 className="text-sm font-semibold flex items-center gap-1">
-                <ImageIcon className="w-4 h-4" /> Bilder ({bilder.length})
-              </h4>
-              <div className="flex items-center gap-1">
-                <select value={uploadKategorie} onChange={(e) => setUploadKategorie(e.target.value)} className="border rounded px-2 py-1 text-xs">
-                  {bildKatList.map(k => <option key={k} value={k}>{k}</option>)}
+          {/* Tab: Details */}
+          {activeTab === "details" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Titel *</label>
+                <Input value={data.titel || ""} onChange={(e) => update("titel", e.target.value)} data-testid={`input-titel-${data.id}`} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Status</label>
+                <select value={data.status} onChange={(e) => update("status", e.target.value)} className="w-full border rounded px-2 py-2 text-sm" data-testid={`select-status-${data.id}`}>
+                  {statusList.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} data-testid={`btn-upload-${data.id}`}>
-                  <Upload className="w-3.5 h-3.5" /> {uploading ? "Lade…" : "Hochladen"}
-                </Button>
-                <input ref={fileInputRef} type="file" multiple accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Kategorie</label>
+                <select value={data.kategorie || (kategorieList[0] || "")} onChange={(e) => update("kategorie", e.target.value)} className="w-full border rounded px-2 py-2 text-sm">
+                  {kategorieList.map(k => <option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Adresse (überschreibt Kunde)</label>
+                <Input value={data.adresse || ""} onChange={(e) => update("adresse", e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Beschreibung</label>
+                <Textarea value={data.beschreibung || ""} onChange={(e) => update("beschreibung", e.target.value)} rows={3} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Notizen (intern)</label>
+                <Textarea value={data.notizen || ""} onChange={(e) => update("notizen", e.target.value)} rows={2} />
               </div>
             </div>
-            {bilder.length === 0 ? (
-              <div className="text-xs text-muted-foreground border-2 border-dashed rounded p-4 text-center">
-                Keine Bilder. Wähle Kategorie und lade Bilder hoch.
-              </div>
-            ) : (
-              <BilderGrid bilder={bilder} onDelete={deleteBild} />
-            )}
-          </div>
+          )}
 
-          {/* Aufgaben + Termine für dieses Projekt */}
-          <div className="space-y-2">
-            <AufgabenPanel projekt_id={data.id} title="Aufgaben für dieses Projekt" defaultCollapsed={true} compact={true} />
-            <TerminePanel projekt_id={data.id} title="Termine für dieses Projekt" defaultCollapsed={true} compact={true} />
-          </div>
+          {/* Tab: Aufgaben */}
+          {activeTab === "aufgaben" && (
+            <AufgabenPanel
+              kunde_id={kundeId}
+              projekt_id={data.id}
+              title="Aufgaben dieses Projekts"
+              defaultCollapsed={false}
+              compact
+            />
+          )}
+
+          {/* Tab: Termine */}
+          {activeTab === "termine" && (
+            <TerminePanel
+              kunde_id={kundeId}
+              projekt_id={data.id}
+              title="Termine dieses Projekts"
+              defaultCollapsed={false}
+              compact
+            />
+          )}
+
+          {/* Tab: Bilder */}
+          {activeTab === "bilder" && (
+            <div>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <h4 className="text-sm font-semibold flex items-center gap-1">
+                  <ImageIcon className="w-4 h-4" /> Bilder ({bilder.length})
+                </h4>
+                <div className="flex items-center gap-1">
+                  <select value={uploadKategorie} onChange={(e) => setUploadKategorie(e.target.value)} className="border rounded px-2 py-1 text-xs">
+                    {bildKatList.map(k => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                  <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} data-testid={`btn-upload-${data.id}`}>
+                    <Upload className="w-3.5 h-3.5" /> {uploading ? "Lade…" : "Hochladen"}
+                  </Button>
+                  <input ref={fileInputRef} type="file" multiple accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
+                </div>
+              </div>
+              {bilder.length === 0 ? (
+                <div className="text-xs text-muted-foreground border-2 border-dashed rounded p-4 text-center">
+                  Keine Bilder. Wähle Kategorie und lade Bilder hoch.
+                </div>
+              ) : (
+                <BilderGrid bilder={bilder} onDelete={deleteBild} />
+              )}
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-3 border-t flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-600 hover:bg-red-50" data-testid={`btn-delete-${data.id}`}>
