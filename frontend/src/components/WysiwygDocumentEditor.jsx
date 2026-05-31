@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
-import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star, X, Pencil } from "lucide-react";
+import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star, X } from "lucide-react";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
@@ -20,7 +20,6 @@ import { DocumentPreview } from "@/components/DocumentPreview";
 import { TextKorrekturModal, TextKorrekturButton } from "@/components/wysiwyg/TextKorrekturModal";
 import { DocumentCheckModal } from "@/components/wysiwyg/DocumentCheckModal";
 import { PdfPreviewModal } from "@/components/wysiwyg/PdfPreviewModal";
-import { AnredeQuickEditModal } from "@/components/AnredeQuickEditModal";
 import { validateDocument } from "@/lib/documentValidator";
 
 const WysiwygDocumentEditor = ({ type = "quote" }) => {
@@ -62,7 +61,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   // Document state
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customer, setCustomer] = useState(null);
-  const [anredeEditOpen, setAnredeEditOpen] = useState(false);
   const [positions, setPositions] = useState([
     { type: "position", pos_nr: 1, description: "", quantity: 1, unit: "Stück", price_net: 0 }
   ]);
@@ -850,19 +848,15 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               {/* Vortext */}
               <div className="px-4 lg:px-10 py-3 lg:py-4 border-b">
                 {customer && !customer.anrede && (
-                  <button
-                    type="button"
-                    onClick={() => setAnredeEditOpen(true)}
-                    className="mb-2 w-full flex items-start gap-2 text-left text-xs bg-amber-50 hover:bg-amber-100 dark:bg-amber-100 dark:hover:bg-amber-200 border border-amber-200 dark:border-amber-300 text-amber-800 dark:text-amber-900 rounded-sm px-3 py-2 cursor-pointer transition-colors"
+                  <div
+                    className="mb-2 flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-100 border border-amber-200 dark:border-amber-300 text-amber-800 dark:text-amber-900 rounded-sm px-3 py-2"
                     data-testid="anrede-missing-hint"
                   >
                     <span className="text-amber-600 flex-shrink-0">⚠</span>
                     <span className="flex-1">
                       Keine Anrede beim Kunden hinterlegt – im Vortext wird <strong>„Sehr geehrte Damen und Herren"</strong> verwendet.
-                      <span className="ml-1 font-medium underline">Klicken zum Ergänzen</span>
                     </span>
-                    <Pencil className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 opacity-70" />
-                  </button>
+                  </div>
                 )}
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Vortext</span>
@@ -1103,27 +1097,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           }}
         />
       )}
-
-      <AnredeQuickEditModal
-        open={anredeEditOpen}
-        onClose={() => setAnredeEditOpen(false)}
-        customer={customer}
-        onSaved={(neueAnrede) => {
-          setCustomer((c) => c ? { ...c, anrede: neueAnrede } : c);
-          // Vortext nur dann ersetzen, wenn er leer ist oder dem Standard entspricht.
-          const isStandard = !vortext?.trim()
-            || /Sehr geehrte Damen und Herren/i.test(vortext || "");
-          if (isStandard && customer) {
-            const a = neueAnrede.toLowerCase();
-            const nachname = (customer.nachname || "").trim();
-            let neu;
-            if (a === "herr") neu = nachname ? `Sehr geehrter Herr ${nachname},` : `Sehr geehrter Herr,`;
-            else if (a === "frau") neu = nachname ? `Sehr geehrte Frau ${nachname},` : `Sehr geehrte Frau,`;
-            else neu = `Sehr geehrte ${neueAnrede},`;
-            setVortext(neu);
-          }
-        }}
-      />
 
       {showDocCheck && (() => {
         const docFields = [
