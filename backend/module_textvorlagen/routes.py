@@ -12,7 +12,7 @@ def _re_escape(s: str) -> str:
 
 router = APIRouter()
 
-VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "kunden_typ", "anrede", "allgemein", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie", "projekt_titel", "aufgabe_titel", "termin_titel", "einsatz_betreff", "hilfe_kunden", "hilfe_projekte", "hilfe_aufgaben", "hilfe_termine", "hilfe_einsaetze"]
+VALID_DOC_TYPES = ["angebot", "auftrag", "rechnung", "kundenportal", "einsatz", "termin", "aufgabe", "aufgaben_kategorie", "reparaturgruppe", "material", "prioritaet", "bild_kategorie", "abschlussgrund", "kunden_status", "kunden_kategorie", "kunden_typ", "anrede", "allgemein", "projekt_status", "projekt_kategorie", "projekt_bild_kategorie", "projekt_titel", "aufgabe_titel", "termin_titel", "einsatz_betreff", "hilfe_kunden", "hilfe_projekte", "hilfe_aufgaben", "hilfe_termine", "hilfe_einsaetze", "hilfe_assistent"]
 VALID_TEXT_TYPES = ["vortext", "schlusstext", "betreff", "bemerkung", "titel", "email", "mahnung", "portal_nachricht", "abschluss_grund", "hilfe"]
 
 # Doc-Types, deren Eintrag selbst eine Auswahl-Option ist (Titel = Wert).

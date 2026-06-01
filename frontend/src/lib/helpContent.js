@@ -132,6 +132,32 @@ export const HELP_DEFAULTS = {
         "4. Fotos werden direkt im Einsatz gespeichert und sind später im Büro sichtbar.",
     },
   ],
+  hilfe_assistent: [
+    {
+      title: "Was kann der Assistent?",
+      content:
+        "1. Hinweise anzeigen: ueberfaellige Angebote, anstehende Termine, fehlende Daten.\n" +
+        "2. Sprache: Mic-Button druecken und reinsprechen - Whisper transkribiert.\n" +
+        "3. Push-Snooze: bei Push-Erinnerungen direkt 'Erledigt' oder '1h/4h/24h spaeter'.\n" +
+        "4. Direktlink: jede Hinweis-Karte hat einen Button, der direkt zum Projekt/Kunden fuehrt.",
+    },
+    {
+      title: "Hinweise verstehen",
+      content:
+        "1. Kritisch (rot): muss heute angegangen werden.\n" +
+        "2. Hoch (orange): innerhalb 24-48h.\n" +
+        "3. Hinweis (gelb): zur Info, nicht zeitkritisch.\n" +
+        "4. Info (blau): rein informativ, z.B. neue Stati.",
+    },
+    {
+      title: "Sprachbefehle (in Vorbereitung)",
+      content:
+        "1. Phase 1: 'Termin morgen 14 Uhr bei Mueller anlegen' -> Vorschlag mit Bestaetigung.\n" +
+        "2. Phase 2: KI schlaegt Antworten auf Mails vor.\n" +
+        "3. Phase 3: KI lernt aus deinen Entscheidungen.\n" +
+        "4. Phase 4: KI arbeitet im Hintergrund und bereitet alles fuer dich vor.",
+    },
+  ],
 };
 
 export const HELP_LABELS = {
@@ -140,4 +166,5 @@ export const HELP_LABELS = {
   hilfe_aufgaben: "Hilfe: Aufgaben",
   hilfe_termine: "Hilfe: Termine",
   hilfe_einsaetze: "Hilfe: Einsätze",
+  hilfe_assistent: "Hilfe: Mein Assistent",
 };
