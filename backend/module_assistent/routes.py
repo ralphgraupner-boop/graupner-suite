@@ -241,3 +241,167 @@ async def save_settings(body: dict, user=Depends(get_current_user)):
         {"id": "config"}, {"$set": body}, upsert=True,
     )
     return {"ok": True}
+
+
+
+# ==========================================================================
+# KI-ASSISTENT (Voice-to-Action MVP) — gemeinsamer Endpoint fuer
+# GlobalAssistantSheet (Bottom-Sheet) + AssistentPage (Verlauf).
+# Whisper wird im Frontend ueber /voice-intake/transcribe-and-structure
+# erledigt; hier kommt bereits transkribierter Text rein.
+# ==========================================================================
+
+from pydantic import BaseModel  # noqa: E402
+from .ai_chat import gpt_intent  # noqa: E402
+from .ai_tools import execute_tool, TOOLS_SCHEMA  # noqa: E402
+
+
+class AskRequest(BaseModel):
+    text: str
+    konversation_id: Optional[str] = None
+    quelle: Optional[str] = "sheet"  # "sheet" oder "page"
+
+
+@router.get("/tools")
+async def list_tools(user=Depends(get_current_user)):
+    """Welche Tools die KI nutzen darf (fuer Hilfe/Doku im Frontend)."""
+    return {"tools": TOOLS_SCHEMA}
+
+
+@router.post("/ask")
+async def assistent_ask(payload: AskRequest, user=Depends(get_current_user)):
+    """Ralph spricht/tippt — KI versteht und fuehrt Action aus.
+
+    1. Konversation laden oder anlegen
+    2. GPT-5.2 -> Intent + Tool-Auswahl
+    3. Tool ausfuehren
+    4. Audit + Konversations-Eintrag speichern
+    5. Antwort zurueck
+    """
+    text = (payload.text or "").strip()
+    if not text:
+        raise HTTPException(400, "Text darf nicht leer sein")
+
+    username = (user or {}).get("username", "unknown")
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # 1) Konversation finden oder anlegen
+    konv_id = payload.konversation_id
+    if konv_id:
+        konv = await db.module_assistent_konversation.find_one(
+            {"id": konv_id, "user": username}, {"_id": 0}
+        )
+        if not konv:
+            konv_id = None
+    if not konv_id:
+        konv_id = str(uuid.uuid4())
+        await db.module_assistent_konversation.insert_one({
+            "id": konv_id,
+            "user": username,
+            "titel": text[:60] + ("…" if len(text) > 60 else ""),
+            "erstellt_am": now_iso,
+            "letzte_aktivitaet": now_iso,
+            "beitraege": [],
+        })
+
+    # 2) User-Beitrag in Konversation eintragen
+    await db.module_assistent_konversation.update_one(
+        {"id": konv_id},
+        {
+            "$push": {"beitraege": {
+                "rolle": "user",
+                "text": text,
+                "quelle": payload.quelle or "sheet",
+                "zeit": now_iso,
+            }},
+            "$set": {"letzte_aktivitaet": now_iso},
+        },
+    )
+
+    # 3) GPT-5.2 -> Intent
+    intent = await gpt_intent(text, session_id=konv_id)
+    tool_name = intent.get("tool")
+    args = intent.get("args") or {}
+    antwort_text = intent.get("antwort") or ""
+
+    # 4) Tool ausfuehren (falls vorgesehen)
+    tool_result = None
+    if tool_name:
+        tool_result = await execute_tool(tool_name, args, user or {})
+
+    # 5) Audit
+    audit_id = str(uuid.uuid4())
+    await db.module_assistent_audit.insert_one({
+        "id": audit_id,
+        "konversation_id": konv_id,
+        "user": username,
+        "eingabe": text,
+        "tool": tool_name,
+        "args": args,
+        "ergebnis": tool_result,
+        "antwort": antwort_text,
+        "erfolg": bool(tool_result and tool_result.get("ok")) if tool_name else True,
+        "zeit": now_iso,
+        "quelle": payload.quelle or "sheet",
+    })
+
+    # 6) KI-Antwort in Konversation eintragen
+    await db.module_assistent_konversation.update_one(
+        {"id": konv_id},
+        {
+            "$push": {"beitraege": {
+                "rolle": "ki",
+                "text": antwort_text,
+                "tool": tool_name,
+                "tool_ergebnis": tool_result,
+                "audit_id": audit_id,
+                "zeit": datetime.now(timezone.utc).isoformat(),
+            }},
+            "$set": {"letzte_aktivitaet": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+
+    return {
+        "konversation_id": konv_id,
+        "audit_id": audit_id,
+        "antwort": antwort_text,
+        "tool": tool_name,
+        "tool_ergebnis": tool_result,
+    }
+
+
+@router.get("/konversationen")
+async def list_konversationen(user=Depends(get_current_user)):
+    """Letzte 30 Konversationen des eingeloggten Users."""
+    username = (user or {}).get("username", "unknown")
+    items = await db.module_assistent_konversation.find(
+        {"user": username},
+        {"_id": 0, "id": 1, "titel": 1, "erstellt_am": 1, "letzte_aktivitaet": 1, "beitraege": 1},
+    ).sort("letzte_aktivitaet", -1).limit(30).to_list(30)
+    # Nur Anzahl der Beitraege, nicht den Inhalt
+    for it in items:
+        it["anzahl_beitraege"] = len(it.get("beitraege", []))
+        it.pop("beitraege", None)
+    return items
+
+
+@router.get("/konversation/{konv_id}")
+async def get_konversation(konv_id: str, user=Depends(get_current_user)):
+    """Vollstaendiger Verlauf einer Konversation."""
+    username = (user or {}).get("username", "unknown")
+    konv = await db.module_assistent_konversation.find_one(
+        {"id": konv_id, "user": username}, {"_id": 0}
+    )
+    if not konv:
+        raise HTTPException(404, "Konversation nicht gefunden")
+    return konv
+
+
+@router.delete("/konversation/{konv_id}")
+async def delete_konversation(konv_id: str, user=Depends(get_current_user)):
+    """Konversation des eigenen Users loeschen."""
+    username = (user or {}).get("username", "unknown")
+    r = await db.module_assistent_konversation.delete_one({"id": konv_id, "user": username})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Konversation nicht gefunden")
+    return {"ok": True}

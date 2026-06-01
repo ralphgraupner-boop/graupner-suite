@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Mic, MicOff, X, CheckCircle2, Clock } from "lucide-react";
 import { VoiceIntakeRecorder } from "@/components/VoiceIntakeRecorder";
+import { KiChatPanel } from "@/components/KiChatPanel";
 import { toast } from "sonner";
 
 /**
@@ -245,10 +246,7 @@ export const GlobalAssistantSheet = ({ open, onClose, snoozeContext = null }) =>
           ) : (
             <>
               {!micAvailable && <NoMicBanner />}
-              <p className="text-sm text-muted-foreground mb-3">
-                Sprich los — Notizen, Erinnerungen oder Fragen. (Befehlsausführung folgt in Phase 2.)
-              </p>
-              <VoiceIntakeRecorder onResult={handleResult} compact />
+              <KiChatPanel compact onClose={onClose} />
             </>
           )}
         </div>

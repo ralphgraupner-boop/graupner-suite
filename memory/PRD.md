@@ -1,12 +1,36 @@
 # PRD — Graupner Suite (Tischlerei-CRM)
 
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
-> Stand: 31.05.2026
+> Stand: 01.06.2026
 
 ## 📌 Letzte Änderungen (01.06.2026, Hamburger Zeit)
 
-### Morgen (~06:40 MEZ):
-- **Mobile-Navigation Bugfix:** „Projekte"-Tab fehlte in der Mobile-Bottom-Navigation. Quick-Tabs umgestellt auf **Home · Projekte · Kunden · Aufgaben** (vorher: Home · Kunden · Dokumente · Kontakte). Passt zur Werkbank-als-Zentrale-Strategie vom 31.05. Datei: `components/layout/Navigation.jsx` Zeile 727-732.
+### Nachmittag (~15:07 MEZ): **KI-Assistent MVP (Voice-to-Action) + Datensicherheit**
+
+**Schritt 1 — Datensicherheit (3 echte Bugs gefixt):**
+- `module_rechnungen/routes_v2.py`: `RechnungV2Update` von `RechnungV2Create` entkoppelt, alle Felder `Optional[...]=None`, PUT nutzt `exclude_unset=True`. Berechnungen nehmen jetzt effektiven Wert (existing+update), kein versehentliches Leeren mehr.
+- `module_kunden/routes_legacy.py`: PUT `/customers/{id}` nutzt neues `CustomerUpdate` + `exclude_unset=True`.
+- `routes/services.py`: PUT `/services/{id}` nutzt neues `ServiceUpdate` + `exclude_unset=True`.
+- **Neue Models in `models.py`:** `CustomerUpdate`, `ServiceUpdate`.
+- **Pytest:** `backend/tests/test_partial_updates.py` — **3/3 grün**.
+- Quote/Order/Invoice v1 waren bereits am 30.05. korrekt; nicht doppelt angefasst.
+
+**Schritt 2 — KI-Assistent MVP in `module_assistent`:**
+- **Neuer Endpoint:** `POST /api/module-assistent/ask` (Text → GPT-5.2 → Tool-Auswahl → Ausführung)
+- **Neue Endpoints:** `GET /tools`, `GET /konversationen`, `GET /konversation/{id}`, `DELETE /konversation/{id}`
+- **4 Tools:** `aufgabe_anlegen`, `termin_anlegen` (+ ICS-Mail an Thorsten), `kunde_suchen`, `notiz_schreiben`
+- **Neue Module-Files:** `module_assistent/ai_chat.py`, `module_assistent/ai_tools.py`
+- **Neue Collections:** `module_assistent_konversation`, `module_assistent_audit`
+- **Whisper-Reuse:** Bestehender `VoiceIntakeRecorder` → `/voice-intake/transcribe-and-structure`; Text wird dann an `/ask` weitergereicht. Kein neuer Whisper-Code.
+- **Persönliche Ansprache (c):** GPT spricht Ralph direkt an („Hab ich dir eingetragen, Ralph").
+- **ICS-Mail bei Termin:** Automatisch an Thorsten via `module_kalender_export` → er tippt → Termin im Kalender.
+- **Frontend NEU:** `components/KiChatPanel.jsx` — wiederverwendbares Chat-Panel mit Mic, Text, Verlauf.
+- **GlobalAssistantSheet (Bottom-Sheet):** Default-Modus zeigt jetzt `KiChatPanel` (statt nur Voice).
+- **AssistentPage:** `KiChatPanel` mit `showHistory` oberhalb der Hinweise eingebaut.
+- **Pytest:** `backend/tests/test_assistent_ask.py` — **7/7 grün** (inkl. echter GPT-5.2-Aufrufe).
+- **Browser-Smoketest:** Chat sendet, KI antwortet, beide Beiträge im UI gerendert.
+
+**KEIN neues `module_ki`** — `module_assistent` erweitert, Doppelung vermieden (Regel 4 + 10).
 
 ## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
 

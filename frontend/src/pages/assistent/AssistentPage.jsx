@@ -4,6 +4,7 @@ import { Brain, CheckCircle, X, RefreshCw, ChevronDown, ChevronUp } from "lucide
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Card, Button, Badge } from "@/components/common";
+import { KiChatPanel } from "@/components/KiChatPanel";
 
 const PRIORITAET_CONFIG = {
   kritisch: { label: "Kritisch", farbe: "bg-red-100 text-red-800 border-red-200" },
@@ -208,6 +209,11 @@ export const AssistentPage = () => {
           </Button>
         </div>
       </div>
+
+      {/* KI-Chat (Voice-to-Action) */}
+      <Card className="p-4 mb-6" data-testid="assistent-ki-chat-card">
+        <KiChatPanel showHistory />
+      </Card>
 
       {/* Hinweise-Bereich */}
       {hinweise.length === 0 ? (
