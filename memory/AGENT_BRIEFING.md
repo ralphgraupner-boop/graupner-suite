@@ -4,10 +4,25 @@
 > Dort stehen die fünf Dateien, die in dieser Reihenfolge gelesen werden
 > MÜSSEN, plus die Modul-Landkarte als SVG-Übersicht.
 
-> **Stand:** 07.05.2026 · Vereinbart mit Ralph Graupner
+> **Stand:** 01.06.2026 · 13 Regeln · Vereinbart mit Ralph Graupner
 >
 > **WICHTIG:** Bevor du irgendeine Aufgabe annimmst oder Code änderst,
-> bestätige Ralph diese Punkte **wörtlich**. Erst dann darfst du loslegen.
+> bestätige Ralph alle 13 Regeln **wörtlich** und liefere den Schlusssatz.
+> Vorlage dafür: `/app/memory/MORGENS_VORLAGE.md`.
+
+---
+
+## 🚨 NEU AB 01.06.2026 — REGEL 13
+
+**Vor JEDER Änderung IMMER zuerst prüfen, ob ein Modul, eine Funktion oder
+ein Datenfeld bereits existiert. Keine Ausnahme.**
+
+Wenn du Code anfasst, ohne vorher zu prüfen — verstößt du gegen Regel 13.
+Ralph hat dich vorher zwingend zu fragen: „Was existiert bereits?"
+
+Diese Regel wurde nötig, weil am 01.06.2026 ein KI-Tool versehentlich
+Thorstens E-Mail hardgecodet wurde, obwohl `db.users.email` + Auflösung
+in `module_termine` schon existierte (Regel 4 + 13 verletzt).
 
 ---
 

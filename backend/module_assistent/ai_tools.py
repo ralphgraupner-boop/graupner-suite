@@ -14,6 +14,16 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
 from database import db, logger
+from routes.mitarbeiter import check_berechtigung
+
+
+# Mapping: KI-Tool -> bestehender Berechtigungsbereich (Regel 4: keine Doppelung)
+TOOL_BERECHTIGUNG = {
+    "aufgabe_anlegen": "modul_aufgaben",
+    "termin_anlegen": "modul_termine",
+    "kunde_suchen": "modul_kunden",
+    "notiz_schreiben": "modul_aufgaben",
+}
 
 
 # ==================== TOOL-SCHEMA ====================
@@ -34,7 +44,7 @@ TOOLS_SCHEMA = [
     },
     {
         "name": "termin_anlegen",
-        "beschreibung": "Lege einen Termin in den Kalender. Loest automatisch ICS-Mail an Thorsten aus.",
+        "beschreibung": "Lege einen Termin in den Kalender. Wenn monteur_username gesetzt ist, wird automatisch eine ICS-Mail an diesen User versendet.",
         "felder": {
             "titel": "Pflicht. Titel des Termins.",
             "start": "Pflicht. ISO-Datetime, z.B. '2026-06-05T10:00'.",
@@ -44,6 +54,7 @@ TOOLS_SCHEMA = [
             "typ": "Optional. Eine von: besichtigung, ausfuehrung, abnahme, intern, sonstiges.",
             "kunde_id": "Optional. Kunden-ID.",
             "projekt_id": "Optional. Projekt-ID.",
+            "monteur_username": "Optional. Login-Username des zustaendigen Mitarbeiters (z.B. 'thorsten.graupner'). Wenn gesetzt: ICS-Mail wird automatisch versendet.",
         },
     },
     {
@@ -65,13 +76,34 @@ TOOLS_SCHEMA = [
 ]
 
 
-def system_prompt_de() -> str:
-    """System-Prompt fuer GPT-5.2 — persoenliche Ansprache an Ralph."""
+async def system_prompt_de() -> str:
+    """System-Prompt fuer GPT-5.2 — persoenliche Ansprache an Ralph.
+
+    Laedt die aktuelle Mitarbeiter-Liste dynamisch aus db.users (kein Hardcode).
+    """
     tool_text = "\n".join(
         f"- {t['name']}: {t['beschreibung']}\n  Felder: " +
         ", ".join(f"{k} ({v})" for k, v in t["felder"].items())
         for t in TOOLS_SCHEMA
     )
+
+    # Mitarbeiter-Liste dynamisch aus db.users laden (Regel 4: kein Hardcode)
+    mitarbeiter_zeilen = []
+    try:
+        users_cursor = db.users.find(
+            {}, {"_id": 0, "username": 1, "vorname": 1, "nachname": 1, "role": 1}
+        )
+        users = await users_cursor.to_list(50)
+        for u in users:
+            anzeige = f"{u.get('vorname','')} {u.get('nachname','')}".strip() or u.get("username", "")
+            mitarbeiter_zeilen.append(f"  - {anzeige} -> username: '{u.get('username','')}' ({u.get('role','')})")
+    except Exception:
+        pass
+    mitarbeiter_block = (
+        "Bekannte Mitarbeiter / Logins (fuer Feld 'monteur_username'):\n"
+        + ("\n".join(mitarbeiter_zeilen) if mitarbeiter_zeilen else "  (keine geladen)")
+    )
+
     return (
         "Du bist Ralphs persoenlicher Assistent fuer die Graupner Suite "
         "(Tischlerei-CRM). Sprich ihn locker und direkt an ('Hab ich dir "
@@ -83,16 +115,19 @@ def system_prompt_de() -> str:
         "Wenn die Eingabe nicht zu einem Tool passt (Smalltalk, unklare Anfrage), "
         "setze 'tool': null und antworte hilfreich. Heutiges Datum: "
         f"{datetime.now(timezone.utc).strftime('%Y-%m-%d')} (UTC). "
-        "Hamburger Zeit liegt 1-2 Stunden voraus, achte bei Termin-Zeiten darauf, "
-        "dass Ralph immer in Hamburger Zeit denkt.\n\n"
+        "Hamburger Zeit liegt 1-2 Stunden voraus, achte bei Termin-Zeiten darauf.\n\n"
         "Verfuegbare Tools:\n" + tool_text + "\n\n"
+        + mitarbeiter_block + "\n\n"
+        "WICHTIG fuer 'termin_anlegen': Wenn der Eingabetext einen Mitarbeiter-Namen aus der "
+        "obigen Liste enthaelt (Vorname oder Nachname reicht), setze IMMER 'monteur_username' "
+        "auf den passenden Login aus der Liste. Ohne dieses Feld wird KEINE ICS-Mail versendet.\n\n"
         "Beispiele:\n"
         'Eingabe: "Leg eine Aufgabe an: morgen Schmidt anrufen"\n'
-        '{"tool":"aufgabe_anlegen","args":{"titel":"Schmidt anrufen","faellig_am":"<morgen>"},'
+        '{"tool":"aufgabe_anlegen","args":{"titel":"Schmidt anrufen","faellig_am":"2026-06-02"},'
         '"antwort":"Hab ich dir eingetragen, Ralph: morgen Schmidt anrufen."}\n\n'
-        'Eingabe: "Termin Donnerstag 10 Uhr mit Mueller, Besichtigung"\n'
-        '{"tool":"termin_anlegen","args":{"titel":"Besichtigung Mueller","start":"<Donnerstag>T10:00","typ":"besichtigung"},'
-        '"antwort":"Termin Donnerstag 10:00 mit Mueller (Besichtigung) ist im Kalender — Thorsten kriegt die Mail."}'
+        'Eingabe: "Termin Donnerstag 10 Uhr mit Mueller, Besichtigung, Thorsten macht das"\n'
+        '{"tool":"termin_anlegen","args":{"titel":"Besichtigung Mueller","start":"2026-06-04T10:00","typ":"besichtigung","monteur_username":"thorsten.graupner"},'
+        '"antwort":"Termin Donnerstag 10:00 mit Mueller — Thorsten kriegt die Mail."}'
     )
 
 
@@ -168,7 +203,7 @@ async def tool_termin_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, Any
         "kunde_id": (args.get("kunde_id") or "").strip(),
         "projekt_id": (args.get("projekt_id") or "").strip(),
         "aufgabe_id": "",
-        "monteur_username": "",
+        "monteur_username": (args.get("monteur_username") or "").strip(),
         "status": "wartet_auf_go",
         "go_at": None,
         "go_by": None,
@@ -186,38 +221,45 @@ async def tool_termin_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, Any
     item.pop("_id", None)
     logger.info(f"KI-Tool termin_anlegen: {titel} @ {start}")
 
-    # ICS-Mail an Thorsten (optional — Fehler hier soll Termin nicht verhindern)
-    ics_status = "nicht_versendet"
-    try:
-        from module_kalender_export.ics_generator import build_ics_event
-        from utils import send_email
+    # ICS-Mail an den im Termin zugeordneten Monteur (kein Hardcode)
+    # Empfaenger kommt aus db.users via monteur_username (vorhandene Datenmaske).
+    ics_status = "kein_monteur"
+    monteur_username = item.get("monteur_username", "").strip()
+    if monteur_username:
+        try:
+            from module_kalender_export.ics_generator import build_ics_event
+            from utils import send_email
 
-        # Thorsten finden
-        thorsten = await db.users.find_one(
-            {"username": {"$in": ["thorsten.graupner", "Thorsten Graupner", "Tg-Admin"]}},
-            {"_id": 0, "email": 1, "vorname": 1, "nachname": 1},
-        )
-        if thorsten and thorsten.get("email"):
-            ics_text = build_ics_event(item, kunde=None)
-            send_email(
-                to_email=thorsten["email"],
-                subject=f"Neuer Termin: {titel}",
-                body_html=(
-                    f"<p>Hi Thorsten,</p>"
-                    f"<p>Ralph hat per KI-Assistent einen Termin angelegt:</p>"
-                    f"<ul><li><b>{titel}</b></li><li>Start: {start}</li>"
-                    f"<li>Ort: {item['ort'] or '—'}</li></ul>"
-                    f"<p>Die ICS-Datei im Anhang antippen — Termin landet im Kalender.</p>"
-                    f"<p>Gruß,<br/>Graupner Suite</p>"
-                ),
-                attachments=[{"filename": "termin.ics", "data": ics_text.encode("utf-8")}],
+            empfaenger = await db.users.find_one(
+                {"username": monteur_username},
+                {"_id": 0, "email": 1, "vorname": 1, "nachname": 1},
             )
-            ics_status = "versendet"
-        else:
-            ics_status = "thorsten_ohne_email"
-    except Exception as exc:
-        logger.warning(f"ICS-Mail an Thorsten fehlgeschlagen: {exc}")
-        ics_status = f"fehler:{exc.__class__.__name__}"
+            empf_email = (empfaenger or {}).get("email", "").strip()
+            if empf_email:
+                ics_text = build_ics_event(item, kunde=None)
+                empf_name = (
+                    f"{(empfaenger or {}).get('vorname','')} {(empfaenger or {}).get('nachname','')}".strip()
+                    or monteur_username
+                )
+                send_email(
+                    to_email=empf_email,
+                    subject=f"Neuer Termin: {titel}",
+                    body_html=(
+                        f"<p>Hallo {empf_name},</p>"
+                        f"<p>Ralph hat per KI-Assistent einen Termin angelegt:</p>"
+                        f"<ul><li><b>{titel}</b></li><li>Start: {start}</li>"
+                        f"<li>Ort: {item['ort'] or '—'}</li></ul>"
+                        f"<p>Die ICS-Datei im Anhang antippen — Termin landet im Kalender.</p>"
+                        f"<p>Gruß,<br/>Graupner Suite</p>"
+                    ),
+                    attachments=[{"filename": "termin.ics", "data": ics_text.encode("utf-8")}],
+                )
+                ics_status = f"versendet:{empf_email}"
+            else:
+                ics_status = f"monteur_ohne_email:{monteur_username}"
+        except Exception as exc:
+            logger.warning(f"ICS-Mail fehlgeschlagen: {exc}")
+            ics_status = f"fehler:{exc.__class__.__name__}"
 
     return {"ok": True, "termin": item, "ics_mail": ics_status}
 
@@ -268,6 +310,18 @@ async def execute_tool(name: str, args: Dict[str, Any], user: dict) -> Dict[str,
     fn = TOOLS.get(name)
     if not fn:
         return {"ok": False, "error": f"Unbekanntes Tool: {name}"}
+    # Berechtigungs-Check vor jeder Ausfuehrung (Regel 4: nutzt vorhandene Funktion)
+    bereich = TOOL_BERECHTIGUNG.get(name)
+    if bereich:
+        erlaubt = await check_berechtigung(user or {}, bereich)
+        if not erlaubt:
+            logger.info(f"KI-Tool '{name}' abgelehnt: keine Berechtigung fuer '{bereich}' (user={user.get('username','?')})")
+            return {
+                "ok": False,
+                "error": "keine_berechtigung",
+                "bereich": bereich,
+                "hinweis": f"Du hast keine Berechtigung fuer '{bereich}'. Bitte einen Admin fragen.",
+            }
     try:
         return await fn(args or {}, user or {})
     except Exception as exc:

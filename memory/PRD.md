@@ -5,6 +5,29 @@
 
 ## 📌 Letzte Änderungen (01.06.2026, Hamburger Zeit)
 
+### Spätnachmittag (~16:55 MEZ): **Hardcode-Fix in KI-Assistent + Regel 13 + Morgens-Vorlage**
+
+**Was geschehen ist:**
+- Hardcoded Username-Liste für Thorsten in `ai_tools.py` war Verstoß gegen Regel 4 + 13.
+- **Korrektur:** Empfänger der ICS-Mail kommt jetzt aus `db.users.email` über das vorhandene `monteur_username` im Termin (Wiederverwendung der Auflösung aus `module_termine`).
+- **`check_berechtigung()`** vor jeder KI-Tool-Ausführung — nutzt vorhandene Bereiche (`modul_aufgaben`, `modul_termine`, `modul_kunden`). KEINE neuen Bereiche, keine Doppelung.
+- **System-Prompt für GPT-5.2 lädt User-Liste dynamisch aus `db.users`** — kein hardcoded Name mehr.
+- **Backup vor Fix erstellt:** `/app/memory/backups/preview_backup_20260601_1639.zip`.
+
+**Neue Regel 13:**
+> Vor jeder Änderung IMMER zuerst prüfen, ob ein Modul, eine Funktion oder ein Datenfeld bereits existiert. Keine Ausnahme.
+
+→ In `AGENT_BRIEFING.md` ergänzt, in `MORGENS_VORLAGE.md` zentral.
+
+**Morgens-Vorlage (`/app/memory/MORGENS_VORLAGE.md`):**
+- Vollständiger Pflicht-Auftrag für jeden Agenten-Start
+- 13 Regeln + Schlusssatz
+- Stil-Beispiele (Handwerker-Klartext statt AI-Sprech)
+- „Stopp"-Wörter bei Regel-Verletzung
+- Ralph kopiert die Vorlage täglich in Emergent oder Claude
+
+**Tests:** 9/10 grün. Der 1 Fail ist KEIN Bug — Emergent LLM Key hat Tagesbudget erreicht (`Budget exceeded! cost: 0.40, max: 0.4`). Aufladen in **Profil → Universal Key → Add Balance**.
+
 ### Nachmittag (~15:07 MEZ): **KI-Assistent MVP (Voice-to-Action) + Datensicherheit**
 
 **Schritt 1 — Datensicherheit (3 echte Bugs gefixt):**
@@ -13,24 +36,23 @@
 - `routes/services.py`: PUT `/services/{id}` nutzt neues `ServiceUpdate` + `exclude_unset=True`.
 - **Neue Models in `models.py`:** `CustomerUpdate`, `ServiceUpdate`.
 - **Pytest:** `backend/tests/test_partial_updates.py` — **3/3 grün**.
-- Quote/Order/Invoice v1 waren bereits am 30.05. korrekt; nicht doppelt angefasst.
 
 **Schritt 2 — KI-Assistent MVP in `module_assistent`:**
 - **Neuer Endpoint:** `POST /api/module-assistent/ask` (Text → GPT-5.2 → Tool-Auswahl → Ausführung)
-- **Neue Endpoints:** `GET /tools`, `GET /konversationen`, `GET /konversation/{id}`, `DELETE /konversation/{id}`
-- **4 Tools:** `aufgabe_anlegen`, `termin_anlegen` (+ ICS-Mail an Thorsten), `kunde_suchen`, `notiz_schreiben`
+- **Weitere Endpoints:** `GET /tools`, `GET /konversationen`, `GET /konversation/{id}`, `DELETE /konversation/{id}`
+- **4 Tools:** `aufgabe_anlegen`, `termin_anlegen` (+ ICS-Mail an `monteur_username` aus DB), `kunde_suchen`, `notiz_schreiben`
 - **Neue Module-Files:** `module_assistent/ai_chat.py`, `module_assistent/ai_tools.py`
 - **Neue Collections:** `module_assistent_konversation`, `module_assistent_audit`
 - **Whisper-Reuse:** Bestehender `VoiceIntakeRecorder` → `/voice-intake/transcribe-and-structure`; Text wird dann an `/ask` weitergereicht. Kein neuer Whisper-Code.
 - **Persönliche Ansprache (c):** GPT spricht Ralph direkt an („Hab ich dir eingetragen, Ralph").
-- **ICS-Mail bei Termin:** Automatisch an Thorsten via `module_kalender_export` → er tippt → Termin im Kalender.
+- **ICS-Mail bei Termin:** Automatisch an User aus `db.users` lt. `monteur_username` via `module_kalender_export`.
 - **Frontend NEU:** `components/KiChatPanel.jsx` — wiederverwendbares Chat-Panel mit Mic, Text, Verlauf.
-- **GlobalAssistantSheet (Bottom-Sheet):** Default-Modus zeigt jetzt `KiChatPanel` (statt nur Voice).
+- **GlobalAssistantSheet (Bottom-Sheet):** Default-Modus zeigt jetzt `KiChatPanel`.
 - **AssistentPage:** `KiChatPanel` mit `showHistory` oberhalb der Hinweise eingebaut.
-- **Pytest:** `backend/tests/test_assistent_ask.py` — **7/7 grün** (inkl. echter GPT-5.2-Aufrufe).
-- **Browser-Smoketest:** Chat sendet, KI antwortet, beide Beiträge im UI gerendert.
 
 **KEIN neues `module_ki`** — `module_assistent` erweitert, Doppelung vermieden (Regel 4 + 10).
+
+---
 
 ## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
 

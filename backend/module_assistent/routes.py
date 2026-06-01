@@ -328,6 +328,12 @@ async def assistent_ask(payload: AskRequest, user=Depends(get_current_user)):
     tool_result = None
     if tool_name:
         tool_result = await execute_tool(tool_name, args, user or {})
+        # Wenn Berechtigung fehlt: Ralph persoenlich Bescheid geben
+        if tool_result and tool_result.get("error") == "keine_berechtigung":
+            antwort_text = (
+                f"Das darf ich fuer dich nicht ausfuehren, Ralph — dir fehlt die "
+                f"Berechtigung fuer '{tool_result.get('bereich')}'. Bitte einen Admin fragen."
+            )
 
     # 5) Audit
     audit_id = str(uuid.uuid4())

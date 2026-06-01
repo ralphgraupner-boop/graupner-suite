@@ -40,7 +40,7 @@ async def gpt_intent(text: str, session_id: str) -> Dict[str, Any]:
         return {"tool": None, "args": {}, "antwort": "Sag mir was — ich hoere dir zu, Ralph."}
 
     chat = (
-        LlmChat(api_key=_emergent_key(), session_id=session_id, system_message=system_prompt_de())
+        LlmChat(api_key=_emergent_key(), session_id=session_id, system_message=await system_prompt_de())
         .with_model("openai", "gpt-5.2")
     )
     try:
