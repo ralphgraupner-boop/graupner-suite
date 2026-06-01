@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 from database import db, logger
 import json
@@ -6,8 +7,37 @@ import zipfile
 import io
 import asyncio
 import os
+import uuid
 
 router = APIRouter()
+
+# Lokales Backup-Verzeichnis (zweites Speicherziel neben E-Mail)
+BACKUP_DIR = os.environ.get("BACKUP_DIR", "/app/backups")
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+
+async def get_backup_settings() -> dict:
+    """Liest Backup-Settings aus DB (kein Hardcode mehr).
+
+    Defaults werden beim ersten Aufruf in die DB geschrieben, damit Admin sie
+    danach ueber UI aendern kann.
+    """
+    s = await db.settings.find_one({"id": "auto_backup_settings"}, {"_id": 0})
+    if not s:
+        s = {
+            "id": "auto_backup_settings",
+            "enabled": True,
+            "time_utc": "02:00",
+            "empfaenger_emails": [],
+            "lokal_aufbewahrung_tage": 14,
+            "object_storage_aufbewahrung_tage": 30,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.settings.update_one({"id": "auto_backup_settings"}, {"$set": s}, upsert=True)
+    # Migration: alten 'email'-Singular auf 'empfaenger_emails' (Liste) konvertieren
+    if "email" in s and not s.get("empfaenger_emails"):
+        s["empfaenger_emails"] = [s["email"]] if s["email"] else []
+    return s
 
 
 async def create_backup_data():
@@ -220,17 +250,27 @@ async def send_backup_email(backup_data: bytes, total_docs: int):
             "data": backup_data,
             "filename": filename
         }]
-        
-        # E-Mail senden
-        send_email(
-            to_email="service24@tischlerei-graupner.de",
-            subject=f"🛡️ Tägliches Backup - Graupner Suite ({datetime.now(timezone.utc).strftime('%d.%m.%Y')})",
-            body_html=body_html,
-            attachments=attachments
-        )
-        
-        logger.info("✅ Backup-E-Mail gesendet an service24@tischlerei-graupner.de")
-        return True
+
+        # E-Mail-Empfaenger aus Settings (kein Hardcode mehr — Regel 4)
+        settings = await get_backup_settings()
+        empfaenger = settings.get("empfaenger_emails") or []
+        if not empfaenger:
+            logger.warning("Backup-E-Mail uebersprungen: keine Empfaenger in Settings konfiguriert")
+            return False
+        sent_any = False
+        for empf in empfaenger:
+            try:
+                send_email(
+                    to_email=empf,
+                    subject=f"🛡️ Tägliches Backup - Graupner Suite ({datetime.now(timezone.utc).strftime('%d.%m.%Y')})",
+                    body_html=body_html,
+                    attachments=attachments
+                )
+                logger.info(f"✅ Backup-E-Mail gesendet an {empf}")
+                sent_any = True
+            except Exception as ee:
+                logger.error(f"❌ Backup-E-Mail an {empf} fehlgeschlagen: {ee}")
+        return sent_any
         
     except Exception as e:
         logger.error(f"❌ Fehler beim Versand der Backup-E-Mail: {e}")
@@ -276,13 +316,16 @@ async def daily_backup_task():
 
 
 async def _run_backup_with_log(trigger: str = "manual"):
-    """Erstellt Backup, sendet Mail und schreibt einen auto_backup_log-Eintrag (success/error)."""
-    import uuid
+    """Erstellt Backup, sendet Mail, speichert lokal + Object-Storage, schreibt Log."""
     started = datetime.now(timezone.utc)
+    backup_id = str(uuid.uuid4())
+    filename = f"Graupner_Backup_{started.strftime('%Y-%m-%d_%H-%M')}.zip"
     log_entry = {
-        "id": str(uuid.uuid4()),
+        "id": backup_id,
         "trigger": trigger,
         "started_at": started.isoformat(),
+        "filename": filename,
+        "storage": {"email": False, "lokal": False, "object_storage": False},
     }
     try:
         backup_data, total_docs = await create_backup_data()
@@ -294,23 +337,56 @@ async def _run_backup_with_log(trigger: str = "manual"):
             })
             await db.auto_backup_log.insert_one(log_entry)
             return False, 0, 0
+
+        size_bytes = len(backup_data)
+
+        # 1) Lokale Speicherung
+        try:
+            lokal_pfad = os.path.join(BACKUP_DIR, filename)
+            with open(lokal_pfad, "wb") as f:
+                f.write(backup_data)
+            log_entry["storage"]["lokal"] = True
+            log_entry["lokal_pfad"] = lokal_pfad
+            # Alte lokale Backups aufraeumen
+            await _cleanup_lokal_backups()
+        except Exception as e:
+            logger.warning(f"Lokales Backup-Speichern fehlgeschlagen: {e}")
+            log_entry["lokal_error"] = str(e)
+
+        # 2) Object-Storage (cloud-aehnlich, ueberlebt Container-Restart)
+        try:
+            from utils.storage import put_object
+            object_path = f"backups/auto/{filename}"
+            put_object(object_path, backup_data, "application/zip")
+            log_entry["storage"]["object_storage"] = True
+            log_entry["object_storage_path"] = object_path
+        except Exception as e:
+            logger.warning(f"Object-Storage-Backup fehlgeschlagen: {e}")
+            log_entry["object_storage_error"] = str(e)
+
+        # 3) E-Mail (an konfigurierte Empfaenger)
         sent = await send_backup_email(backup_data, total_docs)
+        log_entry["storage"]["email"] = bool(sent)
+
+        # Wenn mindestens ein Speicherziel erfolgreich war -> success
+        any_ok = any(log_entry["storage"].values())
         log_entry.update({
-            "status": "success" if sent else "warn",
+            "status": "success" if any_ok else "warn",
             "total_docs": total_docs,
-            "size_kb": round(len(backup_data) / 1024, 1),
+            "size_kb": round(size_bytes / 1024, 1),
             "mail_sent": bool(sent),
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
         await db.auto_backup_log.insert_one(log_entry)
-        # Aufräumen: nur die letzten 30 Logs behalten
+
+        # Log-Aufraeumen (letzte 30)
         try:
             cursor = db.auto_backup_log.find({}, {"_id": 0, "id": 1, "created_at": 1}).sort("created_at", -1)
             ids_to_keep = [d["id"] async for d in cursor.limit(30)]
             await db.auto_backup_log.delete_many({"id": {"$nin": ids_to_keep}})
         except Exception:
             pass
-        return True, total_docs, len(backup_data)
+        return True, total_docs, size_bytes
     except Exception as e:  # noqa: BLE001
         log_entry.update({
             "status": "error",
@@ -321,31 +397,59 @@ async def _run_backup_with_log(trigger: str = "manual"):
         return False, 0, 0
 
 
+async def _cleanup_lokal_backups():
+    """Loescht lokale Backups, die aelter sind als die konfigurierte Aufbewahrungsdauer."""
+    try:
+        settings = await get_backup_settings()
+        keep_days = int(settings.get("lokal_aufbewahrung_tage", 14))
+        cutoff = datetime.now(timezone.utc).timestamp() - keep_days * 86400
+        for fn in os.listdir(BACKUP_DIR):
+            full = os.path.join(BACKUP_DIR, fn)
+            if os.path.isfile(full) and os.path.getmtime(full) < cutoff:
+                os.remove(full)
+                logger.info(f"Altes lokales Backup geloescht: {fn}")
+    except Exception as e:
+        logger.warning(f"Cleanup lokale Backups fehlgeschlagen: {e}")
+
+
 @router.get("/backup/auto/status")
 async def get_auto_backup_status():
-    """Status des automatischen Backups"""
+    """Status des automatischen Backups + letztes Backup-Ergebnis."""
     try:
-        # Prüfe letzte Backup-E-Mail in der Datenbank (optional)
-        settings = await db.settings.find_one({"id": "auto_backup_settings"}, {"_id": 0})
-        
-        if not settings:
-            settings = {
-                "enabled": True,
-                "time": "02:00",
-                "email": "service24@tischlerei-graupner.de",
-                "keep_days": 7
-            }
-        
+        settings = await get_backup_settings()
+        # Letzter Lauf
+        last = await db.auto_backup_log.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+        # Anzahl lokal vorhandener ZIP-Dateien
+        lokal_count = 0
+        try:
+            lokal_count = len([f for f in os.listdir(BACKUP_DIR) if f.endswith(".zip")])
+        except Exception:
+            pass
         return {
             "enabled": settings.get("enabled", True),
-            "next_backup": "Täglich um 02:00 Uhr UTC",
-            "email": settings.get("email"),
-            "keep_days": settings.get("keep_days", 7),
-            "status": "active"
+            "next_backup": f"Täglich um {settings.get('time_utc', '02:00')} UTC",
+            "empfaenger_emails": settings.get("empfaenger_emails", []),
+            "lokal_aufbewahrung_tage": settings.get("lokal_aufbewahrung_tage", 14),
+            "lokal_dateien": lokal_count,
+            "letzter_lauf": last,
+            "status": "active" if settings.get("enabled", True) else "deaktiviert",
         }
     except Exception as e:
         logger.error(f"Fehler beim Abrufen des Auto-Backup-Status: {e}")
-        return {"enabled": False, "status": "error"}
+        return {"enabled": False, "status": "error", "error": str(e)}
+
+
+@router.put("/backup/auto/settings")
+async def update_backup_settings(payload: dict):
+    """Aktualisiert Backup-Settings (Admin). Wird vom Frontend genutzt."""
+    allowed = {"enabled", "time_utc", "empfaenger_emails", "lokal_aufbewahrung_tage",
+               "object_storage_aufbewahrung_tage"}
+    update = {k: v for k, v in (payload or {}).items() if k in allowed}
+    if not update:
+        raise HTTPException(400, "Keine gueltigen Felder uebermittelt")
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.settings.update_one({"id": "auto_backup_settings"}, {"$set": update}, upsert=True)
+    return await get_backup_settings()
 
 
 @router.post("/backup/auto/trigger")
@@ -368,3 +472,136 @@ async def get_backup_log(limit: int = 30):
     async for d in db.auto_backup_log.find({}, {"_id": 0}).sort("created_at", -1).limit(limit):
         items.append(d)
     return items
+
+
+
+@router.get("/backup/auto/download/{backup_id}")
+async def download_backup(backup_id: str):
+    """Lädt ein Backup als ZIP herunter (zuerst lokal, dann Object-Storage)."""
+    entry = await db.auto_backup_log.find_one({"id": backup_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(404, "Backup-Eintrag nicht gefunden")
+    lokal_pfad = entry.get("lokal_pfad")
+    if lokal_pfad and os.path.exists(lokal_pfad):
+        def iterfile():
+            with open(lokal_pfad, "rb") as f:
+                yield from f
+        return StreamingResponse(
+            iterfile(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={entry.get('filename', 'backup.zip')}"},
+        )
+    object_path = entry.get("object_storage_path")
+    if object_path:
+        try:
+            from utils.storage import get_object
+            data, _ = get_object(object_path)
+            return StreamingResponse(
+                io.BytesIO(data),
+                media_type="application/zip",
+                headers={"Content-Disposition": f"attachment; filename={entry.get('filename', 'backup.zip')}"},
+            )
+        except Exception as e:
+            raise HTTPException(500, f"Object-Storage-Download fehlgeschlagen: {e}")
+    raise HTTPException(404, "Backup-Datei weder lokal noch im Object-Storage gefunden")
+
+
+async def _load_backup_zip(backup_id: str) -> bytes:
+    """Hilfsfunktion: ZIP-Bytes eines Backups holen (lokal oder Object-Storage)."""
+    entry = await db.auto_backup_log.find_one({"id": backup_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(404, "Backup-Eintrag nicht gefunden")
+    lokal_pfad = entry.get("lokal_pfad")
+    if lokal_pfad and os.path.exists(lokal_pfad):
+        with open(lokal_pfad, "rb") as f:
+            return f.read()
+    object_path = entry.get("object_storage_path")
+    if object_path:
+        from utils.storage import get_object
+        data, _ = get_object(object_path)
+        return data
+    raise HTTPException(404, "Backup-Datei nicht auffindbar")
+
+
+@router.post("/backup/auto/restore/dry-run/{backup_id}")
+async def restore_dry_run(backup_id: str):
+    """Trockenlauf: zeigt was eine Wiederherstellung tun würde — schreibt NICHTS."""
+    raw = await _load_backup_zip(backup_id)
+    differenzen = []
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            for name in zf.namelist():
+                if not name.endswith(".json") or name == "_metadata.json":
+                    continue
+                coll = name[:-5]
+                try:
+                    items = json.loads(zf.read(name).decode("utf-8"))
+                    if not isinstance(items, list):
+                        continue
+                except Exception:
+                    continue
+                aktuell = await db[coll].count_documents({})
+                differenzen.append({
+                    "collection": coll,
+                    "im_backup": len(items),
+                    "aktuell_in_db": aktuell,
+                    "diff": len(items) - aktuell,
+                })
+    except zipfile.BadZipFile:
+        raise HTTPException(400, "Backup-Datei ist beschaedigt (kein gueltiges ZIP)")
+    return {
+        "backup_id": backup_id,
+        "wird_geschrieben": 0,
+        "differenzen": differenzen,
+        "hinweis": (
+            "Trockenlauf — keine Daten wurden veraendert. "
+            "Beim echten Restore werden Collections geleert und durch Backup-Stand ersetzt."
+        ),
+    }
+
+
+@router.post("/backup/auto/restore/apply/{backup_id}")
+async def restore_apply(backup_id: str, payload: dict | None = None):
+    """ECHTE Wiederherstellung — ersetzt Collections durch Backup-Inhalt.
+
+    Erfordert payload mit 'bestaetigung': 'JA_RESTORE'.
+    Erstellt vor dem Restore automatisch ein Sicherungs-Backup ('pre_restore').
+    """
+    payload = payload or {}
+    if payload.get("bestaetigung") != "JA_RESTORE":
+        raise HTTPException(400, "Bestaetigung fehlt — 'bestaetigung':'JA_RESTORE' im Body erwartet")
+
+    logger.info(f"🛡️ Pre-Restore-Backup vor Restore von {backup_id}...")
+    await _run_backup_with_log(trigger="pre_restore")
+
+    raw = await _load_backup_zip(backup_id)
+    counts = {}
+    fehler = []
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            collections = [n[:-5] for n in zf.namelist() if n.endswith(".json") and n != "_metadata.json"]
+            for coll in collections:
+                try:
+                    items = json.loads(zf.read(f"{coll}.json").decode("utf-8"))
+                    if not isinstance(items, list):
+                        continue
+                    await db[coll].delete_many({})
+                    if items:
+                        for item in items:
+                            item.pop("_id", None)
+                        await db[coll].insert_many(items)
+                    counts[coll] = len(items)
+                except Exception as e:
+                    fehler.append({"collection": coll, "error": str(e)})
+                    logger.error(f"Restore {coll} fehlgeschlagen: {e}")
+    except zipfile.BadZipFile:
+        raise HTTPException(400, "Backup-Datei ist beschaedigt")
+
+    logger.info(f"✅ Restore abgeschlossen: {sum(counts.values())} Datensaetze")
+    return {
+        "ok": len(fehler) == 0,
+        "backup_id": backup_id,
+        "wiederhergestellt": counts,
+        "fehler": fehler,
+        "hinweis": "Pre-Restore-Sicherung wurde automatisch erstellt (siehe auto_backup_log).",
+    }

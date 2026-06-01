@@ -5,6 +5,45 @@
 
 ## 📌 Letzte Änderungen (01.06.2026, Hamburger Zeit)
 
+### Abends (~18:37 MEZ): **Backup-System Stufe 1 + 2 + 4 — kein Hardcode mehr, 3 Speicherziele, Restore-Knopf**
+
+**Was geschehen ist:**
+Ralph hat darauf bestanden, vor jedem Live-Deploy das Backup-System wasserdicht zu machen (Regel 5 + 13). Analyse zeigte: Auto-Backup lief seit dem 16.05.2026 NICHT mehr (Container-Restarts unterbrachen den `asyncio.sleep`-Timer), und der Empfänger war hartcodiert.
+
+**Backend (`routes/auto_backup.py` komplett überarbeitet):**
+- **Empfänger-E-Mails** kommen jetzt aus `db.settings.auto_backup_settings.empfaenger_emails` (Liste, mehrere Empfänger möglich) — kein Hardcode mehr.
+- **Drei Speicherziele** bei jedem Backup:
+  1. **E-Mail** (an konfigurierte Empfänger)
+  2. **Lokal** (`/app/backups/`, Aufbewahrung 14 Tage)
+  3. **Object-Storage** (Emergent Cloud, überlebt Container-Restart)
+- **Restore-System:**
+  - `POST /api/backup/auto/restore/dry-run/{backup_id}` — Trockenlauf, zeigt Differenzen
+  - `POST /api/backup/auto/restore/apply/{backup_id}` (mit `bestaetigung: "JA_RESTORE"`) — Echte Wiederherstellung
+  - Automatisches Pre-Restore-Backup wird zuerst gemacht (Sicherheitsnetz)
+- **Download:** `GET /api/backup/auto/download/{backup_id}` lädt ZIP (lokal oder Cloud)
+- **Settings-API:** `PUT /api/backup/auto/settings` für E-Mail-Empfänger, Aufbewahrungsdauer
+
+**Frontend (`components/BackupStatusCard.jsx` NEU):**
+- Dashboard-Karte mit **Ampel** (Grün/Gelb/Rot):
+  - Grün = letztes Backup ≤ 36 h alt + erfolgreich
+  - Gelb = ≤ 72 h
+  - Rot = älter / fehlgeschlagen
+- Drei Häkchen für E-Mail/Lokal/Cloud-Status
+- Knopf „Backup jetzt erstellen" + „Letztes herunterladen"
+- In `DashboardPage.jsx` oben eingebaut.
+
+**Probe-Lauf:**
+- Manuelles Backup ausgelöst → **972 Datensätze, 28,7 MB**, alle 3 Speicherziele ✅
+- Trockenlauf-Test → 54 Collections gefunden, korrekt analysiert, **0 Schreibvorgänge**
+- Download-Test → 29 MB ZIP, 110 Dateien im Archiv
+
+**Tests:** `backend/tests/test_backup_system.py` — **8/8 grün**. Gesamttest-Suite **18/18 grün**.
+
+**Wichtig zu wissen:**
+- `db.settings.auto_backup_settings.empfaenger_emails` ist aktuell auf `["service24@tischlerei-graupner.de"]` gesetzt — kann jederzeit über die UI/API geändert werden.
+- Das automatische tägliche Backup um 02:00 UTC läuft weiterhin via `daily_backup_task()` — robuster, weil pro Lauf jetzt 3 Speicherziele bedient werden. Bei Container-Restart neu geplant.
+- Lokales Verzeichnis `/app/backups/` wird automatisch bereinigt (Aufbewahrung 14 Tage).
+
 ### Spätnachmittag (~16:55 MEZ): **Hardcode-Fix in KI-Assistent + Regel 13 + Morgens-Vorlage**
 
 **Was geschehen ist:**
