@@ -176,7 +176,7 @@ async def tool_aufgabe_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, An
     await db.module_aufgaben.insert_one(item)
     item.pop("_id", None)
     logger.info(f"KI-Tool aufgabe_anlegen: {titel}")
-    return {"ok": True, "aufgabe": item}
+    return {"ok": True, "aufgabe": item, "direkt_link": f"/module/aufgaben?highlight={item['id']}"}
 
 
 async def tool_termin_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
@@ -261,12 +261,18 @@ async def tool_termin_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, Any
             logger.warning(f"ICS-Mail fehlgeschlagen: {exc}")
             ics_status = f"fehler:{exc.__class__.__name__}"
 
-    return {"ok": True, "termin": item, "ics_mail": ics_status}
+    return {"ok": True, "termin": item, "ics_mail": ics_status, "direkt_link": f"/module/termine?highlight={item['id']}"}
 
 
 async def tool_kunde_suchen(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
-    treffer = await _resolve_kunde(args.get("query") or "")
-    return {"ok": True, "treffer": treffer, "anzahl": len(treffer)}
+    query = args.get("query") or ""
+    treffer = await _resolve_kunde(query)
+    return {
+        "ok": True,
+        "treffer": treffer,
+        "anzahl": len(treffer),
+        "direkt_link": f"/module/kunden?search={query}" if query else "/module/kunden",
+    }
 
 
 async def tool_notiz_schreiben(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
@@ -295,7 +301,7 @@ async def tool_notiz_schreiben(args: Dict[str, Any], user: dict) -> Dict[str, An
     }
     await db.module_aufgaben.insert_one(item)
     item.pop("_id", None)
-    return {"ok": True, "notiz": item}
+    return {"ok": True, "notiz": item, "direkt_link": f"/module/aufgaben?highlight={item['id']}"}
 
 
 TOOLS = {

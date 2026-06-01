@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Send, Loader2, MessageSquare, X, History } from "lucide-react";
+import { Mic, Send, Loader2, MessageSquare, X, History, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { VoiceIntakeRecorder } from "@/components/VoiceIntakeRecorder";
@@ -220,6 +221,20 @@ export const KiChatPanel = ({ showHistory = false, onClose, compact = false }) =
               {b.text}
               {b.tool && !b.error && (
                 <div className="mt-1 text-[10px] opacity-70 italic">→ {b.tool}</div>
+              )}
+              {b.tool_ergebnis?.direkt_link && b.tool_ergebnis?.ok && !b.error && (
+                <Link
+                  to={b.tool_ergebnis.direkt_link}
+                  onClick={() => compact && onClose && onClose()}
+                  className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background border text-xs font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+                  data-testid={`ki-chat-direktlink-${i}`}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {b.tool === "termin_anlegen" && "Termin öffnen"}
+                  {b.tool === "aufgabe_anlegen" && "Aufgabe öffnen"}
+                  {b.tool === "notiz_schreiben" && "Notiz öffnen"}
+                  {b.tool === "kunde_suchen" && "Kunden öffnen"}
+                </Link>
               )}
             </div>
           </div>
