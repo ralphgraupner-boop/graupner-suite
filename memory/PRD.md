@@ -3,6 +3,11 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 31.05.2026
 
+## 📌 Letzte Änderungen (01.06.2026, Hamburger Zeit)
+
+### Morgen (~06:40 MEZ):
+- **Mobile-Navigation Bugfix:** „Projekte"-Tab fehlte in der Mobile-Bottom-Navigation. Quick-Tabs umgestellt auf **Home · Projekte · Kunden · Aufgaben** (vorher: Home · Kunden · Dokumente · Kontakte). Passt zur Werkbank-als-Zentrale-Strategie vom 31.05. Datei: `components/layout/Navigation.jsx` Zeile 727-732.
+
 ## 📌 Letzte Änderungen (31.05.2026, Hamburger Zeit)
 
 ### Nachmittag (~16:15 MEZ):

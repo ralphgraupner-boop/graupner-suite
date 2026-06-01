@@ -726,9 +726,9 @@ const MobileNav = ({ onLogout }) => {
       ]
     : [
         { path: "/dashboard", icon: LayoutDashboard, label: "Home" },
+        { path: "/module/projekte", icon: Folder, label: "Projekte" },
         { path: "/module/kunden", icon: Users, label: "Kunden" },
-        { path: "/module/dokumente", icon: FileText, label: "Dokumente" },
-        { path: "/module/kontakt", icon: Download, label: "Kontakte" },
+        { path: "/module/aufgaben", icon: Briefcase, label: "Aufgaben" },
       ];
 
   const moreItems = navItems.filter(i => !mobileTabItems.find(t => t.path === i.path));
