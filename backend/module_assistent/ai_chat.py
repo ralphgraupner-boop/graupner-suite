@@ -33,15 +33,26 @@ def _strip_codefence(raw: str) -> str:
 
 
 async def gpt_intent(text: str, session_id: str) -> Dict[str, Any]:
-    """Schickt Ralphs Eingabe an GPT-5.2 und gibt {tool, args, antwort} zurueck."""
+    """Schickt Ralphs Eingabe an GPT-5.2 und gibt {tool, args, antwort} zurueck.
+
+    Wir nutzen pro Aufruf einen frischen Session-Hash (statt der Konversations-ID),
+    weil jeder /ask-Call atomar ist (kein Mehrturn-Kontext noetig).
+    Dadurch akkumuliert das per-Session-Budget der LLM-Library NICHT.
+    Zusaetzlich setzen wir das max_budget auf 2 USD als Sicherheitsdeckel.
+    """
     from emergentintegrations.llm.chat import LlmChat, UserMessage
+    import uuid as _uuid
 
     if not text or not text.strip():
         return {"tool": None, "args": {}, "antwort": "Sag mir was — ich hoere dir zu, Ralph."}
 
+    # Frischer Session-Hash pro Aufruf — verhindert Budget-Akkumulation
+    fresh_session = f"{session_id}:{_uuid.uuid4().hex[:8]}"
+
     chat = (
-        LlmChat(api_key=_emergent_key(), session_id=session_id, system_message=await system_prompt_de())
+        LlmChat(api_key=_emergent_key(), session_id=fresh_session, system_message=await system_prompt_de())
         .with_model("openai", "gpt-5.2")
+        .with_params(max_budget=2.0)  # 2 USD pro Aufruf als Deckel (real: 1-3 Cent)
     )
     try:
         raw = await chat.send_message(UserMessage(text=text.strip()))
