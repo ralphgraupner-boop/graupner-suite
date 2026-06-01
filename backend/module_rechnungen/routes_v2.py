@@ -44,8 +44,28 @@ class RechnungV2Create(BaseModel):
     lohnanteil_custom: Optional[float] = None
     kleinbetrag: bool = False  # < 250 EUR brutto = weniger Pflichtfelder
 
-class RechnungV2Update(RechnungV2Create):
-    pass
+class RechnungV2Update(BaseModel):
+    # Eigenes Update-Model mit Optional[...] = None, damit partielle PUTs keine
+    # Default-Werte ueberschreiben (Datensicherheit).
+    customer_id: Optional[str] = None
+    auftrag_id: Optional[str] = None
+    angebot_id: Optional[str] = None
+    mode: Optional[Literal["kurz", "voll"]] = None
+    betreff: Optional[str] = None
+    verweis_text: Optional[str] = None
+    kurz_leistungstext: Optional[str] = None
+    leistungsdatum: Optional[str] = None
+    positions: Optional[List[Position]] = None
+    vortext: Optional[str] = None
+    schlusstext: Optional[str] = None
+    discount: Optional[float] = None
+    discount_type: Optional[Literal["amount", "percent"]] = None
+    vat_rate: Optional[float] = None
+    deposit_amount: Optional[float] = None
+    due_days: Optional[int] = None
+    show_lohnanteil: Optional[bool] = None
+    lohnanteil_custom: Optional[float] = None
+    kleinbetrag: Optional[bool] = None
 
 # ============== NUMMER ==============
 
@@ -178,17 +198,29 @@ async def update_rechnung_v2(rid: str, payload: RechnungV2Update, user=Depends(g
     if existing.get("is_printed"):
         raise HTTPException(400, "Rechnung ist als 'Gedruckt' markiert und kann nicht mehr bearbeitet werden. Bitte zuerst Markierung aufheben.")
 
-    update = payload.model_dump()
-    # Summen neu berechnen
-    subtotal = sum((p.get("quantity") or 0) * (p.get("price_net") or 0) for p in update["positions"])
-    if update["discount_type"] == "percent":
-        discount_amount = subtotal * (update["discount"] / 100)
+    # Nur gesendete Felder uebernehmen — verhindert Datenverlust bei partiellem PUT
+    update = payload.model_dump(exclude_unset=True)
+    # Positions als dicts (falls Pydantic-Modelle drin sind)
+    if "positions" in update and update["positions"] is not None:
+        update["positions"] = [p if isinstance(p, dict) else p.model_dump() for p in update["positions"]]
+
+    # Effektive Werte fuer die Berechnung: gesendete Felder + sonst bestehende
+    eff = {**existing, **update}
+    positions = eff.get("positions") or []
+    discount = eff.get("discount") or 0
+    discount_type = eff.get("discount_type") or "amount"
+    vat_rate = eff.get("vat_rate") or 0
+    deposit_amount = eff.get("deposit_amount") or 0
+
+    subtotal = sum((p.get("quantity") or 0) * (p.get("price_net") or 0) for p in positions)
+    if discount_type == "percent":
+        discount_amount = subtotal * (discount / 100)
     else:
-        discount_amount = update["discount"]
+        discount_amount = discount
     net_after_discount = max(0, subtotal - discount_amount)
-    vat = net_after_discount * (update["vat_rate"] / 100)
+    vat = net_after_discount * (vat_rate / 100)
     brutto = net_after_discount + vat
-    final_amount = max(0, brutto - (update["deposit_amount"] or 0))
+    final_amount = max(0, brutto - deposit_amount)
 
     update.update({
         "subtotal": round(subtotal, 2),

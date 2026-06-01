@@ -65,6 +65,27 @@ class CustomerCreate(BaseModel):
     status: str = "Neu"
 
 
+class CustomerUpdate(BaseModel):
+    # Alle Felder Optional fuer partielles Update (exclude_unset)
+    name: Optional[str] = None
+    vorname: Optional[str] = None
+    nachname: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    strasse: Optional[str] = None
+    hausnummer: Optional[str] = None
+    plz: Optional[str] = None
+    ort: Optional[str] = None
+    notes: Optional[str] = None
+    photos: Optional[List[Any]] = None
+    customer_type: Optional[str] = None
+    categories: Optional[List[str]] = None
+    firma: Optional[str] = None
+    anrede: Optional[str] = None
+    status: Optional[str] = None
+
+
 class Anfrage(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str  # Legacy - kombiniert aus Vorname + Nachname
@@ -179,6 +200,14 @@ class ServiceCreate(BaseModel):
     price_net: float = 0
     ek_price: float = 0
     unit: str = "Stunde"
+
+
+class ServiceUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price_net: Optional[float] = None
+    ek_price: Optional[float] = None
+    unit: Optional[str] = None
 
 
 class Position(BaseModel):

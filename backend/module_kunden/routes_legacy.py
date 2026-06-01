@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form
 from typing import List, Optional
-from models import Customer, CustomerCreate, Anfrage
+from models import Customer, CustomerCreate, CustomerUpdate, Anfrage
 from database import db, logger, CATEGORIES
 from auth import get_current_user
 import re
@@ -135,18 +135,21 @@ async def create_customer(customer: CustomerCreate):
 
 
 @router.put("/customers/{customer_id}", response_model=Customer)
-async def update_customer(customer_id: str, customer: CustomerCreate):
+async def update_customer(customer_id: str, customer: CustomerUpdate):
     existing = await db.customers.find_one({"id": customer_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
-    
-    # Generate combined name from vorname + nachname if not provided
-    update_data = customer.model_dump()
+
+    # Nur tatsaechlich gesendete Felder uebernehmen (exclude_unset) — verhindert
+    # Datenverlust durch Default-Werte bei partiellen PUT-Requests.
+    update_data = customer.model_dump(exclude_unset=True)
+
+    # Generate combined name from vorname + nachname if both gesendet wurden und name leer
     if not update_data.get("name") and (update_data.get("vorname") or update_data.get("nachname")):
-        update_data["name"] = f"{update_data.get('vorname', '')} {update_data.get('nachname', '')}".strip()
-    
+        update_data["name"] = f"{update_data.get('vorname', existing.get('vorname',''))} {update_data.get('nachname', existing.get('nachname',''))}".strip()
+
     updated = {**existing, **update_data}
-    await db.customers.update_one({"id": customer_id}, {"$set": updated})
+    await db.customers.update_one({"id": customer_id}, {"$set": update_data})
     return updated
 
 
