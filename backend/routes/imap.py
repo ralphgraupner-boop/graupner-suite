@@ -355,7 +355,14 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
         await db.email_inbox.insert_one(inbox_entry)
         inbox_entry.pop("_id", None)
         fetched += 1
-        mail.store(eid, "+FLAGS", "\\Seen")
+        # Preview-Schutz: NIE Flags auf dem echten IMAP-Server setzen, wenn wir
+        # auf Preview/unknown laufen. Sonst wird die Mail dort als gelesen
+        # markiert und ist auf Live "weg" (jeder andere Client uebersieht sie).
+        from utils.environment import is_preview_or_unknown
+        if is_preview_or_unknown():
+            logger.info(f"⛔ Preview/unknown: \\Seen unterdrueckt fuer Mail {eid!r}")
+        else:
+            mail.store(eid, "+FLAGS", "\\Seen")
         
         # Auto-import ins Kontakt-Modul wenn "anfrage" klassifiziert
         if classification == "anfrage":
@@ -770,13 +777,20 @@ async def permanent_delete_email(email_id: str, user=Depends(get_current_user)):
             if creds["server"] and creds["user"] and creds["password"]:
                 imap = imaplib.IMAP4_SSL(creds["server"], creds["port"])
                 imap.login(creds["user"], creds["password"])
-                imap.select("INBOX", readonly=False)
-                status, data = imap.search(None, f'HEADER Message-ID "{message_id}"')
-                if status == "OK" and data[0]:
-                    for eid in data[0].split():
-                        imap.store(eid, "+FLAGS", "\\Deleted")
-                    imap.expunge()
-                imap.logout()
+                # Preview-Schutz: keine Loesch-Operationen auf dem IMAP-Server,
+                # wenn wir nicht eindeutig auf Live laufen.
+                from utils.environment import is_preview_or_unknown
+                if is_preview_or_unknown():
+                    logger.info(f"⛔ Preview/unknown: IMAP-\\Deleted unterdrueckt fuer Message-ID {message_id!r}")
+                    imap.logout()
+                else:
+                    imap.select("INBOX", readonly=False)
+                    status, data = imap.search(None, f'HEADER Message-ID "{message_id}"')
+                    if status == "OK" and data[0]:
+                        for eid in data[0].split():
+                            imap.store(eid, "+FLAGS", "\\Deleted")
+                        imap.expunge()
+                    imap.logout()
         except Exception as e:
             logger.warning(f"IMAP delete failed: {e}")
 

@@ -94,6 +94,11 @@ def _append_to_sent_folder(msg_obj, imap_settings: dict):
                         if name:
                             available.append(name)
             appended = False
+            # Preview-Schutz: Test-Mails auf Preview gehoeren NICHT in den echten Sent-Ordner.
+            from utils.environment import is_preview_or_unknown
+            if is_preview_or_unknown():
+                logger.info("⛔ Preview/unknown: IMAP-Sent-Kopie wird NICHT hochgeladen (Schutz vor Live-Kontamination).")
+                return
             for folder in candidates:
                 if folder in available or not available:
                     try:

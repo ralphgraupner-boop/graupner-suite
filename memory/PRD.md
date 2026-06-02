@@ -5,6 +5,31 @@
 
 ## 📌 Letzte Änderungen (02.06.2026, Hamburger Zeit)
 
+### Mittag (~13:05 MEZ): **Preview-Schutz fuer IMAP + Kunden-Diff-Werkzeug**
+
+**Was geschehen ist:**
+Ralph hat festgestellt, dass Preview Mails vom echten IMAP-Server abruft UND als gelesen markiert — dadurch werden sie auf Live faktisch unsichtbar. Zusätzlich: 2 Kunden existieren nur auf Preview und müssen sicher nach Live übernommen werden.
+
+**Was gebaut wurde:**
+- **`backend/utils/environment.py` (neu, ~95 Zeilen):** Zentrale Umgebungs-Erkennung im Backend (`is_preview()`, `is_live()`, `is_preview_or_unknown()`). Liest `REACT_APP_BACKEND_URL` aus `frontend/.env`. Spiegelt die Logik aus `frontend/src/lib/env.js`. **`is_preview_or_unknown()` ist der Sicherheitsanker**: bei unklarer Umgebung gilt sie als geschützt, keine destruktiven Operationen.
+- **`backend/routes/imap.py`:** 2 kritische `mail.store(..., "+FLAGS", "\\Seen"|"\\Deleted")`-Aufrufe (Z. 358 + Z. 777) mit `if is_preview_or_unknown(): log + skip else: store` umschlossen. `readonly=True` beim SELECT bleibt als zusätzliche Schicht. Mails werden auf Preview nicht mehr verändert.
+- **`backend/utils/__init__.py`:** Sent-Folder-APPEND in `_append_to_sent_folder` Z. 96+ ebenfalls geschützt — auf Preview werden Test-Mails nicht mehr in den echten IMAP-Sent-Ordner hochgeladen.
+- **`backend/scripts/kunden_diff_preview_live.py` (neu, ~175 Zeilen):** Read-only Diff-Skript. Vergleicht `db.module_kunden` (Preview) mit einem Live-Backup-ZIP. Liefert JSON mit `only_in_preview`, `only_in_live`, `in_beiden`. **Null Schreibvorgang.** Identitäts-Schlüssel ist `id` (UUID) mit Fallback auf `email|nachname|vorname`.
+
+**Tests:** `backend/tests/test_environment_preview_schutz.py` (7/7 grün) + `test_invite_service.py` (7/7 grün) = **14/14 grün gesamt.**
+
+**Smoketests:**
+- IMAP-Schutz: Reale Preview-Umgebung erkannt (`host: modul-first-app.preview.emergentagent.com`), Code-Pfad zeigt `mail.store()` wird NICHT aufgerufen. Log: `⛔ Preview/unknown: \Seen unterdrueckt`.
+- Kunden-Diff: gegen aktuelles Preview-Backup (als Test-Live) gelaufen → **2 Kunden nur auf Preview** identifiziert (Meike Plehn, Jörg Krüger). Echter Diff gegen Live-Backup steht aus, weil Live-ZIP noch nicht da.
+
+**Was Ralph als Nächstes braucht:**
+1. Live-Backup-ZIP nach `/app/backups/` legen
+2. `python3 /app/backend/scripts/kunden_diff_preview_live.py /pfad/zum/live.zip` ausführen
+3. JSON-Ergebnis prüfen → mir die zu übernehmenden Kunden-IDs nennen
+4. Erst dann baue ich den eigentlichen Live-Export-ZIP (nochmal mit explizitem „Ja" zur konkreten Datei)
+
+---
+
 ### Vormittag (~11:25 MEZ): **Termin-Einladung mit Gmail-1-Tap (schema.org/Event)**
 
 **Was geschehen ist:**
