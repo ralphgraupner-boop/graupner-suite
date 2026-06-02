@@ -17,6 +17,42 @@ from database import db, logger
 from routes.mitarbeiter import check_berechtigung
 
 
+SAMMEL_PROJEKT_TITEL = "Allgemein / Büro"
+
+
+async def _hole_oder_lege_sammelprojekt_an(kunde_id: str, user: dict) -> str:
+    """Findet das 'Allgemein / Büro'-Sammelprojekt eines Kunden — oder legt es an.
+
+    Wird von KI-Tools genutzt, wenn der User nur 'kunde_id' uebergibt, aber kein
+    konkretes Projekt nennt. Damit landet die Aufgabe/Termin trotzdem unter einem
+    Projekt (Regel: kunde_id IMPLIZIERT projekt_id).
+    """
+    if not kunde_id:
+        return ""
+    existing = await db.module_projekte.find_one(
+        {"kunde_id": kunde_id, "titel": SAMMEL_PROJEKT_TITEL},
+        {"_id": 0, "id": 1},
+    )
+    if existing:
+        return existing["id"]
+    pid = str(uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    await db.module_projekte.insert_one({
+        "id": pid,
+        "kunde_id": kunde_id,
+        "titel": SAMMEL_PROJEKT_TITEL,
+        "beschreibung": "Sammelprojekt fuer Aufgaben/Termine ohne spezifischen Projektbezug (von KI angelegt).",
+        "kategorie": "",
+        "status": "Aktiv",
+        "created_at": now,
+        "updated_at": now,
+        "created_by": (user or {}).get("username", "ki-assistent"),
+        "sort_order": 9999,
+    })
+    logger.info(f"KI: Sammelprojekt '{SAMMEL_PROJEKT_TITEL}' fuer Kunde {kunde_id} angelegt ({pid})")
+    return pid
+
+
 # Mapping: KI-Tool -> bestehender Berechtigungsbereich (Regel 4: keine Doppelung)
 TOOL_BERECHTIGUNG = {
     "aufgabe_anlegen": "modul_aufgaben",
@@ -166,6 +202,11 @@ async def tool_aufgabe_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, An
     titel = (args.get("titel") or "").strip()
     if not titel:
         return {"ok": False, "error": "Titel fehlt."}
+    kunde_id = (args.get("kunde_id") or "").strip()
+    projekt_id = (args.get("projekt_id") or "").strip()
+    # Wenn Kunde ohne Projekt -> automatisch ins Sammelprojekt
+    if kunde_id and not projekt_id:
+        projekt_id = await _hole_oder_lege_sammelprojekt_an(kunde_id, user)
     now = datetime.now(timezone.utc).isoformat()
     item = {
         "id": str(uuid4()),
@@ -176,8 +217,8 @@ async def tool_aufgabe_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, An
         "zugewiesen_an": "",
         "faellig_am": (args.get("faellig_am") or "").strip(),
         "wiederholung": "einmalig",
-        "kunde_id": (args.get("kunde_id") or "").strip(),
-        "projekt_id": (args.get("projekt_id") or "").strip(),
+        "kunde_id": kunde_id,
+        "projekt_id": projekt_id,
         "status": "offen",
         "erstellt_am": now,
         "erledigt_am": None,
@@ -202,6 +243,12 @@ async def tool_termin_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, Any
     if typ not in valid_typ:
         typ = "ausfuehrung"
 
+    kunde_id = (args.get("kunde_id") or "").strip()
+    projekt_id = (args.get("projekt_id") or "").strip()
+    # Wenn Kunde ohne Projekt -> automatisch ins Sammelprojekt
+    if kunde_id and not projekt_id:
+        projekt_id = await _hole_oder_lege_sammelprojekt_an(kunde_id, user)
+
     now = datetime.now(timezone.utc).isoformat()
     item = {
         "id": str(uuid4()),
@@ -211,8 +258,8 @@ async def tool_termin_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, Any
         "ende": (args.get("ende") or "").strip(),
         "ort": (args.get("ort") or "").strip(),
         "beschreibung": (args.get("beschreibung") or "").strip(),
-        "kunde_id": (args.get("kunde_id") or "").strip(),
-        "projekt_id": (args.get("projekt_id") or "").strip(),
+        "kunde_id": kunde_id,
+        "projekt_id": projekt_id,
         "aufgabe_id": "",
         "monteur_username": (args.get("monteur_username") or "").strip(),
         "status": "wartet_auf_go",

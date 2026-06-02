@@ -247,6 +247,10 @@ async def create_termin(payload: TerminCreate, user=Depends(get_current_user)):
     if not data["start"].strip():
         raise HTTPException(400, "Startzeit darf nicht leer sein")
     _validate_enums(data)
+    # Regel: Wenn Kunde dranhaengt, muss auch ein Projekt dranhaengen.
+    # Reine Reminder/interne Termine ohne Kunde bleiben erlaubt.
+    if (data.get("kunde_id") or "").strip() and not (data.get("projekt_id") or "").strip():
+        raise HTTPException(400, "Termine mit Kunden-Bezug müssen einem Projekt zugeordnet sein.")
 
     now = datetime.now(timezone.utc).isoformat()
     item = {
@@ -295,6 +299,11 @@ async def update_termin(termin_id: str, payload: TerminUpdate, user=Depends(get_
                   "kunde_id", "projekt_id", "aufgabe_id", "monteur_username"):
         if field in data:
             update[field] = data[field].strip() if isinstance(data[field], str) else data[field]
+    # Regel: Wenn nach dem Update Kunde dran ist, muss auch Projekt dran sein.
+    merged_kunde = update.get("kunde_id", existing.get("kunde_id", ""))
+    merged_projekt = update.get("projekt_id", existing.get("projekt_id", ""))
+    if (merged_kunde or "").strip() and not (merged_projekt or "").strip():
+        raise HTTPException(400, "Termine mit Kunden-Bezug müssen einem Projekt zugeordnet sein.")
     await db.module_termine.update_one({"id": termin_id}, {"$set": update})
     return await db.module_termine.find_one({"id": termin_id}, {"_id": 0})
 

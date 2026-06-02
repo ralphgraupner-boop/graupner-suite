@@ -166,12 +166,6 @@ const ProjektWerkbank = () => {
         <CustomerDocumentsPanel customerId={kunde_id} />
       </div>
 
-      {/* Aufgaben + Termine ohne Projekt-Bezug (Kunden-Ebene) */}
-      <div className="mb-4 space-y-2">
-        <AufgabenPanel kunde_id={kunde_id} onlyWithoutProjekt title="Aufgaben ohne Projekt-Bezug" defaultCollapsed compact />
-        <TerminePanel kunde_id={kunde_id} onlyWithoutProjekt title="Termine ohne Projekt-Bezug" defaultCollapsed compact />
-      </div>
-
       {/* === Projekte === */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold flex items-center gap-2">
