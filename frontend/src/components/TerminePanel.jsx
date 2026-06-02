@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
+import { makeGoogleCalendarLink } from "@/lib/gcalLink";
 
 const STATUS = {
   wartet_auf_go: { cls: "bg-amber-50 text-amber-800 border-amber-200", icon: AlertTriangle, label: "Wartet auf GO" },
@@ -188,6 +189,16 @@ export const TerminePanel = ({ kunde_id = "", projekt_id = "", title = "Termine"
                           📧
                         </button>
                       )}
+                      <a
+                        href={makeGoogleCalendarLink(t)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs px-2 py-0.5 border border-emerald-300 text-emerald-700 rounded-sm hover:bg-emerald-50"
+                        title="In Google Kalender eintragen"
+                        data-testid={`panel-termin-gcal-${t.id}`}
+                      >
+                        🗓️
+                      </a>
                       <button
                         onClick={() => setEditing(t)}
                         className="p-1 text-muted-foreground hover:bg-muted rounded-sm"
