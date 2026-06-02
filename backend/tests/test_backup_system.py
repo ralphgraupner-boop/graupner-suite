@@ -30,6 +30,10 @@ class TestBackupSystem:
         assert "empfaenger_emails" in d
         assert "lokal_aufbewahrung_tage" in d
         assert "lokal_dateien" in d
+        # NEU: Heartbeat-Felder im Status
+        assert "scheduler_lebt" in d
+        assert "letzter_heartbeat" in d
+        assert "heartbeat_alter_minuten" in d
 
     def test_settings_update(self, headers):
         # Empfaenger setzen

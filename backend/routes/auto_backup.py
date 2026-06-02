@@ -278,32 +278,87 @@ async def send_backup_email(backup_data: bytes, total_docs: int):
 
 
 async def daily_backup_task():
-    """Täglicher Backup-Task (läuft um 2:00 Uhr)"""
+    """Täglicher Backup-Task — robust gegen Container-Restarts.
+
+    Verhalten:
+    1. Bei JEDEM Start: prüft letzten erfolgreichen Lauf.
+       Wenn älter als 23 h -> sofort Catch-up Backup ('catchup_after_restart').
+    2. Plant nächsten regulären Lauf auf 02:00 UTC.
+    3. Während des Wartens: alle 60 Min Heartbeat-Eintrag (zeigt 'Task lebt').
+    """
+    logger.info("🛡️ daily_backup_task gestartet — prüfe Catch-up-Bedarf...")
+
+    # === 1) Catch-up bei Start ===
+    try:
+        letzter = await db.auto_backup_log.find_one(
+            {"status": "success", "trigger": {"$ne": "heartbeat"}},
+            {"_id": 0, "created_at": 1},
+            sort=[("created_at", -1)],
+        )
+        if letzter:
+            from datetime import datetime as _dt
+            zuletzt = _dt.fromisoformat(letzter["created_at"].replace("Z", "+00:00"))
+            alter_std = (datetime.now(timezone.utc) - zuletzt).total_seconds() / 3600
+            if alter_std > 23:
+                logger.warning(f"⚠️ Letzter erfolgreicher Lauf vor {alter_std:.1f} h — Catch-up jetzt!")
+                await _run_backup_with_log(trigger="catchup_after_restart")
+            else:
+                logger.info(f"✅ Letzter Lauf vor {alter_std:.1f} h — kein Catch-up nötig")
+        else:
+            logger.warning("⚠️ Noch nie ein erfolgreicher Lauf in der DB — Catch-up jetzt!")
+            await _run_backup_with_log(trigger="catchup_first_run")
+    except Exception as e:
+        logger.error(f"Catch-up-Pruefung fehlgeschlagen: {e}")
+
+    # === 2) Reguläre Schleife mit Heartbeat ===
+    HEARTBEAT_INTERVAL = 3600  # 1 Stunde
     while True:
         try:
-            # Warte bis 2:00 Uhr
             now = datetime.now(timezone.utc)
             next_backup = now.replace(hour=2, minute=0, second=0, microsecond=0)
-            
-            # Wenn 2 Uhr schon vorbei, dann morgen
             if now.hour >= 2:
                 from datetime import timedelta
                 next_backup += timedelta(days=1)
-            
             wait_seconds = (next_backup - now).total_seconds()
-            logger.info(f"⏰ Nächstes automatisches Backup: {next_backup.strftime('%d.%m.%Y %H:%M')} UTC (in {wait_seconds/3600:.1f} Stunden)")
-            
-            await asyncio.sleep(wait_seconds)
-            
-            # Backup erstellen
+            logger.info(
+                f"⏰ Nächstes automatisches Backup: {next_backup.strftime('%d.%m.%Y %H:%M')} "
+                f"UTC (in {wait_seconds/3600:.1f} Stunden)"
+            )
+
+            # In Stunden-Schritten warten, dazwischen Heartbeat schreiben
+            while wait_seconds > 0:
+                sleep_now = min(HEARTBEAT_INTERVAL, wait_seconds)
+                await asyncio.sleep(sleep_now)
+                wait_seconds -= sleep_now
+                # Heartbeat schreiben
+                try:
+                    await db.auto_backup_log.insert_one({
+                        "id": str(uuid.uuid4()),
+                        "trigger": "heartbeat",
+                        "status": "alive",
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    })
+                    # Alte Heartbeats aufraeumen (nur letzte 48)
+                    cursor = db.auto_backup_log.find(
+                        {"trigger": "heartbeat"}, {"_id": 0, "id": 1, "created_at": 1}
+                    ).sort("created_at", -1)
+                    keep = [d["id"] async for d in cursor.limit(48)]
+                    if keep:
+                        await db.auto_backup_log.delete_many(
+                            {"trigger": "heartbeat", "id": {"$nin": keep}}
+                        )
+                except Exception as he:
+                    logger.warning(f"Heartbeat-Schreibfehler: {he}")
+
+            # Backup ausloesen
             logger.info("🛡️ Starte automatisches tägliches Backup...")
             await _run_backup_with_log(trigger="schedule")
-            
+
         except Exception as e:
             logger.error(f"❌ Fehler im täglichen Backup-Task: {e}")
             try:
                 await db.auto_backup_log.insert_one({
-                    "id": str(__import__("uuid").uuid4()),
+                    "id": str(uuid.uuid4()),
                     "status": "error",
                     "error": str(e),
                     "trigger": "schedule",
@@ -311,7 +366,6 @@ async def daily_backup_task():
                 })
             except Exception:
                 pass
-            # Warte 1 Stunde bei Fehler
             await asyncio.sleep(3600)
 
 
@@ -414,12 +468,28 @@ async def _cleanup_lokal_backups():
 
 @router.get("/backup/auto/status")
 async def get_auto_backup_status():
-    """Status des automatischen Backups + letztes Backup-Ergebnis."""
+    """Status des automatischen Backups + letztes Backup-Ergebnis + Heartbeat."""
     try:
         settings = await get_backup_settings()
-        # Letzter Lauf
-        last = await db.auto_backup_log.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
-        # Anzahl lokal vorhandener ZIP-Dateien
+        # Letzter ECHTER Lauf (heartbeats ausschliessen)
+        last = await db.auto_backup_log.find_one(
+            {"trigger": {"$ne": "heartbeat"}},
+            {"_id": 0},
+            sort=[("created_at", -1)],
+        )
+        # Letzter Heartbeat (Lebenszeichen des Schedulers)
+        hb = await db.auto_backup_log.find_one(
+            {"trigger": "heartbeat"},
+            {"_id": 0, "created_at": 1},
+            sort=[("created_at", -1)],
+        )
+        scheduler_lebt = False
+        heartbeat_alter_min = None
+        if hb:
+            from datetime import datetime as _dt
+            zeit = _dt.fromisoformat(hb["created_at"].replace("Z", "+00:00"))
+            heartbeat_alter_min = round((datetime.now(timezone.utc) - zeit).total_seconds() / 60, 1)
+            scheduler_lebt = heartbeat_alter_min <= 90  # max. 90 Min ohne Heartbeat = noch ok
         lokal_count = 0
         try:
             lokal_count = len([f for f in os.listdir(BACKUP_DIR) if f.endswith(".zip")])
@@ -432,6 +502,9 @@ async def get_auto_backup_status():
             "lokal_aufbewahrung_tage": settings.get("lokal_aufbewahrung_tage", 14),
             "lokal_dateien": lokal_count,
             "letzter_lauf": last,
+            "scheduler_lebt": scheduler_lebt,
+            "letzter_heartbeat": hb.get("created_at") if hb else None,
+            "heartbeat_alter_minuten": heartbeat_alter_min,
             "status": "active" if settings.get("enabled", True) else "deaktiviert",
         }
     except Exception as e:

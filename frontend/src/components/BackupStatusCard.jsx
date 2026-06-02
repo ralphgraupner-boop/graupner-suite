@@ -115,6 +115,9 @@ export const BackupStatusCard = () => {
     if (istErfolg && alterStd <= 36) ampel = "gruen";
     else if (istErfolg && alterStd <= 72) ampel = "gelb";
   }
+  // Scheduler-Watchdog: wenn kein Heartbeat in 90+ Minuten -> Warnung uebersteuert Ampel
+  const schedulerTot = status?.scheduler_lebt === false;
+  if (schedulerTot) ampel = "rot";
   const ampelStyle = {
     gruen: "bg-green-100 text-green-800 border-green-200",
     gelb: "bg-amber-100 text-amber-800 border-amber-200",
@@ -157,7 +160,16 @@ export const BackupStatusCard = () => {
             </div>
             <div className="text-[11px] mt-1 opacity-70">
               {status?.next_backup} · Lokal: {status?.lokal_dateien} Dateien
+              {status?.heartbeat_alter_minuten != null && (
+                <> · Scheduler-Heartbeat vor {status.heartbeat_alter_minuten} Min</>
+              )}
             </div>
+            {schedulerTot && (
+              <div className="mt-2 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+                ⚠️ Scheduler antwortet nicht — letztes Lebenszeichen vor {status?.heartbeat_alter_minuten ?? "?"} Min.
+                Bitte Backend neu starten oder Admin informieren.
+              </div>
+            )}
           </div>
         </div>
       </div>
