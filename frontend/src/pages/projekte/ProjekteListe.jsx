@@ -188,7 +188,7 @@ const ProjekteListe = () => {
                     {searchHits.kunden.map(k => (
                       <button
                         key={`k-${k.id}`}
-                        onClick={() => { setSelectedKunde({ id: k.id, label: k.label }); setSearchQuery(""); }}
+                        onClick={() => { setSelectedKunde({ id: k.id, label: k.label }); setSearchQuery(""); navigate(`/module/projekte/werkbank/${k.id}`); }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0"
                         data-testid={`projekte-hit-kunde-${k.id}`}
                       >
