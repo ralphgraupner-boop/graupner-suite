@@ -11,11 +11,74 @@ KEINE Aenderung an db.module_termine, KEIN neues Modul.
 """
 from __future__ import annotations
 import json
+import re
+from urllib.parse import quote
 from typing import Optional, Dict, Any, Tuple
 
 from database import db, logger
 from utils import send_email
 from .ics_generator import build_ics_event
+
+
+def _gcal_format_dt(iso_str: str) -> str:
+    """Wandelt '2026-06-05T10:00' (oder mit Sekunden / TZ) in '20260605T100000' fuer Google-Calendar-URL.
+
+    Google akzeptiert:
+    - 'YYYYMMDDTHHMMSSZ' (UTC)
+    - 'YYYYMMDDTHHMMSS' (floating, local time)
+    Wir liefern floating local — der Empfaenger sieht die Zeit so wie eingegeben.
+    """
+    if not iso_str:
+        return ""
+    # Alles Nicht-Ziffer-und-T entfernen: 2026-06-05T10:00 → 20260605T1000
+    s = re.sub(r"[^\dT]", "", iso_str.strip())
+    if "T" not in s:
+        # Nur Datum gegeben -> Mitternacht ergaenzen
+        s += "T000000"
+    date_part, time_part = s.split("T", 1)
+    # Sekunden auffuellen
+    if len(time_part) == 4:
+        time_part += "00"
+    elif len(time_part) == 2:
+        time_part += "0000"
+    return f"{date_part}T{time_part}"
+
+
+def make_google_calendar_link(termin: dict, kunde: Optional[dict] = None) -> str:
+    """Baut einen Google-Calendar-'Add-Event'-Link aus den Termindaten.
+
+    Empfaenger klickt → Google oeffnet sich mit allen Feldern vorbefuellt → "Speichern" → fertig.
+    Funktioniert unabhaengig vom Mail-Client und ohne ICS-Datei.
+
+    Doku: https://calendar.google.com/calendar/render?action=TEMPLATE&...
+    """
+    titel = (termin.get("titel") or "Termin").strip()
+    start = _gcal_format_dt(termin.get("start") or "")
+    ende = _gcal_format_dt(termin.get("ende") or termin.get("start") or "")
+    ort = (termin.get("ort") or "").strip() or _ort_aus_kunde(kunde)
+    details = (termin.get("beschreibung") or "").strip()
+    if kunde:
+        kn = _kunde_anzeige(kunde)
+        phone = (kunde.get("phone") or "").strip()
+        if kn or phone:
+            details = (
+                (details + "\n\n" if details else "")
+                + (f"Kunde: {kn}\n" if kn else "")
+                + (f"Telefon: {phone}\n" if phone else "")
+            ).rstrip()
+
+    params = [
+        ("action", "TEMPLATE"),
+        ("text", titel),
+        ("dates", f"{start}/{ende}" if start and ende else ""),
+    ]
+    if details:
+        params.append(("details", details))
+    if ort:
+        params.append(("location", ort))
+
+    qs = "&".join(f"{k}={quote(v, safe='')}" for k, v in params if v)
+    return f"https://calendar.google.com/calendar/render?{qs}"
 
 
 def _ort_aus_kunde(kunde: Optional[dict]) -> str:
@@ -103,6 +166,9 @@ def baue_termin_mail(
         organizer_name=organisator_name or "",
     )
 
+    # Google-Calendar-Add-Event-Link — ein Tipp = im Kalender
+    gcal_link = make_google_calendar_link(termin, kunde)
+
     # Body — sauberes HTML, Gmail-tauglich, schema.org im Head
     maps_url = (
         f"https://www.google.com/maps/dir/?api=1&destination={ort.replace(' ', '+')}"
@@ -130,10 +196,18 @@ def baue_termin_mail(
         + "</head><body style=\"font-family:Arial,sans-serif;max-width:600px;color:#111\">"
         + f"<h2 style=\"color:#16a34a;margin:0 0 8px 0\">📅 Termin: {titel}</h2>"
         + f"<p>Hallo {empfaenger_name},</p>"
-        + f"<p>{organisator_name} hat dir einen Termin angelegt. "
-          "Bei Gmail erscheint oben in der Mail automatisch der Knopf "
-          "<strong>Zum Kalender hinzufuegen</strong> — einmal tippen, fertig. "
-          "Falls kein Knopf da ist: einfach den Anhang <em>termin.ics</em> oeffnen.</p>"
+        + f"<p>{organisator_name} hat dir einen Termin angelegt.</p>"
+        + f"<p style=\"margin:20px 0\"><a href=\"{gcal_link}\" "
+          "style=\"display:inline-block;background:#16a34a;color:#fff;"
+          "padding:12px 24px;border-radius:6px;text-decoration:none;"
+          "font-weight:bold;font-size:15px\">"
+          "🗓️ In Google Kalender eintragen</a></p>"
+        + "<p style=\"color:#666;font-size:13px\">"
+          "Tippe oben drauf — Google oeffnet sich mit allen Daten vorbefuellt. "
+          "Du klickst einmal auf <strong>Speichern</strong>, fertig.<br>"
+          "Alternativen: Gmail zeigt ggf. auch den Knopf <em>Zum Kalender hinzufuegen</em> oben in der Mail, "
+          "und die Datei <em>termin.ics</em> im Anhang funktioniert in jedem Kalender-Programm."
+          "</p>"
         + "<table style=\"border-collapse:collapse;margin:16px 0\">"
         + f"<tr><td style='padding:6px 12px;font-weight:bold'>Wann:</td><td style='padding:6px 12px'>{zeile_wann}</td></tr>"
         + zeile_wo
