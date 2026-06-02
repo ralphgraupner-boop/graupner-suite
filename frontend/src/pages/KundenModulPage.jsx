@@ -16,6 +16,7 @@ import { KundeImportButton } from "@/components/KundeImportButton";
 import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
 import MailHistoryModal from "@/components/MailHistoryModal";
+import { MailLink } from "@/components/MailLink";
 import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog from "@/components/NewProjektDialog";
@@ -498,7 +499,7 @@ const KundenModulPage = () => {
                     </div>
                     <div className="flex items-center gap-x-3 gap-y-0.5 text-xs sm:text-sm text-muted-foreground flex-wrap">
                       {kunde.phone && <span>{kunde.phone}</span>}
-                      {kunde.email && <span className="truncate">{kunde.email}</span>}
+                      {kunde.email && <MailLink email={kunde.email} className="truncate" />}
                       {kunde.photos?.length > 0 && <span className="text-primary flex items-center gap-1"><File className="w-3 h-3" />{kunde.photos.length}</span>}
                       {(linkCounts[kunde.id] || 0) > 0 && (
                         <span
@@ -553,7 +554,7 @@ const KundenModulPage = () => {
                           {kunde.firma && <p className="text-sm"><span className="font-medium">Firma:</span> {kunde.firma}</p>}
                           {kunde.vorname && <p className="text-sm"><span className="font-medium">Vorname:</span> {kunde.vorname}</p>}
                           {kunde.nachname && <p className="text-sm"><span className="font-medium">Nachname:</span> {kunde.nachname}</p>}
-                          {kunde.email && <p className="text-sm"><span className="font-medium">E-Mail:</span> {kunde.email}</p>}
+                          {kunde.email && <p className="text-sm flex items-center gap-2"><span className="font-medium">E-Mail:</span> <MailLink email={kunde.email} /></p>}
                           {kunde.phone && <p className="text-sm"><span className="font-medium">Telefon:</span> {kunde.phone}</p>}
                           {(kunde.strasse || kunde.address) && (
                             <div>

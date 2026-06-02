@@ -15,6 +15,7 @@ import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog, { useTextvorlagen } from "@/components/NewProjektDialog";
 import ProjektBild from "@/components/ProjektBild";
 import MailHistoryModal from "@/components/MailHistoryModal";
+import { MailLink } from "@/components/MailLink";
 import { CustomerDocumentsPanel } from "@/components/CustomerDocumentsPanel";
 
 const STATUS_COLORS = {
@@ -91,9 +92,7 @@ const ProjektWerkbank = () => {
                   </a>
                 )}
                 {kunde.email && (
-                  <a href={`mailto:${kunde.email}`} className="flex items-center gap-1 hover:text-primary">
-                    <Mail className="w-3.5 h-3.5" /> {kunde.email}
-                  </a>
+                  <MailLink email={kunde.email} showIcon />
                 )}
               </div>
             </div>
