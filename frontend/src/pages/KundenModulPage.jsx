@@ -127,6 +127,8 @@ const KundenModulPage = () => {
   // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
   // URL-Parameter ?edit={kundeId} -> Datenmaske für diesen Kunden direkt öffnen
   //   (wird z.B. von der Mail-Inbox nach "Als Kunde übernehmen" genutzt)
+  // URL-Parameter ?expand={kundeId} -> Kunden in der Liste aufklappen (nicht editieren)
+  //   (wird z.B. von der Projekt-Suche genutzt: Klick auf Kunden-Treffer → Kundenseite mit aufgeklapptem Kunden)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const f = params.get("filter");
@@ -141,6 +143,23 @@ const KundenModulPage = () => {
         // edit-Param aus URL entfernen, damit Refresh nicht erneut öffnet
         const cleaned = new URLSearchParams(location.search);
         cleaned.delete("edit");
+        navigate(`${location.pathname}${cleaned.toString() ? "?" + cleaned.toString() : ""}`, { replace: true });
+      }
+    }
+    const expandId = params.get("expand");
+    if (expandId && kunden.length > 0) {
+      const k = kunden.find((x) => x.id === expandId);
+      if (k) {
+        setStatusFilter("alle");
+        setExpandedId(expandId);
+        // Sanft zum aufgeklappten Kunden scrollen
+        setTimeout(() => {
+          const el = document.querySelector(`[data-kunde-id="${expandId}"]`);
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 150);
+        // expand-Param aus URL entfernen, damit Refresh nicht erneut springt
+        const cleaned = new URLSearchParams(location.search);
+        cleaned.delete("expand");
         navigate(`${location.pathname}${cleaned.toString() ? "?" + cleaned.toString() : ""}`, { replace: true });
       }
     }
@@ -438,7 +457,7 @@ const KundenModulPage = () => {
             const isExpanded = expandedId === kunde.id;
             const displayName = (kunde.vorname || kunde.nachname) ? `${kunde.vorname || ''} ${kunde.nachname || ''}`.trim() : kunde.name;
             return (
-              <Card key={kunde.id} className={`transition-all cursor-pointer overflow-hidden border-l-4 ${STATUS_COLORS[kunde.status || kunde.kontakt_status || "Anfrage"]?.border || ""} ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md'}`} data-testid={`kunden-modul-${kunde.id}`}>
+              <Card key={kunde.id} data-kunde-id={kunde.id} className={`transition-all cursor-pointer overflow-hidden border-l-4 ${STATUS_COLORS[kunde.status || kunde.kontakt_status || "Anfrage"]?.border || ""} ${isExpanded ? 'shadow-lg border-primary/40 ring-1 ring-primary/20' : 'hover:shadow-md'}`} data-testid={`kunden-modul-${kunde.id}`}>
                 <div className="flex items-center gap-2 sm:gap-4 p-3 lg:p-4" onClick={() => setExpandedId(isExpanded ? null : kunde.id)}>
                   <input
                     type="checkbox"
