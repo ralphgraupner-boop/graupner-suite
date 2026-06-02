@@ -125,24 +125,34 @@ const KundenModulPage = () => {
   const location = useLocation();
 
   // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
+  // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
   // URL-Parameter ?edit={kundeId} -> Datenmaske für diesen Kunden direkt öffnen
   //   (wird z.B. von der Mail-Inbox nach "Als Kunde übernehmen" genutzt,
   //    und von der Projekt-Suche nach Klick auf einen Kunden-Treffer)
+  // URL-Parameter ?returnTo={pfad} -> nach Schliessen der Datenmaske dorthin zurueckkehren
+  //   (z.B. ProjektWerkbank: "Kunde bearbeiten" -> nach Speichern/Abbrechen zurueck zur Werkbank)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const f = params.get("filter");
     if (f) setStatusFilter(f);
     const editId = params.get("edit");
+    const returnTo = params.get("returnTo");
     if (editId && kunden.length > 0) {
       const k = kunden.find((x) => x.id === editId);
       if (k) {
         // Status auf "alle" stellen, damit der neue Kunde sicher sichtbar ist
         setStatusFilter("alle");
-        openEditFor(k);
+        const popupOpened = openEditFor(k, returnTo);
         // edit-Param aus URL entfernen, damit Refresh nicht erneut öffnet
         const cleaned = new URLSearchParams(location.search);
         cleaned.delete("edit");
+        cleaned.delete("returnTo");
         navigate(`${location.pathname}${cleaned.toString() ? "?" + cleaned.toString() : ""}`, { replace: true });
+        // Wenn Popup-Fenster geoeffnet wurde (eigenes Browser-Window), kann der User
+        // gleich zurueck zur Werkbank navigieren — er bearbeitet im Popup weiter.
+        if (popupOpened && returnTo) {
+          navigate(returnTo, { replace: true });
+        }
       }
     }
   }, [location.search, kunden]);  // eslint-disable-line
@@ -155,16 +165,20 @@ const KundenModulPage = () => {
   // Multi-Window Helper: öffnet weiteres "Kunde bearbeiten"-Fenster.
   // Bevorzugt direkten Browser-Popup (User-Pref `ui_direct_popout`, default an).
   // Fallback bei Popup-Blocker oder deaktivierter Pref: In-App-Modal (Dedupe per kunde.id).
-  const openEditFor = (kunde) => {
+  // Rueckgabewert: true wenn echtes Popup-Fenster aufgegangen ist, false wenn In-App-Modal.
+  // `returnTo`: wenn gesetzt, wird beim Schliessen des In-App-Modals dorthin navigiert.
+  const openEditFor = (kunde, returnTo) => {
     const url = kunde?.id ? `/popup/kunde/${kunde.id}` : "/popup/kunde/new";
-    if (openInPopup(url)) return;
+    if (openInPopup(url)) return true;
     setOpenEdits((prev) => {
       if (kunde && kunde.id && prev.some((k) => k && k.id === kunde.id)) return prev;
-      const entry = kunde || { __new: true, __key: `_new_${Date.now()}_${Math.random()}` };
+      const entry = kunde ? { ...kunde, __returnTo: returnTo || undefined } : { __new: true, __key: `_new_${Date.now()}_${Math.random()}`, __returnTo: returnTo || undefined };
       return [...prev, entry];
     });
+    return false;
   };
   const closeEditFor = (target) => {
+    const returnTo = target?.__returnTo;
     setOpenEdits((prev) =>
       prev.filter((k) => {
         if (target?.id) return k?.id !== target.id;
@@ -172,6 +186,7 @@ const KundenModulPage = () => {
         return false;
       })
     );
+    if (returnTo) navigate(returnTo, { replace: true });
   };
 
   const loadKunden = async () => {
