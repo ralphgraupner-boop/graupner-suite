@@ -468,6 +468,15 @@ const KundenModulPage = () => {
                       {kunde.firma && <Badge variant="info" className="text-xs hidden sm:inline-flex">{kunde.firma}</Badge>}
                       {kunde.customer_type && kunde.customer_type !== "Privat" && <Badge variant="default" className="text-xs hidden sm:inline-flex">{kunde.customer_type}</Badge>}
                       {(kunde.status || kunde.kontakt_status) && <Badge className={`text-xs ${STATUS_COLORS[kunde.status || kunde.kontakt_status]?.badge || "bg-gray-100 text-gray-600"}`}>{kunde.status || kunde.kontakt_status}</Badge>}
+                      {search.trim() && (() => {
+                        const q = search.trim().toLowerCase();
+                        const nameLabel = (((kunde.vorname || kunde.nachname) ? `${kunde.vorname||''} ${kunde.nachname||''}`.trim() : kunde.name) || '').toLowerCase();
+                        const inName = nameLabel.includes(q) || (kunde.email||'').toLowerCase().includes(q) || (kunde.firma||'').toLowerCase().includes(q);
+                        if (inName) return null;
+                        if ((kunde.anliegen||'').toLowerCase().includes(q)) return <Badge variant="outline" className="text-xs italic" data-testid={`hit-anliegen-${kunde.id}`}>gefunden in: Anliegen</Badge>;
+                        if ((kunde.nachricht||'').toLowerCase().includes(q)) return <Badge variant="outline" className="text-xs italic" data-testid={`hit-nachricht-${kunde.id}`}>gefunden in: Nachricht</Badge>;
+                        return null;
+                      })()}
                     </div>
                     <div className="flex items-center gap-x-3 gap-y-0.5 text-xs sm:text-sm text-muted-foreground flex-wrap">
                       {kunde.phone && <span>{kunde.phone}</span>}

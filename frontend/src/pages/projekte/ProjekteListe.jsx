@@ -77,18 +77,34 @@ const ProjekteListe = () => {
     const q = searchQuery.trim().toLowerCase();
     if (q.length < 1) return { kunden: [], projekte: [] };
     const kunden = Object.entries(kundenMap)
-      .map(([id, k]) => ({ id, label: k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id, anliegen: k.anliegen || "", nachricht: k.nachricht || "" }))
-      .filter(k => k.label.toLowerCase().includes(q) || k.anliegen.toLowerCase().includes(q) || k.nachricht.toLowerCase().includes(q))
+      .map(([id, k]) => {
+        const label = k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id;
+        const anliegen = k.anliegen || "";
+        const nachricht = k.nachricht || "";
+        let matchedIn = null;
+        if (label.toLowerCase().includes(q)) matchedIn = "Name";
+        else if (anliegen.toLowerCase().includes(q)) matchedIn = "Anliegen";
+        else if (nachricht.toLowerCase().includes(q)) matchedIn = "Nachricht";
+        return { id, label, matchedIn };
+      })
+      .filter(k => k.matchedIn)
       .slice(0, 8);
     const projekteHits = projekte
-      .filter(p =>
-        (p.titel || "").toLowerCase().includes(q) ||
-        (p.beschreibung || "").toLowerCase().includes(q) ||
-        (p.notizen || "").toLowerCase().includes(q) ||
-        (kundeLabel(p.kunde_id) || "").toLowerCase().includes(q)
-      )
+      .map(p => {
+        const titel = p.titel || "";
+        const beschreibung = p.beschreibung || "";
+        const notizen = p.notizen || "";
+        const kLabel = kundeLabel(p.kunde_id) || "";
+        let matchedIn = null;
+        if (titel.toLowerCase().includes(q)) matchedIn = "Titel";
+        else if (kLabel.toLowerCase().includes(q)) matchedIn = "Kunde";
+        else if (beschreibung.toLowerCase().includes(q)) matchedIn = "Beschreibung";
+        else if (notizen.toLowerCase().includes(q)) matchedIn = "Notizen";
+        return { p, matchedIn, kLabel };
+      })
+      .filter(x => x.matchedIn)
       .slice(0, 8)
-      .map(p => ({ id: p.id, titel: p.titel || "(ohne Titel)", kunde_id: p.kunde_id, kundeLabel: kundeLabel(p.kunde_id) }));
+      .map(x => ({ id: x.p.id, titel: x.p.titel || "(ohne Titel)", kunde_id: x.p.kunde_id, kundeLabel: x.kLabel, matchedIn: x.matchedIn }));
     return { kunden, projekte: projekteHits };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, kundenMap, projekte]);
@@ -196,6 +212,9 @@ const ProjekteListe = () => {
                       >
                         <UserIcon className="w-4 h-4 text-blue-700 flex-shrink-0" />
                         <span>{k.label}</span>
+                        {k.matchedIn && k.matchedIn !== "Name" && (
+                          <span className="ml-auto text-xs text-muted-foreground italic">gefunden in: {k.matchedIn}</span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -212,7 +231,10 @@ const ProjekteListe = () => {
                       >
                         <Folder className="w-4 h-4 text-emerald-700 flex-shrink-0" />
                         <span>{p.titel}</span>
-                        {p.kundeLabel && <span className="text-xs text-muted-foreground ml-auto">({p.kundeLabel})</span>}
+                        {p.kundeLabel && <span className="text-xs text-muted-foreground">({p.kundeLabel})</span>}
+                        {p.matchedIn && p.matchedIn !== "Titel" && (
+                          <span className="ml-auto text-xs text-muted-foreground italic">gefunden in: {p.matchedIn}</span>
+                        )}
                       </button>
                     ))}
                   </div>
