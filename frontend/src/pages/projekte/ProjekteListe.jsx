@@ -44,7 +44,7 @@ const ProjekteListe = () => {
       ]);
       setProjekte(pRes.data);
       const km = {};
-      (kRes.data || []).forEach(k => { km[k.id] = { vorname: k.vorname, nachname: k.nachname, firma: k.firma }; });
+      (kRes.data || []).forEach(k => { km[k.id] = { vorname: k.vorname, nachname: k.nachname, firma: k.firma, anliegen: k.anliegen || "", nachricht: k.nachricht || "" }; });
       setKundenMap(km);
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
@@ -77,12 +77,14 @@ const ProjekteListe = () => {
     const q = searchQuery.trim().toLowerCase();
     if (q.length < 1) return { kunden: [], projekte: [] };
     const kunden = Object.entries(kundenMap)
-      .map(([id, k]) => ({ id, label: k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id }))
-      .filter(k => k.label.toLowerCase().includes(q))
+      .map(([id, k]) => ({ id, label: k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id, anliegen: k.anliegen || "", nachricht: k.nachricht || "" }))
+      .filter(k => k.label.toLowerCase().includes(q) || k.anliegen.toLowerCase().includes(q) || k.nachricht.toLowerCase().includes(q))
       .slice(0, 8);
     const projekteHits = projekte
       .filter(p =>
         (p.titel || "").toLowerCase().includes(q) ||
+        (p.beschreibung || "").toLowerCase().includes(q) ||
+        (p.notizen || "").toLowerCase().includes(q) ||
         (kundeLabel(p.kunde_id) || "").toLowerCase().includes(q)
       )
       .slice(0, 8)

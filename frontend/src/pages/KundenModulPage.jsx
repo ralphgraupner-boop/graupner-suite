@@ -274,7 +274,8 @@ const KundenModulPage = () => {
     const searchMatch = (((c.vorname || c.nachname) ? `${c.vorname || ''} ${c.nachname || ''}`.trim() : (c.name || '')).toLowerCase().includes(search.toLowerCase()) ||
       (c.email || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.firma || "").toLowerCase().includes(search.toLowerCase()) ||
-      (c.nachricht || "").toLowerCase().includes(search.toLowerCase()));
+      (c.nachricht || "").toLowerCase().includes(search.toLowerCase()) ||
+      (c.anliegen || "").toLowerCase().includes(search.toLowerCase()));
     const catMatch = !categoryFilter || (c.categories || []).includes(categoryFilter);
     // Filter-Logik mit zwei Sonderkategorien:
     //   "aktiv"  -> alle AUSSER Abgeschlossen/Archiv (neuer Standard)
