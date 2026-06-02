@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail, Link as LinkIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -123,6 +123,8 @@ const KundenModulPage = () => {
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
   const navigate = useNavigate();
   const location = useLocation();
+  // Lock gegen StrictMode-Doppel-Trigger: gleiche editId nicht zweimal verarbeiten.
+  const handledEditRef = useRef(null);
 
   // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
   // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
@@ -137,7 +139,8 @@ const KundenModulPage = () => {
     if (f) setStatusFilter(f);
     const editId = params.get("edit");
     const returnTo = params.get("returnTo");
-    if (editId && kunden.length > 0) {
+    if (editId && kunden.length > 0 && handledEditRef.current !== editId) {
+      handledEditRef.current = editId;
       const k = kunden.find((x) => x.id === editId);
       if (k) {
         // Status auf "alle" stellen, damit der neue Kunde sicher sichtbar ist
