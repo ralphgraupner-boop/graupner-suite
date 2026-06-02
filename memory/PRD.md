@@ -5,6 +5,42 @@
 
 ## 📌 Letzte Änderungen (02.06.2026, Hamburger Zeit)
 
+### Abend (~19:20 MEZ): **Google-Calendar-Add-Event-Link (1 Klick = im Kalender)**
+
+**Was gebaut:**
+- `module_kalender_export/invite_service.py`: Neue Helper `make_google_calendar_link(termin, kunde)` baut `calendar.google.com/calendar/render?action=TEMPLATE&…`
+- `baue_termin_mail`: Termin-Mail hat jetzt prominent oben einen **grünen Knopf „🗓️ In Google Kalender eintragen"**. ICS-Anhang + Gmail-1-Tap bleiben als Fallback.
+- `frontend/src/lib/gcalLink.js` (NEU): Frontend-Helper, spiegelt Backend-Logik 1:1
+- `TerminePanel.jsx`: Pro Termin ein 🗓️-Button neben den anderen Aktionen → öffnet Google in neuem Tab mit allen Daten vorbefüllt
+- Echter Smoketest: Mail an Thorsten mit BCC an Ralph, Knopf + JSON-LD + ICS-Anhang alle drin.
+
+### Spät-Nachmittag (~18:35 MEZ): **Projekt-Bezug Pflicht für Aufgaben/Termine mit Kunde**
+
+**Regel:** Wenn `kunde_id` gesetzt ist, dann auch `projekt_id`. Reminder ohne Kunde bleiben frei (Ralphs Wahl „a").
+
+**Gebaut:**
+- Backend `module_aufgaben/routes.py` + `module_termine/routes.py`: POST/PUT lehnen 400 ab wenn kunde_id ohne projekt_id
+- KI-Tools (`module_assistent/ai_tools.py`): `_hole_oder_lege_sammelprojekt_an()` — wenn KI Aufgabe/Termin mit nur kunde_id bekommt, legt automatisch (oder findet) Sammelprojekt **„Allgemein / Büro"** beim Kunden an
+- Neuer Endpoint `POST /api/admin/migrate-projekte-bezug?dry_run=true|false` (`routes/admin_migrations.py`, admin-only)
+- Preview-Migration gelaufen: 4 Sammelprojekte angelegt, 4 Aufgaben + 2 Termine migriert
+- **WICHTIG für Live-Deploy:** Migration muss auf Live separat getriggert werden (`POST /api/admin/migrate-projekte-bezug?dry_run=true` zur Vorschau, dann `dry_run=false`). Vorher manuell ein Backup ziehen.
+
+### Nachmittag (~17:50 MEZ): **„Kunde bearbeiten" aus Werkbank — Modal mit Rückkehr**
+
+- `ProjektWerkbank.jsx` Z. 102: navigiert zu `/module/kunden?edit=${kunde.id}&returnTo=...` (statt nur zur Kundenliste)
+- `KundenModulPage.jsx`: liest `returnTo`, gibt es an `openEditFor` durch; nach Modal-Close → `navigate(returnTo)`. Bei echtem Popup-Fenster (User-Pref) sofortige Rückkehr im Hauptfenster.
+- `useRef`-Lock gegen StrictMode-Doppel-Trigger (verhinderte doppeltes Modal-Öffnen in Dev)
+
+### Nachmittag (~17:21 MEZ): **Erweiterte Suche in Kunden + Projekten**
+
+- Kunden-Suche durchsucht jetzt zusätzlich `anliegen`
+- Projekt-Suche durchsucht jetzt zusätzlich `beschreibung`, `notizen` + Kunden-Treffer auch in `anliegen`/`nachricht`
+- Pro Treffer: Badge „gefunden in: Anliegen / Nachricht / Beschreibung / Notizen" wenn Match nicht im Namen war
+
+### Nachmittag (~15:38 MEZ): **Projekt-Werkbank von der Projekte-Seite aus erreichbar**
+
+- `pages/projekte/ProjekteListe.jsx`: Klick auf Kunden-Treffer in der Suche → `navigate('/module/projekte/werkbank/${k.id}')`
+
 ### Mittag (~13:05 MEZ): **Preview-Schutz fuer IMAP + Kunden-Diff-Werkzeug**
 
 **Was geschehen ist:**
