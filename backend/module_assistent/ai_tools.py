@@ -118,16 +118,27 @@ async def system_prompt_de() -> str:
         "Hamburger Zeit liegt 1-2 Stunden voraus, achte bei Termin-Zeiten darauf.\n\n"
         "Verfuegbare Tools:\n" + tool_text + "\n\n"
         + mitarbeiter_block + "\n\n"
-        "WICHTIG fuer 'termin_anlegen': Wenn der Eingabetext einen Mitarbeiter-Namen aus der "
-        "obigen Liste enthaelt (Vorname oder Nachname reicht), setze IMMER 'monteur_username' "
-        "auf den passenden Login aus der Liste. Ohne dieses Feld wird KEINE ICS-Mail versendet.\n\n"
+        "WICHTIG fuer 'termin_anlegen' — IMMER ANWENDEN:\n"
+        "Sobald der Eingabetext irgendeinen Namen, Vornamen, Nachnamen oder Kosenamen "
+        "eines Mitarbeiters aus der obigen Liste enthaelt (Gross-/Kleinschreibung, Komma, "
+        "'fuer X', 'X soll', 'X macht', 'X faehrt hin', 'X kuemmert sich' — egal wie), "
+        "MUSST du 'monteur_username' auf den passenden Login aus der Liste setzen. "
+        "Wenn der Name uneindeutig ist (mehrere Treffer): nimm den mit Rolle 'admin' oder "
+        "'monteur', sonst den ersten. Ohne dieses Feld wird KEINE Mail versendet — "
+        "und der Mitarbeiter sieht den Termin nie auf seinem Handy.\n\n"
         "Beispiele:\n"
         'Eingabe: "Leg eine Aufgabe an: morgen Schmidt anrufen"\n'
         '{"tool":"aufgabe_anlegen","args":{"titel":"Schmidt anrufen","faellig_am":"2026-06-02"},'
         '"antwort":"Hab ich dir eingetragen, Ralph: morgen Schmidt anrufen."}\n\n'
         'Eingabe: "Termin Donnerstag 10 Uhr mit Mueller, Besichtigung, Thorsten macht das"\n'
         '{"tool":"termin_anlegen","args":{"titel":"Besichtigung Mueller","start":"2026-06-04T10:00","typ":"besichtigung","monteur_username":"thorsten.graupner"},'
-        '"antwort":"Termin Donnerstag 10:00 mit Mueller — Thorsten kriegt die Mail."}'
+        '"antwort":"Termin Donnerstag 10:00 mit Mueller — Thorsten kriegt die Mail."}\n\n'
+        'Eingabe: "Termin morgen 11 Uhr fuer Thorsten"\n'
+        '{"tool":"termin_anlegen","args":{"titel":"Termin","start":"2026-06-03T11:00","monteur_username":"thorsten.graupner"},'
+        '"antwort":"Hab ich angelegt, Thorsten kriegt die Mail."}\n\n'
+        'Eingabe: "Termin 5. Juni 10 Uhr bei Schmidt anlegen, Thorsten faehrt hin"\n'
+        '{"tool":"termin_anlegen","args":{"titel":"Termin Schmidt","start":"2026-06-05T10:00","ort":"bei Schmidt","monteur_username":"thorsten.graupner"},'
+        '"antwort":"Termin am 5. Juni 10:00 fuer Thorsten — er kriegt die Mail."}'
     )
 
 
@@ -221,47 +232,33 @@ async def tool_termin_anlegen(args: Dict[str, Any], user: dict) -> Dict[str, Any
     item.pop("_id", None)
     logger.info(f"KI-Tool termin_anlegen: {titel} @ {start}")
 
-    # ICS-Mail an den im Termin zugeordneten Monteur (kein Hardcode)
-    # Empfaenger kommt aus db.users via monteur_username (vorhandene Datenmaske).
-    ics_status = "kein_monteur"
+    # Einladungs-Mail an den im Termin zugeordneten Monteur ueber den gemeinsamen
+    # Service. Beide Wege (KI und manuell) nutzen baue_termin_mail+sende_termin_einladung.
+    # Schema.org/Event JSON-LD in der Mail → Gmail zeigt 1-Tap "Termin hinzufuegen"-Knopf.
+    from module_kalender_export.invite_service import sende_termin_einladung
     monteur_username = item.get("monteur_username", "").strip()
-    if monteur_username:
-        try:
-            from module_kalender_export.ics_generator import build_ics_event
-            from utils import send_email
+    organisator = await db.users.find_one(
+        {"username": (user or {}).get("username", "")},
+        {"_id": 0, "username": 1, "vorname": 1, "nachname": 1, "email": 1},
+    ) or {"username": (user or {}).get("username", "")}
+    mail_result = await sende_termin_einladung(
+        termin=item,
+        monteur_username=monteur_username,
+        organisator=organisator,
+    )
+    # Kompakter Status-String fuer das audit-log (rueckwaertskompatibel mit alten Eintraegen)
+    if mail_result.get("ok"):
+        ics_status = f"versendet:{mail_result.get('empfaenger_email','')}"
+    else:
+        ics_status = mail_result.get("status", "fehler")
 
-            empfaenger = await db.users.find_one(
-                {"username": monteur_username},
-                {"_id": 0, "email": 1, "vorname": 1, "nachname": 1},
-            )
-            empf_email = (empfaenger or {}).get("email", "").strip()
-            if empf_email:
-                ics_text = build_ics_event(item, kunde=None)
-                empf_name = (
-                    f"{(empfaenger or {}).get('vorname','')} {(empfaenger or {}).get('nachname','')}".strip()
-                    or monteur_username
-                )
-                send_email(
-                    to_email=empf_email,
-                    subject=f"Neuer Termin: {titel}",
-                    body_html=(
-                        f"<p>Hallo {empf_name},</p>"
-                        f"<p>Ralph hat per KI-Assistent einen Termin angelegt:</p>"
-                        f"<ul><li><b>{titel}</b></li><li>Start: {start}</li>"
-                        f"<li>Ort: {item['ort'] or '—'}</li></ul>"
-                        f"<p>Die ICS-Datei im Anhang antippen — Termin landet im Kalender.</p>"
-                        f"<p>Gruß,<br/>Graupner Suite</p>"
-                    ),
-                    attachments=[{"filename": "termin.ics", "data": ics_text.encode("utf-8")}],
-                )
-                ics_status = f"versendet:{empf_email}"
-            else:
-                ics_status = f"monteur_ohne_email:{monteur_username}"
-        except Exception as exc:
-            logger.warning(f"ICS-Mail fehlgeschlagen: {exc}")
-            ics_status = f"fehler:{exc.__class__.__name__}"
-
-    return {"ok": True, "termin": item, "ics_mail": ics_status, "direkt_link": f"/module/termine?highlight={item['id']}"}
+    return {
+        "ok": True,
+        "termin": item,
+        "ics_mail": ics_status,
+        "ics_mail_detail": mail_result,
+        "direkt_link": f"/module/termine?highlight={item['id']}",
+    }
 
 
 async def tool_kunde_suchen(args: Dict[str, Any], user: dict) -> Dict[str, Any]:

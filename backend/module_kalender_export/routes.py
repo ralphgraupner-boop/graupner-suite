@@ -189,42 +189,26 @@ async def send_termin(termin_id: str, payload: SendRequest, user=Depends(get_cur
         raise HTTPException(400, "Keine Empfänger ausgewählt oder keine E-Mail-Adressen verfügbar")
 
     organizer_email = sachbearbeiter_email or "noreply@graupner.local"
-    ics_content = build_ics_event(termin, kunde, organizer_email=organizer_email, organizer_name=await _get_user_display(sachbearbeiter))
-    ics_bytes = ics_content.encode("utf-8")
+    organizer_name = await _get_user_display(sachbearbeiter)
 
-    # Body bauen (HTML)
-    when = termin.get("start", "")
-    addr = (termin.get("ort") or _kunde_address(kunde)).strip()
-    maps_url = f"https://www.google.com/maps/dir/?api=1&destination={addr.replace(' ', '+')}" if addr else ""
-    kunde_phone = (kunde or {}).get("phone", "")
+    # Gemeinsamer Mail-Builder mit schema.org/Event JSON-LD → Gmail-1-Tap-Knopf
+    from .invite_service import baue_termin_mail
 
     sent_ok = []
     sent_fail = []
     for r in unique_recipients:
-        body = f"""
-<html><body style='font-family:Arial,sans-serif;max-width:600px'>
-<h2 style='color:#16a34a'>📅 Terminvorschlag</h2>
-<p>Hallo <strong>{r['name']}</strong>,</p>
-<p>folgender Termin ist für dich relevant. Im Anhang findest du eine Kalenderdatei (.ics) – einfach öffnen, dann landet der Termin in deinem Kalender (Google, Outlook, Apple, Thunderbird).</p>
-
-<table style='border-collapse:collapse;margin:16px 0'>
-  <tr><td style='padding:6px;font-weight:bold'>Titel:</td><td style='padding:6px'>{termin.get('titel','')}</td></tr>
-  <tr><td style='padding:6px;font-weight:bold'>Wann:</td><td style='padding:6px'>{when}{(' – ' + termin.get('ende','')) if termin.get('ende') else ''}</td></tr>
-  {f"<tr><td style='padding:6px;font-weight:bold'>Wo:</td><td style='padding:6px'>{addr}{f' (<a href={maps_url}>Route in Google Maps</a>)' if maps_url else ''}</td></tr>" if addr else ''}
-  {f"<tr><td style='padding:6px;font-weight:bold'>Kunde:</td><td style='padding:6px'>{_kunde_name(kunde)}{f' – Tel.: {kunde_phone}' if kunde_phone else ''}</td></tr>" if kunde else ''}
-  {f"<tr><td style='padding:6px;font-weight:bold'>Beschreibung:</td><td style='padding:6px;white-space:pre-wrap'>{termin.get('beschreibung','')}</td></tr>" if termin.get('beschreibung') else ''}
-</table>
-
-<p style='margin-top:24px;color:#666;font-size:12px'>
-Gesendet von Tischlerei R. Graupner – Graupner Suite<br>
-Veranstalter: {await _get_user_display(sachbearbeiter)} ({organizer_email})
-</p>
-</body></html>
-"""
+        # Pro Empfaenger personalisierter Body (Anrede + JSON-LD underName)
+        subject, body, ics_bytes = baue_termin_mail(
+            termin=termin,
+            empfaenger_name=r["name"],
+            organisator_name=organizer_name,
+            organisator_email=organizer_email,
+            kunde=kunde,
+        )
         try:
             send_email(
                 to_email=r["email"],
-                subject=f"📅 Terminvorschlag: {termin.get('titel','')}{(' – ' + when[:16]) if when else ''}",
+                subject=subject,
                 body_html=body,
                 attachments=[{"filename": "termin.ics", "data": ics_bytes}],
             )

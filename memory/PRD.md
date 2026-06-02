@@ -1,7 +1,30 @@
 # PRD — Graupner Suite (Tischlerei-CRM)
 
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
-> Stand: 01.06.2026
+> Stand: 02.06.2026
+
+## 📌 Letzte Änderungen (02.06.2026, Hamburger Zeit)
+
+### Vormittag (~11:25 MEZ): **Termin-Einladung mit Gmail-1-Tap (schema.org/Event)**
+
+**Was geschehen ist:**
+Ralph hat festgestellt, dass die KI-Termine zwar in der DB landen, aber Thorsten praktisch nie eine Mail bekommt — weil GPT in 4 von 5 Fällen `monteur_username` leer ließ. Zusätzlich war die alte ICS-Mail nicht Gmail-1-Tap-fähig (kein schema.org-Markup).
+
+**Was gebaut wurde (Regel 4+13 sauber, kein neues Modul):**
+- **Neuer gemeinsamer Service `module_kalender_export/invite_service.py`** mit zwei Funktionen:
+  - `baue_termin_mail(termin, empfaenger_name, organisator_name, organisator_email, kunde)` → liefert `(subject, body_html, ics_bytes)` mit eingebettetem schema.org/Event JSON-LD → Gmail zeigt automatisch den Knopf „Zum Kalender hinzufügen" oben in der Mail
+  - `sende_termin_einladung(termin, monteur_username, organisator, cc_email)` → löst Empfänger über `db.users` auf, baut Mail, versendet via `send_email` (mit optionalem BCC)
+- **Beide Wege nutzen jetzt denselben Service:**
+  - KI: `tool_termin_anlegen` in `module_assistent/ai_tools.py` ruft `sende_termin_einladung`
+  - Manuell: `POST /termin/{id}/send` in `module_kalender_export/routes.py` ruft `baue_termin_mail` pro Empfänger
+- **KI-Prompt gehärtet** (`system_prompt_de`): 4 statt 2 Beispiele, harte Regel „IMMER monteur_username setzen, sobald irgendein Mitarbeiter-Name im Text vorkommt". Beispiele decken auch „Termin morgen 11 Uhr für Thorsten" und „Thorsten faehrt hin" ab.
+- **Erweiterbare Basis für künftige KI-Befehle:** Konvention festgelegt — pro neuer Aktion eine Service-Funktion in einem `module_X`. Bei ≥3 Aktionen Migration nach `module_aktionen` möglich.
+
+**Tests:** `backend/tests/test_invite_service.py` — **7/7 grün** (schema.org JSON-LD Inhalt, ICS-Pflichtfelder, Empfänger-Auflösung, Fehler-Pfade, gemockter SMTP-Versand).
+
+**Echter Smoketest:** Mail an Thorsten (hhgraupner@gmail.com) mit BCC an Ralph (Ralph.graupner@gmail.com) — Status 'versendet', schema.org-Markup im Body, ICS-Anhang `termin.ics` enthalten.
+
+---
 
 ## 📌 Letzte Änderungen (01.06.2026, Hamburger Zeit)
 
