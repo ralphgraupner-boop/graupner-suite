@@ -552,4 +552,4 @@ Code-Beispiele:    [HTML/JS] [PHP] [curl]   [Doku-Link]
 Bei Fragen zur Integration:
 - **Ralph Graupner** (Tischlerei Graupner)
 - Doku: `/api-docs/public` (nach Login)
-- Test-Sandbox: `https://modul-first-app.preview.emergentagent.com/api/public/contact`
+- Test-Sandbox: `https://tischlerei-suite.preview.emergentagent.com/api/public/contact`

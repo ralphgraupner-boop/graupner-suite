@@ -75,7 +75,7 @@ Letzter Git-Commit-Hash zu Beginn: `7a76265 — Auto-generated changes`
 
 ## 🔑 Test-Zugang Preview
 
-- URL: `https://modul-first-app.preview.emergentagent.com`
+- URL: `https://tischlerei-suite.preview.emergentagent.com`
 - User: `admin-preview` / `HamburgPreview2026!`
 
 ## 🎯 Live-Umgebung

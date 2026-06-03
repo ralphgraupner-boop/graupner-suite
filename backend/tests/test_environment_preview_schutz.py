@@ -17,7 +17,7 @@ def _reset():
 
 def test_detect_preview_url():
     _reset()
-    with patch.dict("os.environ", {"REACT_APP_BACKEND_URL": "https://modul-first-app.preview.emergentagent.com"}, clear=False):
+    with patch.dict("os.environ", {"REACT_APP_BACKEND_URL": "https://tischlerei-suite.preview.emergentagent.com"}, clear=False):
         result = env_mod.detect_env()
         assert result["kind"] == "preview"
         assert env_mod.is_preview() is True
@@ -73,7 +73,7 @@ def test_imap_seen_wird_in_preview_unterdrueckt():
     fake_imap = MagicMock()
 
     # Echtes Verhalten nachstellen — Block aus routes/imap.py:
-    with patch.dict("os.environ", {"REACT_APP_BACKEND_URL": "https://x.preview.emergentagent.com"}, clear=False):
+    with patch.dict("os.environ", {"REACT_APP_BACKEND_URL": "https://tischlerei-suite.preview.emergentagent.com"}, clear=False):
         from utils.environment import is_preview_or_unknown
         eid = b"42"
         if is_preview_or_unknown():
