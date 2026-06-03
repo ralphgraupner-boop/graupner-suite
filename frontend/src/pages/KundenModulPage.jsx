@@ -270,6 +270,17 @@ const KundenModulPage = () => {
     finally { setVcfUploading(false); }
   };
 
+  const handleExport = async () => {
+    try {
+      const res = await api.get("/modules/kunden/export");
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = `kunden_modul_${new Date().toISOString().split("T")[0]}.json`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Exportiert");
+    } catch { toast.error("Fehler"); }
+  };
+
   const statusOrder = { "Neu": 0, "Anfrage": 1, "Interessent": 2, "Kunde": 3, "In Bearbeitung": 4, "Abgeschlossen": 5, "Archiv": 6 };
 
   // kontakt_status hat Vorrang (konsistent mit Dashboard-Backend)
@@ -334,6 +345,9 @@ const KundenModulPage = () => {
         </div>
         {/* Aktionen — Mobile: eigene Zeile, horizontal scrollbar, "Neuer Kunde" prominent */}
         <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap lg:flex-shrink-0">
+          <Button variant="outline" size="sm" onClick={handleExport} className="flex-shrink-0">
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
+          </Button>
           <KundeImportButton onImported={loadKunden} />
           <KundenMultiExportButton selectedIds={Array.from(selectedIds)} totalCount={kunden.length} />
           <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${vcfUploading ? 'bg-muted text-muted-foreground' : 'bg-muted text-foreground hover:bg-muted/80 border border-border'}`} data-testid="btn-vcf-import-kunden-modul">
