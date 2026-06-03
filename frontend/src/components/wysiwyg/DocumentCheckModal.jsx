@@ -25,12 +25,24 @@ const renderDiff = (orig, corr) => {
   return out;
 };
 
-export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, onApplyAll, kontextInfo }) => {
+export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, onApplyAll, kontextInfo, type, lohnanteilEingetragen, onCreateLohnanteilText }) => {
   const [tab, setTab] = useState("rechtschreibung");
   const [results, setResults] = useState(null); // [{id, label, original, corrected, changed}]
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [appliedIds, setAppliedIds] = useState(new Set());
+  const [lohntextAsk, setLohntextAsk] = useState(true);
+  const [lohntextLoading, setLohntextLoading] = useState(false);
+
+  const createLohntext = async () => {
+    setLohntextLoading(true);
+    try {
+      const res = await onCreateLohnanteilText?.();
+      if (res !== false) setLohntextAsk(false);
+    } finally {
+      setLohntextLoading(false);
+    }
+  };
 
   const changedResults = useMemo(() => (results || []).filter((r) => r.changed), [results]);
   const errorCount = (issues || []).filter((i) => i.severity === "error").length;
@@ -178,6 +190,23 @@ export const DocumentCheckModal = ({ isOpen, onClose, fields, issues, onApply, o
 
           {tab === "plausibilitaet" && (
             <div data-testid="docchk-pane-pl">
+              {type === "invoice" && lohnanteilEingetragen && lohntextAsk && (
+                <div className="border rounded-lg p-3 mb-3 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800" data-testid="lohntext-frage">
+                  <p className="text-sm font-medium mb-2">Soll ich den Lohnanteiltext erstellen?</p>
+                  <div className="flex items-center gap-2">
+                    <button onClick={createLohntext} disabled={lohntextLoading}
+                      className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                      data-testid="btn-lohntext-ja">
+                      {lohntextLoading ? <Loader2 className="w-4 h-4 inline animate-spin" /> : "Ja"}
+                    </button>
+                    <button onClick={() => setLohntextAsk(false)} disabled={lohntextLoading}
+                      className="text-sm px-3 py-1.5 rounded-md border hover:bg-muted"
+                      data-testid="btn-lohntext-nein">
+                      Nein
+                    </button>
+                  </div>
+                </div>
+              )}
               {(issues || []).length === 0 ? (
                 <div className="text-center py-6">
                   <CheckCircle2 className="w-10 h-10 mx-auto text-green-600 mb-2" />

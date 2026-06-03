@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star, X } from "lucide-react";
 import { api, API } from "@/lib/api";
-import { TextTemplateSelect, getAnredeBrief } from "@/components/TextTemplateSelect";
+import { TextTemplateSelect, getAnredeBrief, resolvePlaceholders } from "@/components/TextTemplateSelect";
 
 // Sub-components
 import { EditorToolbar } from "@/components/wysiwyg/EditorToolbar";
@@ -1170,9 +1170,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             kontext: "allgemein",
           })).filter(f => f.text.trim()),
         ];
+        const lohnanteilLeer = !(effectiveLohnanteil > 0);
         const issues = validateDocument({
           customer, betreff, positions, type,
           dueDays, anzahlungProzent: depositAmount, abschlag: discount, mwstSatz: vatRate,
+          lohnanteilLeer,
         });
         const applyOne = (r) => {
           if (r.id === "betreff") setBetreff(r.corrected);
@@ -1182,6 +1184,21 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           else if (r.id.startsWith("position-")) {
             const idx = parseInt(r.id.split("-")[1], 10);
             updatePosition(idx, "description", r.corrected);
+          }
+        };
+        const createLohnanteilText = async () => {
+          try {
+            const res = await api.get("/modules/textvorlagen/data", { params: { doc_type: "allgemein", text_type: "bemerkung" } });
+            const tpl = (res.data || []).find(t => /35a|lohnanteil/i.test(t.title || ""));
+            if (!tpl) { toast.error("Keine §35a-Textvorlage gefunden"); return false; }
+            const lohnanteilData = { netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate };
+            const text = resolvePlaceholders(tpl.content, customer, settings, docNumber, lohnanteilData);
+            setSchlusstext(prev => (prev && prev.trim() ? prev.trimEnd() + "\n\n" : "") + text);
+            toast.success("Lohnanteiltext in Schlusstext eingefügt");
+            return true;
+          } catch {
+            toast.error("Fehler beim Laden der Lohnanteil-Textvorlage");
+            return false;
           }
         };
         const kontextInfo = [
@@ -1196,6 +1213,9 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             fields={docFields}
             issues={issues}
             kontextInfo={kontextInfo}
+            type={type}
+            lohnanteilEingetragen={effectiveLohnanteil > 0}
+            onCreateLohnanteilText={createLohnanteilText}
             onApply={applyOne}
             onApplyAll={(items) => items.forEach(applyOne)}
           />

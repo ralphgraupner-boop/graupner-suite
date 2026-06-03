@@ -7,8 +7,13 @@
  *   field:    Anzeigename des Feldes
  *   message:  Klartext-Hinweis
  */
-export const validateDocument = ({ customer, betreff, positions, type, dueDays, anzahlungProzent, abschlag, mwstSatz }) => {
+export const validateDocument = ({ customer, betreff, positions, type, dueDays, anzahlungProzent, abschlag, mwstSatz, lohnanteilLeer }) => {
   const issues = [];
+
+  // Lohnanteil-Pflichtpruefung (nur Rechnung): bei leerem Lohnanteil stoppt die Pruefung hier
+  if (type === "invoice" && lohnanteilLeer) {
+    return [{ severity: "error", field: "Lohnanteil", message: "Sie haben die Lohnkosten noch nicht eingetragen — bitte eintragen" }];
+  }
 
   // Kunde
   if (!customer || (!customer.name && !customer.nachname)) {
