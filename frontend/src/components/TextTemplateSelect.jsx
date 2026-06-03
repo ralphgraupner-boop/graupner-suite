@@ -16,6 +16,9 @@ const PLACEHOLDERS = [
   { alias: "{lohnanteil_mwst}", desc: "MwSt auf Lohnanteil" },
   { alias: "{lohnanteil_brutto}", desc: "Lohnanteil brutto" },
   { alias: "{mwst_satz}", desc: "MwSt-Satz (z.B. 19,00%)" },
+  { alias: "{bearbeiter}", desc: "Eingeloggter Benutzer" },
+  { alias: "{zahlbar_bis}", desc: "Zahlungsziel (heute + Zahlungsfrist)" },
+  { alias: "{anzahlung}", desc: "Anzahlungsbetrag" },
 ];
 
 const getAnredeBrief = (customer) => {
@@ -35,11 +38,29 @@ const getAnredeBrief = (customer) => {
   }
 };
 
-const resolvePlaceholders = (text, customer, settings, docNumber, lohnanteilData) => {
+const resolvePlaceholders = (text, customer, settings, docNumber, lohnanteilData, docContext) => {
   if (!text) return "";
   const now = new Date();
   const la = lohnanteilData || {};
+  const ctx = docContext || {};
   const vatRate = la.vatRate || 19;
+  // {bearbeiter} = eingeloggter Benutzer (Login-Name)
+  let bearbeiter = "";
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "null");
+    bearbeiter = u?.username || "";
+  } catch { bearbeiter = ""; }
+  // {zahlbar_bis} = heutiges Datum + Zahlungsfrist (due_days)
+  let zahlbarBis = "";
+  if (ctx.due_days != null && !isNaN(Number(ctx.due_days))) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + Number(ctx.due_days));
+    zahlbarBis = d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+  // {anzahlung} = Anzahlungsbetrag
+  const anzahlung = (ctx.anzahlung != null && !isNaN(Number(ctx.anzahlung)))
+    ? Number(ctx.anzahlung).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "";
   return text
     .replace(/\{anrede_brief\}/g, getAnredeBrief(customer))
     .replace(/\{kunde_name\}/g, customer?.name || "")
@@ -55,10 +76,13 @@ const resolvePlaceholders = (text, customer, settings, docNumber, lohnanteilData
     .replace(/\{lohn_mwst\}/g, (la.mwst || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
     .replace(/\{lohnanteil_brutto\}/g, (la.brutto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
     .replace(/\{lohn_brutto\}/g, (la.brutto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-    .replace(/\{mwst_satz\}/g, vatRate.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%");
+    .replace(/\{mwst_satz\}/g, vatRate.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%")
+    .replace(/\{bearbeiter\}/g, bearbeiter)
+    .replace(/\{zahlbar_bis\}/g, zahlbarBis)
+    .replace(/\{anzahlung\}/g, anzahlung);
 };
 
-const TextTemplateSelect = ({ docType, textType, value, onChange, customer, settings, docNumber, lohnanteilData }) => {
+const TextTemplateSelect = ({ docType, textType, value, onChange, customer, settings, docNumber, lohnanteilData, docContext }) => {
   const [templates, setTemplates] = useState([]);
   const [open, setOpen] = useState(false);
   const [fromTemplate, setFromTemplate] = useState(false);
