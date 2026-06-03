@@ -99,7 +99,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
   };
 
   const handleSelect = (template) => {
-    const resolved = resolvePlaceholders(template.content, customer, settings, docNumber, lohnanteilData);
+    const resolved = resolvePlaceholders(template.content, customer, settings, docNumber, lohnanteilData, docContext);
     onChange(resolved);
     setFromTemplate(true);
     setShowSavePrompt(false);
@@ -111,7 +111,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
     setFromTemplate(false);
     // Show save prompt when user types something new and it's not empty
     if (newValue.trim().length > 3) {
-      const isExisting = templates.some(t => t.content === newValue || resolvePlaceholders(t.content, customer, settings, docNumber, lohnanteilData) === newValue);
+      const isExisting = templates.some(t => t.content === newValue || resolvePlaceholders(t.content, customer, settings, docNumber, lohnanteilData, docContext) === newValue);
       setShowSavePrompt(!isExisting);
     } else {
       setShowSavePrompt(false);
@@ -181,7 +181,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
           onChange={(e) => handleChange(e.target.value)}
           onBlur={() => {
             if (value?.trim() && !fromTemplate) {
-              const isExisting = templates.some(t => t.content === value || resolvePlaceholders(t.content, customer, settings, docNumber, lohnanteilData) === value);
+              const isExisting = templates.some(t => t.content === value || resolvePlaceholders(t.content, customer, settings, docNumber, lohnanteilData, docContext) === value);
               if (!isExisting) setShowSavePrompt(true);
             }
           }}
@@ -255,7 +255,7 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
   allTemplates.forEach(t => { textTypeCounts[t.text_type] = (textTypeCounts[t.text_type] || 0) + 1; });
 
   const selectedTemplate = allTemplates.find(t => t.id === selectedId);
-  const resolvedPreview = selectedTemplate ? resolvePlaceholders(selectedTemplate.content, customer, settings, docNumber, lohnanteilData) : "";
+  const resolvedPreview = selectedTemplate ? resolvePlaceholders(selectedTemplate.content, customer, settings, docNumber, lohnanteilData, docContext) : "";
 
   const handleCreate = async () => {
     if (!newForm.title?.trim() || !newForm.content?.trim()) { toast.error("Titel und Inhalt erforderlich"); return; }

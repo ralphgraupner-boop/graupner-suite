@@ -873,7 +873,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     testId="btn-korrektur-betreff"
                   />
                 </div>
-                <TextTemplateSelect docType={docTypeMap[type]} textType="betreff" value={betreff} onChange={setBetreff} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="betreff" value={betreff} onChange={setBetreff} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} docContext={{ due_days: dueDays != null ? Number(dueDays) : undefined, anzahlung: depositAmount }} />
               </div>
 
               {/* Vortext */}
@@ -925,7 +925,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     testId="btn-korrektur-vortext"
                   />
                 </div>
-                <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={setVortext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={setVortext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} docContext={{ due_days: dueDays != null ? Number(dueDays) : undefined, anzahlung: depositAmount }} />
               </div>
 
               <PositionsTable
@@ -965,7 +965,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     testId="btn-korrektur-schlusstext"
                   />
                 </div>
-                <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={setSchlusstext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={setSchlusstext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} docContext={{ due_days: dueDays != null ? Number(dueDays) : undefined, anzahlung: depositAmount }} />
               </div>
 
               {/* Footer (3-spaltig wie PDF: Firma+Inhaber+Adresse · Kontakt+St.-Nr. · Bank) */}
