@@ -309,7 +309,16 @@ def _draw_lohnanteil(c, width, inv, y):
     """Lohnanteil § 35a EStG - falls aktiv."""
     if not inv.get("show_lohnanteil"):
         return y
-    lohn = inv.get("lohnanteil_custom")
+    # Robustes Parsen: das Feld kommt aus dem Frontend mal als float, mal als
+    # String mit deutschem Komma ("123,45"), mal leer ("") oder None.
+    # Bei Parse-Fehler oder None: Default 60 % vom Netto-nach-Rabatt.
+    raw = inv.get("lohnanteil_custom")
+    lohn = None
+    if raw is not None and str(raw).strip() != "":
+        try:
+            lohn = float(str(raw).replace(",", ".").strip())
+        except (ValueError, TypeError):
+            lohn = None
     if lohn is None:
         # 60% des Nettos als Default
         lohn = (inv.get("net_after_discount") or 0) * 0.6
