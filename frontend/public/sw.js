@@ -1,4 +1,4 @@
-const CACHE_NAME = 'graupner-suite-v3';
+const CACHE_NAME = 'graupner-suite-v4';
 const OFFLINE_URL = '/offline.html';
 
 // Assets die immer gecacht werden sollen
@@ -129,6 +129,7 @@ self.addEventListener('push', (event) => {
     }
   }
   const hasEntity = !!(data.entity_type && data.entity_id);
+  const isWolke = data.entity_type === 'wolke';
   const options = {
     body: data.body || 'Neue Nachricht',
     icon: '/icon-192.png',
@@ -143,10 +144,14 @@ self.addEventListener('push', (event) => {
       entity_id: data.entity_id || null,
       push_token: data.push_token || null,
     },
-    actions: hasEntity ? [
+    // Wolke: 1-Tap „Erhalten"-Bestaetigung statt „Snooze".
+    actions: hasEntity ? (isWolke ? [
+      { action: 'erhalten', title: '📬 Erhalten' },
+      { action: 'open', title: '📂 Öffnen' },
+    ] : [
       { action: 'open', title: '📂 Öffnen' },
       { action: 'snooze', title: '⏰ Später' },
-    ] : [],
+    ]) : [],
   };
   event.waitUntil(
     self.registration.showNotification(data.title || 'Graupner Suite', options)
@@ -156,6 +161,37 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   const d = event.notification.data || {};
   const action = event.action;
+
+  if (action === 'erhalten' && d.entity_type === 'wolke' && d.entity_id && d.push_token) {
+    // Quick-Action: Wolke ohne App-Öffnen als 'erhalten' bestaetigen
+    event.notification.close();
+    event.waitUntil(
+      fetch('/api/push/quick-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          push_token: d.push_token,
+          entity_type: 'wolke',
+          entity_id: d.entity_id,
+          action: 'erhalten',
+        }),
+      })
+        .then(() => self.registration.showNotification('📬 Erhalten bestätigt', {
+          body: 'Absender sieht jetzt, dass die Wolke angekommen ist.',
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'graupner-wolke-erh-' + Date.now(),
+          requireInteraction: false,
+        }))
+        .catch(() => self.registration.showNotification('⚠ Fehler', {
+          body: 'Bestätigung fehlgeschlagen. Bitte App öffnen.',
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'graupner-err-' + Date.now(),
+        }))
+    );
+    return;
+  }
 
   if (action === 'done' && d.entity_type && d.entity_id && d.push_token) {
     // Quick-Action: ohne UI als erledigt markieren

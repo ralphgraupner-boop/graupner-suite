@@ -271,10 +271,23 @@ export const WolkePopover = () => {
     api.get("/module-wolke/mitarbeiter").then(r => setMitarbeiter(r.data || [])).catch(() => {});
   }, []);
 
-  // Beim Öffnen: Listen laden
+  // Beim Öffnen: Listen laden + alle 10 s pollen, damit Absender Bestätigungen live sieht.
   useEffect(() => {
-    if (open) { reloadListen(); }
+    if (!open) return;
+    reloadListen();
+    const t = setInterval(reloadListen, 10000);
+    return () => clearInterval(t);
   }, [open, reloadListen]);
+
+  const markErhalten = async (id) => {
+    try {
+      await api.patch(`/module-wolke/${id}/erhalten`);
+      toast.success("Erhalten bestätigt");
+      await Promise.all([reloadListen(), reloadCount()]);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Konnte nicht bestätigt werden");
+    }
+  };
 
   const markErledigt = async (id) => {
     try {
@@ -368,12 +381,12 @@ export const WolkePopover = () => {
               {tab === "erhalten" && (
                 erhalten.length === 0
                   ? <div className="text-center text-sm text-muted-foreground py-8">Keine Wolken erhalten</div>
-                  : erhalten.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="erhalten" onErledigt={markErledigt} onDelete={del} />)
+                  : erhalten.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="erhalten" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} />)
               )}
               {tab === "gesendet" && (
                 gesendet.length === 0
                   ? <div className="text-center text-sm text-muted-foreground py-8">Keine Wolken gesendet</div>
-                  : gesendet.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="gesendet" onErledigt={markErledigt} onDelete={del} />)
+                  : gesendet.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="gesendet" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} />)
               )}
               {tab === "neu" && (
                 <WolkeNeuForm
