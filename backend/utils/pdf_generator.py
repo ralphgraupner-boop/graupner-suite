@@ -953,6 +953,12 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     page_num += 1
                     _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                     y_pos = height - 3.5 * cm
+                # Schriftgroessen aus den User-Einstellungen ableiten:
+                # body_font_size = Lesefont der Schlusstexte/Vortexte (siehe oben aus settings.pdf_font_size).
+                # Headline etwas groesser/bold, Body-Text 0.5pt kleiner als Body — bewusst dezent, damit der Hinweis nicht den Schlusstext dominiert.
+                hinweis_body_size = max(7.5, body_font_size - 1)
+                hinweis_head_size = body_font_size
+                hinweis_line_h = body_line_height
                 for raw_line in hinweis.split("\n"):
                     line = raw_line.rstrip()
                     if not line:
@@ -960,12 +966,12 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                         continue
                     is_headline = line.endswith(":")
                     if is_headline:
-                        c.setFont("Helvetica-Bold", 9)
+                        c.setFont("Helvetica-Bold", hinweis_head_size)
                         c.setFillColor(HexColor("#003399"))
                     else:
-                        c.setFont("Helvetica", 8.5)
+                        c.setFont("Helvetica", hinweis_body_size)
                         c.setFillColor(text_color)
-                    for wl in _wrap_text(c, line, "Helvetica-Bold" if is_headline else "Helvetica", 9 if is_headline else 8.5, width - 4 * cm):
+                    for wl in _wrap_text(c, line, "Helvetica-Bold" if is_headline else "Helvetica", hinweis_head_size if is_headline else hinweis_body_size, width - 4 * cm):
                         if y_pos < footer_y_limit:
                             _draw_footer(c, width, settings, page_num)
                             c.showPage()
@@ -973,8 +979,8 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                             _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
                             y_pos = height - 3.5 * cm
                         c.drawString(2 * cm, y_pos, wl)
-                        y_pos -= 0.42 * cm
-                y_pos -= 0.3 * cm
+                        y_pos -= hinweis_line_h * cm
+                y_pos -= 0.2 * cm
 
     # === Schlusstext ===
     schlusstext = data.get("schlusstext", "")

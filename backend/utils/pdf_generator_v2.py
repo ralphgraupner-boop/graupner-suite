@@ -332,39 +332,43 @@ def _draw_lohnanteil(c, width, inv, y):
     from module_textvorlagen.lohnanteil_helper import get_lohnanteil_text_sync
     text = get_lohnanteil_text_sync(lohn, vat_rate)
 
+    # Schriftgroessen aus den User-Einstellungen ableiten (nicht hardcoded).
+    # Settings werden ueber das inv-dict an den V2-Generator gereicht (key "_settings"),
+    # Fallback auf 'normal' (10pt) wenn nicht gesetzt.
+    settings = inv.get("_settings") or {}
+    _font_map = {"klein": 9, "normal": 10, "gross": 11, "sehr_gross": 12}
+    body_font_size = _font_map.get(str(settings.get("pdf_font_size", "normal")).lower(), 10)
+    hinweis_body_size = max(7.5, body_font_size - 1)
+    hinweis_head_size = body_font_size
+    hinweis_line_h = 0.35 + (body_font_size - 9) * 0.04
+
     y -= 0.3 * cm
-    c.setFont("Helvetica", 8.5)
+    c.setFont("Helvetica", hinweis_body_size)
     c.setFillColor(SCHWARZ)
-    # Pro Zeile aus der Vorlage einen drawString; lange Zeilen werden bei ~95 Zeichen
-    # auf max. zwei Druckzeilen umgebrochen (kein Wort-Wrap noetig, der Wortlaut
-    # ist auf eine PDF-Breite ausgelegt).
     for raw_line in text.split("\n"):
         line = raw_line.rstrip()
         if not line:
             y -= 0.25 * cm
             continue
-        # Headline-Erkennung: erste Zeile mit ":" wird bold/blau gerendert
         is_headline = line.endswith(":")
         if is_headline:
-            c.setFont("Helvetica-Bold", 9)
+            c.setFont("Helvetica-Bold", hinweis_head_size)
             c.setFillColor(KOENIGSBLAU)
         else:
-            c.setFont("Helvetica", 8.5)
+            c.setFont("Helvetica", hinweis_body_size)
             c.setFillColor(SCHWARZ)
-        # Simpler Zeilenumbruch bei zu langen Zeilen (~95 Zeichen)
         max_chars = 95
         if len(line) <= max_chars:
             c.drawString(2 * cm, y, line)
-            y -= 0.42 * cm
+            y -= hinweis_line_h * cm
         else:
-            # An letztem Leerzeichen vor max_chars splitten
             split_at = line.rfind(" ", 0, max_chars)
             if split_at < 0:
                 split_at = max_chars
             c.drawString(2 * cm, y, line[:split_at])
-            y -= 0.4 * cm
+            y -= hinweis_line_h * cm
             c.drawString(2 * cm, y, line[split_at:].lstrip())
-            y -= 0.42 * cm
+            y -= hinweis_line_h * cm
     y -= 0.2 * cm
     return y
 
