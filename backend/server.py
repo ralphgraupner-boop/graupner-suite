@@ -187,6 +187,12 @@ async def startup_event():
         await auto_sync_kontakt_status_on_startup()
     except Exception as e:
         logger.warning(f"Auto-Sync kontakt_status import: {e}")
+    # §35a Lohnanteil-Textvorlage seeden (idempotent)
+    try:
+        from module_textvorlagen.lohnanteil_helper import ensure_lohnanteil_template_seeded
+        await ensure_lohnanteil_template_seeded()
+    except Exception as e:
+        logger.warning(f"Lohnanteil-Seed import: {e}")
     # Portal-v2-Backup: taeglicher Auto-Snapshot (Background-Task)
     try:
         start_auto_backup_task()

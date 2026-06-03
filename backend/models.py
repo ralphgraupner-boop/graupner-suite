@@ -251,7 +251,7 @@ class Quote(BaseModel):
     valid_until: str = ""
     followup_sent: bool = False
     show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    lohnanteil_custom: Optional[float] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class QuoteCreate(BaseModel):
@@ -265,7 +265,7 @@ class QuoteCreate(BaseModel):
     discount_type: str = "percent"
     vat_rate: float = 19
     show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    lohnanteil_custom: Optional[float] = None
 
 class Order(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -288,7 +288,7 @@ class Order(BaseModel):
     status: str = "Offen"
     is_template: bool = False
     show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    lohnanteil_custom: Optional[float] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Invoice(BaseModel):
@@ -322,7 +322,7 @@ class Invoice(BaseModel):
     dunning_history: List[dict] = []
     is_template: bool = False
     show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    lohnanteil_custom: Optional[float] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class InvoiceCreate(BaseModel):
@@ -339,7 +339,7 @@ class InvoiceCreate(BaseModel):
     deposit_amount: float = 0
     due_days: Optional[int] = None  # None = aus settings.default_due_days übernehmen
     show_lohnanteil: bool = False
-    lohnanteil_custom: str = ""
+    lohnanteil_custom: Optional[float] = None
 
 
 class CompanySettings(BaseModel):
@@ -449,7 +449,7 @@ class QuoteUpdate(BaseModel):
     status: Optional[str] = None
     custom_total: Optional[float] = None
     show_lohnanteil: Optional[bool] = None
-    lohnanteil_custom: Optional[str] = None
+    lohnanteil_custom: Optional[float] = None
 
 class OrderUpdate(BaseModel):
     customer_id: Optional[str] = None
@@ -464,7 +464,7 @@ class OrderUpdate(BaseModel):
     status: Optional[str] = None
     custom_total: Optional[float] = None
     show_lohnanteil: Optional[bool] = None
-    lohnanteil_custom: Optional[str] = None
+    lohnanteil_custom: Optional[float] = None
 
 class InvoiceUpdate(BaseModel):
     customer_id: Optional[str] = None
@@ -480,7 +480,7 @@ class InvoiceUpdate(BaseModel):
     deposit_amount: Optional[float] = None
     custom_total: Optional[float] = None
     show_lohnanteil: Optional[bool] = None
-    lohnanteil_custom: Optional[str] = None
+    lohnanteil_custom: Optional[float] = None
     due_days: Optional[int] = None  # wenn gesetzt: due_date wird neu berechnet
 
 class PushSubscription(BaseModel):

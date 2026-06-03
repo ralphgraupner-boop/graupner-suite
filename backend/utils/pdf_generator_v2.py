@@ -306,7 +306,10 @@ def _draw_totals(c, width, inv, y):
 
 
 def _draw_lohnanteil(c, width, inv, y):
-    """Lohnanteil § 35a EStG - falls aktiv."""
+    """Lohnanteil § 35a EStG - falls aktiv.
+    Wortlaut kommt aus module_textvorlagen (allgemein/bemerkung/§35a Lohnanteil),
+    damit Ralph den Text in Einstellungen → Textvorlagen pflegen kann.
+    Platzhalter: {lohn_netto}, {lohn_mwst}, {lohn_brutto}, {mwst_satz}."""
     if not inv.get("show_lohnanteil"):
         return y
     # Robustes Parsen: das Feld kommt aus dem Frontend mal als float, mal als
@@ -324,19 +327,45 @@ def _draw_lohnanteil(c, width, inv, y):
         lohn = (inv.get("net_after_discount") or 0) * 0.6
     if not lohn or lohn <= 0:
         return y
-    lohn_mwst = lohn * (inv.get("vat_rate", 19) / 100)
-    lohn_brutto = lohn + lohn_mwst
+    vat_rate = inv.get("vat_rate", 19) or 19
+    # Text aus Vorlage rendern (sync, weil reportlab nicht im async-Context laeuft)
+    from module_textvorlagen.lohnanteil_helper import get_lohnanteil_text_sync
+    text = get_lohnanteil_text_sync(lohn, vat_rate)
+
     y -= 0.3 * cm
-    c.setFont("Helvetica-Bold", 9)
-    c.setFillColor(KOENIGSBLAU)
-    c.drawString(2 * cm, y, "Hinweis § 35a EStG (Steuerbonus Handwerkerleistung):")
-    y -= 0.45 * cm
     c.setFont("Helvetica", 8.5)
     c.setFillColor(SCHWARZ)
-    c.drawString(2 * cm, y, f"Enthaltene Arbeits-/Fahrtkosten netto: {_fmt_eur(lohn)} · MwSt: {_fmt_eur(lohn_mwst)} · brutto: {_fmt_eur(lohn_brutto)}")
-    y -= 0.4 * cm
-    c.drawString(2 * cm, y, "20 % der Arbeitskosten sind als Steuerermäßigung nach § 35a EStG abzugsfähig (max. 1.200 € pro Jahr).")
-    y -= 0.5 * cm
+    # Pro Zeile aus der Vorlage einen drawString; lange Zeilen werden bei ~95 Zeichen
+    # auf max. zwei Druckzeilen umgebrochen (kein Wort-Wrap noetig, der Wortlaut
+    # ist auf eine PDF-Breite ausgelegt).
+    for raw_line in text.split("\n"):
+        line = raw_line.rstrip()
+        if not line:
+            y -= 0.25 * cm
+            continue
+        # Headline-Erkennung: erste Zeile mit ":" wird bold/blau gerendert
+        is_headline = line.endswith(":")
+        if is_headline:
+            c.setFont("Helvetica-Bold", 9)
+            c.setFillColor(KOENIGSBLAU)
+        else:
+            c.setFont("Helvetica", 8.5)
+            c.setFillColor(SCHWARZ)
+        # Simpler Zeilenumbruch bei zu langen Zeilen (~95 Zeichen)
+        max_chars = 95
+        if len(line) <= max_chars:
+            c.drawString(2 * cm, y, line)
+            y -= 0.42 * cm
+        else:
+            # An letztem Leerzeichen vor max_chars splitten
+            split_at = line.rfind(" ", 0, max_chars)
+            if split_at < 0:
+                split_at = max_chars
+            c.drawString(2 * cm, y, line[:split_at])
+            y -= 0.4 * cm
+            c.drawString(2 * cm, y, line[split_at:].lstrip())
+            y -= 0.42 * cm
+    y -= 0.2 * cm
     return y
 
 

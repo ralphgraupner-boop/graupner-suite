@@ -919,6 +919,63 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     c.drawRightString(width - 2 * cm, y_pos, f"{data.get('total_gross', 0):.2f} €")
     y_pos -= 0.8 * cm
 
+    # === §35a Lohnanteil-Hinweis (wenn aktiviert) ===
+    # Wortlaut aus module_textvorlagen (allgemein/bemerkung/§35a Lohnanteil),
+    # damit Ralph den Text in Einstellungen → Textvorlagen pflegen kann.
+    if data.get("show_lohnanteil"):
+        # Robustes Parsen: float / String mit Komma / leer / None
+        raw = data.get("lohnanteil_custom")
+        lohn_netto = None
+        if raw is not None and str(raw).strip() != "":
+            try:
+                lohn_netto = float(str(raw).replace(",", ".").strip())
+            except (ValueError, TypeError):
+                lohn_netto = None
+        if lohn_netto is None:
+            # 60% des Nettos-nach-Rabatt als Default
+            subtotal = data.get("subtotal_net", 0) or 0
+            discount_pct = (data.get("discount", 0) or 0) if data.get("discount_type") == "percent" else 0
+            discount_abs = (data.get("discount", 0) or 0) if data.get("discount_type") != "percent" else 0
+            net_after = subtotal * (1 - discount_pct / 100) - discount_abs
+            lohn_netto = max(0.0, net_after) * 0.6
+        if lohn_netto and lohn_netto > 0:
+            vat_rate_val = float(data.get("vat_rate", 19) or 19)
+            try:
+                from module_textvorlagen.lohnanteil_helper import get_lohnanteil_text_sync
+                hinweis = get_lohnanteil_text_sync(lohn_netto, vat_rate_val)
+            except Exception:
+                hinweis = ""
+            if hinweis:
+                # Neue Seite, falls knapp am Footer
+                if y_pos < footer_y_limit + 3 * cm:
+                    _draw_footer(c, width, settings, page_num)
+                    c.showPage()
+                    page_num += 1
+                    _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                    y_pos = height - 3.5 * cm
+                for raw_line in hinweis.split("\n"):
+                    line = raw_line.rstrip()
+                    if not line:
+                        y_pos -= 0.25 * cm
+                        continue
+                    is_headline = line.endswith(":")
+                    if is_headline:
+                        c.setFont("Helvetica-Bold", 9)
+                        c.setFillColor(HexColor("#003399"))
+                    else:
+                        c.setFont("Helvetica", 8.5)
+                        c.setFillColor(text_color)
+                    for wl in _wrap_text(c, line, "Helvetica-Bold" if is_headline else "Helvetica", 9 if is_headline else 8.5, width - 4 * cm):
+                        if y_pos < footer_y_limit:
+                            _draw_footer(c, width, settings, page_num)
+                            c.showPage()
+                            page_num += 1
+                            _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                            y_pos = height - 3.5 * cm
+                        c.drawString(2 * cm, y_pos, wl)
+                        y_pos -= 0.42 * cm
+                y_pos -= 0.3 * cm
+
     # === Schlusstext ===
     schlusstext = data.get("schlusstext", "")
     if schlusstext:

@@ -34,6 +34,11 @@ PLACEHOLDERS = [
     {"alias": "{firma}", "beschreibung": "Ihr Firmenname"},
     {"alias": "{datum}", "beschreibung": "Heutiges Datum"},
     {"alias": "{dokument_nr}", "beschreibung": "Dokument-Nummer"},
+    # §35a Lohnanteil — werden in Rechnungs-Textvorlagen genutzt
+    {"alias": "{lohn_netto}", "beschreibung": "Lohnanteil netto (z.B. 333,00)"},
+    {"alias": "{lohn_mwst}", "beschreibung": "MwSt-Betrag auf Lohnanteil (z.B. 63,27)"},
+    {"alias": "{lohn_brutto}", "beschreibung": "Lohnanteil brutto / Gesamt-Lohnsumme (z.B. 396,27)"},
+    {"alias": "{mwst_satz}", "beschreibung": "MwSt-Satz des Dokuments (z.B. 19,00%)"},
 ]
 
 TEXTVORLAGEN_MODUL = {

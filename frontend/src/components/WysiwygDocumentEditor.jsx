@@ -109,7 +109,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   // E-Mail Dialog
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [showLohnanteil, setShowLohnanteil] = useState(false);
+  const [showLohnanteil, setShowLohnanteil] = useState(type === "invoice");
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
   const [showLohnkosten, setShowLohnkosten] = useState(false);
   const [showDocCheck, setShowDocCheck] = useState(false);
@@ -622,16 +622,44 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       if (isNew) {
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
+        const _lohn = lohnanteilCustom === "" || lohnanteilCustom === null ? null : Number(String(lohnanteilCustom).replace(",", "."));
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: (Number.isFinite(_lohn) ? _lohn : null), ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         const res = await api.post(`/${endpoint}`, payload);
         if (res?.data?.id) { navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); return res.data.id; }
         return null;
       } else {
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: lohnanteilCustom, ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
+        const _lohn = lohnanteilCustom === "" || lohnanteilCustom === null ? null : Number(String(lohnanteilCustom).replace(",", "."));
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: (Number.isFinite(_lohn) ? _lohn : null), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         await api.put(`/${endpoint}/${id}`, payload);
         return id;
       }
     } catch { toast.error("Fehler beim Speichern"); return null; } finally { setSaving(false); }
+  };
+
+  // Pflicht-Check vor Druck/PDF/Versand: bei Rechnung mit aktiviertem Lohnanteil
+  // muss ein Betrag gesetzt sein. Sonst: Dialog "Default (60% vom Netto) übernehmen?".
+  // Bei Bestätigung: Default wird ins Eingabefeld geschrieben (Transparenz) und true zurückgegeben.
+  const ensureLohnanteilOrConfirm = async () => {
+    if (type !== "invoice") return true;
+    if (!showLohnanteil) return true;
+    const cur = lohnanteilCustom === null || lohnanteilCustom === undefined ? "" : String(lohnanteilCustom).trim();
+    const parsed = cur === "" ? NaN : Number(cur.replace(",", "."));
+    if (Number.isFinite(parsed) && parsed > 0) return true;
+    const netAfter = positions.reduce((s, p) => s + (Number(p.quantity) || 0) * (Number(p.price_net) || 0), 0)
+      - (discountType === "percent"
+        ? (positions.reduce((s, p) => s + (Number(p.quantity) || 0) * (Number(p.price_net) || 0), 0) * (Number(discount) || 0) / 100)
+        : (Number(discount) || 0));
+    const dflt = Math.max(0, Math.round(netAfter * 0.6 * 100) / 100);
+    const ok = window.confirm(
+      `Lohnanteil §35a ist aktiviert, aber kein Betrag eingetragen.\n\n` +
+      `Soll der Default von ${dflt.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € ` +
+      `(60 % vom Netto) übernommen und in das Eingabefeld eingetragen werden?\n\n` +
+      `OK = Default übernehmen und fortfahren\n` +
+      `Abbrechen = zurück zur Bearbeitung`
+    );
+    if (!ok) return false;
+    setLohnanteilCustom(String(dflt).replace(".", ","));
+    return true;
   };
 
   const handleSave = async () => {
@@ -652,6 +680,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const handleDownloadPDF = async () => {
     if (!validateTextFields()) return;
+    if (!(await ensureLohnanteilOrConfirm())) return;
     // Immer zuerst speichern → PDF zeigt dann aktuellen Stand, nicht die alte Version
     const savedId = await persistDocument();
     if (!savedId) return;
@@ -675,6 +704,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const handlePrint = async () => {
     if (!validateTextFields()) return;
+    if (!(await ensureLohnanteilOrConfirm())) return;
     // Immer zuerst speichern → Druck zeigt aktuellen Stand
     const savedId = await persistDocument();
     if (!savedId) return;
@@ -711,6 +741,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const executeMailClient = async (withText, saveFirst) => {
+    if (!(await ensureLohnanteilOrConfirm())) return;
     const to = customer?.email || "";
     const docTitle = titles[type] || "Dokument";
     const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);

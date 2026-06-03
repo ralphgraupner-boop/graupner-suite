@@ -50,8 +50,11 @@ const resolvePlaceholders = (text, customer, settings, docNumber, lohnanteilData
     .replace(/\{datum\}/g, now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }))
     .replace(/\{dokument_nr\}/g, docNumber || "")
     .replace(/\{lohnanteil\}/g, (la.netto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    .replace(/\{lohn_netto\}/g, (la.netto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
     .replace(/\{lohnanteil_mwst\}/g, (la.mwst || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    .replace(/\{lohn_mwst\}/g, (la.mwst || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
     .replace(/\{lohnanteil_brutto\}/g, (la.brutto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    .replace(/\{lohn_brutto\}/g, (la.brutto || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
     .replace(/\{mwst_satz\}/g, vatRate.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%");
 };
 

@@ -193,14 +193,15 @@ async def generate_pdf(dokument: dict) -> bytes:
     # §35a Hinweis (nur Rechnung, wenn Lohnanteil > 0)
     lohn_netto = float(dokument.get("lohn_netto") or 0)
     if dokument.get("type") == "rechnung" and lohn_netto > 0:
-        lohn_brutto_hinweis = lohn_netto * (1 + (mwst / netto if netto else 0))
-        hinweis = (
-            "<b>Hinweis §35a EStG:</b> "
-            f"Der Arbeitslohn-Anteil (inkl. MwSt.) beträgt {_fmt_eur(lohn_brutto_hinweis)}. "
-            "Dieser Betrag ist steuerlich absetzbar (Handwerkerleistungen an selbst genutzter Wohnung)."
-        )
+        # Wortlaut aus Textvorlage (Einstellungen → Textvorlagen → §35a Lohnanteil)
+        from module_textvorlagen.lohnanteil_helper import get_lohnanteil_text_sync
+        vat_rate = float(dokument.get("vat_rate") or 19)
+        hinweis_text = get_lohnanteil_text_sync(lohn_netto, vat_rate)
+        # Mehrzeilig zu HTML konvertieren, damit Paragraph Zeilenumbrueche zeigt
+        hinweis_html = hinweis_text.replace("\n", "<br/>")
+        # Erste Zeile (Headline mit ":") fett, Rest normal
         story.append(Spacer(1, 2 * mm))
-        story.append(Paragraph(hinweis, small))
+        story.append(Paragraph(hinweis_html, small))
         story.append(Spacer(1, 2 * mm))
 
     # Schlusstext
