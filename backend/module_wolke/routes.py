@@ -1,6 +1,6 @@
 """Routes für module_wolke — siehe __init__.py."""
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,6 +13,10 @@ router = APIRouter()
 
 VALID_TYPES = ["memo", "aufgabe"]
 VALID_STATUS = ["offen", "erledigt"]
+
+# Push-Retry Defaults (User-Entscheidung 03.06.2026): 5 Min Intervall, 10 Versuche
+WOLKE_RETRY_INTERVALL_MIN = 5
+WOLKE_MAX_VERSUCHE = 10
 
 
 def _iso(dt: datetime) -> str:
@@ -142,6 +146,24 @@ async def create_wolke(body: WolkeCreate, user=Depends(get_current_user)):
     # Memos gelten sofort als 'erledigt' (Counter zählt sie nicht).
     status = "erledigt" if body.type == "memo" else "offen"
     now = _now_iso()
+    # Empfaenger-Username fuer Push-Versand auflösen.
+    # - empfaenger_id "user:<name>" -> name direkt nutzen
+    # - sonst Mitarbeiter-Doc -> per email auf db.users mappen
+    empf_username = ""
+    if empf.get("source") == "user":
+        empf_username = (empf.get("vorname") or "").strip()  # bei user-source steht username in vorname
+    else:
+        empf_email = (empf.get("email") or "").strip()
+        if empf_email:
+            u = await db.users.find_one({"email": empf_email}, {"_id": 0, "username": 1})
+            if u:
+                empf_username = (u.get("username") or "").strip()
+
+    # Wiederholungs-Konfiguration: nur fuer 'aufgabe', nicht fuer 'memo'.
+    naechster_retry_at = None
+    if status == "offen":
+        naechster_retry_at = (datetime.now(timezone.utc) + timedelta(minutes=WOLKE_RETRY_INTERVALL_MIN)).isoformat()
+
     doc = {
         "id": str(uuid4()),
         "type": body.type,
@@ -149,6 +171,7 @@ async def create_wolke(body: WolkeCreate, user=Depends(get_current_user)):
         "absender_name": absender_name,
         "empfaenger_id": empf.get("id", ""),
         "empfaenger_name": _mitarbeiter_label(empf),
+        "empfaenger_username": empf_username,
         "kunde_id": kunde_id,
         "kunde_label": kunde_label,
         "text": text,
@@ -157,8 +180,42 @@ async def create_wolke(body: WolkeCreate, user=Depends(get_current_user)):
         "created_by_user": _username(user),
         "erledigt_am": now if status == "erledigt" else None,
         "erledigt_von": absender_id if status == "erledigt" else None,
+        # Push-Bestätigung
+        "erhalten_am": None,
+        "erhalten_von": "",
+        "erhalten_via": "",
+        # Retry-Felder (nur fuer 'aufgabe' aktiv)
+        "retry_count": 0,
+        "max_versuche": WOLKE_MAX_VERSUCHE,
+        "retry_intervall_min": WOLKE_RETRY_INTERVALL_MIN,
+        "naechster_retry_at": naechster_retry_at,
     }
     await db.module_wolke.insert_one({**doc})  # avoid _id mutation in response
+
+    # Push-Benachrichtigung an Empfänger (nur bei 'aufgabe' — Memos sind passiv).
+    if status == "offen" and empf_username:
+        try:
+            from routes.push import send_push_to_user
+            push_body = f"{absender_name}: {text[:120]}"
+            sent = await send_push_to_user(
+                username=empf_username,
+                title="📬 Neue Wolke-Aufgabe",
+                body=push_body,
+                url="/module/wolke?tab=erhalten",
+                entity_type="wolke",
+                entity_id=doc["id"],
+            )
+            await db.module_wolke.update_one(
+                {"id": doc["id"]},
+                {"$set": {"retry_count": 1, "letzter_push_at": now, "letzter_push_ok": sent > 0}},
+            )
+            doc["retry_count"] = 1
+            doc["letzter_push_at"] = now
+            doc["letzter_push_ok"] = sent > 0
+        except Exception as e:
+            from database import logger
+            logger.warning(f"Wolke create: Push fehlgeschlagen: {e}")
+
     return doc
 
 
@@ -203,6 +260,31 @@ async def count_offen(user=Depends(get_current_user)):
         "status": "offen",
     })
     return {"count": n}
+
+
+@router.patch("/{wolke_id}/erhalten")
+async def mark_erhalten(wolke_id: str, user=Depends(get_current_user)):
+    """Empfaenger bestaetigt: Push/Wolke ist angekommen. Stoppt den Retry-Loop.
+    Loescht 'erledigt' NICHT — Erledigt ist ein separater Workflow-Schritt."""
+    doc = await db.module_wolke.find_one({"id": wolke_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Wolke nicht gefunden")
+    me = await _get_mitarbeiter_for_user(user)
+    is_admin = (getattr(user, "role", "") or (user or {}).get("role", "")) == "admin"
+    if not is_admin and (not me or me.get("id") != doc.get("empfaenger_id")):
+        raise HTTPException(403, "Nur der Empfänger oder ein Admin darf 'erhalten' bestaetigen")
+    if doc.get("erhalten_am"):
+        return doc  # idempotent
+    now = _now_iso()
+    erh_von = (me or {}).get("id", "") or _username(user) or "admin"
+    await db.module_wolke.update_one(
+        {"id": wolke_id},
+        {"$set": {"erhalten_am": now, "erhalten_von": erh_von, "erhalten_via": "tipp"}},
+    )
+    doc["erhalten_am"] = now
+    doc["erhalten_von"] = erh_von
+    doc["erhalten_via"] = "tipp"
+    return doc
 
 
 @router.patch("/{wolke_id}/erledigt")

@@ -1,37 +1,62 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header
 import json
 from uuid import uuid4
 from models import PushSubscription, PushUnsubscribe
-from database import db, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, logger
+from database import db, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, JWT_SECRET, logger
 from pywebpush import webpush, WebPushException
 from auth import get_current_user
+import jwt as _jwt
 
 router = APIRouter()
 
 
+def _username_from_auth_header(authorization: str) -> str:
+    """Liest username aus Authorization-Header, ohne Exception zu werfen.
+    Liefert leeren String, wenn kein/ungueltiger Token. Wird in /push/subscribe
+    genutzt, um Subscriptions an den eingeloggten User zu binden (Auto-Nachtragen
+    beim Login: Frontend ruft subscribe nach Login erneut)."""
+    if not authorization:
+        return ""
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return ""
+    try:
+        payload = _jwt.decode(parts[1], JWT_SECRET, algorithms=["HS256"])
+        return (payload.get("username") or "").strip()
+    except Exception:
+        return ""
+
+
 @router.post("/push/subscribe")
-async def push_subscribe(subscription: PushSubscription):
-    """Browser Push-Benachrichtigung abonnieren"""
+async def push_subscribe(subscription: PushSubscription, authorization: str = Header(None)):
+    """Browser Push-Benachrichtigung abonnieren.
+    Bindet die Subscription an den eingeloggten User (username aus JWT),
+    damit gezielt an einzelne Empfaenger gepusht werden kann."""
     from datetime import datetime, timezone
+    username = _username_from_auth_header(authorization) or (subscription.username or "").strip()
     existing = await db.push_subscriptions.find_one({"endpoint": subscription.endpoint})
     if existing:
         token = existing.get("push_token") or str(uuid4())
+        update_doc = {
+            "keys": subscription.keys,
+            "push_token": token,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if username:
+            update_doc["username"] = username
         await db.push_subscriptions.update_one(
             {"endpoint": subscription.endpoint},
-            {"$set": {
-                "keys": subscription.keys,
-                "push_token": token,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }}
+            {"$set": update_doc},
         )
     else:
         await db.push_subscriptions.insert_one({
             "endpoint": subscription.endpoint,
             "keys": subscription.keys,
             "push_token": str(uuid4()),
+            "username": username or "",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
-    return {"message": "Push-Benachrichtigung aktiviert"}
+    return {"message": "Push-Benachrichtigung aktiviert", "user_bound": bool(username)}
 
 
 @router.delete("/push/subscribe")
@@ -130,6 +155,50 @@ async def send_push_to_all(title: str, body: str, url: str = "/", entity_type: s
             logger.error(f"Push unexpected error: {e}")
 
 
+async def send_push_to_user(username: str, title: str, body: str, url: str = "/", entity_type: str = None, entity_id: str = None):
+    """Push-Benachrichtigung gezielt an alle Geraete EINES Users.
+    Nutzt das gleiche Payload-Format wie send_push_to_all. Liefert Anzahl
+    erfolgreich versendeter Pushes zurueck (fuer Retry-Scheduler-Log)."""
+    if not VAPID_PRIVATE_KEY:
+        logger.warning("VAPID keys not configured, skipping push")
+        return 0
+    if not username:
+        return 0
+    subscriptions = await db.push_subscriptions.find({"username": username}, {"_id": 0}).to_list(100)
+    if not subscriptions:
+        logger.info(f"send_push_to_user: keine Subscriptions fuer username='{username}'")
+        return 0
+    sent_ok = 0
+    for sub in subscriptions:
+        payload_data = {"title": title, "body": body, "url": url}
+        if entity_type and entity_id:
+            payload_data["entity_type"] = entity_type
+            payload_data["entity_id"] = entity_id
+            payload_data["push_token"] = sub.get("push_token", "")
+        try:
+            webpush(
+                subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
+                data=json.dumps(payload_data),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": "mailto:info@graupner-suite.de"},
+            )
+            sent_ok += 1
+        except WebPushException as e:
+            is_gone = False
+            if hasattr(e, 'response') and e.response is not None and hasattr(e.response, 'status_code'):
+                is_gone = e.response.status_code in (404, 410)
+            if not is_gone and ("410" in str(e) or "Gone" in str(e) or "expired" in str(e)):
+                is_gone = True
+            if is_gone:
+                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+                logger.info(f"send_push_to_user: tote Subscription entfernt ({sub['endpoint'][:50]})")
+            else:
+                logger.error(f"send_push_to_user fail: {e}")
+        except Exception as e:
+            logger.error(f"send_push_to_user unexpected: {e}")
+    return sent_ok
+
+
 # ============== QUICK-ACTION ENDPOINT ==============
 # Wird vom Service Worker beim Klick auf den „Erledigt"-Button aufgerufen.
 # Authentifizierung über push_token (an Subscription gebunden).
@@ -149,7 +218,7 @@ async def push_quick_action(data: dict):
     if not sub:
         raise HTTPException(401, "Ungültiger Push-Token")
 
-    if action not in ("done", "snooze"):
+    if action not in ("done", "snooze", "erhalten"):
         raise HTTPException(400, "Unbekannte Aktion")
 
     now = datetime.now(timezone.utc)
@@ -161,11 +230,27 @@ async def push_quick_action(data: dict):
         "invoice": ("invoices", {"followup_seen": True, "followup_seen_at": now_iso}),
         "task": ("module_aufgaben", {"status": "erledigt", "erledigt_am": now_iso}),
         "termin": ("module_termine", {"status": "erledigt", "erledigt_am": now_iso}),
+        "wolke": ("module_wolke", {"erhalten_am": now_iso, "erhalten_via": "push"}),
     }
     if entity_type not in COL:
         raise HTTPException(400, f"Unbekannter entity_type: {entity_type}")
     coll_name, done_update = COL[entity_type]
     coll = db[coll_name]
+
+    # Wolke: Push-Tipp „Erhalten" markiert nur als erhalten (NICHT als erledigt).
+    # Erledigt bleibt der explizite Workflow-Schritt im UI.
+    if action == "erhalten":
+        if entity_type != "wolke":
+            raise HTTPException(400, "Aktion 'erhalten' nur fuer wolke")
+        # username aus subscription holen
+        erh_von = sub.get("username", "") or "push"
+        res = await coll.update_one(
+            {"id": entity_id},
+            {"$set": {"erhalten_am": now_iso, "erhalten_via": "push", "erhalten_von": erh_von}},
+        )
+        if res.matched_count == 0:
+            raise HTTPException(404, "Wolke nicht gefunden")
+        return {"ok": True, "message": "Erhalten bestaetigt"}
 
     if action == "done":
         res = await coll.update_one({"id": entity_id}, {"$set": done_update})

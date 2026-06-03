@@ -199,6 +199,12 @@ async def startup_event():
     logger.info("IMAP-Polling DEAKTIVIERT (manuell per Code)")
     # Start automatic daily backup task
     asyncio.create_task(daily_backup_loop())
+    # Wolke Push-Retry Scheduler (5 Min Intervall, 10 Versuche — siehe module_wolke/retry_scheduler.py)
+    try:
+        from module_wolke.retry_scheduler import wolke_retry_loop
+        asyncio.create_task(wolke_retry_loop())
+    except Exception as e:
+        logger.warning(f"Wolke-Retry-Scheduler konnte nicht gestartet werden: {e}")
     # Assistent: täglicher Check-Lauf um 06:00 UTC
     try:
         from module_assistent.scheduler import assistent_daily_task

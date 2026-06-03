@@ -486,6 +486,7 @@ class InvoiceUpdate(BaseModel):
 class PushSubscription(BaseModel):
     endpoint: str
     keys: dict
+    username: Optional[str] = None  # optional: vom Frontend mitgeschickt; serverseitig aus Auth-Header bevorzugt
 
 class PushUnsubscribe(BaseModel):
     endpoint: str
