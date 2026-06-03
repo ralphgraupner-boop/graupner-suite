@@ -39,6 +39,11 @@ PLACEHOLDERS = [
     {"alias": "{lohn_mwst}", "beschreibung": "MwSt-Betrag auf Lohnanteil (z.B. 63,27)"},
     {"alias": "{lohn_brutto}", "beschreibung": "Lohnanteil brutto / Gesamt-Lohnsumme (z.B. 396,27)"},
     {"alias": "{mwst_satz}", "beschreibung": "MwSt-Satz des Dokuments (z.B. 19,00%)"},
+    # Dokument-Kontext (Schlusstext etc.) — Werte werden ohne eigene Formatierung eingesetzt,
+    # uebernehmen also Schriftart/Groesse der umgebenden Textstelle.
+    {"alias": "{bearbeiter}", "beschreibung": "Name des Bearbeiters"},
+    {"alias": "{zahlbar_bis}", "beschreibung": "Zahlungsfrist (Datum, z.B. 17.06.2026)"},
+    {"alias": "{anzahlung}", "beschreibung": "Anzahlungsbetrag (z.B. 100,00 €)"},
 ]
 
 TEXTVORLAGEN_MODUL = {
