@@ -3,6 +3,32 @@
 > Modulares, mobil-freundliches CRM für eine Tischlerei.
 > Stand: 02.06.2026
 
+
+## 📌 03.06.2026 — Wolke Push-Bestätigung mit Auto-Retry (Hamburger Zeit)
+
+### 11:04 MESZ: **Wolke-Aufgaben: Push, „Erhalten"-Bestätigung, 5-Min-Retry**
+
+**Hintergrund:** Push-Benachrichtigungen kamen bei Thorsten nur 1 von 5 Mal an, weil `push_subscriptions` nicht an einen User gebunden waren. Komplette Kette gebaut.
+
+**Backend:**
+- `models.py`: `PushSubscription` um optionales `username` erweitert
+- `routes/push.py`: `/push/subscribe` liest JWT aus Auth-Header und speichert `username` auf der Subscription (Auto-Nachtragen bei nächstem Login). Neue Funktion `send_push_to_user(username, …)` für gezielten Versand. `wolke` ins COL-Mapping aufgenommen mit neuer Action `erhalten`.
+- `module_wolke/routes.py`: `create_wolke` resolved `empfaenger_username` (per `user:<name>` oder Mitarbeiter→users.email), triggert Push, schreibt `retry_count`, `max_versuche=10`, `retry_intervall_min=5`, `naechster_retry_at`. Neuer Endpoint `PATCH /api/module-wolke/{id}/erhalten` (idempotent, stoppt Retry).
+- `module_wolke/retry_scheduler.py` (NEU): asyncio-Background-Loop, alle 30 s, sendet Push erneut wenn `erhalten_am=null` und `retry_count < max_versuche`. Stoppt bei Limit oder fehlendem Username (kein Endlos-Loop).
+- `server.py`: Scheduler im Startup-Hook gestartet.
+
+**Frontend:**
+- `WolkePopover.jsx`: Neuer Button **„📬 Erhalten"** (sky-600) im Erhalten-Tab. Im Gesendet-Tab Badge **„📬 Erhalten HH:MM"** bzw. **„⏳ Noch nicht bestätigt · n/10 Push"**. Polling alle 10 s während Slide-Over offen → Absender sieht Bestätigung live.
+- `public/sw.js` (v4): Push-Action **„📬 Erhalten"** für `entity_type=wolke`, 1-Tap-Bestätigung direkt aus der Benachrichtigung.
+
+**Smoketest bestanden:** Wolke an `user:Tg-Admin` → username korrekt aufgelöst, retry_count=1, next_retry +5 Min, PATCH /erhalten → 200, erhalten_via=tipp.
+
+**Wichtig für Live-Deploy:** Nach Deploy müssen alle Nutzer sich einmal frisch einloggen, damit ihre bestehenden Push-Subscriptions den `username` automatisch nachgetragen bekommen. Alternativ: Browser-Push neu aktivieren.
+
+### 09:23 MESZ: **Bug-Fix: Doppelter Export-Button in Kundenliste**
+- `KundenModulPage.jsx`: Versehentlich entfernten JSON-Export-Button + `handleExport`-Funktion auf Wunsch wiederhergestellt (Stand wie Live-Commit `3533d4e`).
+
+
 ## 📌 Letzte Änderungen (02.06.2026, Hamburger Zeit)
 
 ### Abend (~19:20 MEZ): **Google-Calendar-Add-Event-Link (1 Klick = im Kalender)**
