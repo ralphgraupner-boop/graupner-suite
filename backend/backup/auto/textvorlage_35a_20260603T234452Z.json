@@ -1,0 +1,11 @@
+{
+  "id": "7f1bd330-0e52-4502-8592-2bdbc77b822b",
+  "title": "§35a Lohnanteil",
+  "content": "Hinweis § 35a EStG (Steuerbonus Handwerkerleistung):\nEnthalten ist ein Lohnanteil von € {lohn_netto} zuzüglich {mwst_satz} MwSt. (= € {lohn_mwst}). Dies ergibt eine Gesamt-Lohnsumme von € {lohn_brutto}.\n20 % der Arbeitskosten sind als Steuerermäßigung nach § 35a EStG abzugsfähig (max. 1.200 € pro Jahr).",
+  "doc_type": "allgemein",
+  "text_type": "bemerkung",
+  "sort_order": 0,
+  "created_at": "2026-06-03T17:47:45.720874+00:00",
+  "updated_at": "2026-06-03T17:47:45.720874+00:00",
+  "seeded": true
+}
