@@ -305,11 +305,12 @@ def _draw_totals(c, width, inv, y):
     return y
 
 
-def _draw_lohnanteil(c, width, inv, y):
+def _draw_lohnanteil(c, width, inv, y, settings=None):
     """Lohnanteil § 35a EStG - falls aktiv.
     Wortlaut kommt aus module_textvorlagen (allgemein/bemerkung/§35a Lohnanteil),
     damit Ralph den Text in Einstellungen → Textvorlagen pflegen kann.
-    Platzhalter: {lohn_netto}, {lohn_mwst}, {lohn_brutto}, {mwst_satz}."""
+    Platzhalter: {lohn_netto}, {lohn_mwst}, {lohn_brutto}, {mwst_satz}.
+    Schriftgroessen kommen aus settings.pdf_font_size (klein/normal/gross/sehr_gross)."""
     if not inv.get("show_lohnanteil"):
         return y
     # Robustes Parsen: das Feld kommt aus dem Frontend mal als float, mal als
@@ -333,11 +334,11 @@ def _draw_lohnanteil(c, width, inv, y):
     text = get_lohnanteil_text_sync(lohn, vat_rate)
 
     # Schriftgroessen aus den User-Einstellungen ableiten (nicht hardcoded).
-    # Settings werden ueber das inv-dict an den V2-Generator gereicht (key "_settings"),
-    # Fallback auf 'normal' (10pt) wenn nicht gesetzt.
-    settings = inv.get("_settings") or {}
+    # settings wird von generate_invoice_v2_pdf durchgereicht; fallback auf inv["_settings"]
+    # (legacy) und dann auf {} -> Default "normal" = 10pt.
+    _settings = settings or inv.get("_settings") or {}
     _font_map = {"klein": 9, "normal": 10, "gross": 11, "sehr_gross": 12}
-    body_font_size = _font_map.get(str(settings.get("pdf_font_size", "normal")).lower(), 10)
+    body_font_size = _font_map.get(str(_settings.get("pdf_font_size", "normal")).lower(), 10)
     hinweis_body_size = max(7.5, body_font_size - 1)
     hinweis_head_size = body_font_size
     hinweis_line_h = 0.35 + (body_font_size - 9) * 0.04
@@ -431,7 +432,7 @@ def generate_invoice_v2_pdf(inv: dict, settings: dict) -> bytes:
             c.drawString(2 * cm, y, line)
             y -= 0.4 * cm
 
-    y = _draw_lohnanteil(c, width, inv, y)
+    y = _draw_lohnanteil(c, width, inv, y, settings=settings)
     _draw_payment_block(c, width, inv, settings, y)
 
     # Footer
