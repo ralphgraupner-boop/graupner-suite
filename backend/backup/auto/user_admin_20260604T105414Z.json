@@ -1,0 +1,27 @@
+{
+  "username": "admin",
+  "email": "Ralph.graupner@gmail.com",
+  "password": "$2b$12$KogQmub/EKSg3Vm4v5M/i.3JqTxhGSREC.9opeNweyG9Pjtx3ZAkm",
+  "role": "admin",
+  "name": "Administrator",
+  "berechtigungen": {
+    "mitarbeiter_stammdaten": true,
+    "mitarbeiter_lohn": true,
+    "mitarbeiter_urlaub": true,
+    "mitarbeiter_krankmeldungen": true,
+    "mitarbeiter_dokumente": true,
+    "mitarbeiter_fortbildungen": true,
+    "mitarbeiter_anlegen_loeschen": true,
+    "modul_mail_anfragen": true,
+    "modul_kunden": true,
+    "modul_projekte": true,
+    "modul_aufgaben": true,
+    "modul_termine": true,
+    "modul_einsaetze": true,
+    "modul_dokumente": true,
+    "modul_kundenportale": true,
+    "modul_monteur_app": true,
+    "modul_buchhaltung": true,
+    "modul_einstellungen": true
+  }
+}
