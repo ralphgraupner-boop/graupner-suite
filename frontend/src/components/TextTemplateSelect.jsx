@@ -252,7 +252,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
 const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", allgemein: "Allgemein" };
 const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung" };
 
-const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, settings, docNumber, lohnanteilData, onSelect, onClose }) => {
+const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, settings, docNumber, lohnanteilData, docContext, onSelect, onClose }) => {
   const [search, setSearch] = useState("");
   const [allTemplates, setAllTemplates] = useState([]);
   const [activeFilter, setActiveFilter] = useState(textType);
