@@ -241,6 +241,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
         settings={settings}
         docNumber={docNumber}
         lohnanteilData={lohnanteilData}
+        docContext={docContext}
         onSelect={(t) => { handleSelect(t); setOpen(false); }}
         onClose={() => setOpen(false)}
       />}
