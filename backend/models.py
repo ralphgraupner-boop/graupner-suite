@@ -1,7 +1,51 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Any, Union
+from pydantic import BaseModel, Field, BeforeValidator
+from typing import List, Optional, Any, Union, Annotated
 import uuid
 from datetime import datetime, timezone
+
+
+def _coerce_float(v):
+    """Toleranter Float-Parser fuer Altdaten in der DB.
+    "" / None -> 0.0, deutsches Komma "1.234,50" -> 1234.5, Zahl bleibt Zahl.
+    Unparsbares -> 0.0 (kein Crash bei Listen-Endpunkten)."""
+    if v is None:
+        return 0.0
+    if isinstance(v, bool):
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).strip()
+    if s == "":
+        return 0.0
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def _coerce_opt_float(v):
+    """Wie _coerce_float, aber "" / None -> None (fuer optionale Geldfelder)."""
+    if v is None:
+        return None
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).strip()
+    if s == "":
+        return None
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
+
+
+CoercedFloat = Annotated[float, BeforeValidator(_coerce_float)]
+OptCoercedFloat = Annotated[Optional[float], BeforeValidator(_coerce_opt_float)]
 
 
 class UserLogin(BaseModel):
@@ -240,18 +284,18 @@ class Quote(BaseModel):
     vortext: str = ""
     schlusstext: str = ""
     betreff: str = ""
-    discount: float = 0
+    discount: CoercedFloat = 0
     discount_type: str = "percent"
-    vat_rate: float = 19
-    subtotal_net: float = 0
-    vat_amount: float = 0
-    total_gross: float = 0
+    vat_rate: CoercedFloat = 19
+    subtotal_net: CoercedFloat = 0
+    vat_amount: CoercedFloat = 0
+    total_gross: CoercedFloat = 0
     status: str = "Entwurf"
     is_template: bool = False
     valid_until: str = ""
     followup_sent: bool = False
     show_lohnanteil: bool = False
-    lohnanteil_custom: Optional[float] = None
+    lohnanteil_custom: OptCoercedFloat = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class QuoteCreate(BaseModel):
@@ -279,16 +323,16 @@ class Order(BaseModel):
     vortext: str = ""
     schlusstext: str = ""
     betreff: str = ""
-    discount: float = 0
+    discount: CoercedFloat = 0
     discount_type: str = "percent"
-    vat_rate: float = 19
-    subtotal_net: float = 0
-    vat_amount: float = 0
-    total_gross: float = 0
+    vat_rate: CoercedFloat = 19
+    subtotal_net: CoercedFloat = 0
+    vat_amount: CoercedFloat = 0
+    total_gross: CoercedFloat = 0
     status: str = "Offen"
     is_template: bool = False
     show_lohnanteil: bool = False
-    lohnanteil_custom: Optional[float] = None
+    lohnanteil_custom: OptCoercedFloat = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Invoice(BaseModel):
@@ -303,26 +347,26 @@ class Invoice(BaseModel):
     vortext: str = ""
     schlusstext: str = ""
     betreff: str = ""
-    discount: float = 0
+    discount: CoercedFloat = 0
     discount_type: str = "percent"
-    vat_rate: float = 19
-    subtotal_net: float = 0
-    vat_amount: float = 0
-    total_gross: float = 0
-    deposit_amount: float = 0
-    final_amount: float = 0
+    vat_rate: CoercedFloat = 19
+    subtotal_net: CoercedFloat = 0
+    vat_amount: CoercedFloat = 0
+    total_gross: CoercedFloat = 0
+    deposit_amount: CoercedFloat = 0
+    final_amount: CoercedFloat = 0
     status: str = "Offen"
     paid_at: Optional[str] = None
     due_date: str = ""
     due_days: int = 14
     dunning_level: int = 0
     dunning_date: Optional[str] = None
-    dunning_fee: float = 0
+    dunning_fee: CoercedFloat = 0
     dunning_custom_text: str = ""
     dunning_history: List[dict] = []
     is_template: bool = False
     show_lohnanteil: bool = False
-    lohnanteil_custom: Optional[float] = None
+    lohnanteil_custom: OptCoercedFloat = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class InvoiceCreate(BaseModel):
