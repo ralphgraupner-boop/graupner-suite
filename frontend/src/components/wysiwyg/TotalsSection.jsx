@@ -162,7 +162,8 @@ const TotalsSection = ({
               )}
             </>
           )}
-          {/* Lohnanteil */}
+          {/* Lohnanteil (nur Rechnung) */}
+          {type === "invoice" && (
           <tr>
             <td></td><td></td><td></td><td></td><td></td>
             <td colSpan={2} className="pt-4 pb-2">
@@ -203,6 +204,7 @@ const TotalsSection = ({
             </td>
             <td></td>
           </tr>
+          )}
         </tbody>
       </table>
       {/* Mobile Totals */}
@@ -292,7 +294,8 @@ const TotalsSection = ({
                 )}
               </>
             )}
-            {/* Lohnanteil Mobile */}
+            {/* Lohnanteil Mobile (nur Rechnung) */}
+            {type === "invoice" && (
             <div className="border-t pt-3 mt-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Lohnanteil</span>
@@ -326,6 +329,7 @@ const TotalsSection = ({
                 )}
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>
