@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Folder, Plus, Search, RefreshCw, ImageIcon, ChevronRight, User as UserIcon, Calendar, MapPin, X, GripVertical } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, Badge } from "@/components/common";
+import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { useF1Help } from "@/lib/useF1Help";
 import { openInPopup, useBroadcast } from "@/lib/windowSync";
