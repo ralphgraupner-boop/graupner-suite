@@ -59,6 +59,9 @@ async def list_anfragen(category: str = "", user=Depends(get_current_user)):
 @router.get("/storage/{path:path}")
 async def serve_storage_file(path: str):
     """Serve a file from object storage - public access for image display"""
+    # Sicherheit: sensible Prefixe (DB-Backups) NIEMALS oeffentlich ausliefern
+    if path.lstrip("/").lower().startswith("backups/"):
+        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
     try:
         from utils.storage import get_object
         content, content_type = get_object(path)

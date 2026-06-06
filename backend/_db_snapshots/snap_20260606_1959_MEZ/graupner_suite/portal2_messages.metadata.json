@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"fc9a3d84857a4ae29e58bd7fe6c5510b","collectionName":"portal2_messages","type":"collection"}

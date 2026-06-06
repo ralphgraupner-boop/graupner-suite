@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"97f223a128ae449c8b0f12370d4a6fad","collectionName":"monteur_app_settings","type":"collection"}

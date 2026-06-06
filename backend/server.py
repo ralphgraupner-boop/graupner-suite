@@ -96,7 +96,8 @@ from module_textkorrektur import router as module_textkorrektur_router
 from module_portal_v2_backup import router as module_portal_v2_backup_router
 from module_portal_v2_backup.routes import start_auto_backup_task
 from dokumente_v2 import router as dokumente_v2_router
-from security.admin_check import require_finanz  # Rollenschutz Finanz-Endpunkte (admin/buchhaltung)
+from security.admin_check import require_finanz, require_admin  # Rollenschutz (admin/buchhaltung bzw. admin)
+from routes.auth import get_current_user  # Login-Pflicht fuer interne Endpunkte
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -104,40 +105,40 @@ api_router = APIRouter(prefix="/api")
 
 # Include all route modules
 api_router.include_router(auth_router)
-api_router.include_router(kunden_router)
-api_router.include_router(articles_router)
-api_router.include_router(services_router)
+api_router.include_router(kunden_router, dependencies=[Depends(get_current_user)])
+api_router.include_router(articles_router, dependencies=[Depends(get_current_user)])
+api_router.include_router(services_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(quotes_router, dependencies=[Depends(require_finanz)])
 api_router.include_router(orders_router, dependencies=[Depends(require_finanz)])
 api_router.include_router(invoices_router, dependencies=[Depends(require_finanz)])
 api_router.include_router(email_router)
-api_router.include_router(settings_router)
+api_router.include_router(settings_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(push_router)
 api_router.include_router(webhook_router)
-api_router.include_router(documents_router)
+api_router.include_router(documents_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(distance_router)
-api_router.include_router(ai_router)
+api_router.include_router(ai_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(pdf_router, dependencies=[Depends(require_finanz)])
 api_router.include_router(dashboard_router)
 api_router.include_router(text_templates_router)
-api_router.include_router(leistungsbloecke_router)
+api_router.include_router(leistungsbloecke_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(portal_router)
 # portal_klon ist Teil von module_kundenportal (oben eingehaengt)
 api_router.include_router(einsaetze_router)
 # document_templates ist Teil von module_dokumente
 api_router.include_router(imap_router)
-api_router.include_router(kalkulation_router)
+api_router.include_router(kalkulation_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(buchhaltung_router)
 api_router.include_router(mitarbeiter_router)
 api_router.include_router(diverses_router)
 api_router.include_router(backup_router)
-api_router.include_router(auto_backup_router)
+api_router.include_router(auto_backup_router, dependencies=[Depends(require_admin)])
 api_router.include_router(admin_migrations_router)
-api_router.include_router(anfragen_router)
+api_router.include_router(anfragen_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(anfragen_fetcher_router)
 # documents_manager ist Teil von module_dokumente
 api_router.include_router(modules_router)
-api_router.include_router(module_artikel_router)
+api_router.include_router(module_artikel_router, dependencies=[Depends(get_current_user)])
 # module_dokumente_data ist Teil von module_dokumente
 api_router.include_router(module_textvorlagen_router)
 api_router.include_router(voice_intake_router)

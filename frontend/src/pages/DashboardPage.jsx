@@ -217,10 +217,12 @@ const DashboardPage = () => {
         </div>
       )}
 
-      {/* Datensicherungs-Status (Ampel + Aktionen) */}
+      {/* Datensicherungs-Status (Ampel + Aktionen) — nur Admin (Backup-API ist admin-only) */}
+      {isAdmin && (
       <div className="mb-4">
         <BackupStatusCard />
       </div>
+      )}
 
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">

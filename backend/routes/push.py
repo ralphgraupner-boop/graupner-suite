@@ -80,7 +80,7 @@ async def get_vapid_key():
 
 
 @router.post("/push/test")
-async def push_test():
+async def push_test(user=Depends(get_current_user)):
     """Test Push-Benachrichtigung an alle Abonnenten"""
     subs = await db.push_subscriptions.find({}, {"_id": 0}).to_list(100)
     if not subs:
