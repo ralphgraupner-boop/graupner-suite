@@ -21,9 +21,12 @@ const DashboardPage = () => {
   const [overviewData, setOverviewData] = useState(null);
   const [inboxStats, setInboxStats] = useState({ unread: 0, total: 0 });
   const [portalUnread, setPortalUnread] = useState({ count: 0, items: [] });
+  const [meineAufgaben, setMeineAufgaben] = useState([]);
+  const [meineTermine, setMeineTermine] = useState([]);
 
   useEffect(() => {
     loadStats();
+    loadMeine();
     checkDueInvoices();
     checkFollowups();
     loadInboxStats();
@@ -68,6 +71,20 @@ const DashboardPage = () => {
     try {
       const res = await api.get("/portals/unread-count");
       setPortalUnread(res.data || { count: 0, items: [] });
+    } catch { /* ignore */ }
+  };
+
+  const loadMeine = async () => {
+    if (isAdmin || !user?.username) return;
+    try {
+      const [aRes, tRes] = await Promise.all([
+        api.get("/module-aufgaben"),
+        api.get("/module-termine"),
+      ]);
+      const aList = Array.isArray(aRes.data) ? aRes.data : (aRes.data?.items || []);
+      const tList = Array.isArray(tRes.data) ? tRes.data : (tRes.data?.items || []);
+      setMeineAufgaben(aList.filter(a => a.zugewiesen_an === user.username && a.status !== "erledigt"));
+      setMeineTermine(tList.filter(t => t.monteur_username === user.username && t.status !== "abgesagt"));
     } catch { /* ignore */ }
   };
 
@@ -309,6 +326,7 @@ const DashboardPage = () => {
             icon={Wrench}
           />
         </Link>
+        {isAdmin && (
         <Link to="/module/termine" className="block" data-testid="stat-link-termine">
           <StatCard
             title="Termine heute"
@@ -317,7 +335,47 @@ const DashboardPage = () => {
             icon={Calendar}
           />
         </Link>
+        )}
       </div>
+
+      {!isAdmin && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" data-testid="meine-aufgaben-termine">
+          <Card className="p-6" data-testid="meine-aufgaben">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-primary" /> Meine offenen Aufgaben ({meineAufgaben.length})
+            </h3>
+            {meineAufgaben.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine offenen Aufgaben.</p>
+            ) : (
+              <ul className="space-y-2">
+                {meineAufgaben.slice(0, 8).map(a => (
+                  <li key={a.id} className="flex items-center justify-between gap-3 text-sm border-b pb-2 last:border-0">
+                    <span className="truncate">{a.titel}</span>
+                    {a.faellig_am && <span className="text-xs text-muted-foreground shrink-0">{new Date(a.faellig_am).toLocaleDateString("de-DE")}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card className="p-6" data-testid="meine-termine">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" /> Meine Termine ({meineTermine.length})
+            </h3>
+            {meineTermine.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Termine.</p>
+            ) : (
+              <ul className="space-y-2">
+                {meineTermine.slice(0, 8).map(t => (
+                  <li key={t.id} className="flex items-center justify-between gap-3 text-sm border-b pb-2 last:border-0">
+                    <span className="truncate">{t.titel}</span>
+                    {t.start && <span className="text-xs text-muted-foreground shrink-0">{new Date(t.start).toLocaleDateString("de-DE")}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* "Letzte Anfragen"-Liste entfernt: Dashboard ist Status-Cockpit (Ralph 06.05.2026).
           Anfragen-Verwaltung passiert ausschließlich im Mail-Inbox-Modul. */}
