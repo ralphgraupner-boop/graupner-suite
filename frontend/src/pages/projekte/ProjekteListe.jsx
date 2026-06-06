@@ -23,6 +23,7 @@ const ProjekteListe = () => {
   const [kundenMap, setKundenMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("aktiv");
+  const [kategorieFilter, setKategorieFilter] = useState("");
   const [showNew, setShowNew] = useState(false);
   // Such-zuerst-Schema (Ralph 12.05.2026): erst Kunde oder Projekt wählen
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,10 +110,13 @@ const ProjekteListe = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, kundenMap, projekte]);
 
+  const kategorien = Array.from(new Set(projekte.map(p => p.kategorie).filter(Boolean))).sort();
+
   const filtered = projekte.filter(p => {
     if (selectedKunde && p.kunde_id !== selectedKunde.id) return false;
     if (statusFilter === "aktiv" && p.status === "Archiv") return false;
     if (statusFilter !== "aktiv" && statusFilter !== "" && p.status !== statusFilter) return false;
+    if (kategorieFilter && p.kategorie !== kategorieFilter) return false;
     return true;
   });
 
@@ -257,6 +261,15 @@ const ProjekteListe = () => {
         ))}
         <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle</FilterButton>
       </div>
+
+      {kategorien.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4" data-testid="projekt-kategorie-filter">
+          <FilterButton active={kategorieFilter === ""} onClick={() => setKategorieFilter("")}>Alle Kategorien</FilterButton>
+          {kategorien.map(k => (
+            <FilterButton key={k} active={kategorieFilter === k} onClick={() => setKategorieFilter(k)}>{k}</FilterButton>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <Card className="p-6 text-center text-muted-foreground">Lade…</Card>
