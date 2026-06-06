@@ -1,0 +1,27 @@
+{
+  "username": "Heike Bolanka",
+  "password": "$2b$12$eLmrqvAXs0XZBxelEtts2.lCVdMeSL8BXPrpD2OKlNbnmKZo9uaka",
+  "email": "HeikeBolanca@gmail.com",
+  "role": "mitarbeiter",
+  "created_at": "2026-04-12T08:26:05.806966+00:00",
+  "berechtigungen": {
+    "mitarbeiter_stammdaten": false,
+    "mitarbeiter_lohn": false,
+    "mitarbeiter_urlaub": false,
+    "mitarbeiter_krankmeldungen": false,
+    "mitarbeiter_dokumente": false,
+    "mitarbeiter_fortbildungen": false,
+    "mitarbeiter_anlegen_loeschen": false,
+    "modul_mail_anfragen": false,
+    "modul_kunden": false,
+    "modul_projekte": false,
+    "modul_aufgaben": true,
+    "modul_termine": true,
+    "modul_einsaetze": false,
+    "modul_dokumente": false,
+    "modul_kundenportale": false,
+    "modul_monteur_app": true,
+    "modul_buchhaltung": false,
+    "modul_einstellungen": false
+  }
+}

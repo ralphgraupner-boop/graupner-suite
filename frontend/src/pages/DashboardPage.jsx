@@ -8,8 +8,11 @@ import { Button, Card, StatCard } from "@/components/common";
 import { AnfragenFetcherButton } from "@/components/AnfragenFetcherButton";
 import { BackupStatusCard } from "@/components/BackupStatusCard";
 import { api, API } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const DashboardPage = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dueSoon, setDueSoon] = useState([]);
@@ -126,7 +129,13 @@ const DashboardPage = () => {
             <h1 className="text-2xl lg:text-4xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">Übersicht Ihrer Geschäftstätigkeit</p>
           </div>
-          <AnfragenFetcherButton onFetched={() => { loadStats(); }} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link to="/module/kunden?filter=aktiv" data-testid="dashboard-kunden-button" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-card hover:bg-muted transition-colors text-sm font-medium">
+              <Users className="w-4 h-4 text-primary" /> Kunden
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold">{stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}</span>
+            </Link>
+            <AnfragenFetcherButton onFetched={() => { loadStats(); }} />
+          </div>
         </div>
       </div>
 
@@ -159,7 +168,7 @@ const DashboardPage = () => {
               </Link>
             );
           })()}
-          {dueSoon.length > 0 && (
+          {isAdmin && dueSoon.length > 0 && (
             <Link to="/invoices" className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200/60 rounded-full hover:bg-amber-100 transition-colors group">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-xs font-medium text-amber-800">
@@ -170,14 +179,14 @@ const DashboardPage = () => {
               <span className="text-[10px] text-amber-600 group-hover:text-amber-700 font-medium">Anzeigen</span>
             </Link>
           )}
-          {(stats?.overdue_count || 0) > 0 && (
+          {isAdmin && (stats?.overdue_count || 0) > 0 && (
             <Link to="/invoices" className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200/60 rounded-full hover:bg-red-100 transition-colors group">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
               <span className="text-xs font-medium text-red-800">{stats.overdue_count} Rechnung(en) überfällig</span>
               <span className="text-[10px] text-red-600 group-hover:text-red-700 font-medium">Mahnwesen</span>
             </Link>
           )}
-          {followupQuotes.length > 0 && (
+          {isAdmin && followupQuotes.length > 0 && (
             <Link to="/quotes" className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200/60 rounded-full hover:bg-blue-100 transition-colors group">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-xs font-medium text-blue-800">
@@ -238,6 +247,7 @@ const DashboardPage = () => {
           />
         </Link>
         </HelpTip>
+        {isAdmin && (
         <HelpTip id="dashboard.stat-invoices" block>
         <Link to="/module/dokumente" className="block" data-testid="stat-link-rechnungen">
           <StatCard
@@ -248,10 +258,12 @@ const DashboardPage = () => {
           />
         </Link>
         </HelpTip>
+        )}
       </div>
 
       {/* Status-Kacheln (Cockpit) — Stand 06.05.2026 */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8" data-testid="status-tiles">
+        {isAdmin && (
         <Link to="/module/dokumente?status=ueberfaellig" className="block" data-testid="stat-link-overdue">
           <StatCard
             title="Überfällig"
@@ -260,6 +272,8 @@ const DashboardPage = () => {
             icon={AlertTriangle}
           />
         </Link>
+        )}
+        {isAdmin && (
         <Link to="/module/dokumente?status=entwurf" className="block" data-testid="stat-link-drafts">
           <StatCard
             title="In Arbeit"
@@ -268,6 +282,8 @@ const DashboardPage = () => {
             icon={FilePlus}
           />
         </Link>
+        )}
+        {isAdmin && (
         <div data-testid="stat-revenue-month">
           {(() => {
             const cur = stats?.revenue?.current_month || 0;
@@ -284,6 +300,7 @@ const DashboardPage = () => {
             );
           })()}
         </div>
+        )}
         <Link to="/einsaetze" className="block" data-testid="stat-link-einsaetze">
           <StatCard
             title="Aktive Aufträge"
@@ -305,6 +322,7 @@ const DashboardPage = () => {
       {/* "Letzte Anfragen"-Liste entfernt: Dashboard ist Status-Cockpit (Ralph 06.05.2026).
           Anfragen-Verwaltung passiert ausschließlich im Mail-Inbox-Modul. */}
 
+      {isAdmin && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Umsatz-Chart */}
         <Card className="p-6" data-testid="dashboard-revenue-chart">
@@ -405,6 +423,7 @@ const DashboardPage = () => {
           </div>
         </Card>
       </div>
+      )}
 
       {/* Gestaffelte Übersicht */}
       <Card className="p-6 mt-6" data-testid="dashboard-overview">

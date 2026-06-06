@@ -1,0 +1,27 @@
+{
+  "username": "thorsten.graupner",
+  "password": "$2b$12$90fDNXtfS10TNlSiM3XSJOTKAuAqOayOL055/bxxhO4bYDXRPkUvG",
+  "email": "hhgraupner@gmail.com",
+  "role": "admin",
+  "created_at": "2026-05-18T12:34:16.887542+00:00",
+  "berechtigungen": {
+    "mitarbeiter_stammdaten": true,
+    "mitarbeiter_lohn": true,
+    "mitarbeiter_urlaub": true,
+    "mitarbeiter_krankmeldungen": true,
+    "mitarbeiter_dokumente": true,
+    "mitarbeiter_fortbildungen": true,
+    "mitarbeiter_anlegen_loeschen": true,
+    "modul_mail_anfragen": true,
+    "modul_kunden": true,
+    "modul_projekte": true,
+    "modul_aufgaben": true,
+    "modul_termine": true,
+    "modul_einsaetze": true,
+    "modul_dokumente": true,
+    "modul_kundenportale": true,
+    "modul_monteur_app": true,
+    "modul_buchhaltung": true,
+    "modul_einstellungen": true
+  }
+}
