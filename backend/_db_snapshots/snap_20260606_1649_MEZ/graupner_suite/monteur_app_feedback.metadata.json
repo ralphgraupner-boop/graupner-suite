@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"b45ff377c6014a37916900539f0bd1bf","collectionName":"monteur_app_feedback","type":"collection"}

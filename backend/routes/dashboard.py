@@ -5,6 +5,7 @@ from collections import defaultdict
 from models import Customer, Anfrage, AnfrageUpdate
 from database import db, CATEGORIES, CUSTOMER_STATUSES
 from auth import get_current_user
+from security.admin_check import require_finanz
 import re
 
 router = APIRouter()
@@ -225,7 +226,7 @@ async def import_vcf(file: UploadFile = File(...), user=Depends(get_current_user
     return result
 
 
-@router.get("/dashboard/stats")
+@router.get("/dashboard/stats", dependencies=[Depends(require_finanz)])
 async def get_dashboard_stats():
     """Dashboard-Statistiken"""
     quotes = await db.quotes.find({}, {"_id": 0}).to_list(1000)

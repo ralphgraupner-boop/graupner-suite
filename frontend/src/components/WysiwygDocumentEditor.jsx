@@ -687,7 +687,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       // Cache-Buster, damit Browser nicht versehentlich eine alte PDF-Version zeigt
-      const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
+      const res = await api.get(`/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const previewWin = window.open(url, "_blank");
@@ -710,7 +710,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     if (!savedId) return;
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
-      const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
+      const res = await api.get(`/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const printWindow = window.open(url, "_blank");
@@ -1151,7 +1151,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             const savedId = await persistDocument();
             if (!savedId) return null;
             const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
-            const res = await axios.get(`${API}/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
+            const res = await api.get(`/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
             return new Blob([res.data], { type: "application/pdf" });
           }}
         />

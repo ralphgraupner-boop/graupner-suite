@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends
 from starlette.middleware.cors import CORSMiddleware
 from database import client, logger
 
@@ -96,6 +96,7 @@ from module_textkorrektur import router as module_textkorrektur_router
 from module_portal_v2_backup import router as module_portal_v2_backup_router
 from module_portal_v2_backup.routes import start_auto_backup_task
 from dokumente_v2 import router as dokumente_v2_router
+from security.admin_check import require_finanz  # Rollenschutz Finanz-Endpunkte (admin/buchhaltung)
 
 # Create the main app
 app = FastAPI(title="Graupner Suite API")
@@ -106,9 +107,9 @@ api_router.include_router(auth_router)
 api_router.include_router(kunden_router)
 api_router.include_router(articles_router)
 api_router.include_router(services_router)
-api_router.include_router(quotes_router)
-api_router.include_router(orders_router)
-api_router.include_router(invoices_router)
+api_router.include_router(quotes_router, dependencies=[Depends(require_finanz)])
+api_router.include_router(orders_router, dependencies=[Depends(require_finanz)])
+api_router.include_router(invoices_router, dependencies=[Depends(require_finanz)])
 api_router.include_router(email_router)
 api_router.include_router(settings_router)
 api_router.include_router(push_router)
@@ -116,7 +117,7 @@ api_router.include_router(webhook_router)
 api_router.include_router(documents_router)
 api_router.include_router(distance_router)
 api_router.include_router(ai_router)
-api_router.include_router(pdf_router)
+api_router.include_router(pdf_router, dependencies=[Depends(require_finanz)])
 api_router.include_router(dashboard_router)
 api_router.include_router(text_templates_router)
 api_router.include_router(leistungsbloecke_router)

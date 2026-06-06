@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"6c0efa1746c14bbfb9daf9b11b841fc7","collectionName":"portal2_sync_log","type":"collection"}

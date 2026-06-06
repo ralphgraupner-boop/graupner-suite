@@ -36,3 +36,15 @@ def require_admin(user=Depends(get_current_user)):
     if _role_of(user) != "admin":
         raise HTTPException(403, "Nur Admin darf diese Aktion ausfuehren.")
     return user
+
+
+def require_finanz(user=Depends(get_current_user)):
+    """Wirft HTTP 403, wenn der User weder Admin noch Buchhaltung ist.
+
+    Schuetzt Finanz-/Dokument-Endpunkte (Angebote, Auftraege, Rechnungen, PDFs,
+    Dashboard-Statistik) vor Zugriff durch Monteure/Mitarbeiter sowie nicht
+    eingeloggte Fremde (get_current_user erzwingt zuerst ein gueltiges Token).
+    """
+    if _role_of(user) not in ("admin", "buchhaltung"):
+        raise HTTPException(403, "Nur Admin oder Buchhaltung darf Finanzdaten einsehen.")
+    return user
