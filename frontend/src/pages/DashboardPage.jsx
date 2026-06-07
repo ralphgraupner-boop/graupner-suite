@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { HelpTip } from "@/components/HelpTip";
 import { Button, Card, StatCard } from "@/components/common";
 import { AnfragenFetcherButton } from "@/components/AnfragenFetcherButton";
-import { BackupStatusCard } from "@/components/BackupStatusCard";
 import { api, API } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -216,14 +215,6 @@ const DashboardPage = () => {
           )}
         </div>
       )}
-
-      {/* Datensicherungs-Status (Ampel + Aktionen) — nur Admin (Backup-API ist admin-only) */}
-      {isAdmin && (
-      <div className="mb-4">
-        <BackupStatusCard />
-      </div>
-      )}
-
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
         <HelpTip id="dashboard.stat-anfragen" block>

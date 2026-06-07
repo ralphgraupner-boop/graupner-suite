@@ -5,6 +5,7 @@ import { Button, Card } from "@/components/common";
 import { api } from "@/lib/api";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PortalV2BackupPanel } from "@/components/PortalV2BackupPanel";
+import { BackupStatusCard } from "@/components/BackupStatusCard";
 
 const BackupTab = () => {
   const [collections, setCollections] = useState([]);
@@ -148,6 +149,9 @@ const BackupTab = () => {
 
   return (
     <div className="space-y-6">
+      {/* Datensicherungs-Status (Ampel + Aktionen) — von Dashboard hierher verschoben */}
+      <BackupStatusCard />
+
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
 
