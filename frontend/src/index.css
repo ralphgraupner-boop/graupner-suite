@@ -47,7 +47,7 @@ code, .mono {
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 142 76% 17%;
-    --radius: 0.25rem;
+    --radius: 0.5rem;
   }
   
   .dark {
