@@ -123,12 +123,23 @@ async def get_customer(customer_id: str):
 
 @router.post("/customers", response_model=Customer)
 async def create_customer(customer: CustomerCreate):
-    # Generate combined name from vorname + nachname if not provided
-    if not customer.name and (customer.vorname or customer.nachname):
-        customer.name = f"{customer.vorname} {customer.nachname}".strip()
-    elif not customer.name:
-        customer.name = "Unbekannt"
-    
+    # Pflichtfeld-Check: keinen leeren Kunden anlegen
+    _name = (customer.name or "").strip()
+    _vn = (customer.vorname or "").strip()
+    _nn = (customer.nachname or "").strip()
+    _firma = (getattr(customer, "firma", "") or "").strip()
+    if not (_name or (_vn and _nn) or _firma):
+        raise HTTPException(
+            status_code=400,
+            detail="Bitte mindestens einen Namen angeben: Name ODER Vor- und Nachname ODER Firma.",
+        )
+    # Combined name aus vorname + nachname bzw. Firma ableiten
+    if not customer.name:
+        if customer.vorname or customer.nachname:
+            customer.name = f"{customer.vorname} {customer.nachname}".strip()
+        elif _firma:
+            customer.name = _firma
+
     customer_obj = Customer(**customer.model_dump())
     await db.customers.insert_one(customer_obj.model_dump())
     return customer_obj

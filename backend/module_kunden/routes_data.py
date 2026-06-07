@@ -198,10 +198,27 @@ async def check_duplicate(vorname: str = "", nachname: str = "", email: str = ""
     return {"count": len(duplicates), "duplicates": duplicates}
 
 
+def _require_name_fields(name, vorname, nachname, firma):
+    """Pflichtfeld-Check: mindestens Name ODER Vorname+Nachname ODER Firma.
+    Verhindert das Anlegen leerer 'Unbekannt'-Kunden."""
+    name = (name or "").strip()
+    vorname = (vorname or "").strip()
+    nachname = (nachname or "").strip()
+    firma = (firma or "").strip()
+    if not (name or (vorname and nachname) or firma):
+        raise HTTPException(
+            status_code=400,
+            detail="Bitte mindestens einen Namen angeben: Name ODER Vor- und Nachname ODER Firma.",
+        )
+
+
 @router.post("/modules/kunden/data")
 async def create_kunde(data: dict, user=Depends(get_current_user)):
     await ensure_modul_registered()
     force = bool(data.get("force", False))
+
+    # Pflichtfeld-Check: keinen leeren Kunden anlegen
+    _require_name_fields(data.get("name"), data.get("vorname"), data.get("nachname"), data.get("firma"))
 
     # Duplikat-Check (wenn nicht force)
     if not force:
@@ -230,7 +247,7 @@ async def create_kunde(data: dict, user=Depends(get_current_user)):
                 },
             )
 
-    name = f"{data.get('vorname', '')} {data.get('nachname', '')}".strip() or data.get('firma', 'Unbekannt')
+    name = f"{data.get('vorname', '')} {data.get('nachname', '')}".strip() or data.get('firma') or data.get('name') or "Unbekannt"
     address = f"{data.get('strasse', '')} {data.get('hausnummer', '')}, {data.get('plz', '')} {data.get('ort', '')}".strip().strip(",").strip()
     item = {
         "id": str(uuid4()),
@@ -434,7 +451,8 @@ async def import_from_kontakt(kontakt_id: str, user=Depends(get_current_user)):
         if existing:
             return {"message": "Kontakt bereits als Kunde vorhanden", "kunde": existing, "already_exists": True}
     # Neuen Kunden erstellen
-    name = f"{kontakt.get('vorname', '')} {kontakt.get('nachname', '')}".strip() or kontakt.get('firma', 'Unbekannt')
+    _require_name_fields(kontakt.get("name"), kontakt.get("vorname"), kontakt.get("nachname"), kontakt.get("firma"))
+    name = f"{kontakt.get('vorname', '')} {kontakt.get('nachname', '')}".strip() or kontakt.get('firma') or kontakt.get('name', 'Unbekannt')
     strasse = kontakt.get("strasse", "")
     hausnummer = kontakt.get("hausnummer", "")
     plz = kontakt.get("plz", "")
