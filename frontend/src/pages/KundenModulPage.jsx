@@ -1276,7 +1276,7 @@ const KontaktImportModal = ({ isOpen, onClose, onImported }) => {
         ) : (
           <div className="max-h-[400px] overflow-y-auto space-y-2">
             {filtered.map(k => {
-              const displayName = `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || "Unbekannt";
+              const displayName = `${k.vorname || ""} ${k.nachname || ""}`.trim() || k.firma || k.name || "Unbekannt";
               return (
                 <div key={k.id} className="flex items-center justify-between p-3 rounded-sm border hover:border-primary/40 transition-colors" data-testid={`kontakt-import-${k.id}`}>
                   <div className="flex items-center gap-3 min-w-0">
