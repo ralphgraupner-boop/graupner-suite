@@ -4,6 +4,28 @@
 > Stand: 02.06.2026
 
 
+## 📌 07.06.2026 — Dashboard-Redesign Phase 1 (Admin-Ansicht, Hamburger Zeit)
+
+**Auftrag Ralph:** Admin-Dashboard nach Mockup neu anordnen (~10-14 Credits). Variante **b** für Timeline-Datenquelle gewählt (zentral im stats-Endpoint).
+
+**Backend (`routes/dashboard.py`, `/dashboard/stats`):**
+- Neu: `projekte` = {total, aktiv, anfragen} — live aus `module_projekte` (Status 'Aktiv'/'Anfrage'). Keine neue Collection, keine Doppelung.
+- Neu: `termine.heute` = Liste der heutigen Termine {id, uhrzeit (HH:MM aus start), titel, ort, monteur_username, kunde_name (live gejoint aus module_kunden), status}. Abgesagte ausgefiltert, nach Uhrzeit sortiert.
+- Curl-verifiziert: projekte total=12/aktiv=4/anfragen=8; termine.heute korrekt befüllt (Smoketest mit 2 Test-Terminen, danach wieder gelöscht).
+
+**Frontend (`pages/DashboardPage.jsx`, nur Admin-Teil):**
+- Neuer Header: Datum (de-DE, Wochentag) + 📍 Hamburg (Standort-Label, kein Datenfeld) + Glocken-Button mit `alertCount`-Badge (scrollt zu Hinweis-Pills).
+- 4 Statistik-Karten: Projekte / Angebote / Kunden / Umsatz-Monat (mit Sublines).
+- HEUTE-Timeline: Zeit-Pills + Titel + Monteur·Kunde/Ort, Empty-State „Keine Termine heute".
+- Pill-Alert-Banner unverändert. Mitarbeiter-Ansicht komplett unverändert (Phase 2 offen).
+- Lint: 4 gemeldete Fehler sind VORBESTEHEND (per `git show HEAD` geprüft), nicht durch diese Änderung.
+
+**Hinweis:** Automatisierter Screenshot durch Emergent-Preview-Gate blockiert (static preview ohne Backend). Visuelle Abnahme durch Ralph selbst (Variante a). Noch NICHT auf Live deployt.
+
+**Phase 2 (offen, wartet auf Freigabe):** `zuständiger Mitarbeiter` an Projekte (Variante B) + Admin-Switcher zur Ansicht je Mitarbeiter (filtert HEUTE-Timeline + Aufgaben).
+
+
+
 ## 📌 03.06.2026 — Wolke Push-Bestätigung mit Auto-Retry (Hamburger Zeit)
 
 ### 11:04 MESZ: **Wolke-Aufgaben: Push, „Erhalten"-Bestätigung, 5-Min-Retry**
