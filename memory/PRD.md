@@ -4,6 +4,21 @@
 > Stand: 02.06.2026
 
 
+## 📌 07.06.2026 (~18:10 MESZ) — Rollenbasiertes Dashboard + Team-Umschalter
+
+**Team-Konfig (DB, editierbar, kein Hardcode):** `db.settings._key='dashboard_team'` mappt Person→Konten-Aliase. Ralph=übrige admin-Konten (admin, admin-preview), Thorsten=thorsten.graupner+Tg-Admin, Heike=h.bolanka+Heike Bolanka. Neuer Endpoint `GET /api/dashboard/team`.
+
+**Rollenbasierte Ansichten in `DashboardPage.jsx`:**
+- **Admin (Ralph):** 4 Karten = Mahnwesen (überfällig) · offene Angebote · Umsatz bezahlt · neue Anfragen. Umschalter **Alle·Ralph·Thorsten·Heike** (filtert HEUTE-Timeline + offene Aufgaben per Alias-Match). Charts/Übersicht nur Admin.
+- **Buchhaltung (Heike):** nur 2 Karten = Unbezahlte Rechnungen · Fällige Zahlungen.
+- **Monteur (mitarbeiter):** nur „Meine offenen Aufgaben" + „Meine Termine heute".
+
+**Punkt 2a/4a/5a (gleiche Session):** Umsatz zeigt **bezahlten** Monatsumsatz (aktuell 0€, da keine Rechnung auf „Bezahlt"); %-Trend nur wenn Vormonat≥50€. Karten/HEUTE/Aufgaben jetzt `rounded-xl` (vorher rounded-sm=0px). Service Worker v4→v5 (Auto-Cache-Invalidierung bei Deploy).
+
+**Verifiziert:** Backend per Curl (team-Endpoint, revenue paid). Frontend kompiliert sauber. Lint-Fehler (4) sind VORBESTEHEND (alter Code, per git geprüft). Automatischer Screenshot durch Preview-Gate blockiert → Sichtprüfung durch Ralph. Noch NICHT auf Live.
+
+
+
 ## 📌 07.06.2026 — Dashboard-Redesign Phase 1 (Admin-Ansicht, Hamburger Zeit)
 
 **Auftrag Ralph:** Admin-Dashboard nach Mockup neu anordnen (~10-14 Credits). Variante **b** für Timeline-Datenquelle gewählt (zentral im stats-Endpoint).

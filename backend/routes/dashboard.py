@@ -229,6 +229,14 @@ async def import_vcf(file: UploadFile = File(...), user=Depends(get_current_user
     return result
 
 
+@router.get("/dashboard/team")
+async def get_dashboard_team(user=Depends(get_current_user)):
+    """Team-Konfiguration fuer den Mitarbeiter-Umschalter (Person -> Konten-Aliase).
+    Liegt editierbar in db.settings (_key='dashboard_team'), kein Hardcode."""
+    doc = await db.settings.find_one({"_key": "dashboard_team"}, {"_id": 0})
+    return (doc or {}).get("team", [])
+
+
 @router.get("/dashboard/stats", dependencies=[Depends(require_finanz)])
 async def get_dashboard_stats():
     """Dashboard-Statistiken"""

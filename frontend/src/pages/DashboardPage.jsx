@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, TrendingDown, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen, FilePlus, Calendar, Wrench, Bell, MapPin } from "lucide-react";
+import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, TrendingDown, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen, FilePlus, Calendar, Bell, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 import { HelpTip } from "@/components/HelpTip";
@@ -12,6 +12,8 @@ import { useAuth } from "@/lib/auth";
 const DashboardPage = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isBuchhaltung = user?.role === "buchhaltung";
+  const isMonteur = !isAdmin && !isBuchhaltung;
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dueSoon, setDueSoon] = useState([]);
@@ -22,9 +24,9 @@ const DashboardPage = () => {
   const [portalUnread, setPortalUnread] = useState({ count: 0, items: [] });
   const [meineAufgaben, setMeineAufgaben] = useState([]);
   const [meineTermine, setMeineTermine] = useState([]);
-  const [mitarbeiterListe, setMitarbeiterListe] = useState([]);
   const [adminAufgaben, setAdminAufgaben] = useState([]);
   const [selectedMitarbeiter, setSelectedMitarbeiter] = useState("alle");
+  const [team, setTeam] = useState([]);
 
   useEffect(() => {
     loadStats();
@@ -80,11 +82,11 @@ const DashboardPage = () => {
   const loadAdminTeam = async () => {
     if (!isAdmin) return;
     try {
-      const [mRes, aRes] = await Promise.all([
-        api.get("/module-aufgaben/mitarbeiter"),
+      const [tRes, aRes] = await Promise.all([
+        api.get("/dashboard/team"),
         api.get("/module-aufgaben"),
       ]);
-      setMitarbeiterListe(Array.isArray(mRes.data) ? mRes.data : []);
+      setTeam(Array.isArray(tRes.data) ? tRes.data : []);
       const aList = Array.isArray(aRes.data) ? aRes.data : (aRes.data?.items || []);
       setAdminAufgaben(aList.filter(a => a.status !== "erledigt"));
     } catch { /* ignore */ }
@@ -158,12 +160,13 @@ const DashboardPage = () => {
   const _norm = (s) => (s || "").trim().toLowerCase();
   const matchMitarbeiter = (val) => {
     if (selectedMitarbeiter === "alle") return true;
-    const sel = mitarbeiterListe.find(m => m.username === selectedMitarbeiter);
-    const targets = [selectedMitarbeiter, sel?.anzeige_name].filter(Boolean).map(_norm);
-    return targets.includes(_norm(val));
+    const p = team.find(t => t.person === selectedMitarbeiter);
+    if (!p) return false;
+    return (p.aliases || []).map(_norm).includes(_norm(val));
   };
   const termineHeute = (stats?.termine?.heute || []).filter(t => matchMitarbeiter(t.monteur_username));
   const offeneAufgabenGefiltert = adminAufgaben.filter(a => matchMitarbeiter(a.zugewiesen_an));
+  const meineTermineHeute = meineTermine.filter(t => (t.start || "").slice(0, 10) === new Date().toISOString().slice(0, 10));
 
   return (
     <div data-testid="dashboard-page">
@@ -265,13 +268,13 @@ const DashboardPage = () => {
       {isAdmin && (
       <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8" data-testid="admin-stat-cards">
-        <HelpTip id="dashboard.stat-projekte" block>
-        <Link to="/module/projekte" className="block" data-testid="stat-link-projekte">
+        <HelpTip id="dashboard.stat-mahnwesen" block>
+        <Link to="/module/dokumente?status=ueberfaellig" className="block" data-testid="stat-link-mahnwesen">
           <StatCard
-            title="Projekte"
-            value={stats?.projekte?.total || 0}
-            subtitle={`${stats?.projekte?.anfragen || 0} Anfragen`}
-            icon={ClipboardCheck}
+            title="Mahnwesen"
+            value={stats?.overdue_count || 0}
+            subtitle="Rechnungen überfällig"
+            icon={AlertTriangle}
             className="rounded-xl"
           />
         </Link>
@@ -279,21 +282,10 @@ const DashboardPage = () => {
         <HelpTip id="dashboard.stat-quotes" block>
         <Link to="/module/dokumente" className="block" data-testid="stat-link-angebote">
           <StatCard
-            title="Angebote"
+            title="Offene Angebote"
             value={stats?.quotes?.open || 0}
             subtitle={`Gesamt: ${stats?.quotes?.total || 0}`}
             icon={FileText}
-            className="rounded-xl"
-          />
-        </Link>
-        </HelpTip>
-        <HelpTip id="dashboard.stat-kunden" block>
-        <Link to="/module/kunden?filter=aktiv" className="block" data-testid="stat-link-kunden">
-          <StatCard
-            title="Kunden"
-            value={stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}
-            subtitle="aktiv"
-            icon={Users}
             className="rounded-xl"
           />
         </Link>
@@ -310,7 +302,7 @@ const DashboardPage = () => {
               : `Vormonat ${diff >= 0 ? "+" : ""}${diff.toFixed(0)}%`;
             return (
               <StatCard
-                title="Umsatz / Monat"
+                title="Umsatz bezahlt"
                 value={`${cur.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €`}
                 subtitle={trend}
                 icon={diff !== null && diff < 0 ? TrendingDown : TrendingUp}
@@ -320,10 +312,21 @@ const DashboardPage = () => {
           })()}
         </div>
         </HelpTip>
+        <HelpTip id="dashboard.stat-anfragen" block>
+        <Link to="/module/mail-inbox" className="block" data-testid="stat-link-anfragen-admin">
+          <StatCard
+            title="Neue Anfragen"
+            value={stats?.anfragen?.total || 0}
+            subtitle="Neu / Offen"
+            icon={Inbox}
+            className="rounded-xl"
+          />
+        </Link>
+        </HelpTip>
       </div>
 
-      {/* Mitarbeiter-Umschalter (Phase 2 Start): filtert HEUTE-Timeline + offene Aufgaben */}
-      {mitarbeiterListe.length > 0 && (
+      {/* Mitarbeiter-Umschalter: Alle · Ralph · Thorsten · Heike (Team-Konfig aus DB) */}
+      {team.length > 0 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap" data-testid="mitarbeiter-switcher">
           <span className="text-xs font-medium text-muted-foreground mr-1">Ansicht:</span>
           <button
@@ -334,15 +337,15 @@ const DashboardPage = () => {
           >
             Alle
           </button>
-          {mitarbeiterListe.map((m) => (
+          {team.map((t) => (
             <button
-              key={m.username}
+              key={t.person}
               type="button"
-              onClick={() => setSelectedMitarbeiter(m.username)}
-              data-testid={`mitarbeiter-pill-${m.username}`}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedMitarbeiter === m.username ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
+              onClick={() => setSelectedMitarbeiter(t.person)}
+              data-testid={`mitarbeiter-pill-${t.person}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedMitarbeiter === t.person ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
             >
-              {m.anzeige_name}
+              {t.person}
             </button>
           ))}
         </div>
@@ -414,53 +417,33 @@ const DashboardPage = () => {
       </>
       )}
 
-      {/* ===== MITARBEITER-Ansicht: bestehende Kacheln (unverändert) ===== */}
-      {!isAdmin && (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
-        <HelpTip id="dashboard.stat-anfragen" block>
-        <Link to="/module/mail-inbox" className="block" data-testid="stat-link-anfragen">
+      {/* ===== BUCHHALTUNG (Heike): nur Finanz-Kennzahlen ===== */}
+      {isBuchhaltung && (
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-6 mb-6 lg:mb-8" data-testid="buchhaltung-cards">
+        <Link to="/module/dokumente?status=offen" className="block" data-testid="stat-link-unbezahlt">
           <StatCard
-            title="Mailanfragen"
-            value={stats?.anfragen?.total || 0}
-            subtitle="Neu / Offen"
-            icon={Inbox}
+            title="Unbezahlte Rechnungen"
+            value={stats?.invoices?.unpaid || 0}
+            subtitle={`Gesamt: ${stats?.invoices?.total || 0}`}
+            icon={Receipt}
+            className="rounded-xl"
           />
         </Link>
-        </HelpTip>
-        <HelpTip id="dashboard.stat-kunden" block>
-        <Link to="/module/kunden?filter=aktiv" className="block" data-testid="stat-link-kunden-ma">
+        <Link to="/module/dokumente?status=ueberfaellig" className="block" data-testid="stat-link-faellig">
           <StatCard
-            title="Kunden aktiv"
-            value={stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}
-            subtitle={stats?.kunden_aktiv?.archiviert ? `+${stats.kunden_aktiv.archiviert} archiviert` : null}
-            icon={Users}
-          />
-        </Link>
-        </HelpTip>
-        <HelpTip id="dashboard.stat-quotes" block>
-        <Link to="/module/dokumente" className="block" data-testid="stat-link-angebote-ma">
-          <StatCard
-            title="Offene Angebote"
-            value={stats?.quotes?.open || 0}
-            subtitle={`Gesamt: ${stats?.quotes?.total || 0}`}
-            icon={FileText}
-          />
-        </Link>
-        </HelpTip>
-        <Link to="/einsaetze" className="block" data-testid="stat-link-einsaetze">
-          <StatCard
-            title="Aktive Aufträge"
-            value={stats?.orders?.open || 0}
-            subtitle="Offene Einsätze"
-            icon={Wrench}
+            title="Fällige Zahlungen"
+            value={(stats?.overdue_count || 0) + (dueSoon.length || 0)}
+            subtitle={`${stats?.overdue_count || 0} überfällig · ${dueSoon.length || 0} bald fällig`}
+            icon={AlertTriangle}
+            className="rounded-xl"
           />
         </Link>
       </div>
       )}
 
-      {!isAdmin && (
+      {isMonteur && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" data-testid="meine-aufgaben-termine">
-          <Card className="p-6" data-testid="meine-aufgaben">
+          <Card className="p-6 rounded-xl" data-testid="meine-aufgaben">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ClipboardCheck className="w-5 h-5 text-primary" /> Meine offenen Aufgaben ({meineAufgaben.length})
             </h3>
@@ -477,18 +460,18 @@ const DashboardPage = () => {
               </ul>
             )}
           </Card>
-          <Card className="p-6" data-testid="meine-termine">
+          <Card className="p-6 rounded-xl" data-testid="meine-termine">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" /> Meine Termine ({meineTermine.length})
+              <Calendar className="w-5 h-5 text-primary" /> Meine Termine heute ({meineTermineHeute.length})
             </h3>
-            {meineTermine.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Termine.</p>
+            {meineTermineHeute.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Termine heute.</p>
             ) : (
               <ul className="space-y-2">
-                {meineTermine.slice(0, 8).map(t => (
+                {meineTermineHeute.map(t => (
                   <li key={t.id} className="flex items-center justify-between gap-3 text-sm border-b pb-2 last:border-0">
                     <span className="truncate">{t.titel}</span>
-                    {t.start && <span className="text-xs text-muted-foreground shrink-0">{new Date(t.start).toLocaleDateString("de-DE")}</span>}
+                    {t.start && <span className="text-xs text-muted-foreground shrink-0">{(t.start.split("T")[1] || "").slice(0,5) || new Date(t.start).toLocaleDateString("de-DE")}</span>}
                   </li>
                 ))}
               </ul>
@@ -603,8 +586,9 @@ const DashboardPage = () => {
       </div>
       )}
 
-      {/* Gestaffelte Übersicht */}
-      <Card className="p-6 mt-6" data-testid="dashboard-overview">
+      {/* Gestaffelte Übersicht — nur Admin (Chef-Cockpit) */}
+      {isAdmin && (
+      <Card className="p-6 mt-6 rounded-xl" data-testid="dashboard-overview">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Eye className="w-5 h-5 text-primary" />
@@ -658,6 +642,7 @@ const DashboardPage = () => {
           </div>
         )}
       </Card>
+      )}
     </div>
   );
 };
