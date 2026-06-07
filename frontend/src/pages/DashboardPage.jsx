@@ -22,10 +22,14 @@ const DashboardPage = () => {
   const [portalUnread, setPortalUnread] = useState({ count: 0, items: [] });
   const [meineAufgaben, setMeineAufgaben] = useState([]);
   const [meineTermine, setMeineTermine] = useState([]);
+  const [mitarbeiterListe, setMitarbeiterListe] = useState([]);
+  const [adminAufgaben, setAdminAufgaben] = useState([]);
+  const [selectedMitarbeiter, setSelectedMitarbeiter] = useState("alle");
 
   useEffect(() => {
     loadStats();
     loadMeine();
+    loadAdminTeam();
     checkDueInvoices();
     checkFollowups();
     loadInboxStats();
@@ -70,6 +74,19 @@ const DashboardPage = () => {
     try {
       const res = await api.get("/portals/unread-count");
       setPortalUnread(res.data || { count: 0, items: [] });
+    } catch { /* ignore */ }
+  };
+
+  const loadAdminTeam = async () => {
+    if (!isAdmin) return;
+    try {
+      const [mRes, aRes] = await Promise.all([
+        api.get("/module-aufgaben/mitarbeiter"),
+        api.get("/module-aufgaben"),
+      ]);
+      setMitarbeiterListe(Array.isArray(mRes.data) ? mRes.data : []);
+      const aList = Array.isArray(aRes.data) ? aRes.data : (aRes.data?.items || []);
+      setAdminAufgaben(aList.filter(a => a.status !== "erledigt"));
     } catch { /* ignore */ }
   };
 
@@ -138,7 +155,15 @@ const DashboardPage = () => {
   }
 
   const alertCount = (dueSoon.length) + (stats?.overdue_count || 0) + (followupQuotes.length) + (inboxStats.unread || 0) + (portalUnread.count || 0);
-  const termineHeute = stats?.termine?.heute || [];
+  const _norm = (s) => (s || "").trim().toLowerCase();
+  const matchMitarbeiter = (val) => {
+    if (selectedMitarbeiter === "alle") return true;
+    const sel = mitarbeiterListe.find(m => m.username === selectedMitarbeiter);
+    const targets = [selectedMitarbeiter, sel?.anzeige_name].filter(Boolean).map(_norm);
+    return targets.includes(_norm(val));
+  };
+  const termineHeute = (stats?.termine?.heute || []).filter(t => matchMitarbeiter(t.monteur_username));
+  const offeneAufgabenGefiltert = adminAufgaben.filter(a => matchMitarbeiter(a.zugewiesen_an));
 
   return (
     <div data-testid="dashboard-page">
@@ -247,6 +272,7 @@ const DashboardPage = () => {
             value={stats?.projekte?.total || 0}
             subtitle={`${stats?.projekte?.anfragen || 0} Anfragen`}
             icon={ClipboardCheck}
+            className="rounded-xl"
           />
         </Link>
         </HelpTip>
@@ -257,6 +283,7 @@ const DashboardPage = () => {
             value={stats?.quotes?.open || 0}
             subtitle={`Gesamt: ${stats?.quotes?.total || 0}`}
             icon={FileText}
+            className="rounded-xl"
           />
         </Link>
         </HelpTip>
@@ -267,22 +294,27 @@ const DashboardPage = () => {
             value={stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}
             subtitle="aktiv"
             icon={Users}
+            className="rounded-xl"
           />
         </Link>
         </HelpTip>
         <HelpTip id="dashboard.stat-umsatz" block>
         <div data-testid="stat-link-umsatz">
           {(() => {
-            const cur = stats?.revenue?.current_month || 0;
-            const last = stats?.revenue?.last_month || 0;
-            const diff = last > 0 ? ((cur - last) / last) * 100 : null;
-            const trend = diff === null ? "Vormonat —" : `Vormonat ${diff >= 0 ? "+" : ""}${diff.toFixed(0)}%`;
+            const cur = stats?.revenue?.current_month_paid || 0;
+            const last = stats?.revenue?.last_month_paid || 0;
+            const showTrend = last >= 50;
+            const diff = showTrend ? ((cur - last) / last) * 100 : null;
+            const trend = !showTrend
+              ? "bezahlt diesen Monat"
+              : `Vormonat ${diff >= 0 ? "+" : ""}${diff.toFixed(0)}%`;
             return (
               <StatCard
                 title="Umsatz / Monat"
                 value={`${cur.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €`}
                 subtitle={trend}
                 icon={diff !== null && diff < 0 ? TrendingDown : TrendingUp}
+                className="rounded-xl"
               />
             );
           })()}
@@ -290,8 +322,34 @@ const DashboardPage = () => {
         </HelpTip>
       </div>
 
+      {/* Mitarbeiter-Umschalter (Phase 2 Start): filtert HEUTE-Timeline + offene Aufgaben */}
+      {mitarbeiterListe.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap" data-testid="mitarbeiter-switcher">
+          <span className="text-xs font-medium text-muted-foreground mr-1">Ansicht:</span>
+          <button
+            type="button"
+            onClick={() => setSelectedMitarbeiter("alle")}
+            data-testid="mitarbeiter-pill-alle"
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedMitarbeiter === "alle" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
+          >
+            Alle
+          </button>
+          {mitarbeiterListe.map((m) => (
+            <button
+              key={m.username}
+              type="button"
+              onClick={() => setSelectedMitarbeiter(m.username)}
+              data-testid={`mitarbeiter-pill-${m.username}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedMitarbeiter === m.username ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
+            >
+              {m.anzeige_name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* HEUTE-Timeline */}
-      <Card className="p-4 lg:p-6 mb-6 lg:mb-8" data-testid="heute-timeline">
+      <Card className="p-4 lg:p-6 mb-6 lg:mb-8 rounded-xl" data-testid="heute-timeline">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold tracking-wider text-muted-foreground flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" /> HEUTE
@@ -315,6 +373,38 @@ const DashboardPage = () => {
                     <p className="text-sm font-medium truncate">{t.titel}</p>
                     {detail && <p className="text-xs text-muted-foreground truncate">{detail}</p>}
                   </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
+      {/* Offene Aufgaben (gefiltert nach Mitarbeiter-Umschalter) */}
+      <Card className="p-4 lg:p-6 mb-6 lg:mb-8 rounded-xl" data-testid="admin-aufgaben">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold tracking-wider text-muted-foreground flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-primary" /> OFFENE AUFGABEN
+            <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">{offeneAufgabenGefiltert.length}</span>
+          </h3>
+          <Link to="/module/aufgaben" className="text-xs font-medium text-primary hover:underline flex items-center gap-1" data-testid="aufgaben-alle">
+            Alle Aufgaben <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
+        {offeneAufgabenGefiltert.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2" data-testid="aufgaben-empty">Keine offenen Aufgaben.</p>
+        ) : (
+          <ul className="space-y-2">
+            {offeneAufgabenGefiltert.slice(0, 8).map((a) => {
+              const ueberfaellig = a.faellig_am && new Date(a.faellig_am) < new Date(new Date().toDateString());
+              return (
+                <li key={a.id} className="flex items-center justify-between gap-3 text-sm border-b border-border/40 pb-2 last:border-0" data-testid={`aufgabe-${a.id}`}>
+                  <span className="truncate">{a.titel}</span>
+                  {a.faellig_am && (
+                    <span className={`text-xs shrink-0 ${ueberfaellig ? "text-red-600 font-semibold" : "text-muted-foreground"}`}>
+                      {new Date(a.faellig_am).toLocaleDateString("de-DE")}
+                    </span>
+                  )}
                 </li>
               );
             })}

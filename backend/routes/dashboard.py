@@ -284,13 +284,17 @@ async def get_dashboard_stats():
         a["name"] = f"{a.get('vorname', '')} {a.get('nachname', '')}".strip() or a.get('firma', 'Unbekannt')
 
     monthly_revenue = defaultdict(float)
+    monthly_revenue_paid = defaultdict(float)
     monthly_quotes = defaultdict(float)
     now = datetime.now(timezone.utc)
     for inv in invoices:
         try:
             created = datetime.fromisoformat(inv.get("created_at", ""))
             month_key = created.strftime("%Y-%m")
-            monthly_revenue[month_key] += inv.get("total_gross", 0)
+            gross = inv.get("total_gross", 0) or 0
+            monthly_revenue[month_key] += gross
+            if inv.get("status") == "Bezahlt":
+                monthly_revenue_paid[month_key] += gross
         except (ValueError, TypeError):
             pass
     for q in quotes:
@@ -338,6 +342,8 @@ async def get_dashboard_stats():
     last_month = (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
     revenue_current = round(monthly_revenue.get(cur_mk, 0), 2)
     revenue_last = round(monthly_revenue.get(last_month, 0), 2)
+    revenue_current_paid = round(monthly_revenue_paid.get(cur_mk, 0), 2)
+    revenue_last_paid = round(monthly_revenue_paid.get(last_month, 0), 2)
 
     # Termine heute / diese Woche
     termine_today, termine_week = 0, 0
@@ -416,6 +422,8 @@ async def get_dashboard_stats():
         "revenue": {
             "current_month": revenue_current,
             "last_month": revenue_last,
+            "current_month_paid": revenue_current_paid,
+            "last_month_paid": revenue_last_paid,
         },
         "termine": {
             "today": termine_today,

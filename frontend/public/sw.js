@@ -1,4 +1,4 @@
-const CACHE_NAME = 'graupner-suite-v4';
+const CACHE_NAME = 'graupner-suite-v5';
 const OFFLINE_URL = '/offline.html';
 
 // Assets die immer gecacht werden sollen

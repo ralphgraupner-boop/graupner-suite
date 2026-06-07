@@ -45,8 +45,8 @@ export const Card = ({ children, className = "", ...props }) => (
   </div>
 );
 
-export const StatCard = ({ title, value, subtitle, icon: Icon, trend }) => (
-  <Card className="p-3 lg:p-6 card-hover hover:shadow-md hover:border-primary/30 transition-all cursor-pointer">
+export const StatCard = ({ title, value, subtitle, icon: Icon, trend, className = "" }) => (
+  <Card className={`p-3 lg:p-6 card-hover hover:shadow-md hover:border-primary/30 transition-all cursor-pointer ${className}`}>
     <div className="flex items-start justify-between">
       <div className="min-w-0">
         <p className="text-xs lg:text-sm font-medium text-muted-foreground truncate">{title}</p>
