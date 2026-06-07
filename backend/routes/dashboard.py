@@ -237,6 +237,12 @@ async def get_dashboard_stats():
     invoices = await db.invoices.find({}, {"_id": 0}).to_list(1000)
     customers = await db.module_kunden.count_documents({})
 
+    # Projekte (Module-First: live aus module_projekte)
+    projekte = await db.module_projekte.find({}, {"_id": 0, "status": 1}).to_list(2000)
+    projekte_total = len(projekte)
+    projekte_aktiv = len([p for p in projekte if p.get("status") == "Aktiv"])
+    projekte_anfragen = len([p for p in projekte if p.get("status") == "Anfrage"])
+
     open_quotes = len([q for q in quotes if q.get("status") == "Entwurf"])
     open_orders = len([o for o in orders if o.get("status") == "Offen"])
     unpaid_invoices = len([i for i in invoices if i.get("status") == "Offen"])
@@ -335,24 +341,42 @@ async def get_dashboard_stats():
 
     # Termine heute / diese Woche
     termine_today, termine_week = 0, 0
+    termine_heute_liste = []
     try:
         termine = await db.module_termine.find({}, {"_id": 0}).to_list(2000)
     except Exception:
         termine = []
     today_str = now.date().isoformat()
     week_end = now.date() + timedelta(days=7)
+    # Kunden-Namen-Map (live joinen, keine Datendoppelung)
+    kunden_namen = {k.get("id"): (k.get("name") or f"{k.get('vorname','')} {k.get('nachname','')}").strip() for k in kontakte}
     for t in termine:
-        d = (t.get("datum") or t.get("date") or t.get("start") or "")[:10]
+        start_raw = (t.get("datum") or t.get("date") or t.get("start") or "")
+        d = start_raw[:10]
         if not d:
             continue
         try:
             td = datetime.fromisoformat(d).date()
         except (ValueError, TypeError):
             continue
-        if td.isoformat() == today_str:
+        if td.isoformat() == today_str and (t.get("status") or "") != "abgesagt":
             termine_today += 1
+            # Uhrzeit aus ISO-Start extrahieren (HH:MM)
+            uhrzeit = ""
+            if "T" in start_raw:
+                uhrzeit = start_raw.split("T", 1)[1][:5]
+            termine_heute_liste.append({
+                "id": t.get("id"),
+                "uhrzeit": uhrzeit,
+                "titel": t.get("titel") or t.get("title") or "Termin",
+                "ort": t.get("ort") or "",
+                "monteur_username": t.get("monteur_username") or "",
+                "kunde_name": kunden_namen.get(t.get("kunde_id"), "") if t.get("kunde_id") else "",
+                "status": t.get("status") or "",
+            })
         if now.date() <= td <= week_end:
             termine_week += 1
+    termine_heute_liste.sort(key=lambda x: x.get("uhrzeit") or "99:99")
 
     return {
         "customers_count": customers,
@@ -377,6 +401,11 @@ async def get_dashboard_stats():
             "total": len(anfragen),
             "recent": recent_anfragen
         },
+        "projekte": {
+            "total": projekte_total,
+            "aktiv": projekte_aktiv,
+            "anfragen": projekte_anfragen,
+        },
         "kunden_aktiv": {
             "total": len(aktive_kunden),
             "archiviert": len(kontakte) - len(aktive_kunden),
@@ -391,5 +420,6 @@ async def get_dashboard_stats():
         "termine": {
             "today": termine_today,
             "next_7_days": termine_week,
+            "heute": termine_heute_liste,
         }
     }

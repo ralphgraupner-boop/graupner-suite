@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, TrendingDown, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen, FilePlus, Calendar, Wrench } from "lucide-react";
+import { Users, FileText, ClipboardCheck, Receipt, ChevronRight, Euro, TrendingUp, TrendingDown, Clock, Eye, Inbox, Filter, AlertTriangle, MailOpen, FilePlus, Calendar, Wrench, Bell, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 import { HelpTip } from "@/components/HelpTip";
@@ -137,13 +137,21 @@ const DashboardPage = () => {
     );
   }
 
+  const alertCount = (dueSoon.length) + (stats?.overdue_count || 0) + (followupQuotes.length) + (inboxStats.unread || 0) + (portalUnread.count || 0);
+  const termineHeute = stats?.termine?.heute || [];
+
   return (
     <div data-testid="dashboard-page">
       <div className="mb-6 lg:mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl lg:text-4xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">Übersicht Ihrer Geschäftstätigkeit</p>
+            <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base flex items-center gap-1.5" data-testid="dashboard-date-location">
+              <span className="capitalize">{new Date().toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+              <span className="text-muted-foreground/50">·</span>
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+              <span>Hamburg</span>
+            </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Link to="/module/kunden?filter=aktiv" data-testid="dashboard-kunden-button" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-card hover:bg-muted transition-colors text-sm font-medium">
@@ -151,6 +159,18 @@ const DashboardPage = () => {
               <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold">{stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}</span>
             </Link>
             <AnfragenFetcherButton onFetched={() => { loadStats(); }} />
+            <button
+              type="button"
+              data-testid="dashboard-bell-button"
+              onClick={() => document.querySelector('[data-testid="dashboard-due-warnings"]')?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              className="relative flex items-center justify-center w-9 h-9 rounded-full border bg-card hover:bg-muted transition-colors"
+              title="Hinweise anzeigen"
+            >
+              <Bell className="w-4 h-4 text-foreground" />
+              {alertCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold" data-testid="dashboard-bell-count">{alertCount}</span>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -216,7 +236,97 @@ const DashboardPage = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
+      {/* ===== ADMIN-Ansicht: 4 Statistik-Karten + HEUTE-Timeline (Mockup Phase 1) ===== */}
+      {isAdmin && (
+      <>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8" data-testid="admin-stat-cards">
+        <HelpTip id="dashboard.stat-projekte" block>
+        <Link to="/module/projekte" className="block" data-testid="stat-link-projekte">
+          <StatCard
+            title="Projekte"
+            value={stats?.projekte?.total || 0}
+            subtitle={`${stats?.projekte?.anfragen || 0} Anfragen`}
+            icon={ClipboardCheck}
+          />
+        </Link>
+        </HelpTip>
+        <HelpTip id="dashboard.stat-quotes" block>
+        <Link to="/module/dokumente" className="block" data-testid="stat-link-angebote">
+          <StatCard
+            title="Angebote"
+            value={stats?.quotes?.open || 0}
+            subtitle={`Gesamt: ${stats?.quotes?.total || 0}`}
+            icon={FileText}
+          />
+        </Link>
+        </HelpTip>
+        <HelpTip id="dashboard.stat-kunden" block>
+        <Link to="/module/kunden?filter=aktiv" className="block" data-testid="stat-link-kunden">
+          <StatCard
+            title="Kunden"
+            value={stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}
+            subtitle="aktiv"
+            icon={Users}
+          />
+        </Link>
+        </HelpTip>
+        <HelpTip id="dashboard.stat-umsatz" block>
+        <div data-testid="stat-link-umsatz">
+          {(() => {
+            const cur = stats?.revenue?.current_month || 0;
+            const last = stats?.revenue?.last_month || 0;
+            const diff = last > 0 ? ((cur - last) / last) * 100 : null;
+            const trend = diff === null ? "Vormonat —" : `Vormonat ${diff >= 0 ? "+" : ""}${diff.toFixed(0)}%`;
+            return (
+              <StatCard
+                title="Umsatz / Monat"
+                value={`${cur.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €`}
+                subtitle={trend}
+                icon={diff !== null && diff < 0 ? TrendingDown : TrendingUp}
+              />
+            );
+          })()}
+        </div>
+        </HelpTip>
+      </div>
+
+      {/* HEUTE-Timeline */}
+      <Card className="p-4 lg:p-6 mb-6 lg:mb-8" data-testid="heute-timeline">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold tracking-wider text-muted-foreground flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" /> HEUTE
+          </h3>
+          <Link to="/module/termine" className="text-xs font-medium text-primary hover:underline flex items-center gap-1" data-testid="heute-alle-termine">
+            Alle Termine <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
+        {termineHeute.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2" data-testid="heute-empty">Keine Termine heute.</p>
+        ) : (
+          <ul className="space-y-2.5">
+            {termineHeute.map((t) => {
+              const detail = [t.monteur_username, t.kunde_name || t.ort].filter(Boolean).join(" · ");
+              return (
+                <li key={t.id} className="flex items-center gap-3" data-testid={`heute-termin-${t.id}`}>
+                  <span className="shrink-0 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-mono font-semibold tabular-nums">
+                    {t.uhrzeit || "—"}
+                  </span>
+                  <div className="min-w-0 flex-1 border-b border-border/40 pb-2.5 -mb-2.5 last:border-0">
+                    <p className="text-sm font-medium truncate">{t.titel}</p>
+                    {detail && <p className="text-xs text-muted-foreground truncate">{detail}</p>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+      </>
+      )}
+
+      {/* ===== MITARBEITER-Ansicht: bestehende Kacheln (unverändert) ===== */}
+      {!isAdmin && (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
         <HelpTip id="dashboard.stat-anfragen" block>
         <Link to="/module/mail-inbox" className="block" data-testid="stat-link-anfragen">
           <StatCard
@@ -228,7 +338,7 @@ const DashboardPage = () => {
         </Link>
         </HelpTip>
         <HelpTip id="dashboard.stat-kunden" block>
-        <Link to="/module/kunden?filter=aktiv" className="block" data-testid="stat-link-kunden">
+        <Link to="/module/kunden?filter=aktiv" className="block" data-testid="stat-link-kunden-ma">
           <StatCard
             title="Kunden aktiv"
             value={stats?.kunden_aktiv?.total ?? stats?.customers_count ?? 0}
@@ -238,7 +348,7 @@ const DashboardPage = () => {
         </Link>
         </HelpTip>
         <HelpTip id="dashboard.stat-quotes" block>
-        <Link to="/module/dokumente" className="block" data-testid="stat-link-angebote">
+        <Link to="/module/dokumente" className="block" data-testid="stat-link-angebote-ma">
           <StatCard
             title="Offene Angebote"
             value={stats?.quotes?.open || 0}
@@ -247,70 +357,6 @@ const DashboardPage = () => {
           />
         </Link>
         </HelpTip>
-        <HelpTip id="dashboard.stat-orders" block>
-        <Link to="/module/dokumente" className="block" data-testid="stat-link-auftraege">
-          <StatCard
-            title="Offene Aufträge"
-            value={stats?.orders?.open || 0}
-            subtitle={`Gesamt: ${stats?.orders?.total || 0}`}
-            icon={ClipboardCheck}
-          />
-        </Link>
-        </HelpTip>
-        {isAdmin && (
-        <HelpTip id="dashboard.stat-invoices" block>
-        <Link to="/module/dokumente" className="block" data-testid="stat-link-rechnungen">
-          <StatCard
-            title="Unbezahlte Rechnungen"
-            value={stats?.invoices?.unpaid || 0}
-            subtitle={`Gesamt: ${stats?.invoices?.total || 0}`}
-            icon={Receipt}
-          />
-        </Link>
-        </HelpTip>
-        )}
-      </div>
-
-      {/* Status-Kacheln (Cockpit) — Stand 06.05.2026 */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8" data-testid="status-tiles">
-        {isAdmin && (
-        <Link to="/module/dokumente?status=ueberfaellig" className="block" data-testid="stat-link-overdue">
-          <StatCard
-            title="Überfällig"
-            value={stats?.overdue_count || 0}
-            subtitle="Rechnungen > 30 Tage"
-            icon={AlertTriangle}
-          />
-        </Link>
-        )}
-        {isAdmin && (
-        <Link to="/module/dokumente?status=entwurf" className="block" data-testid="stat-link-drafts">
-          <StatCard
-            title="In Arbeit"
-            value={stats?.invoices?.drafts || 0}
-            subtitle="Rechnungs-Entwürfe"
-            icon={FilePlus}
-          />
-        </Link>
-        )}
-        {isAdmin && (
-        <div data-testid="stat-revenue-month">
-          {(() => {
-            const cur = stats?.revenue?.current_month || 0;
-            const last = stats?.revenue?.last_month || 0;
-            const diff = last > 0 ? ((cur - last) / last) * 100 : null;
-            const trend = diff === null ? "—" : `${diff >= 0 ? "+" : ""}${diff.toFixed(0)}%`;
-            return (
-              <StatCard
-                title="Umsatz / Monat"
-                value={`${cur.toLocaleString("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €`}
-                subtitle={`Vormonat: ${trend}`}
-                icon={diff !== null && diff < 0 ? TrendingDown : TrendingUp}
-              />
-            );
-          })()}
-        </div>
-        )}
         <Link to="/einsaetze" className="block" data-testid="stat-link-einsaetze">
           <StatCard
             title="Aktive Aufträge"
@@ -319,17 +365,8 @@ const DashboardPage = () => {
             icon={Wrench}
           />
         </Link>
-        {isAdmin && (
-        <Link to="/module/termine" className="block" data-testid="stat-link-termine">
-          <StatCard
-            title="Termine heute"
-            value={stats?.termine?.today || 0}
-            subtitle={`${stats?.termine?.next_7_days || 0} in 7 Tagen`}
-            icon={Calendar}
-          />
-        </Link>
-        )}
       </div>
+      )}
 
       {!isAdmin && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" data-testid="meine-aufgaben-termine">
