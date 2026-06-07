@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Mail, Save, Plus, Pencil, Trash2, FileText, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Users, Hash, Type } from "lucide-react";
+import { Mail, Save, Plus, Pencil, Trash2, FileText, BookOpen, Star, AlertTriangle, Link2, ChevronDown, ChevronUp, Users, Hash, Type, Palette, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Card, Modal, Badge } from "@/components/common";
 import { api } from "@/lib/api";
+import { useTheme } from "@/lib/themeContext";
 
 const TYPEN = [
   { value: "notiz", label: "Notiz", icon: FileText, color: "bg-blue-100 text-blue-700" },
@@ -13,6 +14,44 @@ const TYPEN = [
 ];
 
 const DEFAULT_KATEGORIEN = ["Allgemein", "Anweisungen", "Hinweise", "Programmbeschreibung", "Links"];
+const FarbschemaCard = () => {
+  const { theme, setTheme } = useTheme();
+  const SCHEMAS = [
+    { value: "light",      label: "Hell",  swatch: "#ffffff", mark: "#14532d" },
+    { value: "dark",       label: "Dunkel", swatch: "#1b1d22", mark: "#3ad07a" },
+    { value: "dark-blue",  label: "Blau",  swatch: "#16243f", mark: "#5ad08a" },
+    { value: "dark-green", label: "Grün",  swatch: "#0f2a0f", mark: "#6adf6a" },
+    { value: "gray",       label: "Grau",  swatch: "#2d2d2d", mark: "#ffffff" },
+  ];
+  return (
+    <Card className="p-4 lg:p-6" data-testid="farbschema-card">
+      <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+        <Palette className="w-5 h-5 text-primary" /> Farbschema
+      </h3>
+      <p className="text-sm text-muted-foreground mb-3">Wählen Sie das Design der Oberfläche.</p>
+      <div className="flex flex-wrap gap-3">
+        {SCHEMAS.map((s) => {
+          const active = theme === s.value;
+          return (
+            <button
+              key={s.value}
+              onClick={() => setTheme(s.value)}
+              data-testid={`farbschema-${s.value}`}
+              title={s.label}
+              className={`flex flex-col items-center gap-1.5 p-2 rounded-md border-2 transition-smooth ${active ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted"}`}
+            >
+              <span className="w-11 h-11 rounded-md border shadow-sm flex items-center justify-center" style={{ backgroundColor: s.swatch }}>
+                {active && <Check className="w-5 h-5" style={{ color: s.mark }} />}
+              </span>
+              <span className="text-xs font-medium">{s.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
+};
+
 const SchriftgroesseCard = () => {
   const SIZES = [
     { value: 14, label: "Klein" },
@@ -362,6 +401,7 @@ const DiversesTab = () => {
   return (
     <div className="space-y-4">
       <SchriftgroesseCard />
+      <FarbschemaCard />
       <RechnungsnummernCard />
       <FeatureFlagsCard />
       <PopOutPrefsCard />

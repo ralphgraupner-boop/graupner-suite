@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain, Sun, Moon, Monitor, Droplet, Mic } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardCheck, Receipt, Package, Settings, LogOut, Menu, Globe, Inbox, Share2, Wrench, MailOpen, Landmark, AlertTriangle, UserCheck, Download, HardHat, Smartphone, BookOpen, Eye, Copy, Folder, Briefcase, Calendar, StickyNote, GripVertical, ArrowUpDown, RotateCcw, Check, ChevronDown, Brain, Sun, Moon, Monitor, Droplet, Leaf, Square, Mic } from "lucide-react";
 import { api } from "@/lib/api";
 import { HelpTip } from "@/components/HelpTip";
 import { detectAppEnv, ENV_BADGE_CLASSES } from "@/lib/env";
@@ -84,10 +84,12 @@ const getChildren = (allItems, parentPath) => allItems.filter(i => i.parentPath 
 const ThemeToggle = ({ variant = "sidebar" }) => {
   const { theme, cycleTheme } = useTheme();
   const meta = {
-    light:       { Icon: Sun,     label: "Hell",         next: "Dunkel" },
-    dark:        { Icon: Moon,    label: "Dunkel",       next: "Dunkelblau" },
-    "dark-blue": { Icon: Droplet, label: "Dunkelblau",   next: "Automatisch" },
-    system:      { Icon: Monitor, label: "Automatisch",  next: "Hell" },
+    light:        { Icon: Sun,     label: "Hell",        next: "Dunkel" },
+    dark:         { Icon: Moon,    label: "Dunkel",      next: "Dunkelblau" },
+    "dark-blue":  { Icon: Droplet, label: "Dunkelblau",  next: "Grün" },
+    "dark-green": { Icon: Leaf,    label: "Grün",        next: "Grau" },
+    gray:         { Icon: Square,  label: "Grau",        next: "Automatisch" },
+    system:       { Icon: Monitor, label: "Automatisch", next: "Hell" },
   };
   const cur = meta[theme] || meta.system;
   const Icon = cur.Icon;
@@ -371,7 +373,7 @@ const Sidebar = ({ onLogout }) => {
 
   return (
     <>
-      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-card border-r flex-col z-30">
+      <aside className="app-sidebar hidden lg:flex fixed left-0 top-0 h-screen w-64 bg-card border-r flex-col z-30">
       <div className="p-6 border-b">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -735,7 +737,7 @@ const MobileNav = ({ onLogout }) => {
 
   return (
     <>
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b flex items-center justify-between px-4 z-30">
+      <header className="app-sidebar lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b flex items-center justify-between px-4 z-30">
         <div className="flex items-center gap-1.5 min-w-0">
           <h1 className="text-lg font-bold text-primary">Graupner Suite</h1>
           {APP_ENV.kind !== "unknown" && (
@@ -751,7 +753,7 @@ const MobileNav = ({ onLogout }) => {
           </button>
         </div>
       </header>
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex justify-around items-center z-30 safe-area-bottom" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <nav className="app-sidebar lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t flex justify-around items-center z-30 safe-area-bottom" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {mobileTabItems.map(({ path, icon: Icon, label }) => (
           <Link key={path} to={path} data-testid={`mobile-nav-${path.slice(1)}`}
             className={`flex flex-col items-center gap-0.5 py-2 px-3 min-w-[64px] ${location.pathname.startsWith(path) ? "text-primary" : "text-muted-foreground"}`}>

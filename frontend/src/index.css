@@ -93,6 +93,46 @@ code, .mono {
     --input: 220 30% 22%;
     --ring: 142 65% 45%;
   }
+
+  /* Grün – helles Schema mit dunkelgrüner Sidebar (Hauptbereich hell, Karten weiß) */
+  .dark-green {
+    --background: 120 50% 96%;
+    --border: 120 43% 84%;
+    --input: 120 43% 84%;
+    --ring: 142 76% 17%;
+  }
+  .dark-green .app-sidebar {
+    --card: 120 47% 11%;
+    --card-foreground: 0 0% 100%;
+    --foreground: 0 0% 100%;
+    --muted: 120 30% 20%;
+    --muted-foreground: 120 15% 78%;
+    --accent: 120 30% 20%;
+    --accent-foreground: 0 0% 100%;
+    --border: 120 40% 16%;
+    --primary: 120 65% 65%;
+    --primary-foreground: 120 47% 11%;
+  }
+
+  /* Grau – helles Schema mit dunkelgrauer Sidebar (Hauptbereich hell, Karten weiß) */
+  .gray {
+    --background: 0 0% 96%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 0 0% 40%;
+  }
+  .gray .app-sidebar {
+    --card: 0 0% 18%;
+    --card-foreground: 0 0% 100%;
+    --foreground: 0 0% 100%;
+    --muted: 0 0% 26%;
+    --muted-foreground: 0 0% 72%;
+    --accent: 0 0% 26%;
+    --accent-foreground: 0 0% 100%;
+    --border: 0 0% 26%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 18%;
+  }
 }
 
 @layer base {

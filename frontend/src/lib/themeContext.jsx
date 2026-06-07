@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-// Vier Modi:
+// Modi:
 //   "light"      → keine CSS-Klasse (heller Modus)
 //   "dark"       → .dark (warmes Neutralgrau)
 //   "dark-blue"  → .dark + .dark-blue (warmes Dunkelblau)
+//   "dark-green" → .dark-green (helles Schema mit dunkelgrüner Sidebar)
+//   "gray"       → .gray (helles Schema mit dunkelgrauer Sidebar)
 //   "system"     → folgt prefers-color-scheme (Dunkel = neutralgrau)
 const STORAGE_KEY = "graupner_theme";
-const VALID = ["light", "dark", "dark-blue", "system"];
+const VALID = ["light", "dark", "dark-blue", "dark-green", "gray", "system"];
 
 const ThemeContext = createContext({
   theme: "system",
@@ -30,11 +32,15 @@ function systemPrefersDark() {
 function applyThemeClasses(mode) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.classList.remove("dark", "dark-blue");
+  root.classList.remove("dark", "dark-blue", "dark-green", "gray");
   if (mode === "dark") {
     root.classList.add("dark");
   } else if (mode === "dark-blue") {
     root.classList.add("dark", "dark-blue");
+  } else if (mode === "dark-green") {
+    root.classList.add("dark-green");
+  } else if (mode === "gray") {
+    root.classList.add("gray");
   }
 }
 
@@ -79,7 +85,7 @@ export const ThemeProvider = ({ children }) => {
   }, []);
 
   const cycleTheme = useCallback(() => {
-    const order = ["light", "dark", "dark-blue", "system"];
+    const order = ["light", "dark", "dark-blue", "dark-green", "gray", "system"];
     const idx = order.indexOf(theme);
     const next = order[(idx + 1) % order.length];
     setTheme(next);
