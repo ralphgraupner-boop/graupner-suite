@@ -325,11 +325,8 @@ async def daily_backup_task():
                 f"UTC (in {wait_seconds/3600:.1f} Stunden)"
             )
 
-            # In Stunden-Schritten warten, dazwischen Heartbeat schreiben
+            # Heartbeat zuerst schreiben (sofort nach Start sichtbar), dann warten
             while wait_seconds > 0:
-                sleep_now = min(HEARTBEAT_INTERVAL, wait_seconds)
-                await asyncio.sleep(sleep_now)
-                wait_seconds -= sleep_now
                 # Heartbeat schreiben
                 try:
                     await db.auto_backup_log.insert_one({
@@ -349,6 +346,9 @@ async def daily_backup_task():
                         )
                 except Exception as he:
                     logger.warning(f"Heartbeat-Schreibfehler: {he}")
+                sleep_now = min(HEARTBEAT_INTERVAL, wait_seconds)
+                await asyncio.sleep(sleep_now)
+                wait_seconds -= sleep_now
 
             # Backup ausloesen
             logger.info("🛡️ Starte automatisches tägliches Backup...")
@@ -527,14 +527,13 @@ async def update_backup_settings(payload: dict):
 
 @router.post("/backup/auto/trigger")
 async def trigger_manual_backup():
-    """Löst sofort ein Backup aus und versendet es per E-Mail (Test)."""
-    logger.info("🛡️ Manueller Backup-Test ausgelöst")
-    ok, total_docs, size_bytes = await _run_backup_with_log(trigger="manual")
+    """Startet sofort ein Backup im Hintergrund (kurze Antwort -> kein Proxy-Timeout)."""
+    logger.info("🛡️ Manueller Backup ausgelöst (läuft im Hintergrund)")
+    asyncio.create_task(_run_backup_with_log(trigger="manual"))
     return {
-        "ok": ok,
-        "total_docs": total_docs,
-        "size_kb": round(size_bytes / 1024, 1) if size_bytes else 0,
-        "message": "Backup erstellt und Mail gesendet" if ok else "Backup fehlgeschlagen — siehe /api/backup/auto/log",
+        "ok": True,
+        "started": True,
+        "message": "Backup gestartet — läuft im Hintergrund (ca. 30 Sekunden).",
     }
 
 

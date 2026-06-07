@@ -53,12 +53,31 @@ export const BackupStatusCard = () => {
   const triggerBackup = async () => {
     setRunning(true);
     try {
-      const r = await api.post("/backup/auto/trigger", {}, { timeout: 180000 });
-      if (r.data?.ok) {
-        toast.success(`Backup erstellt — ${r.data.total_docs} Datensätze, ${r.data.size_kb} KB`);
-        load();
-      } else {
-        toast.error(r.data?.message || "Backup fehlgeschlagen");
+      const before = status?.letzter_lauf?.created_at;
+      const r = await api.post("/backup/auto/trigger", {});
+      if (!r.data?.ok) {
+        toast.error(r.data?.message || "Backup konnte nicht gestartet werden");
+        setRunning(false);
+        return;
+      }
+      toast.success("Backup gestartet — läuft im Hintergrund …");
+      // Auf das tatsächliche Ergebnis warten (Status pollen), unabhängig von Proxy-Timeouts
+      let fertig = false;
+      for (let i = 0; i < 20 && !fertig; i++) {
+        await new Promise((res) => setTimeout(res, 3000));
+        try {
+          const s = await api.get("/backup/auto/status");
+          setStatus(s.data);
+          const ll = s.data?.letzter_lauf;
+          if (ll && ll.created_at !== before) {
+            fertig = true;
+            if (ll.status === "success") {
+              toast.success(`Backup erstellt — ${ll.total_docs} Datensätze, ${ll.size_kb} KB`);
+            } else {
+              toast.error("Backup fehlgeschlagen — siehe Backup-Log in den Einstellungen");
+            }
+          }
+        } catch (_) { /* weiter pollen */ }
       }
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Backup-Aufruf fehlgeschlagen");
