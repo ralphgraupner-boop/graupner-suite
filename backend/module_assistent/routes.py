@@ -334,6 +334,12 @@ async def assistent_ask(payload: AskRequest, user=Depends(get_current_user)):
                 f"Das darf ich fuer dich nicht ausfuehren, Ralph — dir fehlt die "
                 f"Berechtigung fuer '{tool_result.get('bereich')}'. Bitte einen Admin fragen."
             )
+        # Filter / Massen-Update: Tool-Hinweis (Anzahl + Bestaetigungs-Rueckfrage)
+        # in die sichtbare Antwort heben (der LLM-Text kennt die Anzahl nicht vorab)
+        elif tool_result and tool_result.get("hinweis") and tool_name in (
+            "kunden_filtern", "kunden_massen_update",
+        ):
+            antwort_text = tool_result["hinweis"]
 
     # 5) Audit
     audit_id = str(uuid.uuid4())

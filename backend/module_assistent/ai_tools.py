@@ -15,6 +15,7 @@ from typing import Optional, Dict, Any
 
 from database import db, logger
 from routes.mitarbeiter import check_berechtigung
+from security.admin_check import _role_of
 
 
 SAMMEL_PROJEKT_TITEL = "Allgemein / Büro"
@@ -59,6 +60,8 @@ TOOL_BERECHTIGUNG = {
     "termin_anlegen": "modul_termine",
     "kunde_suchen": "modul_kunden",
     "notiz_schreiben": "modul_aufgaben",
+    "kunden_filtern": "modul_kunden",
+    "kunden_massen_update": "modul_kunden",
 }
 
 
@@ -107,6 +110,29 @@ TOOLS_SCHEMA = [
             "text": "Pflicht. Der Notiz-Inhalt.",
             "kunde_id": "Optional. Kunden-ID falls zugeordnet.",
             "projekt_id": "Optional. Projekt-ID falls zugeordnet.",
+        },
+    },
+    {
+        "name": "kunden_filtern",
+        "beschreibung": "Filtere Kunden/Anfragen nach Status, Kategorie oder Typ. Z.B. 'alle Kunden ohne Kategorie' oder 'alle Anfragen mit Status Neu'. Read-only, aendert nichts.",
+        "felder": {
+            "status": "Optional. Kundenstatus, z.B. 'Neu', 'Anfrage', 'Aktiv'.",
+            "kategorie": "Optional. Exakte Kategorie, die vorhanden sein muss (z.B. 'Hebeschiebetuer').",
+            "ohne_kategorie": "Optional (true/false). Wenn true: nur Kunden OHNE jede Kategorie.",
+            "customer_type": "Optional. 'Privat' oder 'Gewerbe'.",
+        },
+    },
+    {
+        "name": "kunden_massen_update",
+        "beschreibung": "ADMIN-ONLY. Aktualisiert mehrere Kunden auf einmal (Kategorie oder Status setzen), gefiltert wie bei kunden_filtern. ZWEI SCHRITTE: erst ZAEHLEN (ohne bestaetigt), dann nach ausdruecklichem 'Ja' des Nutzers mit bestaetigt=true AUSFUEHREN.",
+        "felder": {
+            "status": "Optional Filter. Nur Kunden mit diesem Status.",
+            "kategorie": "Optional Filter. Nur Kunden mit dieser Kategorie.",
+            "ohne_kategorie": "Optional Filter (true/false). Nur Kunden ohne Kategorie.",
+            "customer_type": "Optional Filter. 'Privat' oder 'Gewerbe'.",
+            "setze_kategorie": "Optional. Diese Kategorie bei allen Treffern setzen (z.B. 'Hebeschiebetuer').",
+            "setze_status": "Optional. Diesen Status bei allen Treffern setzen.",
+            "bestaetigt": "Steuert die Ausfuehrung: false/leer = nur zaehlen + Rueckfrage; true = wirklich ausfuehren (NUR nach ausdruecklichem 'Ja' des Nutzers).",
         },
     },
 ]
@@ -162,6 +188,12 @@ async def system_prompt_de() -> str:
         "Wenn der Name uneindeutig ist (mehrere Treffer): nimm den mit Rolle 'admin' oder "
         "'monteur', sonst den ersten. Ohne dieses Feld wird KEINE Mail versendet — "
         "und der Mitarbeiter sieht den Termin nie auf seinem Handy.\n\n"
+        "WICHTIG fuer 'kunden_massen_update' — SICHERHEIT:\n"
+        "Dieses Tool veraendert VIELE Datensaetze auf einmal. Rufe es ZUERST OHNE "
+        "'bestaetigt' (oder bestaetigt=false) auf — dann wird nur GEZAEHLT und die Anzahl "
+        "gemeldet, es wird NICHTS geaendert. Setze 'bestaetigt': true NUR dann, wenn der "
+        "Nutzer im DARAUFFOLGENDEN Schritt ausdruecklich zustimmt ('ja', 'mach das', "
+        "'bestaetigt'). Erfinde niemals eine Zustimmung.\n\n"
         "Beispiele:\n"
         'Eingabe: "Leg eine Aufgabe an: morgen Schmidt anrufen"\n'
         '{"tool":"aufgabe_anlegen","args":{"titel":"Schmidt anrufen","faellig_am":"2026-06-02"},'
@@ -348,11 +380,121 @@ async def tool_notiz_schreiben(args: Dict[str, Any], user: dict) -> Dict[str, An
     return {"ok": True, "notiz": item, "direkt_link": f"/module/aufgaben?highlight={item['id']}"}
 
 
+def _build_kunden_filter(args: Dict[str, Any]) -> tuple:
+    """Baut den Mongo-Filter fuer kunden_filtern / kunden_massen_update.
+    Gibt (query, beschreibung_liste) zurueck. Regel 4: keine Doppelung."""
+    query: Dict[str, Any] = {}
+    beschreibung = []
+    status = (args.get("status") or "").strip()
+    kategorie = (args.get("kategorie") or "").strip()
+    customer_type = (args.get("customer_type") or "").strip()
+    ohne_kategorie = bool(args.get("ohne_kategorie"))
+    if status:
+        query["status"] = status
+        beschreibung.append(f"Status '{status}'")
+    if customer_type:
+        query["customer_type"] = customer_type
+        beschreibung.append(f"Typ '{customer_type}'")
+    if ohne_kategorie:
+        query["$or"] = [
+            {"categories": {"$exists": False}},
+            {"categories": None},
+            {"categories": []},
+        ]
+        beschreibung.append("ohne Kategorie")
+    elif kategorie:
+        query["categories"] = kategorie
+        beschreibung.append(f"Kategorie '{kategorie}'")
+    return query, beschreibung
+
+
+async def tool_kunden_filtern(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
+    query, beschreibung = _build_kunden_filter(args)
+    anzahl = await db.module_kunden.count_documents(query)
+    cursor = db.module_kunden.find(
+        query,
+        {"_id": 0, "id": 1, "vorname": 1, "nachname": 1, "name": 1, "firma": 1,
+         "email": 1, "phone": 1, "plz": 1, "ort": 1, "status": 1, "categories": 1,
+         "customer_type": 1},
+    ).limit(50)
+    treffer = await cursor.to_list(50)
+    filter_text = " + ".join(beschreibung) if beschreibung else "alle Kunden"
+    return {
+        "ok": True,
+        "treffer": treffer,
+        "anzahl": anzahl,
+        "filter": filter_text,
+        "direkt_link": "/module/kunden",
+        "hinweis": f"{anzahl} Kunden gefunden ({filter_text}).",
+    }
+
+
+async def tool_kunden_massen_update(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
+    # Nur Admin (Regel: require_admin)
+    if _role_of(user) != "admin":
+        return {
+            "ok": False,
+            "error": "keine_berechtigung",
+            "hinweis": "Nur Admins duerfen Massen-Updates ausfuehren.",
+        }
+    query, beschreibung = _build_kunden_filter(args)
+    # Mindestens ein Filter noetig (kein versehentliches Update ALLER Kunden)
+    if not query:
+        return {"ok": False, "error": "kein_filter",
+                "hinweis": "Bitte einen Filter angeben (z.B. Status oder 'ohne Kategorie')."}
+    setze_kategorie = (args.get("setze_kategorie") or "").strip()
+    setze_status = (args.get("setze_status") or "").strip()
+    update_set: Dict[str, Any] = {}
+    update_beschreibung = []
+    if setze_kategorie:
+        update_set["categories"] = [setze_kategorie]
+        update_beschreibung.append(f"Kategorie -> '{setze_kategorie}'")
+    if setze_status:
+        update_set["status"] = setze_status
+        update_beschreibung.append(f"Status -> '{setze_status}'")
+    if not update_set:
+        return {"ok": False, "error": "kein_update",
+                "hinweis": "Bitte angeben, was gesetzt werden soll (setze_kategorie oder setze_status)."}
+    filter_text = " + ".join(beschreibung)
+    update_text = " + ".join(update_beschreibung)
+    anzahl = await db.module_kunden.count_documents(query)
+    # Schritt 1: nur zaehlen + Rueckfrage (keine Aenderung)
+    if not bool(args.get("bestaetigt")):
+        return {
+            "ok": True,
+            "needs_confirmation": True,
+            "anzahl": anzahl,
+            "filter": filter_text,
+            "aenderung": update_text,
+            "hinweis": f"{anzahl} Kunden ({filter_text}) wuerden geaendert: {update_text}. "
+                       f"Bestaetige mit 'Ja', dann fuehre ich es aus.",
+        }
+    # Schritt 2: ausfuehren
+    if anzahl == 0:
+        return {"ok": True, "aktualisiert": 0, "hinweis": "Keine passenden Kunden gefunden."}
+    update_set["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.module_kunden.update_many(query, {"$set": update_set})
+    logger.info(
+        f"KI-Tool kunden_massen_update: {result.modified_count} Kunden "
+        f"({filter_text}) -> {update_text} (user={(user or {}).get('username','?')})"
+    )
+    return {
+        "ok": True,
+        "aktualisiert": result.modified_count,
+        "filter": filter_text,
+        "aenderung": update_text,
+        "direkt_link": "/module/kunden",
+        "hinweis": f"{result.modified_count} Kunden aktualisiert: {update_text}.",
+    }
+
+
 TOOLS = {
     "aufgabe_anlegen": tool_aufgabe_anlegen,
     "termin_anlegen": tool_termin_anlegen,
     "kunde_suchen": tool_kunde_suchen,
     "notiz_schreiben": tool_notiz_schreiben,
+    "kunden_filtern": tool_kunden_filtern,
+    "kunden_massen_update": tool_kunden_massen_update,
 }
 
 
