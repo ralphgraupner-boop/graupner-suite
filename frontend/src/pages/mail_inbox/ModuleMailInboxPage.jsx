@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Modal } from "@/components/common";
 import MailDetailModal from "@/components/MailDetailModal";
 import MailAcceptDuplicateDialog from "@/components/MailAcceptDuplicateDialog";
+import MailAnfrageUebernehmenModal from "@/components/MailAnfrageUebernehmenModal";
 
 const STATUS_LABELS = {
   vorschlag: { label: "Offen", color: "bg-amber-100 text-amber-800" },
@@ -37,6 +38,7 @@ const ModuleMailInboxPage = () => {
 
   // Detail-Modal: Mail prüfen + entscheiden
   const [detailEntry, setDetailEntry] = useState(null);
+  const [uebernehmenEntry, setUebernehmenEntry] = useState(null);
 
   // Statistik
   const [stats, setStats] = useState(null);
@@ -82,26 +84,9 @@ const ModuleMailInboxPage = () => {
     }
   };
 
-  const accept = async (entry, forceNew = false) => {
-    // Direkt übernehmen mit den geparsten Daten und ins Kunden-Modul navigieren.
-    // (Bearbeiten passiert dort in der bestehenden Datenmaske – keine Doppelung.)
-    try {
-      const r = await api.post(
-        `/module-mail-inbox/accept/${entry.id}`,
-        forceNew ? { force_new: true } : {},
-      );
-      toast.success(`Kunde „${r.data.kunde_name}" angelegt`);
-      try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
-      setDupCtx(null);
-      navigate(`/module/kunden?edit=${r.data.kunde_id}`);
-    } catch (err) {
-      const detail = err?.response?.data?.detail;
-      if (err?.response?.status === 409 && detail && detail.code === "duplicate_kunde") {
-        setDupCtx({ entry, duplicates: detail.duplicates || [] });
-        return;
-      }
-      toast.error(typeof detail === "string" ? detail : "Übernahme fehlgeschlagen");
-    }
+  const accept = (entry) => {
+    // Geführter 4-Schritt-Workflow im Modal (statt direkter Anlage + Navigation)
+    setUebernehmenEntry(entry);
   };
 
   const linkToExisting = async (kundeId) => {
@@ -445,7 +430,7 @@ const ModuleMailInboxPage = () => {
         <div className="text-center py-12 text-muted-foreground">
           <Mail className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p>Keine Einträge.</p>
-          <p className="text-xs mt-1">Klicke auf „Postfach prüfen" oben rechts.</p>
+          <p className="text-xs mt-1">{`Klicke auf „Postfach prüfen" oben rechts.`}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -839,6 +824,14 @@ const ModuleMailInboxPage = () => {
         onForce={() => dupCtx && accept(dupCtx.entry, true)}
         onClose={() => setDupCtx(null)}
       />
+
+      {uebernehmenEntry && (
+        <MailAnfrageUebernehmenModal
+          entry={uebernehmenEntry}
+          onClose={() => setUebernehmenEntry(null)}
+          onDone={async () => { await load(); }}
+        />
+      )}
     </div>
   );
 };
