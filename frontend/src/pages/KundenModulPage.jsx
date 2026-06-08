@@ -109,6 +109,7 @@ const KundenModulPage = () => {
   const [openEdits, setOpenEdits] = useState([]); // mehrere "Kunde bearbeiten"-Fenster parallel
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [editingId, setEditingId] = useState(null);  // Inline-Bearbeiten: welcher Kunde gerade im Edit-Modus ist
   const [vcfUploading, setVcfUploading] = useState(false);
   const [vcfDuplicateDialog, setVcfDuplicateDialog] = useState(null);
   const [showKontaktImport, setShowKontaktImport] = useState(false);
@@ -535,7 +536,7 @@ const KundenModulPage = () => {
                         <span className="absolute -top-1 -right-1 text-[9px] bg-emerald-600 text-white rounded-full px-1 leading-tight min-w-[16px] text-center">{projektCounts[kunde.id]}</span>
                       )}
                     </button>
-                    <button onClick={() => openEditFor(kunde)} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten"><Edit className="w-4 h-4" /></button>
+                    <button onClick={() => { setExpandedId(kunde.id); setEditingId(kunde.id); }} className="p-2 hover:bg-muted rounded-sm" title="Bearbeiten" data-testid={`btn-edit-inline-${kunde.id}`}><Edit className="w-4 h-4" /></button>
                     <button onClick={() => handleDelete(kunde)} className="p-2 rounded-sm hover:bg-destructive/10 text-red-600" title="Kunde sicher löschen (mit Vorab-Backup)" data-testid={`btn-kunde-delete-${kunde.id}`}>
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -546,6 +547,14 @@ const KundenModulPage = () => {
                 {/* Detail */}
                 {isExpanded && (
                   <div className="border-t bg-muted/30 p-4 lg:p-6 animate-in slide-in-from-top-2 duration-200">
+                    {editingId === kunde.id ? (
+                      <KundeInlineEdit
+                        kunde={kunde}
+                        onSaved={() => { setEditingId(null); loadKunden(); }}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    ) : (
+                    <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Kontaktdaten</h4>
@@ -670,7 +679,7 @@ const KundenModulPage = () => {
 
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-                      <Button size="sm" onClick={() => openEditFor(kunde)}><Edit className="w-4 h-4" /> Bearbeiten</Button>
+                      <Button size="sm" onClick={() => setEditingId(kunde.id)} data-testid={`btn-detail-edit-inline-${kunde.id}`}><Edit className="w-4 h-4" /> Bearbeiten</Button>
                       <Button
                         size="sm"
                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -763,6 +772,8 @@ const KundenModulPage = () => {
 
                     {/* Dokumenten-Hub für diesen Kunden */}
                     <CustomerDocumentsPanel customerId={kunde.id} />
+                    </>
+                    )}
                   </div>
                 )}
               </Card>
@@ -871,6 +882,104 @@ const DuplicateDialog = ({ title, duplicates, onCancel, onOpen, onForce, loading
     </div>
   </div>
 );
+
+
+// ==================== KUNDE INLINE EDIT ====================
+// Bearbeiten direkt in der aufgeklappten Kundenkarte (kein separates Fenster).
+const KundeInlineEdit = ({ kunde, onSaved, onCancel }) => {
+  const [form, setForm] = useState({
+    anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "",
+    firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "",
+    strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "",
+    customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage",
+    categories: kunde.categories || [], notes: kunde.notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
+  const KUNDEN_KATEGORIEN = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
+  const ANREDEN = useTextvorlagen("anrede", ANREDEN_FALLBACK);
+  const CUSTOMER_TYPES = useTextvorlagen("kunden_typ", CUSTOMER_TYPES_FALLBACK);
+
+  const toggleCat = (cat) => setForm(f => ({
+    ...f,
+    categories: (f.categories || []).includes(cat) ? f.categories.filter(c => c !== cat) : [...(f.categories || []), cat],
+  }));
+
+  const save = async () => {
+    if (!form.vorname && !form.nachname && !form.firma) { toast.error("Vorname, Nachname oder Firma erforderlich"); return; }
+    setSaving(true);
+    try {
+      await api.put(`/modules/kunden/data/${kunde.id}`, form);
+      toast.success("Kunde aktualisiert");
+      broadcast("kunden-changed", { kundeId: kunde.id });
+      onSaved();
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" && detail ? detail : "Fehler beim Speichern");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-4" data-testid={`kunde-inline-edit-${kunde.id}`}>
+      <h4 className="text-sm font-semibold text-primary uppercase tracking-wide flex items-center gap-2"><Edit className="w-4 h-4" /> Bearbeiten</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium mb-1">Anrede</label>
+          <select value={form.anrede} onChange={e => setForm({ ...form, anrede: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid={`edit-anrede-${kunde.id}`}>
+            <option value="">Bitte wählen</option>{ANREDEN.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1">Kundentyp</label>
+          <select value={form.customer_type} onChange={e => setForm({ ...form, customer_type: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid={`edit-typ-${kunde.id}`}>
+            {CUSTOMER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+      <div><label className="block text-xs font-medium mb-1">Firma</label><Input value={form.firma} onChange={e => setForm({ ...form, firma: e.target.value })} data-testid={`edit-firma-${kunde.id}`} /></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><label className="block text-xs font-medium mb-1">Vorname</label><Input value={form.vorname} onChange={e => setForm({ ...form, vorname: e.target.value })} data-testid={`edit-vorname-${kunde.id}`} /></div>
+        <div><label className="block text-xs font-medium mb-1">Nachname</label><Input value={form.nachname} onChange={e => setForm({ ...form, nachname: e.target.value })} data-testid={`edit-nachname-${kunde.id}`} /></div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div><label className="block text-xs font-medium mb-1">E-Mail</label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} data-testid={`edit-email-${kunde.id}`} /></div>
+        <div><label className="block text-xs font-medium mb-1">Telefon</label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} data-testid={`edit-phone-${kunde.id}`} /></div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Adresse</label>
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-8"><Input placeholder="Straße" value={form.strasse} onChange={e => setForm({ ...form, strasse: e.target.value })} data-testid={`edit-strasse-${kunde.id}`} /></div>
+          <div className="col-span-4"><Input placeholder="Nr." value={form.hausnummer} onChange={e => setForm({ ...form, hausnummer: e.target.value })} data-testid={`edit-nr-${kunde.id}`} /></div>
+        </div>
+        <div className="grid grid-cols-4 gap-2 mt-2">
+          <div><Input placeholder="PLZ" value={form.plz} onChange={e => setForm({ ...form, plz: e.target.value })} data-testid={`edit-plz-${kunde.id}`} /></div>
+          <div className="col-span-3"><Input placeholder="Ort" value={form.ort} onChange={e => setForm({ ...form, ort: e.target.value })} data-testid={`edit-ort-${kunde.id}`} /></div>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Status</label>
+        <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid={`edit-status-${kunde.id}`}>
+          {KUNDEN_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Kategorien</label>
+        <div className="flex flex-wrap gap-2">
+          {KUNDEN_KATEGORIEN.map(cat => (
+            <button key={cat} type="button" onClick={() => toggleCat(cat)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${(form.categories || []).includes(cat) ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input"}`}>{cat}</button>
+          ))}
+        </div>
+      </div>
+      <div><label className="block text-xs font-medium mb-1">Notizen</label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} data-testid={`edit-notes-${kunde.id}`} /></div>
+      <div className="flex gap-2 pt-3 border-t">
+        <Button size="sm" onClick={save} disabled={saving} data-testid={`edit-save-${kunde.id}`}>
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />} Speichern
+        </Button>
+        <Button size="sm" variant="outline" onClick={onCancel} disabled={saving} data-testid={`edit-cancel-${kunde.id}`}>Abbrechen</Button>
+      </div>
+    </div>
+  );
+};
 
 
 // ==================== KUNDEN FORM MODAL ====================
