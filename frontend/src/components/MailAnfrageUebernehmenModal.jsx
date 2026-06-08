@@ -46,6 +46,7 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
   const [form, setForm] = useState(() => prefillFrom(parsed));
   const [busy, setBusy] = useState(false);
   const [kunde, setKunde] = useState(null);
+  const [projektId, setProjektId] = useState(null);
   const [dupError, setDupError] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -123,7 +124,7 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
         kundeId={kunde.id}
         kunde={kunde}
         onClose={() => setStep(4)}
-        onCreated={() => setStep(4)}
+        onCreated={(p) => { setProjektId(p?.id || null); setStep(4); }}
       />
     );
   }
@@ -234,7 +235,12 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
             <Button variant="outline" className="h-auto py-4 flex-col" onClick={() => finish(`/module/termine?kunde_id=${kunde.id}`)} data-testid="aktion-termin">
               <CalendarPlus className="w-5 h-5" /> Termin
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col" onClick={() => finish(`/module/projekte/werkbank/${kunde.id}`)} data-testid="aktion-werkbank">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex-col"
+              onClick={() => finish(projektId ? `/module/projekte/werkbank/${projektId}` : `/module/kunden?edit=${kunde.id}`)}
+              data-testid="aktion-werkbank"
+            >
               <Folder className="w-5 h-5" /> Zur Werkbank
             </Button>
           </div>
