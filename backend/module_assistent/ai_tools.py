@@ -9,6 +9,7 @@ dieselbe Struktur wie die normalen Create-Endpoints. Auth wurde bereits am
 /ask-Endpoint geprueft.
 """
 from __future__ import annotations
+import re
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
@@ -406,6 +407,27 @@ async def tool_notiz_schreiben(args: Dict[str, Any], user: dict) -> Dict[str, An
     return {"ok": True, "notiz": item, "direkt_link": f"/module/aufgaben?highlight={item['id']}"}
 
 
+def _umlaut_regex(text: str) -> str:
+    """Baut ein umlaut-tolerantes, case-insensitives Regex-Pattern.
+
+    Loest den bekannten Umlaut-Bug: In der DB steht z.B. 'Hebeschiebetuer'
+    mal mit Umlaut, GPT liefert oft die andere Schreibweise. Reines
+    $options:'i' wuerde ue<->ue NICHT matchen, darum machen wir die
+    Umlaut-Varianten austauschbar (ue<->ue, ae<->ae, oe<->oe, ss<->ss).
+    """
+    pattern = re.escape((text or "").strip())
+    for um, asc in (("\u00fc", "ue"), ("\u00dc", "Ue"), ("\u00e4", "ae"),
+                    ("\u00c4", "Ae"), ("\u00f6", "oe"), ("\u00d6", "Oe"),
+                    ("\u00df", "ss")):
+        pattern = pattern.replace(um, asc)
+    pattern = re.sub(r"(?i)ue", "(?:ue|\u00fc)", pattern)
+    pattern = re.sub(r"(?i)ae", "(?:ae|\u00e4)", pattern)
+    pattern = re.sub(r"(?i)oe", "(?:oe|\u00f6)", pattern)
+    pattern = re.sub(r"(?i)ss", "(?:ss|\u00df)", pattern)
+    return pattern
+
+
+
 def _build_kunden_filter(args: Dict[str, Any]) -> tuple:
     """Baut den Mongo-Filter fuer kunden_filtern / kunden_massen_update.
     Gibt (query, beschreibung_liste) zurueck. Regel 4: keine Doppelung."""
@@ -429,7 +451,7 @@ def _build_kunden_filter(args: Dict[str, Any]) -> tuple:
         ]
         beschreibung.append("ohne Kategorie")
     elif kategorie:
-        query["categories"] = kategorie
+        query["categories"] = {"$regex": _umlaut_regex(kategorie), "$options": "i"}
         beschreibung.append(f"Kategorie '{kategorie}'")
     return query, beschreibung
 
@@ -518,7 +540,8 @@ async def tool_auftraege_nach_mitarbeiter(args: Dict[str, Any], user: dict) -> D
     name = (args.get("mitarbeiter") or args.get("name") or "").strip()
     if not name:
         return {"ok": False, "error": "kein_name", "hinweis": "Bitte einen Mitarbeiternamen angeben."}
-    q = {"$or": [{"zustaendig": name}, {"monteur_username": name}]}
+    name_rx = {"$regex": _umlaut_regex(name), "$options": "i"}
+    q = {"$or": [{"zustaendig": name_rx}, {"monteur_username": name_rx}]}
     orders = await db.orders.find(q, {"_id": 0}).limit(50).to_list(50)
     projekte = await db.module_projekte.find(
         q, {"_id": 0, "id": 1, "titel": 1, "status": 1, "kunde_id": 1, "zustaendig": 1, "monteur_username": 1},
