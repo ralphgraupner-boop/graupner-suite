@@ -919,58 +919,71 @@ const KundeInlineEdit = ({ kunde, onSaved, onCancel }) => {
     } finally { setSaving(false); }
   };
 
+  const inputCls = "h-9 text-sm";
+  const selectCls = "w-full h-9 rounded-sm border border-input bg-background px-2 text-sm";
+  const lblCls = "block text-[11px] font-medium text-muted-foreground mb-0.5";
   return (
     <div className="space-y-4" data-testid={`kunde-inline-edit-${kunde.id}`}>
-      <h4 className="text-sm font-semibold text-primary uppercase tracking-wide flex items-center gap-2"><Edit className="w-4 h-4" /> Bearbeiten</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium mb-1">Anrede</label>
-          <select value={form.anrede} onChange={e => setForm({ ...form, anrede: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid={`edit-anrede-${kunde.id}`}>
-            <option value="">Bitte wählen</option>{ANREDEN.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+        {/* Spalte 1 — Kontakt */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-primary mb-1 uppercase tracking-wide flex items-center gap-1"><Edit className="w-3.5 h-3.5" /> Kontakt</h4>
+          <div>
+            <label className={lblCls}>Anrede</label>
+            <select value={form.anrede} onChange={e => setForm({ ...form, anrede: e.target.value })} className={selectCls} data-testid={`edit-anrede-${kunde.id}`}>
+              <option value="">Bitte wählen</option>{ANREDEN.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div><label className={lblCls}>Vorname</label><Input className={inputCls} value={form.vorname} onChange={e => setForm({ ...form, vorname: e.target.value })} data-testid={`edit-vorname-${kunde.id}`} /></div>
+          <div><label className={lblCls}>Nachname</label><Input className={inputCls} value={form.nachname} onChange={e => setForm({ ...form, nachname: e.target.value })} data-testid={`edit-nachname-${kunde.id}`} /></div>
+          <div><label className={lblCls}>Firma</label><Input className={inputCls} value={form.firma} onChange={e => setForm({ ...form, firma: e.target.value })} data-testid={`edit-firma-${kunde.id}`} /></div>
+          <div><label className={lblCls}>E-Mail</label><Input className={inputCls} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} data-testid={`edit-email-${kunde.id}`} /></div>
+          <div><label className={lblCls}>Telefon</label><Input className={inputCls} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} data-testid={`edit-phone-${kunde.id}`} /></div>
         </div>
-        <div>
-          <label className="block text-xs font-medium mb-1">Kundentyp</label>
-          <select value={form.customer_type} onChange={e => setForm({ ...form, customer_type: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid={`edit-typ-${kunde.id}`}>
-            {CUSTOMER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+
+        {/* Spalte 2 — Details & Adresse */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">Details &amp; Adresse</h4>
+          <div>
+            <label className={lblCls}>Kundentyp</label>
+            <select value={form.customer_type} onChange={e => setForm({ ...form, customer_type: e.target.value })} className={selectCls} data-testid={`edit-typ-${kunde.id}`}>
+              {CUSTOMER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={lblCls}>Status</label>
+            <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className={selectCls} data-testid={`edit-status-${kunde.id}`}>
+              {KUNDEN_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={lblCls}>Straße / Nr.</label>
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-8"><Input className={inputCls} placeholder="Straße" value={form.strasse} onChange={e => setForm({ ...form, strasse: e.target.value })} data-testid={`edit-strasse-${kunde.id}`} /></div>
+              <div className="col-span-4"><Input className={inputCls} placeholder="Nr." value={form.hausnummer} onChange={e => setForm({ ...form, hausnummer: e.target.value })} data-testid={`edit-nr-${kunde.id}`} /></div>
+            </div>
+          </div>
+          <div>
+            <label className={lblCls}>PLZ / Ort</label>
+            <div className="grid grid-cols-4 gap-2">
+              <div><Input className={inputCls} placeholder="PLZ" value={form.plz} onChange={e => setForm({ ...form, plz: e.target.value })} data-testid={`edit-plz-${kunde.id}`} /></div>
+              <div className="col-span-3"><Input className={inputCls} placeholder="Ort" value={form.ort} onChange={e => setForm({ ...form, ort: e.target.value })} data-testid={`edit-ort-${kunde.id}`} /></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Spalte 3 — Kategorien & Notizen */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wide">Kategorien &amp; Notizen</h4>
+          <div className="flex flex-wrap gap-1.5">
+            {KUNDEN_KATEGORIEN.map(cat => (
+              <button key={cat} type="button" onClick={() => toggleCat(cat)} className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border ${(form.categories || []).includes(cat) ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input hover:border-primary/50"}`}>{cat}</button>
+            ))}
+          </div>
+          <div><label className={lblCls}>Notizen</label><Textarea className="text-sm" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={5} data-testid={`edit-notes-${kunde.id}`} /></div>
         </div>
       </div>
-      <div><label className="block text-xs font-medium mb-1">Firma</label><Input value={form.firma} onChange={e => setForm({ ...form, firma: e.target.value })} data-testid={`edit-firma-${kunde.id}`} /></div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div><label className="block text-xs font-medium mb-1">Vorname</label><Input value={form.vorname} onChange={e => setForm({ ...form, vorname: e.target.value })} data-testid={`edit-vorname-${kunde.id}`} /></div>
-        <div><label className="block text-xs font-medium mb-1">Nachname</label><Input value={form.nachname} onChange={e => setForm({ ...form, nachname: e.target.value })} data-testid={`edit-nachname-${kunde.id}`} /></div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div><label className="block text-xs font-medium mb-1">E-Mail</label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} data-testid={`edit-email-${kunde.id}`} /></div>
-        <div><label className="block text-xs font-medium mb-1">Telefon</label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} data-testid={`edit-phone-${kunde.id}`} /></div>
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Adresse</label>
-        <div className="grid grid-cols-12 gap-2">
-          <div className="col-span-8"><Input placeholder="Straße" value={form.strasse} onChange={e => setForm({ ...form, strasse: e.target.value })} data-testid={`edit-strasse-${kunde.id}`} /></div>
-          <div className="col-span-4"><Input placeholder="Nr." value={form.hausnummer} onChange={e => setForm({ ...form, hausnummer: e.target.value })} data-testid={`edit-nr-${kunde.id}`} /></div>
-        </div>
-        <div className="grid grid-cols-4 gap-2 mt-2">
-          <div><Input placeholder="PLZ" value={form.plz} onChange={e => setForm({ ...form, plz: e.target.value })} data-testid={`edit-plz-${kunde.id}`} /></div>
-          <div className="col-span-3"><Input placeholder="Ort" value={form.ort} onChange={e => setForm({ ...form, ort: e.target.value })} data-testid={`edit-ort-${kunde.id}`} /></div>
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Status</label>
-        <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3" data-testid={`edit-status-${kunde.id}`}>
-          {KUNDEN_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Kategorien</label>
-        <div className="flex flex-wrap gap-2">
-          {KUNDEN_KATEGORIEN.map(cat => (
-            <button key={cat} type="button" onClick={() => toggleCat(cat)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${(form.categories || []).includes(cat) ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input"}`}>{cat}</button>
-          ))}
-        </div>
-      </div>
-      <div><label className="block text-xs font-medium mb-1">Notizen</label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} data-testid={`edit-notes-${kunde.id}`} /></div>
+
       <div className="flex gap-2 pt-3 border-t">
         <Button size="sm" onClick={save} disabled={saving} data-testid={`edit-save-${kunde.id}`}>
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />} Speichern
