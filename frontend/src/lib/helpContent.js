@@ -158,6 +158,16 @@ export const HELP_DEFAULTS = {
         "4. Phase 4: KI arbeitet im Hintergrund und bereitet alles fuer dich vor.",
     },
   ],
+  hilfe_workflows: [
+    {
+      title: "Rechnung aus Angebot erstellen",
+      content:
+        "1. Dokumente → Angebote → beim Angebot auf das Stift-Icon klicken (öffnen).\n" +
+        "2. Status auf 'Beauftragt' setzen → Speichern.\n" +
+        "3. F5 drücken (Seite aktualisieren).\n" +
+        "4. Dokumente → Aufträge → beim Auftrag auf das €-Icon (Rechnung) klicken → die Rechnung wird erstellt.",
+    },
+  ],
 };
 
 export const HELP_LABELS = {
@@ -167,4 +177,5 @@ export const HELP_LABELS = {
   hilfe_termine: "Hilfe: Termine",
   hilfe_einsaetze: "Hilfe: Einsätze",
   hilfe_assistent: "Hilfe: Mein Assistent",
+  hilfe_workflows: "Workflows – Übersicht",
 };

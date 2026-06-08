@@ -3,6 +3,7 @@ import { HelpCircle, X, Sparkles, Loader2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { HELP_DEFAULTS, HELP_LABELS } from "@/lib/helpContent";
+import { activeF1Contexts } from "@/lib/useF1Help";
 
 /**
  * Globales Hilfe-Slide-Over rechts.
@@ -33,6 +34,21 @@ export const HelpSlideOver = () => {
     };
     window.addEventListener("graupner:f1-help", onF1);
     return () => window.removeEventListener("graupner:f1-help", onF1);
+  }, []);
+
+  // Globaler F1-Fallback: Workflow-Uebersicht oeffnen, wenn die aktuelle Seite
+  // KEINEN eigenen F1-Hilfe-Kontext registriert hat (Regel 13: nutzt das
+  // bestehende HelpSlideOver statt eines neuen Modals).
+  useEffect(() => {
+    const onGlobalF1 = (e) => {
+      if (e.key !== "F1") return;
+      if (activeF1Contexts.size > 0) return; // Seite behandelt F1 selbst
+      e.preventDefault();
+      setContext("hilfe_workflows");
+      setOpen(true);
+    };
+    window.addEventListener("keydown", onGlobalF1);
+    return () => window.removeEventListener("keydown", onGlobalF1);
   }, []);
 
   // ESC schliesst
