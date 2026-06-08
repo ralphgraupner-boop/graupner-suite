@@ -10,7 +10,7 @@ dieselbe Struktur wie die normalen Create-Endpoints. Auth wurde bereits am
 """
 from __future__ import annotations
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
 
 from database import db, logger
@@ -62,6 +62,10 @@ TOOL_BERECHTIGUNG = {
     "notiz_schreiben": "modul_aufgaben",
     "kunden_filtern": "modul_kunden",
     "kunden_massen_update": "modul_kunden",
+    "auftraege_nach_mitarbeiter": "modul_projekte",
+    "tages_zusammenfassung": "modul_aufgaben",
+    "angebote_offen": "modul_dokumente",
+    "rechnungen_offen": "modul_dokumente",
 }
 
 
@@ -134,6 +138,28 @@ TOOLS_SCHEMA = [
             "setze_status": "Optional. Diesen Status bei allen Treffern setzen.",
             "bestaetigt": "Steuert die Ausfuehrung: false/leer = nur zaehlen + Rueckfrage; true = wirklich ausfuehren (NUR nach ausdruecklichem 'Ja' des Nutzers).",
         },
+    },
+    {
+        "name": "auftraege_nach_mitarbeiter",
+        "beschreibung": "Read-only. Zeigt Auftraege (db.orders) und Projekte (db.module_projekte) eines Mitarbeiters, gefiltert nach 'zustaendig' oder 'monteur_username'. Z.B. 'Zeige alle Auftraege von Thorsten'.",
+        "felder": {
+            "mitarbeiter": "Pflicht. Name oder Benutzername des Mitarbeiters (z.B. 'Thorsten Graupner').",
+        },
+    },
+    {
+        "name": "tages_zusammenfassung",
+        "beschreibung": "Read-only. Was ist heute wichtig? Kombiniert heutige Termine (db.module_termine), faellige Aufgaben (db.module_aufgaben) und – nur bei Finanz-Berechtigung – ueberfaellige Rechnungen (db.invoices).",
+        "felder": {},
+    },
+    {
+        "name": "angebote_offen",
+        "beschreibung": "Read-only. Welche Angebote warten auf Rueckmeldung? Filtert db.quotes nach offenem Status (versendet, nicht angenommen/abgelehnt) und aelter als 7 Tage.",
+        "felder": {},
+    },
+    {
+        "name": "rechnungen_offen",
+        "beschreibung": "Read-only. Welche Rechnungen sind noch nicht bezahlt? Filtert db.invoices nach Status 'Offen' oder 'Ueberfaellig'.",
+        "felder": {},
     },
 ]
 
@@ -488,6 +514,90 @@ async def tool_kunden_massen_update(args: Dict[str, Any], user: dict) -> Dict[st
     }
 
 
+async def tool_auftraege_nach_mitarbeiter(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
+    name = (args.get("mitarbeiter") or args.get("name") or "").strip()
+    if not name:
+        return {"ok": False, "error": "kein_name", "hinweis": "Bitte einen Mitarbeiternamen angeben."}
+    q = {"$or": [{"zustaendig": name}, {"monteur_username": name}]}
+    orders = await db.orders.find(q, {"_id": 0}).limit(50).to_list(50)
+    projekte = await db.module_projekte.find(
+        q, {"_id": 0, "id": 1, "titel": 1, "status": 1, "kunde_id": 1, "zustaendig": 1, "monteur_username": 1},
+    ).limit(50).to_list(50)
+    anzahl = len(orders) + len(projekte)
+    hinweis = (
+        f"{anzahl} Auftraege/Projekte fuer '{name}' gefunden."
+        if anzahl else
+        f"Keine Auftraege/Projekte mit zustaendig/monteur_username = '{name}' gefunden."
+    )
+    return {
+        "ok": True, "anzahl": anzahl, "auftraege": orders, "projekte": projekte,
+        "direkt_link": "/module/projekte", "hinweis": hinweis,
+    }
+
+
+async def tool_tages_zusammenfassung(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
+    heute = datetime.now(timezone.utc).date().isoformat()
+    termine = await db.module_termine.find(
+        {}, {"_id": 0, "titel": 1, "start": 1, "monteur_username": 1, "ort": 1, "status": 1},
+    ).to_list(500)
+    termine_heute = [t for t in termine if (t.get("start") or "")[:10] == heute and t.get("status") != "abgesagt"]
+    aufgaben = await db.module_aufgaben.find(
+        {"status": "offen"}, {"_id": 0, "titel": 1, "faellig_am": 1, "zugewiesen_an": 1, "prioritaet": 1},
+    ).to_list(500)
+    aufgaben_faellig = [a for a in aufgaben if a.get("faellig_am") and a["faellig_am"][:10] <= heute]
+    result: Dict[str, Any] = {
+        "ok": True,
+        "datum": heute,
+        "termine_heute": termine_heute,
+        "anzahl_termine": len(termine_heute),
+        "aufgaben_faellig": aufgaben_faellig,
+        "anzahl_aufgaben": len(aufgaben_faellig),
+    }
+    hinweis = f"Heute ({heute}): {len(termine_heute)} Termine, {len(aufgaben_faellig)} faellige Aufgaben"
+    # Ueberfaellige Rechnungen nur bei Finanz-Berechtigung (Monteure sehen keine Finanzen)
+    if await check_berechtigung(user, "modul_dokumente"):
+        rechnungen = await db.invoices.find(
+            {"status": "Überfällig"},
+            {"_id": 0, "invoice_number": 1, "customer_name": 1, "total_gross": 1, "due_date": 1},
+        ).to_list(200)
+        result["rechnungen_ueberfaellig"] = rechnungen
+        result["anzahl_rechnungen_ueberfaellig"] = len(rechnungen)
+        hinweis += f", {len(rechnungen)} ueberfaellige Rechnungen"
+    result["hinweis"] = hinweis + "."
+    return result
+
+
+async def tool_angebote_offen(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
+    grenze = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    quotes = await db.quotes.find(
+        {"status": {"$nin": ["Entwurf", "Angenommen", "Abgelehnt", "Storniert"]},
+         "is_template": {"$ne": True}},
+        {"_id": 0, "quote_number": 1, "customer_name": 1, "total_gross": 1, "status": 1,
+         "created_at": 1, "betreff": 1},
+    ).to_list(500)
+    offen_alt = [q for q in quotes if (q.get("created_at") or "") < grenze]
+    summe = round(sum(q.get("total_gross", 0) or 0 for q in offen_alt), 2)
+    return {
+        "ok": True, "anzahl": len(offen_alt), "summe": summe, "angebote": offen_alt,
+        "direkt_link": "/module/dokumente",
+        "hinweis": f"{len(offen_alt)} Angebote warten seit ueber 7 Tagen auf Rueckmeldung (Summe {summe} EUR).",
+    }
+
+
+async def tool_rechnungen_offen(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
+    rechnungen = await db.invoices.find(
+        {"status": {"$in": ["Offen", "Überfällig"]}},
+        {"_id": 0, "invoice_number": 1, "customer_name": 1, "total_gross": 1, "status": 1, "due_date": 1},
+    ).to_list(500)
+    summe = round(sum(r.get("total_gross", 0) or 0 for r in rechnungen), 2)
+    ueberfaellig = len([r for r in rechnungen if r.get("status") == "Überfällig"])
+    return {
+        "ok": True, "anzahl": len(rechnungen), "davon_ueberfaellig": ueberfaellig, "summe": summe,
+        "rechnungen": rechnungen, "direkt_link": "/module/dokumente",
+        "hinweis": f"{len(rechnungen)} offene Rechnungen ({ueberfaellig} ueberfaellig), Summe {summe} EUR.",
+    }
+
+
 TOOLS = {
     "aufgabe_anlegen": tool_aufgabe_anlegen,
     "termin_anlegen": tool_termin_anlegen,
@@ -495,6 +605,10 @@ TOOLS = {
     "notiz_schreiben": tool_notiz_schreiben,
     "kunden_filtern": tool_kunden_filtern,
     "kunden_massen_update": tool_kunden_massen_update,
+    "auftraege_nach_mitarbeiter": tool_auftraege_nach_mitarbeiter,
+    "tages_zusammenfassung": tool_tages_zusammenfassung,
+    "angebote_offen": tool_angebote_offen,
+    "rechnungen_offen": tool_rechnungen_offen,
 }
 
 
