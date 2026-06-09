@@ -917,6 +917,20 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     c.setFont("Helvetica-Bold", 11)
     c.drawString(14 * cm, y_pos, "Gesamt:")
     c.drawRightString(width - 2 * cm, y_pos, f"{data.get('total_gross', 0):.2f} €")
+    y_pos -= 0.6 * cm
+
+    # === Anzahlung / Restbetrag (nur Rechnung mit Anzahlung > 0) ===
+    _deposit = data.get("deposit_amount", 0) or 0
+    if doc_type == "invoice" and _deposit > 0:
+        _final = max(0, (data.get("total_gross", 0) or 0) - _deposit)
+        c.setFillColor(text_color)
+        c.setFont("Helvetica", 10)
+        c.drawString(14 * cm, y_pos, "Anzahlung:")
+        c.drawRightString(width - 2 * cm, y_pos, f"-{_deposit:.2f} €")
+        y_pos -= 0.5 * cm
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(14 * cm, y_pos, "Restbetrag:")
+        c.drawRightString(width - 2 * cm, y_pos, f"{_final:.2f} €")
     y_pos -= 0.8 * cm
 
     # === §35a Lohnanteil-Hinweis (wenn aktiviert) ===
