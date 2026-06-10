@@ -451,3 +451,9 @@ Ralph hat darauf bestanden, vor jedem Live-Deploy das Backup-System wasserdicht 
 - Helfer: /app/windows-helfer/ {bbcompose.reg, bbcompose.ps1, ANLEITUNG.txt}. Betterbird-Standardpfad bestaetigt + (x86)-Auto-Erkennung. PS1 nutzt Authorization-Header.
 - Hinweise: Sonderzeichen (' , Newline) in Betreff/Body koennen Betterbird -compose stoeren -> .eml-Fallback. Protokoll-Test nur auf echtem Windows-PC moeglich.
 - pdf_generator.py/routes_v1.py/dokumente_v2/v6/DB NICHT angefasst. NICHT auf Live (Deploy via Save to Github durch Ralph).
+
+## Changelog 10.06.2026 (Mail-Signatur + Encoding + bbcompose-Fixes)
+- eml_export.py: GET /api/eml-meta charset=utf-8 (PowerShell-Umlaut-Fix). Neue Helfer _signature()/_compose_body() -> Text-Signatur aus company_settings (company_name/address/phone/email/website), leere Felder weggelassen, beide Pfade (.eml + Meta), nur "mit Text". Keine Farbe moeglich (Klartext-Body).
+- windows-helfer/bbcompose.ps1: Param-Parsing per Split (statt Regex/System.Uri), ${id}-Klammern (id-Verschluck-Bug), UTF-8-Dekodierung der Meta-Antwort, Diagnoseanzeige ($ShowDiagnose).
+- windows-helfer: install.bat/install.ps1 (Ein-Klick, HKCU/ohne Admin, Betterbird-Autosuche).
+- Betterbird-Direkt mit PDF-Anhang vom Nutzer bestaetigt funktionierend. NICHT auf Live (Redeploy durch Ralph noetig).

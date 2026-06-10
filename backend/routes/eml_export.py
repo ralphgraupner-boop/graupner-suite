@@ -37,6 +37,41 @@ async def _customer_email(doc: dict) -> str:
     return ""
 
 
+def _signature(settings: dict) -> str:
+    """Professionelle Text-Signatur aus den Firmendaten (company_settings).
+    Leere Felder werden weggelassen – kein Hardcoding."""
+    company = settings.get("company_name") or "Tischlerei Graupner"
+    address = (settings.get("address") or settings.get("company_address") or "").strip()
+    phone = (settings.get("phone") or "").strip()
+    email = (settings.get("email") or "").strip()
+    website = (settings.get("website") or "").strip()
+    lines = ["--", company]
+    if address:
+        lines.append(address)
+    if phone:
+        lines.append(f"Tel.: {phone}")
+    if email:
+        lines.append(f"E-Mail: {email}")
+    if website:
+        lines.append(f"Web: {website}")
+    return "\n".join(lines)
+
+
+def _compose_body(doc: dict, settings: dict, with_text: bool) -> str:
+    """Mail-Text: Vortext, Schlusstext, Grußformel + Firmen-Signatur."""
+    if not with_text:
+        return ""
+    company = settings.get("company_name") or "Tischlerei Graupner"
+    parts = []
+    if (doc.get("vortext") or "").strip():
+        parts.append(doc["vortext"].strip())
+    if (doc.get("schlusstext") or "").strip():
+        parts.append(doc["schlusstext"].strip())
+    parts.append(f"Mit freundlichen Grüßen\n{company}")
+    parts.append(_signature(settings))
+    return "\n\n".join(parts)
+
+
 async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Response:
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     label = _LABELS[doc_type]
@@ -46,16 +81,7 @@ async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Resp
     pdf_bytes = generate_document_pdf(doc_type, doc, settings).read()
 
     subject = doc.get("betreff") or f"{label} {number}"
-    if with_text:
-        parts = []
-        if (doc.get("vortext") or "").strip():
-            parts.append(doc["vortext"].strip())
-        if (doc.get("schlusstext") or "").strip():
-            parts.append(doc["schlusstext"].strip())
-        parts.append(f"Mit freundlichen Grüßen\n{company}")
-        body = "\n\n".join(parts)
-    else:
-        body = ""
+    body = _compose_body(doc, settings, with_text)
 
     msg = EmailMessage()
     to_email = await _customer_email(doc)
@@ -89,16 +115,7 @@ async def _build_meta_response(doc_type: str, doc: dict, with_text: bool) -> dic
     company = settings.get("company_name") or "Tischlerei Graupner"
 
     subject = doc.get("betreff") or f"{label} {number}"
-    if with_text:
-        parts = []
-        if (doc.get("vortext") or "").strip():
-            parts.append(doc["vortext"].strip())
-        if (doc.get("schlusstext") or "").strip():
-            parts.append(doc["schlusstext"].strip())
-        parts.append(f"Mit freundlichen Grüßen\n{company}")
-        body = "\n\n".join(parts)
-    else:
-        body = ""
+    body = _compose_body(doc, settings, with_text)
 
     to_email = await _customer_email(doc)
     return {"to": to_email, "subject": subject, "body": body}
