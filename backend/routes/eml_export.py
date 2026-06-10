@@ -8,7 +8,7 @@ oeffnet sie inkl. PDF-Anhang. mailto: kann das nicht, .eml schon.
 from email.message import EmailMessage
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 
 from database import db
 from utils.pdf_generator import generate_document_pdf
@@ -111,7 +111,8 @@ async def get_eml_meta(doc_type: str, doc_id: str, text: int = Query(1)):
     doc = await db[_COLLECTION[doc_type]].find_one({"id": doc_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
-    return await _build_meta_response(doc_type, doc, with_text=bool(text))
+    data = await _build_meta_response(doc_type, doc, with_text=bool(text))
+    return JSONResponse(content=data, media_type="application/json; charset=utf-8")
 
 
 @router.get("/eml/quote/{quote_id}")

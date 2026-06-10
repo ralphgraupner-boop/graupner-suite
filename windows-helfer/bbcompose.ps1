@@ -52,8 +52,11 @@ try {
     $pdf = Join-Path $env:TEMP ("graupner_" + $type + "_" + $id + ".pdf")
     Invoke-WebRequest -Uri $pdfUrl -Headers $headers -OutFile $pdf -UseBasicParsing
 
-    # 2) Empfaenger / Betreff / Text holen
-    $meta = Invoke-RestMethod -Uri $metaUrl -Headers $headers -UseBasicParsing
+    # 2) Empfaenger / Betreff / Text holen (RawContent als UTF-8 dekodieren,
+    #    sonst zeigt PowerShell 5.1 Umlaute falsch an: ae->Ã¤ etc.)
+    $metaResp = Invoke-WebRequest -Uri $metaUrl -Headers $headers -UseBasicParsing
+    $metaJson = [System.Text.Encoding]::UTF8.GetString($metaResp.RawContentStream.ToArray())
+    $meta = $metaJson | ConvertFrom-Json
 
     # 3) Betterbird mit Anhang oeffnen
     $arg = "to='$($meta.to)',subject='$($meta.subject)',body='$($meta.body)',attachment='$pdf'"
