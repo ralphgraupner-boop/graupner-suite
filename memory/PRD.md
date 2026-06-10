@@ -438,3 +438,9 @@ Ralph hat darauf bestanden, vor jedem Live-Deploy das Backup-System wasserdicht 
 
 ## Zugangsdaten Vorschau
 - Username: `admin-preview`, Passwort: `HamburgPreview2026!`
+
+## Changelog 10.06.2026 (AufgabenPanel.jsx)
+- P0 erledigt: Aufgaben-Anlage aus Kundenansicht. `QuickAufgabeDialog` zeigt jetzt im Kunden-Kontext ein Projekt-Dropdown (live `GET /api/module-projekte/?kunde_id=...`); bei leerer Liste „Projekt jetzt anlegen" via `NewProjektDialog` (neues Projekt wird auto-vorausgewählt); Validierung „Bitte Projekt wählen". (vom Nutzer bestätigt: funktioniert)
+- Fix erledigt: `faellig_am` wird bei Neuanlage mit Tagesdatum (lokale/Hamburger Zeit) vorbelegt; Bearbeiten lässt gespeicherten Wert unverändert. (bestätigt)
+- Befund (kein Code-Bug): Globale Aufgabenliste filtert nicht nach kunde_id/projekt_id (`module_aufgaben/routes.py` 201–224); neue Aufgaben erscheinen nach Neuladen. Bestätigt.
+- Geänderte Datei: nur `frontend/src/components/AufgabenPanel.jsx`. Backend/DB unangetastet. NICHT deployt (Live-Freigabe via „Save to Github" durch Ralph).
