@@ -464,3 +464,9 @@ Ralph hat darauf bestanden, vor jedem Live-Deploy das Backup-System wasserdicht 
 - Einsätze: routes/eml_export.py (eml-meta/einsatz + eml/einsatz mit Reparaturauftrag-PDF, _einsatz_email/_compose_einsatz_body), routes/pdf.py (/pdf/einsatz). EinsaetzeModulPage.jsx Mailprogramm-Button -> Betterbird-Dialog (type=einsatz). Alle 3 Endpoints HTTP 200 getestet.
 - Einsatz-Dialog nutzt gespeicherte Einsatz-Daten (nicht editierte Panel-Felder); "Direkt senden" (SMTP) im Panel bleibt.
 - NICHT auf Live (Redeploy durch Ralph nötig).
+
+## Changelog 10.06.2026 (KI-Tool anfrage_kategorisieren)
+- module_assistent/ai_tools.py: neues Tool anfrage_kategorisieren (Schema + TOOL_BERECHTIGUNG modul_kunden + TOOLS-Dispatch + system_prompt-Sicherheitshinweis).
+- Liest db.anfragen (status 'neu'), matcht Text gegen Reparaturgruppen (_list_titles aus module_textvorlagen, doc_type 'reparaturgruppe'; kein Hardcoding) + pflegbare Synonyme (db.settings id 'anfrage_synonyme', map). Umlaut-tolerant via _umlaut_regex/_norm/_text_enthaelt.
+- 2-Schritt: Vorschlag -> nach 'Ja' (bestaetigt=true) schreibt reparaturgruppen + Status 'kategorisiert' (alle neuen). Kunde NUR Vorschlag (1 eindeutiger Treffer), nicht geschrieben.
+- Getestet: Direkt+Synonym-Matching, 3/31 Anfragen erkannt, read-only im Vorschlag bestaetigt. Preview ohne Reparaturgruppen -> meldet 'keine Quelle'. Live OK. Redeploy noetig.

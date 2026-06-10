@@ -67,6 +67,7 @@ TOOL_BERECHTIGUNG = {
     "tages_zusammenfassung": "modul_aufgaben",
     "angebote_offen": "modul_dokumente",
     "rechnungen_offen": "modul_dokumente",
+    "anfrage_kategorisieren": "modul_kunden",
 }
 
 
@@ -162,6 +163,13 @@ TOOLS_SCHEMA = [
         "beschreibung": "Read-only. Welche Rechnungen sind noch nicht bezahlt? Filtert db.invoices nach Status 'Offen' oder 'Ueberfaellig'.",
         "felder": {},
     },
+    {
+        "name": "anfrage_kategorisieren",
+        "beschreibung": "Liest ALLE neuen Anfragen (db.anfragen, status 'neu') und schlaegt je Anfrage eine Reparaturgruppe (aus der Einsatz-Config) und den passenden Kunden vor. ZWEI SCHRITTE: erst VORSCHLAG (ohne bestaetigt), dann nach ausdruecklichem 'Ja' mit bestaetigt=true AUSFUEHREN. Beim Ausfuehren werden 'reparaturgruppen' gesetzt und der Status auf 'kategorisiert' geaendert; der Kunde wird NUR vorgeschlagen, NICHT geschrieben.",
+        "felder": {
+            "bestaetigt": "Steuert die Ausfuehrung: false/leer = nur Vorschlag (nichts wird geschrieben); true = wirklich schreiben (NUR nach ausdruecklichem 'Ja' des Nutzers).",
+        },
+    },
 ]
 
 
@@ -221,6 +229,12 @@ async def system_prompt_de() -> str:
         "gemeldet, es wird NICHTS geaendert. Setze 'bestaetigt': true NUR dann, wenn der "
         "Nutzer im DARAUFFOLGENDEN Schritt ausdruecklich zustimmt ('ja', 'mach das', "
         "'bestaetigt'). Erfinde niemals eine Zustimmung.\n\n"
+        "WICHTIG fuer 'anfrage_kategorisieren' — SICHERHEIT:\n"
+        "Auch dieses Tool ist ZWEISTUFIG. Rufe es ZUERST OHNE 'bestaetigt' auf — dann "
+        "liefert es nur VORSCHLAEGE (Reparaturgruppe + Kunde je Anfrage) und schreibt NICHTS. "
+        "Setze 'bestaetigt': true NUR nach ausdruecklichem 'Ja' des Nutzers; dann werden die "
+        "Reparaturgruppen gesetzt und der Status auf 'kategorisiert' geaendert. Der Kunde wird "
+        "immer nur vorgeschlagen, nie automatisch zugeordnet.\n\n"
         "Beispiele:\n"
         'Eingabe: "Leg eine Aufgabe an: morgen Schmidt anrufen"\n'
         '{"tool":"aufgabe_anlegen","args":{"titel":"Schmidt anrufen","faellig_am":"2026-06-02"},'
@@ -621,6 +635,140 @@ async def tool_rechnungen_offen(args: Dict[str, Any], user: dict) -> Dict[str, A
     }
 
 
+# ==================== ANFRAGE-KATEGORISIERUNG ====================
+
+# Pflegbare Synonym-Liste (synonym -> Reparaturgruppen-Name). Wird beim ersten
+# Aufruf nach db.settings (id 'anfrage_synonyme') geschrieben und ist dort
+# editierbar. Ein Synonym greift NUR, wenn sein Ziel als Reparaturgruppe existiert.
+DEFAULT_SYNONYME = {
+    "hs-tür": "Hebeschiebetür", "hs tür": "Hebeschiebetür", "hst": "Hebeschiebetür",
+    "hebe-schiebe-tür": "Hebeschiebetür",
+    "psk": "PSK-Tür", "psk-tür": "PSK-Tür", "parallel-schiebe-kipp": "PSK-Tür",
+    "haustuer": "Haustür", "terrassentür": "Terrassentür", "rolladen": "Rollladen",
+}
+
+
+def _norm(s: str) -> str:
+    """Normalisiert fuer Gleichheits-Vergleich: lower, Umlaute->ascii, nur a-z0-9."""
+    s = (s or "").lower()
+    for um, asc in (("ü", "ue"), ("ä", "ae"), ("ö", "oe"), ("ß", "ss")):
+        s = s.replace(um, asc)
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
+def _text_enthaelt(text: str, begriff: str) -> bool:
+    """Umlaut-toleranter, case-insensitiver Substring-Test (nutzt _umlaut_regex)."""
+    if not begriff or not begriff.strip():
+        return False
+    return re.search(_umlaut_regex(begriff), text or "", re.IGNORECASE) is not None
+
+
+async def tool_anfrage_kategorisieren(args: Dict[str, Any], user: dict) -> Dict[str, Any]:
+    bestaetigt = bool(args.get("bestaetigt"))
+
+    # 1) Reparaturgruppen aus der Einsatz-Config (einzige Quelle, kein Hardcoding)
+    try:
+        from module_einsaetze.routes import _list_titles
+        gruppen = await _list_titles("reparaturgruppe")
+    except Exception as exc:
+        logger.error(f"anfrage_kategorisieren: Reparaturgruppen laden fehlgeschlagen: {exc}")
+        gruppen = []
+    if not gruppen:
+        return {"ok": True, "anzahl_anfragen": 0,
+                "hinweis": "Keine Reparaturgruppen in der Einsatz-Config hinterlegt – ohne Kategorien-Quelle kann ich nicht kategorisieren."}
+
+    # 2) Pflegbare Synonym-Liste (db.settings, beim ersten Mal anlegen)
+    syn_doc = await db.settings.find_one({"id": "anfrage_synonyme"}, {"_id": 0})
+    if not syn_doc:
+        syn_doc = {"id": "anfrage_synonyme", "map": DEFAULT_SYNONYME,
+                   "hinweis": "Pflegbar: 'synonym' (klein) -> exakter Reparaturgruppen-Name. Greift nur, wenn das Ziel als Reparaturgruppe existiert."}
+        await db.settings.insert_one(dict(syn_doc))
+    syn_map = syn_doc.get("map") or {}
+
+    # 3) Neue (unbearbeitete) Anfragen
+    anfragen = await db.anfragen.find({"status": "neu"}, {"_id": 0}).to_list(1000)
+    gruppen_norm = [(_norm(g), g) for g in gruppen if g]
+
+    vorschlaege = []
+    for a in anfragen:
+        text = " ".join(str(a.get(f) or "") for f in
+                        ("name", "vorname", "nachname", "firma", "nachricht", "notes"))
+        if isinstance(a.get("categories"), list):
+            text += " " + " ".join(str(x) for x in a["categories"])
+        tn = _norm(text)
+
+        gefunden, keywords = [], []
+        # a) direkte Treffer auf Reparaturgruppen-Namen
+        for gn, g in gruppen_norm:
+            if gn and gn in tn and g not in gefunden:
+                gefunden.append(g)
+                keywords.append(g)
+        # b) Synonyme -> Ziel-Reparaturgruppe
+        for syn, ziel in syn_map.items():
+            if not _text_enthaelt(text, syn):
+                continue
+            zn = _norm(ziel)
+            for gn, g in gruppen_norm:
+                if gn == zn and g not in gefunden:
+                    gefunden.append(g)
+                    keywords.append(syn)
+
+        # Kunde NUR vorschlagen (nicht schreiben)
+        kandidaten = await _resolve_kunde(a.get("email") or a.get("name") or "")
+        kunde_vorschlag = None
+        if len(kandidaten) == 1:
+            k = kandidaten[0]
+            name = f"{k.get('vorname','')} {k.get('nachname','')}".strip() or k.get("name") or k.get("firma") or ""
+            kunde_vorschlag = {"id": k.get("id"), "name": name, "email": k.get("email", "")}
+
+        vorschlaege.append({
+            "anfrage_id": a.get("id"),
+            "anfrage_name": a.get("name") or f"{a.get('vorname','')} {a.get('nachname','')}".strip(),
+            "email": a.get("email", ""),
+            "kategorie_vorschlag": gefunden,
+            "erkannte_keywords": keywords,
+            "kunde_vorschlag": kunde_vorschlag,
+            "kunde_kandidaten": len(kandidaten),
+        })
+
+    mit_kategorie = [v for v in vorschlaege if v["kategorie_vorschlag"]]
+
+    # Schritt 1: nur Vorschlag (nichts wird geschrieben)
+    if not bestaetigt:
+        return {
+            "ok": True,
+            "needs_confirmation": True,
+            "anzahl_anfragen": len(anfragen),
+            "anzahl_mit_kategorie": len(mit_kategorie),
+            "vorschlaege": vorschlaege,
+            "hinweis": f"{len(mit_kategorie)} von {len(anfragen)} neuen Anfragen konnte ich eine "
+                       f"Reparaturgruppe zuordnen. Mit 'Ja' schreibe ich die Kategorien und setze "
+                       f"den Status auf 'kategorisiert' (Kunde bleibt nur Vorschlag).",
+        }
+
+    # Schritt 2: ausfuehren (nur Anfragen mit Treffer)
+    now = datetime.now(timezone.utc).isoformat()
+    geschrieben = 0
+    for v in mit_kategorie:
+        await db.anfragen.update_one(
+            {"id": v["anfrage_id"]},
+            {"$set": {"reparaturgruppen": v["kategorie_vorschlag"],
+                      "status": "kategorisiert", "updated_at": now}},
+        )
+        geschrieben += 1
+    logger.info(f"KI-Tool anfrage_kategorisieren: {geschrieben} Anfragen kategorisiert "
+                f"(user={(user or {}).get('username','?')})")
+    return {
+        "ok": True,
+        "kategorisiert": geschrieben,
+        "anzahl_anfragen": len(anfragen),
+        "vorschlaege": vorschlaege,
+        "direkt_link": "/module/anfragen",
+        "hinweis": f"{geschrieben} Anfragen kategorisiert + Status 'kategorisiert' gesetzt. "
+                   f"Kunden-Zuordnung war nur ein Vorschlag (nicht geschrieben).",
+    }
+
+
 TOOLS = {
     "aufgabe_anlegen": tool_aufgabe_anlegen,
     "termin_anlegen": tool_termin_anlegen,
@@ -632,6 +780,7 @@ TOOLS = {
     "tages_zusammenfassung": tool_tages_zusammenfassung,
     "angebote_offen": tool_angebote_offen,
     "rechnungen_offen": tool_rechnungen_offen,
+    "anfrage_kategorisieren": tool_anfrage_kategorisieren,
 }
 
 
