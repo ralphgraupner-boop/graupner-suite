@@ -14,7 +14,6 @@ import { DocumentHeader } from "@/components/wysiwyg/DocumentHeader";
 import { PositionsTable } from "@/components/wysiwyg/PositionsTable";
 import { TotalsSection } from "@/components/wysiwyg/TotalsSection";
 import { RightSidebar } from "@/components/wysiwyg/RightSidebar";
-import { SendDocumentEmail } from "@/components/SendDocumentEmail";
 import { SettingsSlideOver } from "@/components/wysiwyg/SettingsSlideOver";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { TextKorrekturModal, TextKorrekturButton } from "@/components/wysiwyg/TextKorrekturModal";
@@ -106,8 +105,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [saveAsArticleIdx, setSaveAsArticleIdx] = useState(null);
   const [saveAsType, setSaveAsType] = useState("Leistung");
 
-  // E-Mail Dialog
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showLohnanteil, setShowLohnanteil] = useState(type === "invoice");
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
@@ -731,8 +728,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     } catch { toast.error("Fehler beim Drucken"); }
   };
 
-  const onOpenEmailDialog = () => { setShowEmailDialog(true); };
-
   const [showMailDialog, setShowMailDialog] = useState(null);
   const [mailMode, setMailMode] = useState("bb"); // "bb" = Betterbird direkt, "eml" = .eml-Datei
 
@@ -816,7 +811,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         isRecording={isRecording} aiLoading={aiLoading} saving={saving}
         navigate={navigate} setShowSettings={setShowSettings} startRecording={startRecording} stopRecording={stopRecording}
         handleSave={handleSave} handleExit={handleExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
-        onOpenEmailDialog={onOpenEmailDialog}
         onOpenMailClient={onOpenMailClient}
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
@@ -1051,12 +1045,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         </div>
       )}
 
-      <SendDocumentEmail
-        isOpen={showEmailDialog}
-        onClose={() => setShowEmailDialog(false)}
-        type={type} docId={id} docNumber={docNumber}
-        customer={customer} settings={settings}
-      />
+      {/* In-App-E-Mail (SMTP) entfernt – Versand nur noch über Mailprogramm (Betterbird/.eml) */}
 
       <SettingsSlideOver
         showSettings={showSettings} setShowSettings={setShowSettings}

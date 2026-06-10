@@ -8,7 +8,7 @@ const EditorToolbar = ({
   isRecording, aiLoading, saving,
   navigate, setShowSettings, startRecording, stopRecording,
   handleSave, handleExit, handleDownloadPDF, handlePrint,
-  onOpenEmailDialog, onOpenMailClient, onToggleVorlagen, onTogglePreview,
+  onOpenMailClient, onToggleVorlagen, onTogglePreview,
   onOpenDocTemplates, onToggleLohnkosten, onOpenDocCheck, onOpenPdfPreview,
   zoomLevel, setZoomLevel,
 }) => {
@@ -117,12 +117,6 @@ const EditorToolbar = ({
             <span className="text-xs text-muted-foreground hidden sm:inline">KI verarbeitet...</span>
           )}
           <div className="h-6 w-px bg-border hidden sm:block" />
-          {!isNew && (
-            <Button variant="outline" size="sm" onClick={onOpenEmailDialog} data-testid="btn-email-document" className="bg-background text-foreground border-border">
-              <Mail className="w-4 h-4" />
-              <span className="hidden sm:inline">E-Mail</span>
-            </Button>
-          )}
           {!isNew && onOpenMailClient && (
             <HelpTip id="doc.btn-mail" placement="bottom">
             <Button size="sm" onClick={onOpenMailClient} data-testid="btn-mailto-document" title="In Betterbird / Thunderbird oeffnen" className="bg-blue-600 text-white hover:bg-blue-700">

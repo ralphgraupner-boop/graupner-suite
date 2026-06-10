@@ -3,7 +3,6 @@ import { Download, Mail, Edit, CheckCircle, X, Send, MailCheck, AlertTriangle, E
 import { toast } from "sonner";
 import { Button, Input, Textarea, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
-import { SendDocumentEmail } from "@/components/SendDocumentEmail";
 
 /* ── A4 page simulation constants ── */
 const PAGE_WIDTH = 700;
@@ -57,14 +56,13 @@ const estPosH = (p) => {
 
 /* ── Component ── */
 const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onEdit, onCreateDunning }) => {
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [emailHistory, setEmailHistory] = useState([]);
+  const [showMailDialog, setShowMailDialog] = useState(false);
+  const [mailMode, setMailMode] = useState("bb"); // "bb" = Betterbird direkt, "eml" = .eml-Datei
   const [settings, setSettings] = useState({});
   const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     if (isOpen && doc) {
-      api.get(`/email/log/${type}/${doc.id}`).then((r) => setEmailHistory(r.data)).catch(() => {});
       api.get("/settings").then((r) => setSettings(r.data)).catch(() => {});
       setCurrentPage(0);
     }
@@ -213,6 +211,34 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
 
   if (!isOpen || !doc) return null;
   const docNumber = doc.quote_number || doc.order_number || doc.invoice_number;
+
+  const ep = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
+
+  const openBetterbird = (withText) => {
+    const token = localStorage.getItem("token") || "";
+    const base = process.env.REACT_APP_BACKEND_URL || "";
+    if (!base) { toast.error("Backend-Adresse fehlt"); return; }
+    const url = `bbcompose://compose?base=${encodeURIComponent(base)}&type=${ep}&id=${encodeURIComponent(doc.id)}&token=${encodeURIComponent(token)}&text=${withText ? 1 : 0}`;
+    window.location.href = url;
+    toast.success("Betterbird wird geöffnet … (lokaler Helfer muss installiert sein)");
+    setShowMailDialog(false);
+  };
+
+  const downloadEml = async (withText) => {
+    try {
+      const res = await api.get(`/eml/${ep}/${doc.id}?text=${withText ? 1 : 0}&t=${Date.now()}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "message/rfc822" }));
+      const a = window.document.createElement("a");
+      a.href = url;
+      a.download = `${titles[type]}_${docNumber}.eml`;
+      window.document.body.appendChild(a); a.click(); a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("E-Mail mit PDF-Anhang erstellt – jetzt in Betterbird öffnen");
+    } catch { toast.error("Fehler beim Erstellen der E-Mail-Datei"); }
+    setShowMailDialog(false);
+  };
+
+  const dispatchMail = (withText) => (mailMode === "bb" ? openBetterbird(withText) : downloadEml(withText));
 
   /* ── Reusable render helpers ── */
   const renderTableHead = () => (
@@ -389,21 +415,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
               <Edit className="w-3.5 h-3.5 mr-1" /> Bearbeiten
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => {
-            setShowEmailDialog(true);
-          }} data-testid="btn-email-document">
-            <Mail className="w-3.5 h-3.5 mr-1" /> E-Mail
-          </Button>
-          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => {
-            const to = doc.customer_email || "";
-            const docTitle = type === "quote" ? "Angebot" : type === "order" ? "Auftrag" : "Rechnung";
-            const subject = encodeURIComponent(doc.betreff || `${docTitle} ${docNumber}`);
-            const mitText = window.confirm("Vortext und Schlusstext in die E-Mail uebernehmen?");
-            const body = mitText
-              ? encodeURIComponent(`${doc.vortext || ""}\n\n---\n\n${doc.schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
-              : "";
-            window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
-          }} data-testid="btn-mailto-preview">
+          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowMailDialog(true)} data-testid="btn-mailprogramm-preview">
             <ExternalLink className="w-3.5 h-3.5 mr-1" /> Mailprogramm
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {
@@ -433,14 +445,45 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
         </div>
       </div>
 
-      {/* ── Email Dialog ── */}
-      <SendDocumentEmail
-        isOpen={showEmailDialog}
-        onClose={() => { setShowEmailDialog(false); api.get(`/email/log/${type}/${doc.id}`).then((r) => setEmailHistory(r.data)).catch(() => {}); }}
-        type={type} docId={doc.id} docNumber={docNumber}
-        customer={{ name: doc.customer_name, email: doc.customer_email || "", id: doc.customer_id }}
-        settings={{}}
-      />
+      {/* ── Mailprogramm-Dialog (Betterbird direkt / .eml herunterladen) ── */}
+      {showMailDialog && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" data-testid="mail-client-dialog">
+          <div className="bg-background rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-5 border-b">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <ExternalLink className="w-5 h-5" /> Mailprogramm öffnen
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">Wie soll die E-Mail vorbereitet werden?</p>
+            </div>
+            <div className="p-5 space-y-2">
+              <div className="flex gap-2 mb-1" data-testid="mail-mode-toggle">
+                <button type="button" onClick={() => setMailMode("bb")} className={`flex-1 px-3 py-2 text-sm rounded-sm border ${mailMode === "bb" ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/40"}`} data-testid="btn-mode-betterbird">Betterbird direkt</button>
+                <button type="button" onClick={() => setMailMode("eml")} className={`flex-1 px-3 py-2 text-sm rounded-sm border ${mailMode === "eml" ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/40"}`} data-testid="btn-mode-eml">.eml herunterladen</button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {mailMode === "bb" ? "Öffnet Betterbird direkt mit PDF-Anhang (lokaler Helfer nötig)." : "Lädt eine .eml-Datei zum Öffnen im Mailprogramm."}
+              </p>
+              <button onClick={() => dispatchMail(true)} className="w-full p-3 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-left flex items-start gap-3" data-testid="btn-mail-with-text">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                <div>
+                  <div className="font-semibold text-primary">Mit Vortext &amp; Schlusstext senden</div>
+                  <div className="text-xs text-muted-foreground">Vortext, Schlusstext und Grußformel werden in die E-Mail übernommen</div>
+                </div>
+              </button>
+              <button onClick={() => dispatchMail(false)} className="w-full p-3 rounded-sm border hover:bg-muted/40 text-left flex items-start gap-3" data-testid="btn-mail-without-text">
+                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center flex-shrink-0 font-bold">—</div>
+                <div>
+                  <div className="font-semibold">Ohne Text (leer)</div>
+                  <div className="text-xs text-muted-foreground">E-Mail wird ohne Inhalt vorbereitet - du schreibst selbst</div>
+                </div>
+              </button>
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <button onClick={() => setShowMailDialog(false)} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted" data-testid="btn-mail-cancel">Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Pages Area ── */}
       <div className="flex-1 overflow-auto" style={{ background: "#4a4a4f" }}>
@@ -517,29 +560,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
           );
           })}
 
-          {/* ── Email History (outside pages) ── */}
-          {emailHistory.length > 0 && (
-            <div className="w-full rounded-sm p-4 bg-white/90 backdrop-blur" style={{ maxWidth: PAGE_WIDTH }} data-testid="email-history">
-              <p className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                <MailCheck className="w-4 h-4" /> Versandhistorie ({emailHistory.length})
-              </p>
-              <div className="space-y-2">
-                {emailHistory.map((log) => (
-                  <div key={log.id} className="flex items-center gap-3 text-xs p-2 bg-muted/30 rounded-sm">
-                    <CheckCircle className={`w-3.5 h-3.5 shrink-0 ${log.status === "gesendet" ? "text-green-500" : "text-red-500"}`} />
-                    <span className="text-muted-foreground">
-                      {new Date(log.sent_at).toLocaleDateString("de-DE")}{" "}
-                      {new Date(log.sent_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                    <span className="truncate">An: {log.to_email}</span>
-                    <Badge variant={log.status === "gesendet" ? "success" : "danger"} className="text-xs ml-auto shrink-0">
-                      {log.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Versandhistorie entfernt – Versand nur noch über Mailprogramm (Betterbird/.eml) */}
         </div>
       </div>
     </div>
