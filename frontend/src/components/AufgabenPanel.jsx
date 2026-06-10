@@ -204,13 +204,18 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
 
 const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
   const isEdit = !!existing;
+  // Tagesdatum (Hamburger/lokale Zeit) als Vorbelegung bei Neuanlage.
+  const heuteISO = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
   const [data, setData] = useState({
     titel: existing?.titel || "",
     beschreibung: existing?.beschreibung || "",
     kategorie: existing?.kategorie || "",
     prioritaet: existing?.prioritaet || "normal",
     zugewiesen_an: existing?.zugewiesen_an || "",
-    faellig_am: existing?.faellig_am || "",
+    faellig_am: existing ? (existing.faellig_am || "") : heuteISO,
     wiederholung: existing?.wiederholung || "einmalig",
     status: existing?.status || "offen",
     kunde_id: existing?.kunde_id || kunde_id,
