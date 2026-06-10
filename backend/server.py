@@ -49,6 +49,7 @@ from module_dokumente import router as documents_router  # Modul-First (07.05.20
 from routes.distance import router as distance_router
 from routes.ai import router as ai_router
 from routes.pdf import router as pdf_router
+from routes.eml_export import router as eml_router
 from routes.dashboard import router as dashboard_router
 from routes.text_templates import router as text_templates_router
 from routes.leistungsbloecke import router as leistungsbloecke_router
@@ -119,6 +120,7 @@ api_router.include_router(documents_router, dependencies=[Depends(get_current_us
 api_router.include_router(distance_router)
 api_router.include_router(ai_router, dependencies=[Depends(get_current_user)])
 api_router.include_router(pdf_router, dependencies=[Depends(require_finanz)])
+api_router.include_router(eml_router, dependencies=[Depends(require_finanz)])
 api_router.include_router(dashboard_router)
 api_router.include_router(text_templates_router)
 api_router.include_router(leistungsbloecke_router, dependencies=[Depends(get_current_user)])

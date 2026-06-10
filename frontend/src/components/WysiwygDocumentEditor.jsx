@@ -742,26 +742,27 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const executeMailClient = async (withText, saveFirst) => {
     if (!(await ensureLohnanteilOrConfirm())) return;
-    const to = customer?.email || "";
-    const docTitle = titles[type] || "Dokument";
-    const subject = encodeURIComponent(betreff || `${docTitle} ${docNumber}`);
-    const body = withText
-      ? encodeURIComponent(`${vortext || ""}\n\n---\n\n${schlusstext || ""}\n\nMit freundlichen Gruessen\nTischlerei R. Graupner`)
-      : "";
-    const doOpen = () => {
-      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
-      // Status auf "Versendet" / "Gesendet" setzen falls nicht schon in dem Status
-      if (!isNew && status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
-        const newStatus = type === "quote" ? "Versendet" : type === "order" ? "Gesendet" : "Versendet";
+    // Immer speichern, damit das angehaengte PDF den aktuellen Stand zeigt
+    const savedId = await persistDocument();
+    if (!savedId) return;
+    try {
+      const ep = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
+      const res = await api.get(`/eml/${ep}/${savedId}?text=${withText ? 1 : 0}&t=${Date.now()}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "message/rfc822" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${titles[type]}_${docNumber || savedId}.eml`;
+      document.body.appendChild(a); a.click(); a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("E-Mail mit PDF-Anhang erstellt - jetzt in Betterbird oeffnen");
+      if (status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
+        const newStatus = type === "order" ? "Gesendet" : "Versendet";
         const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
-        api.put(`/${endpoint}/${id}/status`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
+        api.put(`/${endpoint}/${savedId}/status`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
       }
-      navigate(listPaths[type]);
-    };
-    if (saveFirst) {
-      await handleSave();
+    } catch {
+      toast.error("Fehler beim Erstellen der E-Mail-Datei");
     }
-    doOpen();
     setShowMailDialog(null);
   };
 
