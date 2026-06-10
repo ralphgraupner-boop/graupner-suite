@@ -9,28 +9,45 @@ if (-not (Test-Path $Betterbird)) {
 }
 # =============================================================
 
+$ShowDiagnose = $true   # zeigt einmalig die aufgerufene URL an (auf $false setzen, wenn nicht mehr noetig)
+
+function Get-Param([string]$url, [string]$name) {
+    $m = [regex]::Match($url, "[?&]$name=([^&]*)")
+    if ($m.Success) { return [System.Uri]::UnescapeDataString($m.Groups[1].Value) }
+    return ""
+}
+
 try {
     # Aufruf: bbcompose://compose?base=...&type=quote&id=...&token=...&text=1
-    $uri   = [System.Uri]$Url
-    $q     = [System.Web.HttpUtility]::ParseQueryString($uri.Query)
-    $base  = $q["base"]
-    $type  = $q["type"]
-    $id    = $q["id"]
-    $token = $q["token"]
-    $text  = $q["text"]
+    # Parameter per Regex auslesen (robust auch fuer das eigene Schema bbcompose://;
+    # [System.Uri].Query liefert bei eigenen Schemata teils leer -> deshalb Regex).
+    $base  = Get-Param $Url "base"
+    $type  = Get-Param $Url "type"
+    $id    = Get-Param $Url "id"
+    $token = Get-Param $Url "token"
+    $text  = Get-Param $Url "text"
     if (-not $text) { $text = "1" }
 
-    if (-not $base -or -not $type -or -not $id) { throw "Ungueltiger Aufruf (base/type/id fehlt)." }
+    if (-not $base -or -not $type -or -not $id) { throw "Ungueltiger Aufruf (base/type/id fehlt).`nURL: $Url" }
     if (-not (Test-Path $Betterbird)) { throw "Betterbird nicht gefunden. Pfad im Skript pruefen: $Betterbird" }
+
+    $pdfUrl  = "$base/api/pdf/$type/$id"
+    $metaUrl = "$base/api/eml-meta/$type/$id?text=$text"
+
+    if ($ShowDiagnose) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Aufgerufene URLs:`n`nPDF:  $pdfUrl`nMeta: $metaUrl",
+            "Graupner bbcompose - Diagnose") | Out-Null
+    }
 
     $headers = @{ Authorization = "Bearer $token" }
 
     # 1) PDF herunterladen (Auth via Bearer-Header)
     $pdf = Join-Path $env:TEMP ("graupner_" + $type + "_" + $id + ".pdf")
-    Invoke-WebRequest -Uri "$base/api/pdf/$type/$id" -Headers $headers -OutFile $pdf -UseBasicParsing
+    Invoke-WebRequest -Uri $pdfUrl -Headers $headers -OutFile $pdf -UseBasicParsing
 
     # 2) Empfaenger / Betreff / Text holen
-    $meta = Invoke-RestMethod -Uri "$base/api/eml-meta/$type/$id?text=$text" -Headers $headers -UseBasicParsing
+    $meta = Invoke-RestMethod -Uri $metaUrl -Headers $headers -UseBasicParsing
 
     # 3) Betterbird mit Anhang oeffnen
     $arg = "to='$($meta.to)',subject='$($meta.subject)',body='$($meta.body)',attachment='$pdf'"
