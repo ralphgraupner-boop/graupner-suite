@@ -82,7 +82,8 @@ def _compose_body(doc: dict, settings: dict, with_text: bool) -> str:
     if not _has_signature(schlusstext):
         company = settings.get("company_name") or "Tischlerei Graupner"
         parts.append(f"Mit freundlichen Grüßen\n{company}")
-        parts.append(_signature(settings))
+    # Adress-/Kontakt-Signatur (-- + Firmendaten) immer anhängen
+    parts.append(_signature(settings))
     return "\n\n".join(parts)
 
 
