@@ -57,18 +57,32 @@ def _signature(settings: dict) -> str:
     return "\n".join(lines)
 
 
+def _has_signature(text: str) -> bool:
+    """Erkennt, ob der Schlusstext bereits eine Grußformel/Signatur enthält."""
+    if not text:
+        return False
+    low = text.lower()
+    markers = ["freundlichen grüßen", "freundlichen gruessen", "freundliche grüße",
+               "freundliche gruesse", "\n--", "viele grüße", "beste grüße"]
+    return any(m in low for m in markers)
+
+
 def _compose_body(doc: dict, settings: dict, with_text: bool) -> str:
-    """Mail-Text: Vortext, Schlusstext, Grußformel + Firmen-Signatur."""
+    """Mail-Text: Vortext, Schlusstext, dann Grußformel + Firmen-Signatur –
+    Letztere nur, wenn der Schlusstext noch KEINE Signatur enthält (keine Dopplung)."""
     if not with_text:
         return ""
-    company = settings.get("company_name") or "Tischlerei Graupner"
     parts = []
-    if (doc.get("vortext") or "").strip():
-        parts.append(doc["vortext"].strip())
-    if (doc.get("schlusstext") or "").strip():
-        parts.append(doc["schlusstext"].strip())
-    parts.append(f"Mit freundlichen Grüßen\n{company}")
-    parts.append(_signature(settings))
+    vortext = (doc.get("vortext") or "").strip()
+    schlusstext = (doc.get("schlusstext") or "").strip()
+    if vortext:
+        parts.append(vortext)
+    if schlusstext:
+        parts.append(schlusstext)
+    if not _has_signature(schlusstext):
+        company = settings.get("company_name") or "Tischlerei Graupner"
+        parts.append(f"Mit freundlichen Grüßen\n{company}")
+        parts.append(_signature(settings))
     return "\n\n".join(parts)
 
 
