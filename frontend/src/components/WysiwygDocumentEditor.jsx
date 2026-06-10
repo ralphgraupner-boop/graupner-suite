@@ -734,6 +734,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const onOpenEmailDialog = () => { setShowEmailDialog(true); };
 
   const [showMailDialog, setShowMailDialog] = useState(null);
+  const [mailMode, setMailMode] = useState("bb"); // "bb" = Betterbird direkt, "eml" = .eml-Datei
 
   const onOpenMailClient = () => {
     if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
@@ -766,7 +767,28 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setShowMailDialog(null);
   };
 
-  // ==================== COMPUTED VALUES ====================
+  // Betterbird direkt via lokalem Helfer (Protokoll bbcompose://). PDF + Text
+  // werden vom Helfer-Skript geladen; siehe windows-helfer/ANLEITUNG.txt.
+  const executeBetterbirdDirect = async (withText) => {
+    if (!(await ensureLohnanteilOrConfirm())) return;
+    const savedId = await persistDocument();
+    if (!savedId) return;
+    const ep = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
+    const token = localStorage.getItem("token") || "";
+    const base = process.env.REACT_APP_BACKEND_URL || "";
+    const url = `bbcompose://compose?base=${encodeURIComponent(base)}&type=${ep}&id=${encodeURIComponent(savedId)}&token=${encodeURIComponent(token)}&text=${withText ? 1 : 0}`;
+    window.location.href = url;
+    toast.success("Betterbird wird geöffnet … (lokaler Helfer muss installiert sein)");
+    if (status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
+      const newStatus = type === "order" ? "Gesendet" : "Versendet";
+      const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
+      api.put(`/${endpoint}/${savedId}/status`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
+    }
+    setShowMailDialog(null);
+  };
+
+  const dispatchMail = (withText) =>
+    mailMode === "bb" ? executeBetterbirdDirect(withText) : executeMailClient(withText, false);
   const { subtotal, discountAmt, netAfterDiscount, vat, total, finalAmount } = calculateTotals();
   const titelGroups = hasTitels ? getTitelGroups() : [];
 
@@ -1058,8 +1080,31 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               <p className="text-sm text-muted-foreground mt-1">Wie soll die E-Mail vorbereitet werden?</p>
             </div>
             <div className="p-5 space-y-2">
+              <div className="flex gap-2 mb-1" data-testid="mail-mode-toggle">
+                <button
+                  type="button"
+                  onClick={() => setMailMode("bb")}
+                  className={`flex-1 px-3 py-2 text-sm rounded-sm border ${mailMode === "bb" ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/40"}`}
+                  data-testid="btn-mode-betterbird"
+                >
+                  Betterbird direkt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMailMode("eml")}
+                  className={`flex-1 px-3 py-2 text-sm rounded-sm border ${mailMode === "eml" ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/40"}`}
+                  data-testid="btn-mode-eml"
+                >
+                  .eml herunterladen
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {mailMode === "bb"
+                  ? "Öffnet Betterbird direkt mit PDF-Anhang (lokaler Helfer nötig)."
+                  : "Lädt eine .eml-Datei zum Öffnen im Mailprogramm."}
+              </p>
               <button
-                onClick={() => executeMailClient(true, false)}
+                onClick={() => dispatchMail(true)}
                 className="w-full p-3 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-left flex items-start gap-3"
                 data-testid="btn-mail-with-text"
               >
@@ -1070,7 +1115,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                 </div>
               </button>
               <button
-                onClick={() => executeMailClient(false, false)}
+                onClick={() => dispatchMail(false)}
                 className="w-full p-3 rounded-sm border hover:bg-muted/40 text-left flex items-start gap-3"
                 data-testid="btn-mail-without-text"
               >

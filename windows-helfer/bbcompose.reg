@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\bbcompose]
+@="URL:Graupner Betterbird Compose"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\bbcompose\shell\open\command]
+@="powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"C:\\Graupner\\bbcompose.ps1\" \"%1\""

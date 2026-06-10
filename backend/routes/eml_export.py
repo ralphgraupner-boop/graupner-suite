@@ -17,6 +17,7 @@ router = APIRouter()
 
 _LABELS = {"quote": "Angebot", "order": "Auftragsbestätigung", "invoice": "Rechnung"}
 _NUMBER_KEYS = {"quote": "quote_number", "order": "order_number", "invoice": "invoice_number"}
+_COLLECTION = {"quote": "quotes", "order": "orders", "invoice": "invoices"}
 
 
 def _ascii_label(label: str) -> str:
@@ -77,6 +78,40 @@ async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Resp
             "Content-Length": str(len(eml_bytes)),
         },
     )
+
+
+async def _build_meta_response(doc_type: str, doc: dict, with_text: bool) -> dict:
+    """Liefert nur Empfaenger/Betreff/Body als JSON – fuer den lokalen
+    Betterbird-Helfer (bbcompose), der das PDF separat ueber /api/pdf laedt."""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    label = _LABELS[doc_type]
+    number = doc.get(_NUMBER_KEYS[doc_type], "") or ""
+    company = settings.get("company_name") or "Tischlerei Graupner"
+
+    subject = doc.get("betreff") or f"{label} {number}"
+    if with_text:
+        parts = []
+        if (doc.get("vortext") or "").strip():
+            parts.append(doc["vortext"].strip())
+        if (doc.get("schlusstext") or "").strip():
+            parts.append(doc["schlusstext"].strip())
+        parts.append(f"Mit freundlichen Grüßen\n{company}")
+        body = "\n\n".join(parts)
+    else:
+        body = ""
+
+    to_email = await _customer_email(doc)
+    return {"to": to_email, "subject": subject, "body": body}
+
+
+@router.get("/eml-meta/{doc_type}/{doc_id}")
+async def get_eml_meta(doc_type: str, doc_id: str, text: int = Query(1)):
+    if doc_type not in _COLLECTION:
+        raise HTTPException(status_code=400, detail="Unbekannter Dokumenttyp")
+    doc = await db[_COLLECTION[doc_type]].find_one({"id": doc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nicht gefunden")
+    return await _build_meta_response(doc_type, doc, with_text=bool(text))
 
 
 @router.get("/eml/quote/{quote_id}")

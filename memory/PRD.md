@@ -444,3 +444,10 @@ Ralph hat darauf bestanden, vor jedem Live-Deploy das Backup-System wasserdicht 
 - Fix erledigt: `faellig_am` wird bei Neuanlage mit Tagesdatum (lokale/Hamburger Zeit) vorbelegt; Bearbeiten lässt gespeicherten Wert unverändert. (bestätigt)
 - Befund (kein Code-Bug): Globale Aufgabenliste filtert nicht nach kunde_id/projekt_id (`module_aufgaben/routes.py` 201–224); neue Aufgaben erscheinen nach Neuladen. Bestätigt.
 - Geänderte Datei: nur `frontend/src/components/AufgabenPanel.jsx`. Backend/DB unangetastet. NICHT deployt (Live-Freigabe via „Save to Github" durch Ralph).
+
+## Changelog 10.06.2026 (Option B: Betterbird-Direkt via bbcompose)
+- Backend: GET /api/eml-meta/{type}/{id} in routes/eml_export.py (to/subject/body als JSON, Bearer-Auth via require_finanz). E2E getestet.
+- Frontend: WysiwygDocumentEditor.jsx Mail-Dialog mit Umschalter "Betterbird direkt" (bbcompose://) vs ".eml herunterladen" (Fallback). Token aus localStorage, base aus REACT_APP_BACKEND_URL.
+- Helfer: /app/windows-helfer/ {bbcompose.reg, bbcompose.ps1, ANLEITUNG.txt}. Betterbird-Standardpfad bestaetigt + (x86)-Auto-Erkennung. PS1 nutzt Authorization-Header.
+- Hinweise: Sonderzeichen (' , Newline) in Betreff/Body koennen Betterbird -compose stoeren -> .eml-Fallback. Protokoll-Test nur auf echtem Windows-PC moeglich.
+- pdf_generator.py/routes_v1.py/dokumente_v2/v6/DB NICHT angefasst. NICHT auf Live (Deploy via Save to Github durch Ralph).

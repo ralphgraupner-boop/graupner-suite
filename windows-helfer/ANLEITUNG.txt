@@ -1,0 +1,45 @@
+GRAUPNER SUITE - BETTERBIRD-HELFER (bbcompose) - INSTALLATION
+=============================================================
+
+Ziel: Ein Klick in der Suite oeffnet Betterbird direkt mit der fertigen
+E-Mail UND dem PDF als Anhang. Einmalige Einrichtung, ca. 5 Minuten.
+Pro PC einmal durchfuehren (z.B. bei Ralph und bei Thorsten).
+
+VORAUSSETZUNG
+-------------
+- Betterbird ist installiert (Standard: C:\Program Files\Betterbird\betterbird.exe).
+- Man ist in der Graupner Suite im Browser angemeldet.
+
+SCHRITT 1 - Ordner anlegen
+--------------------------
+Lege den Ordner an:  C:\Graupner
+
+SCHRITT 2 - Skript kopieren
+---------------------------
+Kopiere die Datei "bbcompose.ps1" nach:  C:\Graupner\bbcompose.ps1
+
+SCHRITT 3 - Protokoll registrieren
+----------------------------------
+Doppelklick auf "bbcompose.reg" und mit "Ja" bestaetigen.
+(Registriert das Protokoll bbcompose:// fuer diesen PC.)
+
+SCHRITT 4 - Betterbird-Pfad pruefen (nur falls noetig)
+------------------------------------------------------
+Standardpfad ist bereits eingetragen:
+  C:\Program Files\Betterbird\betterbird.exe
+Das Skript prueft automatisch auch:
+  C:\Program Files (x86)\Betterbird\betterbird.exe
+Liegt Betterbird woanders, oeffne C:\Graupner\bbcompose.ps1 mit dem
+Editor und passe die Zeile "$Betterbird = ..." an.
+
+FERTIG
+------
+In der Suite: Dokument oeffnen -> "Mailprogramm" -> oben "Betterbird direkt"
+waehlen -> Betterbird oeffnet sich mit PDF-Anhang.
+
+HINWEISE
+--------
+- Sonderzeichen (Apostroph ', Komma, Zeilenumbruch) in Betreff/Text koennen
+  Betterbirds Aufruf stoeren. Bei Problemen den ".eml herunterladen"-Modus
+  im selben Dialog nutzen (Fallback).
+- Bei Fehlern erscheint ein kleines Hinweisfenster mit der Ursache.
