@@ -285,7 +285,7 @@ const Sidebar = ({ onLogout }) => {
         const calls = [
           api.get("/portals/unread-count").catch(() => ({ data: { count: 0 } })),
           api.get("/module-termine/wartet-auf-go").catch(() => ({ data: { count: 0 } })),
-          api.get("/module-assistent/hinweise/count").catch(() => ({ data: { count: 0 } })),
+          api.get("/anfragen/count-neu").catch(() => ({ data: { count: 0 } })),
           api.get("/module-mail-inbox/stats").catch(() => ({ data: { total: { vorschlag: 0 } } })),
           api.get("/module-projekte/count-neu").catch(() => ({ data: { count: 0 } })),
           api.get("/module-aufgaben/count-offen").catch(() => ({ data: { count: 0 } })),

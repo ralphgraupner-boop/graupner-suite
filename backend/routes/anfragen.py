@@ -175,6 +175,13 @@ async def get_anfragen(category: str = None, status: str = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/anfragen/count-neu")
+async def count_anfragen_neu():
+    """Anzahl unkategorisierter Anfragen (Status 'neu') – fuer roten Badge in der Navigation."""
+    count = await db.anfragen.count_documents({"status": "neu"})
+    return {"count": count}
+
+
 @router.get("/anfragen/{anfrage_id}")
 async def get_anfrage(anfrage_id: str):
     """Einzelne Anfrage abrufen"""
