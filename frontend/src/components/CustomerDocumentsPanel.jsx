@@ -98,7 +98,7 @@ export const CustomerDocumentsPanel = ({ customerId, projektId = null }) => {
           <div className="font-mono text-sm font-medium truncate">{number}</div>
           <div className="text-xs text-muted-foreground">{fmtDate(doc.created_at || doc.date)}</div>
           <Badge className={`${statusColor(doc.status)} text-xs w-fit`}>{doc.status || "—"}</Badge>
-          <div className="text-sm font-mono text-right">{fmtEur(doc.total || doc.brutto || 0)}</div>
+          <div className="text-sm font-mono text-right">{fmtEur(doc.total_gross ?? doc.total ?? doc.brutto ?? 0)}</div>
         </div>
         <div className="flex gap-1 flex-shrink-0">
           <button
