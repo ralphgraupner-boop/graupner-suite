@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { VorlagenPicker } from "@/components/VorlagenPicker";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
+import { NewProjektDialog } from "@/components/NewProjektDialog";
 
 const STATUS_STYLES = {
   offen: { cls: "bg-amber-50 text-amber-800 border-amber-200", icon: AlertCircle, label: "Offen" },
@@ -236,8 +237,30 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
   }, []);
   const upd = (k, v) => setData(d => ({ ...d, [k]: v }));
 
+  // Plan a/b/c: Im Kunden-Kontext (kunde_id, aber kein festes projekt_id vom Aufruf)
+  // muss ein Projekt gewählt werden, da das Backend projekt_id verlangt.
+  const showProjektPicker = !!kunde_id && !projekt_id;
+  const [projekte, setProjekte] = useState([]);
+  const [projekteLoading, setProjekteLoading] = useState(false);
+  const [showNewProjekt, setShowNewProjekt] = useState(false);
+
+  const loadProjekte = async () => {
+    if (!showProjektPicker) return;
+    setProjekteLoading(true);
+    try {
+      const r = await api.get("/module-projekte/", { params: { kunde_id } });
+      setProjekte(Array.isArray(r.data) ? r.data : []);
+    } catch {
+      setProjekte([]);
+    } finally {
+      setProjekteLoading(false);
+    }
+  };
+  useEffect(() => { loadProjekte(); }, [kunde_id, showProjektPicker]);  // eslint-disable-line
+
   const save = async () => {
     if (!data.titel.trim()) { toast.error("Titel erforderlich"); return; }
+    if (showProjektPicker && !data.projekt_id) { toast.error("Bitte Projekt wählen"); return; }
     setSaving(true);
     try {
       if (isEdit) {
@@ -257,6 +280,7 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="aufgabe-quick-dialog">
       <div className="bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
@@ -287,6 +311,48 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
               autoFocus
             />
           </div>
+          {showProjektPicker && (
+            <div data-testid="quick-projekt-block">
+              <label className="block text-sm font-medium mb-1">Projekt *</label>
+              {projekteLoading ? (
+                <p className="text-xs text-muted-foreground">Lade Projekte…</p>
+              ) : projekte.length === 0 ? (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2 flex items-center justify-between gap-2">
+                  <span>Kein Projekt vorhanden.</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProjekt(true)}
+                    className="px-2 py-1 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 whitespace-nowrap"
+                    data-testid="quick-btn-new-projekt-empty"
+                  >
+                    + Projekt jetzt anlegen
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={data.projekt_id}
+                    onChange={(e) => upd("projekt_id", e.target.value)}
+                    className="w-full border rounded-sm p-2 text-sm"
+                    data-testid="quick-select-projekt"
+                  >
+                    <option value="">— bitte wählen —</option>
+                    {projekte.map(p => (
+                      <option key={p.id} value={p.id}>{p.titel || p.name || p.id}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProjekt(true)}
+                    className="text-xs px-2 py-2 border rounded-sm hover:bg-muted whitespace-nowrap"
+                    data-testid="quick-btn-new-projekt"
+                  >
+                    + Neu
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-1">Beschreibung</label>
             <textarea
@@ -395,6 +461,22 @@ const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClo
         </div>
       </div>
     </div>
+    {showNewProjekt && (
+      <NewProjektDialog
+        kundeId={kunde_id}
+        onClose={() => setShowNewProjekt(false)}
+        onCreated={(p) => {
+          setShowNewProjekt(false);
+          if (p?.id) {
+            setProjekte(list => [p, ...list.filter(x => x.id !== p.id)]);
+            upd("projekt_id", p.id);
+          } else {
+            loadProjekte();
+          }
+        }}
+      />
+    )}
+    </>
   );
 };
 
