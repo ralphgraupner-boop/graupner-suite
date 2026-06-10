@@ -771,12 +771,20 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   // werden vom Helfer-Skript geladen; siehe windows-helfer/ANLEITUNG.txt.
   const executeBetterbirdDirect = async (withText) => {
     if (!(await ensureLohnanteilOrConfirm())) return;
+    // Dokument zuerst speichern, damit eine gueltige ID vorhanden ist.
     const savedId = await persistDocument();
-    if (!savedId) return;
+    if (!savedId || typeof savedId !== "string" || !savedId.trim()) {
+      toast.error("Dokument konnte nicht gespeichert werden – Betterbird-Aufruf abgebrochen.");
+      return;
+    }
     const ep = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
     const token = localStorage.getItem("token") || "";
     const base = process.env.REACT_APP_BACKEND_URL || "";
-    const url = `bbcompose://compose?base=${encodeURIComponent(base)}&type=${ep}&id=${encodeURIComponent(savedId)}&token=${encodeURIComponent(token)}&text=${withText ? 1 : 0}`;
+    if (!base) {
+      toast.error("Backend-Adresse fehlt – Betterbird-Aufruf abgebrochen.");
+      return;
+    }
+    const url = `bbcompose://compose?base=${encodeURIComponent(base)}&type=${ep}&id=${encodeURIComponent(savedId.trim())}&token=${encodeURIComponent(token)}&text=${withText ? 1 : 0}`;
     window.location.href = url;
     toast.success("Betterbird wird geöffnet … (lokaler Helfer muss installiert sein)");
     if (status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
