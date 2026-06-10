@@ -10,6 +10,15 @@ VORAUSSETZUNG
 - Betterbird ist installiert (Standard: C:\Program Files\Betterbird\betterbird.exe).
 - Man ist in der Graupner Suite im Browser angemeldet.
 
+EINFACHSTE METHODE (empfohlen, ohne Admin-Rechte)
+-------------------------------------------------
+Doppelklick auf "install.bat" -> fertig.
+Der Installer sucht Betterbird automatisch, kopiert das Skript nach
+C:\Graupner und registriert das Protokoll fuer den aktuellen Benutzer.
+Am Ende erscheint eine Erfolgsmeldung.
+
+(Die folgenden Schritte 1-4 sind nur die MANUELLE Alternative.)
+
 SCHRITT 1 - Ordner anlegen
 --------------------------
 Lege den Ordner an:  C:\Graupner
