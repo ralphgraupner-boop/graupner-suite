@@ -17,7 +17,7 @@ router = APIRouter()
 
 _LABELS = {"quote": "Angebot", "order": "Auftragsbestätigung", "invoice": "Rechnung"}
 _NUMBER_KEYS = {"quote": "quote_number", "order": "order_number", "invoice": "invoice_number"}
-_COLLECTION = {"quote": "quotes", "order": "orders", "invoice": "invoices"}
+_COLLECTION = {"quote": "quotes", "order": "orders", "invoice": "invoices", "einsatz": "einsaetze"}
 
 
 def _ascii_label(label: str) -> str:
@@ -87,6 +87,33 @@ def _compose_body(doc: dict, settings: dict, with_text: bool) -> str:
     return "\n\n".join(parts)
 
 
+async def _einsatz_email(einsatz: dict) -> str:
+    if einsatz.get("kunde_email"):
+        return einsatz["kunde_email"]
+    kid = einsatz.get("kunde_id")
+    if kid:
+        for coll in ("module_kunden", "module_kontakt"):
+            c = await db[coll].find_one({"id": kid}, {"_id": 0, "email": 1})
+            if c and c.get("email"):
+                return c["email"]
+    return ""
+
+
+def _compose_einsatz_body(einsatz: dict, settings: dict, with_text: bool) -> str:
+    """Mail-Text fuer Einsaetze: Beschreibung + Grußformel + Signatur."""
+    if not with_text:
+        return ""
+    parts = []
+    beschreibung = (einsatz.get("beschreibung") or "").strip()
+    if beschreibung:
+        parts.append(beschreibung)
+    if not _has_signature(beschreibung):
+        company = settings.get("company_name") or "Tischlerei Graupner"
+        parts.append(f"Mit freundlichen Grüßen\n{company}")
+    parts.append(_signature(settings))
+    return "\n\n".join(parts)
+
+
 async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Response:
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     label = _LABELS[doc_type]
@@ -125,6 +152,11 @@ async def _build_meta_response(doc_type: str, doc: dict, with_text: bool) -> dic
     """Liefert nur Empfaenger/Betreff/Body als JSON – fuer den lokalen
     Betterbird-Helfer (bbcompose), der das PDF separat ueber /api/pdf laedt."""
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    if doc_type == "einsatz":
+        subject = doc.get("betreff") or "Einsatz"
+        body = _compose_einsatz_body(doc, settings, with_text)
+        to_email = await _einsatz_email(doc)
+        return {"to": to_email, "subject": subject, "body": body}
     label = _LABELS[doc_type]
     number = doc.get(_NUMBER_KEYS[doc_type], "") or ""
     company = settings.get("company_name") or "Tischlerei Graupner"
@@ -169,3 +201,34 @@ async def get_invoice_eml(invoice_id: str, text: int = Query(1)):
     if not invoice:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden")
     return await _build_eml_response("invoice", invoice, with_text=bool(text))
+
+
+@router.get("/eml/einsatz/{einsatz_id}")
+async def get_einsatz_eml(einsatz_id: str, text: int = Query(1)):
+    einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
+    if not einsatz:
+        raise HTTPException(status_code=404, detail="Einsatz nicht gefunden")
+    from module_einsaetze.routes import _generate_reparaturauftrag_pdf, _enrich_einsatz_mit_kunde
+    einsatz = await _enrich_einsatz_mit_kunde(einsatz)
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    pdf_bytes = _generate_reparaturauftrag_pdf(einsatz, settings)
+    subject = einsatz.get("betreff") or "Einsatz"
+    body = _compose_einsatz_body(einsatz, settings, bool(text))
+    msg = EmailMessage()
+    to_email = await _einsatz_email(einsatz)
+    if to_email:
+        msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content(body if body else " ")
+    name = (einsatz.get("kunde_name") or "Kunde").replace(" ", "_")
+    msg.add_attachment(pdf_bytes, maintype="application", subtype="pdf",
+                       filename=f"Reparaturauftrag_{name}.pdf")
+    eml_bytes = msg.as_bytes()
+    return Response(
+        content=eml_bytes,
+        media_type="message/rfc822",
+        headers={
+            "Content-Disposition": f'attachment; filename="Reparaturauftrag_{name}.eml"',
+            "Content-Length": str(len(eml_bytes)),
+        },
+    )

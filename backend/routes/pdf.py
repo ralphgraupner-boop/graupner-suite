@@ -95,3 +95,27 @@ async def get_invoice_pdf(invoice_id: str, download: bool = Query(False)):
             "Content-Length": str(len(pdf_bytes))
         }
     )
+
+
+@router.get("/pdf/einsatz/{einsatz_id}")
+async def get_einsatz_pdf(einsatz_id: str, download: bool = Query(False)):
+    einsatz = await db.einsaetze.find_one({"id": einsatz_id}, {"_id": 0})
+    if not einsatz:
+        raise HTTPException(status_code=404, detail="Einsatz nicht gefunden")
+
+    from module_einsaetze.routes import _generate_reparaturauftrag_pdf, _enrich_einsatz_mit_kunde
+    einsatz = await _enrich_einsatz_mit_kunde(einsatz)
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    pdf_bytes = _generate_reparaturauftrag_pdf(einsatz, settings)
+    name = (einsatz.get("kunde_name") or "Kunde").replace(" ", "_")
+    filename = f"Reparaturauftrag_{name}.pdf"
+    disposition = "attachment" if download else "inline"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "Content-Length": str(len(pdf_bytes))
+        }
+    )

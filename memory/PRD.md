@@ -457,3 +457,10 @@ Ralph hat darauf bestanden, vor jedem Live-Deploy das Backup-System wasserdicht 
 - windows-helfer/bbcompose.ps1: Param-Parsing per Split (statt Regex/System.Uri), ${id}-Klammern (id-Verschluck-Bug), UTF-8-Dekodierung der Meta-Antwort, Diagnoseanzeige ($ShowDiagnose).
 - windows-helfer: install.bat/install.ps1 (Ein-Klick, HKCU/ohne Admin, Betterbird-Autosuche).
 - Betterbird-Direkt mit PDF-Anhang vom Nutzer bestaetigt funktionierend. NICHT auf Live (Redeploy durch Ralph noetig).
+
+## Changelog 10.06.2026 (Mail-Cleanup + Einsätze Betterbird)
+- Alle alten Dokument-Mail-Buttons/SMTP entfernt; nur noch "Mailprogramm" + Betterbird-Dialog (Editor, Vorschau DocumentPreview, Einsätze).
+- Toter Code gelöscht: components/SendDocumentEmail.jsx, components/wysiwyg/EmailDialog.jsx.
+- Einsätze: routes/eml_export.py (eml-meta/einsatz + eml/einsatz mit Reparaturauftrag-PDF, _einsatz_email/_compose_einsatz_body), routes/pdf.py (/pdf/einsatz). EinsaetzeModulPage.jsx Mailprogramm-Button -> Betterbird-Dialog (type=einsatz). Alle 3 Endpoints HTTP 200 getestet.
+- Einsatz-Dialog nutzt gespeicherte Einsatz-Daten (nicht editierte Panel-Felder); "Direkt senden" (SMTP) im Panel bleibt.
+- NICHT auf Live (Redeploy durch Ralph nötig).
