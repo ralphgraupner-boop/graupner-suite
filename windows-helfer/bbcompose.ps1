@@ -11,28 +11,34 @@ if (-not (Test-Path $Betterbird)) {
 
 $ShowDiagnose = $true   # zeigt einmalig die aufgerufene URL an (auf $false setzen, wenn nicht mehr noetig)
 
-function Get-Param([string]$url, [string]$name) {
-    $m = [regex]::Match($url, "[?&]$name=([^&]*)")
-    if ($m.Success) { return [System.Uri]::UnescapeDataString($m.Groups[1].Value) }
-    return ""
+function Get-Params([string]$url) {
+    $h = @{}
+    $i = $url.IndexOf("?")
+    if ($i -lt 0) { return $h }
+    foreach ($pair in $url.Substring($i + 1).Split("&")) {
+        $kv = $pair.Split("=", 2)
+        if ($kv.Length -eq 2 -and $kv[0]) { $h[$kv[0]] = [System.Uri]::UnescapeDataString($kv[1]) }
+    }
+    return $h
 }
 
 try {
     # Aufruf: bbcompose://compose?base=...&type=quote&id=...&token=...&text=1
     # Parameter per Regex auslesen (robust auch fuer das eigene Schema bbcompose://;
     # [System.Uri].Query liefert bei eigenen Schemata teils leer -> deshalb Regex).
-    $base  = Get-Param $Url "base"
-    $type  = Get-Param $Url "type"
-    $id    = Get-Param $Url "id"
-    $token = Get-Param $Url "token"
-    $text  = Get-Param $Url "text"
+    $p     = Get-Params $Url
+    $base  = $p["base"]
+    $type  = $p["type"]
+    $id    = $p["id"]
+    $token = $p["token"]
+    $text  = $p["text"]
     if (-not $text) { $text = "1" }
 
     if (-not $base -or -not $type -or -not $id) { throw "Ungueltiger Aufruf (base/type/id fehlt).`nURL: $Url" }
     if (-not (Test-Path $Betterbird)) { throw "Betterbird nicht gefunden. Pfad im Skript pruefen: $Betterbird" }
 
-    $pdfUrl  = "$base/api/pdf/$type/$id"
-    $metaUrl = "$base/api/eml-meta/$type/$id?text=$text"
+    $pdfUrl  = "${base}/api/pdf/${type}/${id}"
+    $metaUrl = "${base}/api/eml-meta/${type}/${id}?text=${text}"
 
     if ($ShowDiagnose) {
         [System.Windows.Forms.MessageBox]::Show(
