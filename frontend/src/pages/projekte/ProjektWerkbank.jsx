@@ -17,6 +17,7 @@ import ProjektBild from "@/components/ProjektBild";
 import MailHistoryModal from "@/components/MailHistoryModal";
 import { MailLink } from "@/components/MailLink";
 import { CustomerDocumentsPanel } from "@/components/CustomerDocumentsPanel";
+import EinsatzModal from "@/components/EinsatzModal";
 
 const STATUS_COLORS = {
   "Anfrage": "bg-blue-100 text-blue-700 border-blue-300",
@@ -39,6 +40,7 @@ const ProjektWerkbank = () => {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [mailHistoryFor, setMailHistoryFor] = useState(null);
+  const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId, projektId?} — zentrales EinsatzModal
 
   const load = async () => {
     setLoading(true);
@@ -143,19 +145,11 @@ const ProjektWerkbank = () => {
             <Globe className="w-4 h-4" /> Kundenportal öffnen / anlegen
           </button>
           <button
-            onClick={async () => {
-              try {
-                await api.post(`/einsaetze/from-kunde/${kunde_id}`);
-                toast.success("Einsatz erstellt");
-                navigate("/einsaetze");
-              } catch (err) {
-                toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
-              }
-            }}
+            onClick={() => setEinsatzCtx({ kundeId: kunde_id })}
             className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
             data-testid="btn-werkbank-einsatz"
           >
-            <Wrench className="w-4 h-4" /> Einsatz erstellen
+            <Wrench className="w-4 h-4" /> Neuer Einsatz
           </button>
         </div>
       </div>
@@ -194,7 +188,7 @@ const ProjektWerkbank = () => {
       ) : (
         <div className="space-y-4">
           {projekte.map(p => (
-            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} kunde={kunde} onChanged={load} />
+            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} kunde={kunde} onChanged={load} onEinsatz={(projektId, projektTitel) => setEinsatzCtx({ kundeId: kunde_id, projektId, projektTitel })} />
           ))}
         </div>
       )}
@@ -215,12 +209,19 @@ const ProjektWerkbank = () => {
         email={mailHistoryFor?.email || ""}
         kundeName={mailHistoryFor?.name || ""}
       />
+
+      <EinsatzModal
+        open={!!einsatzCtx}
+        context={einsatzCtx || {}}
+        onClose={() => setEinsatzCtx(null)}
+        onSaved={() => {}}
+      />
     </div>
   );
 };
 
 // ==================== Projekt-Karte (inline editierbar) ====================
-const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
+const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [data, setData] = useState(projekt);
@@ -486,6 +487,16 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged }) => {
               <Trash2 className="w-4 h-4" /> Löschen
             </Button>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEinsatz?.(data.id, data.titel)}
+                className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                data-testid={`btn-projekt-einsatz-${data.id}`}
+                title="Neuen Einsatz für dieses Projekt anlegen"
+              >
+                <Wrench className="w-4 h-4" /> Einsatz
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

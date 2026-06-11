@@ -8,9 +8,10 @@ import { TextareaWithAI } from "@/components/TextareaWithAI";
 import {
   Calendar, Plus, Trash2, X, MapPin, User as UserIcon, Folder, Briefcase, HardHat,
   CheckCircle2, Clock, RefreshCw, Filter, AlertTriangle, ChevronRight, XCircle, Search,
-  GripVertical,
+  GripVertical, Wrench,
 } from "lucide-react";
 import { colorForUser, initialsOf, MonteurAvatar } from "@/lib/avatarUtils";
+import EinsatzModal from "@/components/EinsatzModal";
 
 const STATUS_LABEL = {
   wartet_auf_go: "Wartet auf GO",
@@ -52,6 +53,7 @@ export default function ModuleTerminePage() {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [selectedMonteure, setSelectedMonteure] = useState(new Set());
+  const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId, projektId?} — zentrales EinsatzModal
 
   // Stammdaten für Auswahl
   const [kunden, setKunden] = useState([]);
@@ -243,6 +245,20 @@ export default function ModuleTerminePage() {
               data-testid="btn-termin-create"
             >
               <Plus className="w-4 h-4" /> Neuer Termin
+            </button>
+          )}
+          {selectedTarget && (
+            <button
+              onClick={() => setEinsatzCtx(
+                selectedTarget.type === "kunde"
+                  ? { kundeId: selectedTarget.id }
+                  : { kundeId: selectedTarget.kunde_id, projektId: selectedTarget.id, projektTitel: selectedTarget.label }
+              )}
+              className="flex items-center gap-1 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-sm hover:bg-orange-100"
+              data-testid="btn-termin-einsatz"
+              disabled={selectedTarget.type === "projekt" && !selectedTarget.kunde_id}
+            >
+              <Wrench className="w-4 h-4" /> Neuer Einsatz
             </button>
           )}
         </div>
@@ -538,6 +554,13 @@ export default function ModuleTerminePage() {
           onSent={() => { setSendingTermin(null); load(); }}
         />
       )}
+
+      <EinsatzModal
+        open={!!einsatzCtx}
+        context={einsatzCtx || {}}
+        onClose={() => setEinsatzCtx(null)}
+        onSaved={() => {}}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { VorlagenPicker } from "@/components/VorlagenPicker";
 import TitleInputWithVorlagen from "@/components/TitleInputWithVorlagen";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
 import { colorForUser, initialsOf } from "@/lib/avatarUtils";
+import EinsatzModal from "@/components/EinsatzModal";
 
 // Kategorien sind reine Datenmaske aus module_textvorlagen — kein Hardcoding
 // (siehe VISION.md, 06.05.2026). Diese Heuristik liefert nur Icons je
@@ -61,6 +62,7 @@ export default function ModuleAufgabenPage() {
   const [selectedMitarbeiter, setSelectedMitarbeiter] = useState(new Set());
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId, projektId?} — zentrales EinsatzModal
   const navigate = useNavigate();
 
   const load = async () => {
@@ -246,6 +248,20 @@ export default function ModuleAufgabenPage() {
               data-testid="btn-aufgabe-create"
             >
               <Plus className="w-4 h-4" /> Neue Aufgabe
+            </button>
+          )}
+          {selectedTarget && (
+            <button
+              onClick={() => setEinsatzCtx(
+                selectedTarget.type === "kunde"
+                  ? { kundeId: selectedTarget.id }
+                  : { kundeId: selectedTarget.kunde_id, projektId: selectedTarget.id, projektTitel: selectedTarget.label }
+              )}
+              className="flex items-center gap-1 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-sm hover:bg-orange-100"
+              data-testid="btn-aufgabe-einsatz"
+              disabled={selectedTarget.type === "projekt" && !selectedTarget.kunde_id}
+            >
+              <Wrench className="w-4 h-4" /> Neuer Einsatz
             </button>
           )}
         </div>
@@ -579,6 +595,13 @@ export default function ModuleAufgabenPage() {
           onSaved={() => { setShowCreate(false); setEditing(null); load(); }}
         />
       )}
+
+      <EinsatzModal
+        open={!!einsatzCtx}
+        context={einsatzCtx || {}}
+        onClose={() => setEinsatzCtx(null)}
+        onSaved={() => {}}
+      />
     </div>
   );
 }

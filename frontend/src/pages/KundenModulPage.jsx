@@ -20,6 +20,7 @@ import { MailLink } from "@/components/MailLink";
 import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import NewProjektDialog from "@/components/NewProjektDialog";
+import EinsatzModal from "@/components/EinsatzModal";
 import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
 import { broadcast, useBroadcast, openInPopup } from "@/lib/windowSync";
 
@@ -120,6 +121,7 @@ const KundenModulPage = () => {
   const [linkCounts, setLinkCounts] = useState({});  // {kunde_id: count_aktiver_links}
   const [projektCounts, setProjektCounts] = useState({});  // {kunde_id: count_projekte}
   const [neuesProjektFuer, setNeuesProjektFuer] = useState(null);  // Kunde-Objekt für Schnell-Projekt-Dialog
+  const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId} — öffnet zentrales EinsatzModal
   const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const KUNDEN_KATEGORIEN_RAW = useTextvorlagenRaw("kunden_kategorie");
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
@@ -753,20 +755,12 @@ const KundenModulPage = () => {
                         Kundenportal öffnen / anlegen
                       </button>
                       <button
-                        onClick={async () => {
-                          try {
-                            await api.post(`/einsaetze/from-kunde/${kunde.id}`);
-                            toast.success("Einsatz erstellt");
-                            window.location.href = "/einsaetze";
-                          } catch (err) {
-                            toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
-                          }
-                        }}
+                        onClick={() => setEinsatzCtx({ kundeId: kunde.id })}
                         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
                         data-testid={`btn-to-einsatz-${kunde.id}`}
                       >
                         <Wrench className="w-4 h-4" />
-                        Einsatz erstellen
+                        Neuer Einsatz
                       </button>
                     </div>
 
@@ -840,6 +834,13 @@ const KundenModulPage = () => {
           onCreated={() => { setNeuesProjektFuer(null); loadProjektCounts(); }}
         />
       )}
+
+      <EinsatzModal
+        open={!!einsatzCtx}
+        context={einsatzCtx || {}}
+        onClose={() => setEinsatzCtx(null)}
+        onSaved={() => loadLinkCounts()}
+      />
     </div>
   );
 };
