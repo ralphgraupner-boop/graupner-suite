@@ -4,10 +4,49 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from database import db, logger
 from uuid import uuid4
+import re
 from auth import get_current_user
 from utils.anrede_detector import detect_anrede
 
 router = APIRouter()
+
+# ── Keyword-Priorisierung (Teil 2a) ──
+# Stufen-Rang: kleiner = dringender (Rot zuerst). Rot=sofort, Grün=stufe1, Gelb=stufe2, Blau=stufe3.
+_STUFE_RANK = {"sofort": 0, "stufe1": 1, "stufe2": 2, "stufe3": 3}
+
+
+def _anfrage_suchtext(a: dict) -> str:
+    """Durchsuchbarer Text einer Anfrage (Datenmaske, keine Doppelung)."""
+    teile = [a.get("nachricht"), a.get("notes"), a.get("betreff"),
+             a.get("anliegen"), a.get("firma"), a.get("name")]
+    kategorien = a.get("categories") or []
+    return " ".join([str(t) for t in teile if t] + [str(k) for k in kategorien])
+
+
+def _stufe_of(text: str, config: dict) -> str:
+    """Ordnet Text einer Prioritätsstufe zu (umlaut-tolerant, bestehende Logik wiederverwendet).
+    Reihenfolge sofort>stufe1>stufe2>stufe3; explizite Keywords zuerst,
+    danach Sonderregel 'sonstige Begriffe mit -tür-' -> stufe1."""
+    from module_assistent.ai_tools import _umlaut_regex  # Wiederverwendung statt Doppelung
+    t = text or ""
+    for stufe in ("sofort", "stufe1", "stufe2", "stufe3"):
+        for kw in config.get(stufe, []) or []:
+            kw = (str(kw) or "").strip()
+            if kw and re.search(_umlaut_regex(kw), t, re.IGNORECASE):
+                return stufe
+    if re.search(_umlaut_regex("t\u00fcr"), t, re.IGNORECASE):
+        return "stufe1"
+    return "stufe3"
+
+
+async def _load_keyword_config() -> dict:
+    """Lädt Keyword-Prioritäten aus db.settings (Fallback: Defaults)."""
+    from routes.settings import DEFAULT_KEYWORD_PRIORITAETEN
+    doc = await db.settings.find_one({"id": "keyword_prioritaeten"}, {"_id": 0})
+    if doc and doc.get("stufen"):
+        saved = doc["stufen"]
+        return {k: saved.get(k, DEFAULT_KEYWORD_PRIORITAETEN[k]) for k in _STUFE_RANK}
+    return DEFAULT_KEYWORD_PRIORITAETEN
 
 
 class AnfrageCreate(BaseModel):
@@ -166,8 +205,13 @@ async def get_anfragen(category: str = None, status: str = None):
             query["status"] = status
         
         anfragen = await db.anfragen.find(query, {"_id": 0}).to_list(1000)
+        config = await _load_keyword_config()
+        for a in anfragen:
+            a["prioritaet_stufe"] = _stufe_of(_anfrage_suchtext(a), config)
+        # Stabil sortieren: zuerst nach Datum (neueste oben), dann nach Stufe (Rot oben)
         anfragen.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        
+        anfragen.sort(key=lambda x: _STUFE_RANK.get(x.get("prioritaet_stufe"), 9))
+
         return anfragen
     
     except Exception as e:
@@ -177,8 +221,10 @@ async def get_anfragen(category: str = None, status: str = None):
 
 @router.get("/anfragen/count-neu")
 async def count_anfragen_neu():
-    """Anzahl unkategorisierter Anfragen (Status 'neu') – fuer roten Badge in der Navigation."""
-    count = await db.anfragen.count_documents({"status": "neu"})
+    """Anzahl NEUER Anfragen mit hoher Priorität (Rot + Grün) – für Badge bei 'Mein Assistent'."""
+    config = await _load_keyword_config()
+    neue = await db.anfragen.find({"status": "neu"}, {"_id": 0}).to_list(1000)
+    count = sum(1 for a in neue if _stufe_of(_anfrage_suchtext(a), config) in ("sofort", "stufe1"))
     return {"count": count}
 
 

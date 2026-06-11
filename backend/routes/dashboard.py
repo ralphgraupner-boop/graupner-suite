@@ -52,7 +52,14 @@ async def list_anfragen(category: str = "", user=Depends(get_current_user)):
     if category:
         query["categories"] = category
     anfragen = await db.anfragen.find(query, {"_id": 0}).to_list(1000)
+    # Keyword-Priorisierung (Teil 2a): Helfer aus routes.anfragen wiederverwenden
+    from routes.anfragen import _load_keyword_config, _stufe_of, _anfrage_suchtext, _STUFE_RANK
+    config = await _load_keyword_config()
+    for a in anfragen:
+        a["prioritaet_stufe"] = _stufe_of(_anfrage_suchtext(a), config)
+    # Stabil sortieren: zuerst Datum (neueste oben), dann Stufe (Rot oben)
     anfragen.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    anfragen.sort(key=lambda x: _STUFE_RANK.get(x.get("prioritaet_stufe"), 9))
     return anfragen
 
 

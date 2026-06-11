@@ -4,6 +4,22 @@
 > Stand: 02.06.2026
 
 
+## 📌 11.06.2026 — Auftrag A: Typ-Logik + Keyword-Priorisierung (Teil 1 + 2a)
+
+**Teil 1 (Frontend):**
+- `EinsatzModal.jsx`: Nach Speichern bei `typ === "aufgabe"` (intern) → keine Link-Abfrage, direkt schließen; bei `einsatz`/`termin` Link-Abfrage wie bisher.
+- `EinsaetzeModulPage.jsx`: Typ-Badge in der Liste (Einsatz grün / Aufgabe blau / Termin amber, `TYP_BADGE`).
+
+**Teil 2a (Backend-Fundament):**
+- `routes/settings.py`: `DEFAULT_KEYWORD_PRIORITAETEN` (4 Stufen) + `GET/PUT /api/keyword-prioritaeten` (db.settings id='keyword_prioritaeten', Ralph kann Keywords ergänzen/entfernen).
+- `routes/anfragen.py`: Priorisierungs-Engine `_stufe_of` (umlaut-tolerant via wiederverwendetem `_umlaut_regex`), `_anfrage_suchtext`, `_load_keyword_config`, `_STUFE_RANK`. Reihenfolge sofort>stufe1>stufe2>stufe3, Sonderregel „sonstige Begriffe mit -tür-" → stufe1. `count-neu` zählt jetzt nur Rot+Grün neue Anfragen.
+- `routes/dashboard.py` `list_anfragen` (die tatsächlich servende `GET /anfragen`-Route): reichert jede Anfrage mit `prioritaet_stufe` an und sortiert Rot oben (Stufe), dann Datum.
+
+**Verifiziert (Curl):** keyword-prioritaeten GET/PUT (+Restore Defaults) ✅; /anfragen liefert `prioritaet_stufe` + Sortierung Rot oben ✅; count-neu=Rot+Grün ✅; Frontend compiled ✅.
+
+**OFFEN (Auftrag B, 2b+2c):** Settings-Frontend „Keyword-Prioritäten" als eigener neuer Tab (CRUD je Stufe); Modul „Mail-Anfragen" Frontend: Farb-Badges + Sortierung Rot oben sichtbar machen. (Backend dafür steht bereit.)
+
+
 ## 📌 11.06.2026 — EinsatzModal Ergänzungen (Typ, Link-Abfrage, Einsatztext im Link)
 
 **Auftrag Ralph (Max 3 Credits):** 3 additive Ergänzungen am `EinsatzModal.jsx`.

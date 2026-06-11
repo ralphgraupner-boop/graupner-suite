@@ -134,3 +134,40 @@ async def update_kunden_status(body: dict):
         upsert=True,
     )
     return status_values
+
+
+# ── Keyword-Prioritäten (Anfragen-Priorisierung, Teil 2a) ──
+# Speicherung in db.settings (id='keyword_prioritaeten'). 4 Stufen, kein Hardcode in der Logik.
+DEFAULT_KEYWORD_PRIORITAETEN = {
+    "sofort": ["Notfall", "dringend", "kaputt", "sofort"],
+    "stufe1": ["Schiebetür", "Hebeschiebetür", "PSK", "Kippschiebetür"],
+    "stufe2": ["Fenster", "Fensterwartung", "Türwartung", "Wartung"],
+    "stufe3": ["Standard"],
+}
+_KW_STUFEN = ["sofort", "stufe1", "stufe2", "stufe3"]
+
+
+@router.get("/keyword-prioritaeten")
+async def get_keyword_prioritaeten():
+    """Keyword-Prioritäten je Stufe abrufen (Fallback: Defaults)."""
+    doc = await db.settings.find_one({"id": "keyword_prioritaeten"}, {"_id": 0})
+    if doc and doc.get("stufen"):
+        saved = doc["stufen"]
+        return {k: saved.get(k, DEFAULT_KEYWORD_PRIORITAETEN[k]) for k in _KW_STUFEN}
+    return DEFAULT_KEYWORD_PRIORITAETEN
+
+
+@router.put("/keyword-prioritaeten")
+async def update_keyword_prioritaeten(body: dict):
+    """Keyword-Prioritäten je Stufe speichern (Ralph kann Keywords ergänzen/entfernen)."""
+    stufen = body.get("stufen") or {}
+    clean = {}
+    for key in _KW_STUFEN:
+        vals = stufen.get(key, DEFAULT_KEYWORD_PRIORITAETEN[key])
+        clean[key] = [str(s).strip() for s in vals if str(s).strip()]
+    await db.settings.update_one(
+        {"id": "keyword_prioritaeten"},
+        {"$set": {"id": "keyword_prioritaeten", "stufen": clean}},
+        upsert=True,
+    )
+    return clean

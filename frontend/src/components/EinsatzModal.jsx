@@ -162,7 +162,12 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
       // [Phase 2] hier anhängen: await erzeugeTermin(); await erzeugeAufgabe();
       onSaved?.();
       toast.success("Gespeichert");
-      setPhase("ask");
+      // Typ 'aufgabe' (intern) → kein Mitarbeiter-Link, direkt schließen.
+      if (form.typ === "aufgabe") {
+        onClose?.();
+      } else {
+        setPhase("ask");
+      }
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Fehler beim Speichern");
     } finally {

@@ -12,6 +12,13 @@ const BILD_KAT_LABELS = {
   hinweise: "Hinweise", sonstiges: "Sonstiges"
 };
 
+// Typ-Badge in der Einsatz-Liste (Einsatz grün / Aufgabe blau / Termin amber)
+const TYP_BADGE = {
+  einsatz: { label: "Einsatz", cls: "bg-green-100 text-green-700" },
+  aufgabe: { label: "Aufgabe", cls: "bg-blue-100 text-blue-700" },
+  termin: { label: "Termin", cls: "bg-amber-100 text-amber-700" },
+};
+
 const EinsaetzeModulPage = () => {
   useF1Help("hilfe_einsaetze");
   const [einsaetze, setEinsaetze] = useState([]);
@@ -232,6 +239,7 @@ const EinsaetzeModulPage = () => {
                     <Wrench className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     <h3 className="font-semibold truncate">{e.betreff || "Ohne Betreff"}</h3>
                     <Badge className={statusBadge(e.status)}>{e.status}</Badge>
+                    {(() => { const tb = TYP_BADGE[e.typ || "einsatz"]; return tb ? <Badge className={tb.cls} data-testid={`einsatz-typ-badge-${e.id}`}>{tb.label}</Badge> : null; })()}
                     {e.prioritaet === "dringend" && <Badge className="bg-red-100 text-red-700">Dringend</Badge>}
                     {e.prioritaet === "hoch" && <Badge className="bg-orange-100 text-orange-700">Hoch</Badge>}
                   </div>
