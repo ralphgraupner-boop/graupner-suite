@@ -79,7 +79,25 @@ async def list_inbox(status: str = "vorschlag", limit: int = 100, user=Depends(g
     items = []
     async for d in db.module_mail_inbox.find(q, {"_id": 0}).sort("received_at", -1).limit(limit):
         items.append(d)
+    # Keyword-Priorisierung (additiv): Helfer aus routes.anfragen wiederverwenden, nicht kopieren
+    from routes.anfragen import _load_keyword_config, _stufe_of, _STUFE_RANK
+    config = await _load_keyword_config()
+    for d in items:
+        d["prioritaet_stufe"] = _stufe_of(_mail_suchtext(d), config)
+    # items sind bereits received_at desc -> stabile Sortierung nach Stufe (Rot oben) genügt
+    items.sort(key=lambda x: _STUFE_RANK.get(x.get("prioritaet_stufe"), 9))
     return items
+
+
+def _mail_suchtext(d: dict) -> str:
+    """Durchsuchbarer Text eines Mail-Inbox-Eintrags (Subject + Auszug + geparste Felder)."""
+    parsed = d.get("parsed") or {}
+    parts = [
+        d.get("subject"), d.get("body_excerpt"), d.get("from_name"),
+        parsed.get("nachricht"), parsed.get("vorname"), parsed.get("nachname"),
+        parsed.get("strasse"), parsed.get("ort"),
+    ]
+    return " ".join([str(p) for p in parts if p])
 
 
 @router.post("/mail-detail")

@@ -16,6 +16,14 @@ const STATUS_LABELS = {
   spam_verdacht: { label: "Spam-Verdacht", color: "bg-red-100 text-red-800" },
 };
 
+// Prioritäts-Badge je prioritaet_stufe (Rot/Grün/Gelb/Blau)
+const STUFE_BADGE = {
+  sofort: { label: "Sofort", color: "bg-red-100 text-red-700", dot: "bg-red-500" },
+  stufe1: { label: "Stufe 1", color: "bg-green-100 text-green-700", dot: "bg-green-500" },
+  stufe2: { label: "Stufe 2", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
+  stufe3: { label: "Stufe 3", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" },
+};
+
 const ModuleMailInboxPage = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
@@ -450,6 +458,14 @@ const ModuleMailInboxPage = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold">{p.anrede ? `${p.anrede} ` : ""}{fullName}</h3>
+                      {e.prioritaet_stufe && (() => {
+                        const pb = STUFE_BADGE[e.prioritaet_stufe];
+                        return pb ? (
+                          <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm font-medium ${pb.color}`} data-testid={`mail-prio-badge-${e.id}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${pb.dot}`} />{pb.label}
+                          </span>
+                        ) : null;
+                      })()}
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-medium ${sb.color}`}>{sb.label}</span>
                       {p.format && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-600 font-mono">{p.format}</span>

@@ -4,6 +4,21 @@
 > Stand: 02.06.2026
 
 
+## 📌 11.06.2026 — Auftrag B: Keyword-Prioritäten Frontend + Mail-Anfragen-Badges
+
+**2b — Settings-Tab „Keyword-Prioritäten":**
+- Neu: `frontend/src/pages/settings/KeywordPrioritaetenTab.jsx` (4 Stufen mit Farbpunkt, Keyword-Chips mit ✕, Plus/Enter hinzufügen, Speichern via `PUT /api/keyword-prioritaeten`).
+- `frontend/src/pages/SettingsPage.jsx`: Tab „Keyword-Prioritäten" (Icon `Flag`) registriert.
+
+**2c — Mail-Anfragen-Liste (`/module/mail-inbox`):**
+- WICHTIG: Diese Liste liest `/api/module-mail-inbox/list` (Collection `module_mail_inbox`), NICHT `/api/anfragen`.
+- Backend additiv `module_mail_inbox/routes_list.py` `list_inbox`: Helfer `_load_keyword_config`/`_stufe_of`/`_STUFE_RANK` aus `routes.anfragen` importiert (nicht kopiert) + lokaler `_mail_suchtext`; jeder Eintrag bekommt `prioritaet_stufe`, Sortierung Rot oben.
+- `frontend/src/pages/mail_inbox/ModuleMailInboxPage.jsx`: Farb-Badge (`STUFE_BADGE`, 🔴🟢🟡🔵) je Eintrag.
+- Assistent-Badge (Rot+Grün) bereits durch 2a erledigt (`/anfragen/count-neu`).
+
+**Verifiziert (Curl):** mail-inbox/list liefert `prioritaet_stufe` + sortiert (sofort→stufe1→…) ✅; Frontend compiled ✅.
+
+
 ## 📌 11.06.2026 — Auftrag A: Typ-Logik + Keyword-Priorisierung (Teil 1 + 2a)
 
 **Teil 1 (Frontend):**
