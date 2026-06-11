@@ -168,6 +168,7 @@ async def create_link(kunde_id: str, body: dict | None = None, user=Depends(get_
     if not k:
         raise HTTPException(404, "Kunde nicht gefunden")
     projekt_id = ((body or {}).get("projekt_id") or "").strip() or None
+    einsatz_text = ((body or {}).get("einsatz_text") or "").strip()
     projekt_titel = ""
     if projekt_id:
         p = await db.module_projekte.find_one(
@@ -183,6 +184,7 @@ async def create_link(kunde_id: str, body: dict | None = None, user=Depends(get_
         "kunde_id": kunde_id,
         "projekt_id": projekt_id,
         "projekt_titel": projekt_titel,  # Cache für Listen/Expiring (Datenmaske ist live aus _sanitize_projekt_for_public)
+        "einsatz_text": einsatz_text,  # Aufgaben/Notizen aus EinsatzModal — im Mitarbeiter-Link sichtbar
         "token": secrets.token_urlsafe(36),
         "created_at": _iso(now),
         "created_by": getattr(user, "username", None),
@@ -469,6 +471,7 @@ async def view_by_token(token: str):
         "created_at": link["created_at"],
         "kunde": kunde,
         "projekt": projekt,
+        "einsatz_text": link.get("einsatz_text", ""),
     }
 
 

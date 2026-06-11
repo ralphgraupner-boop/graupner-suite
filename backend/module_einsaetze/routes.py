@@ -245,6 +245,7 @@ async def create_einsatz(body: dict, user=Depends(get_current_user)):
         "kontakt_id": body.get("kontakt_id", body.get("anfrage_id", "")),
         "projekt_id": body.get("projekt_id", ""),
         "projekt_titel": body.get("projekt_titel", ""),
+        "typ": body.get("typ", "einsatz"),
         "objekt_strasse": body.get("objekt_strasse", ""),
         "objekt_plz": body.get("objekt_plz", ""),
         "objekt_ort": body.get("objekt_ort", ""),

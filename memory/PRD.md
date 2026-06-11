@@ -4,6 +4,16 @@
 > Stand: 02.06.2026
 
 
+## 📌 11.06.2026 — EinsatzModal Ergänzungen (Typ, Link-Abfrage, Einsatztext im Link)
+
+**Auftrag Ralph (Max 3 Credits):** 3 additive Ergänzungen am `EinsatzModal.jsx`.
+1. **Typ-Pflichtfeld** oben: `Einsatz (Vor-Ort)` / `Aufgabe (intern)` / `Termin` — wird gespeichert (`POST /api/einsaetze` persistiert jetzt `typ`, additive Zeile in `module_einsaetze/routes.py`).
+2. **Abfrage nach Speichern:** Phase-Flow `form → ask → link`. Nach Speichern Frage „Mitarbeiter-Link erstellen und senden?" mit [Ja — Link erstellen] / [Nein — nur intern speichern] + amber-Hinweis (ohne Link nicht in Planung berücksichtigt). Auto-Link-Erzeugung entfernt.
+3. **Einsatztext im Link:** `module_kundenlink.create_link` nimmt additiv `einsatz_text` an, speichert es am Link-Doc, `view_by_token` gibt es zurück; `KundenLinkPage.jsx` rendert orange Block „Aufgaben für diesen Einsatz".
+
+**Verifiziert (Curl):** typ=termin persistiert; einsatz_text im `/view/{token}` sichtbar (Umlaute korrekt); Frontend kompiliert sauber. Test-Datensätze gelöscht/Link widerrufen. NUR Preview.
+
+
 ## 📌 10.06.2026 — Zentrales EinsatzModal (Planungsmodul Phase 1)
 
 **Auftrag Ralph (Max 3 Credits):** Neues kontextsensitives `EinsatzModal` als Kern eines künftigen zentralen Planungsmoduls (später Termine+Aufgaben zusammenführen). Erweiterbar gebaut nach 3 Design-Entscheidungen: (1) Kontext-Objekt statt Einzel-Props, (2) Pipeline-Save (Phase 2 nur anhängen), (3) `projekt_id` als gemeinsame Klammer.

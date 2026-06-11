@@ -316,6 +316,14 @@ const KundenLinkPage = () => {
           </section>
         )}
 
+        {/* Einsatz-Text (Aufgaben/Notizen aus EinsatzModal) */}
+        {data.einsatz_text && (
+          <section className="bg-orange-50 border border-orange-200 rounded-sm p-3" data-testid="kundenlink-einsatz-text">
+            <h3 className="text-xs font-semibold text-orange-700 uppercase mb-2">Aufgaben für diesen Einsatz</h3>
+            <p className="text-base whitespace-pre-wrap text-slate-900 font-medium leading-relaxed">{data.einsatz_text}</p>
+          </section>
+        )}
+
         {/* Projekt-Section (nur wenn Link projektbezogen) */}
         {data.projekt && (
           <section className="bg-violet-50 border border-violet-200 rounded-sm p-3 space-y-3" data-testid="kundenlink-projekt">

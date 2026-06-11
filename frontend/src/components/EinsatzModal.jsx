@@ -38,6 +38,7 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [saving, setSaving] = useState(false);
   const [createdLink, setCreatedLink] = useState(null);
+  const [phase, setPhase] = useState("form"); // form | ask | link
   const [form, setForm] = useState({});
 
   const isHausverwaltung = (kunde?.customer_type || "").toLowerCase() === "hausverwaltung";
@@ -45,7 +46,9 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
   useEffect(() => {
     if (!open || !context.kundeId) return;
     setCreatedLink(null);
+    setPhase("form");
     setForm({
+      typ: "einsatz",
       betreff: context.betreff || "",
       beschreibung: context.notizen || "",
       objekt_strasse: "",
@@ -111,6 +114,7 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
   const erzeugeEinsatz = async () => {
     const payload = {
       kunde_id: context.kundeId,
+      typ: form.typ,
       projekt_id: form.projekt_id,
       projekt_titel: form.projekt_titel,
       betreff: form.betreff || form.projekt_titel || "Einsatz",
@@ -131,6 +135,7 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
     try {
       const res = await api.post(`/module-kundenlink/create/${context.kundeId}`, {
         projekt_id: form.projekt_id || undefined,
+        einsatz_text: form.beschreibung || undefined,
       });
       return res.data;
     } catch {
@@ -147,21 +152,35 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
       toast.error("Bitte ein Projekt zuordnen (Pflichtfeld)");
       return;
     }
+    if (!form.typ) {
+      toast.error("Bitte einen Typ wählen");
+      return;
+    }
     setSaving(true);
     try {
       await erzeugeEinsatz();
       // [Phase 2] hier anhängen: await erzeugeTermin(); await erzeugeAufgabe();
-      const link = await erzeugeMitarbeiterLink();
-      toast.success("Einsatz gespeichert");
       onSaved?.();
-      if (link?.token) {
-        setCreatedLink(`${window.location.origin}/m/${link.token}`);
-      } else {
-        toast.warning("Einsatz gespeichert — der Mitarbeiter-Link konnte nicht erzeugt werden.");
-        onClose?.();
-      }
+      toast.success("Gespeichert");
+      setPhase("ask");
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Fehler beim Speichern");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateLink = async () => {
+    setSaving(true);
+    try {
+      const link = await erzeugeMitarbeiterLink();
+      if (link?.token) {
+        setCreatedLink(`${window.location.origin}/m/${link.token}`);
+        setPhase("link");
+      } else {
+        toast.warning("Der Mitarbeiter-Link konnte nicht erzeugt werden.");
+        onClose?.();
+      }
     } finally {
       setSaving(false);
     }
@@ -188,7 +207,7 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
           </button>
         </div>
 
-        {createdLink ? (
+        {phase === "link" ? (
           // ===== Erfolgs-Ansicht: Mitarbeiter-Link =====
           <div className="p-4 space-y-4" data-testid="einsatz-link-result">
             <div className="flex items-center gap-2 text-emerald-700 font-medium">
@@ -220,9 +239,54 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
               </button>
             </div>
           </div>
+        ) : phase === "ask" ? (
+          // ===== Abfrage: Mitarbeiter-Link erstellen? =====
+          <div className="p-4 space-y-4" data-testid="einsatz-ask-link">
+            <p className="text-sm font-medium">Mitarbeiter-Link erstellen und senden?</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleCreateLink}
+                disabled={saving}
+                className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                data-testid="btn-einsatz-link-ja"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Ja — Link erstellen
+              </button>
+              <button
+                onClick={() => onClose?.()}
+                disabled={saving}
+                className="flex-1 px-4 py-2 text-sm border rounded-sm hover:bg-muted disabled:opacity-50"
+                data-testid="btn-einsatz-link-nein"
+              >
+                Nein — nur intern speichern
+              </button>
+            </div>
+            <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2" data-testid="einsatz-ask-hint">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              Ohne Mitarbeiter-Link wird dieser Einsatz nur intern gespeichert und kann in der Planung nicht berücksichtigt werden.
+            </div>
+          </div>
         ) : (
           // ===== Formular =====
           <div className="p-4 space-y-3">
+            {/* Typ — Pflichtfeld */}
+            <div>
+              <label className="block text-xs font-medium mb-1 text-muted-foreground">
+                Typ <span className="text-red-600">*</span>
+              </label>
+              <select
+                value={form.typ || "einsatz"}
+                onChange={(e) => upd("typ", e.target.value)}
+                className="w-full border rounded-sm p-2 text-sm"
+                data-testid="einsatz-field-typ"
+              >
+                <option value="einsatz">Einsatz (Vor-Ort)</option>
+                <option value="aufgabe">Aufgabe (intern)</option>
+                <option value="termin">Termin</option>
+              </select>
+            </div>
+
             {/* Kunde (read-only aus Kontext/Kundenstamm) */}
             <div>
               <label className="block text-xs font-medium mb-1 text-muted-foreground flex items-center gap-1">
@@ -351,7 +415,7 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
           </div>
         )}
 
-        {!createdLink && (
+        {phase === "form" && (
           <div className="p-4 border-t flex justify-end gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted" data-testid="btn-einsatz-abbrechen">
               Abbrechen
