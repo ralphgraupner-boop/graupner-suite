@@ -171,3 +171,37 @@ async def update_keyword_prioritaeten(body: dict):
         upsert=True,
     )
     return clean
+
+
+# ── Begrüßungsvorlagen (Mail-Anfragen, je Prioritätsstufe) ──
+DEFAULT_BEGRUESSUNGSVORLAGEN = {
+    "sofort": "Guten Tag,\n\nvielen Dank für Ihre Anfrage. Da es sich um einen dringenden Fall handelt, melden wir uns schnellstmöglich bei Ihnen.\n\n",
+    "stufe1": "Guten Tag,\n\nvielen Dank für Ihre Anfrage rund um Türen und Fenster. Wir prüfen Ihr Anliegen und melden uns zeitnah mit einem Terminvorschlag.\n\n",
+    "stufe2": "Guten Tag,\n\nvielen Dank für Ihre Anfrage zur Wartung. Wir melden uns in Kürze bei Ihnen, um die Details abzustimmen.\n\n",
+    "stufe3": "Guten Tag,\n\nvielen Dank für Ihre Anfrage. Wir haben Ihre Nachricht erhalten und melden uns zeitnah bei Ihnen.\n\n",
+}
+
+
+@router.get("/begruessungsvorlagen")
+async def get_begruessungsvorlagen():
+    """Begrüßungsvorlagen je Prioritätsstufe abrufen (Fallback: Defaults)."""
+    doc = await db.settings.find_one({"id": "begruessungsvorlagen"}, {"_id": 0})
+    if doc and doc.get("vorlagen"):
+        saved = doc["vorlagen"]
+        return {k: saved.get(k, DEFAULT_BEGRUESSUNGSVORLAGEN[k]) for k in _KW_STUFEN}
+    return DEFAULT_BEGRUESSUNGSVORLAGEN
+
+
+@router.put("/begruessungsvorlagen")
+async def update_begruessungsvorlagen(body: dict):
+    """Begrüßungsvorlagen je Prioritätsstufe speichern."""
+    vorlagen = body.get("vorlagen") or {}
+    clean = {}
+    for key in _KW_STUFEN:
+        clean[key] = str(vorlagen.get(key, DEFAULT_BEGRUESSUNGSVORLAGEN[key]) or "").strip()
+    await db.settings.update_one(
+        {"id": "begruessungsvorlagen"},
+        {"$set": {"id": "begruessungsvorlagen", "vorlagen": clean}},
+        upsert=True,
+    )
+    return clean

@@ -4,6 +4,20 @@
 > Stand: 02.06.2026
 
 
+## 📌 11.06.2026 — Automatische Begrüßungsmail (Mail-Anfragen)
+
+**Backend (additiv):**
+- `routes/settings.py`: `DEFAULT_BEGRUESSUNGSVORLAGEN` (4 Stufen) + `GET/PUT /api/begruessungsvorlagen`.
+- `routes/eml_export.py`: neuer Betterbird-Typ `begruessung` → Collection `module_mail_inbox`; `_begruessung_meta` ermittelt Empfänger (parsed.email/from_email), Betreff „Ihre Anfrage bei {company}", Body = Vorlage je Prioritätsstufe (Stufe via wiederverwendetem `_stufe_of`/`_load_keyword_config` + `_mail_suchtext`) + Firmen-Signatur.
+- `module_mail_inbox/routes_actions.py`: `POST /begruessung-gesendet/{entry_id}` → status='übernommen' + begruessung_gesendet + begruessung_at.
+
+**Frontend:**
+- Neu: `frontend/src/pages/settings/BegruessungsvorlagenTab.jsx` (4 Textfelder je Stufe, GET/PUT). In SettingsPage als Tab „Begrüßungsvorlagen" registriert.
+- `frontend/src/pages/mail_inbox/ModuleMailInboxPage.jsx`: Button „Begrüßungsmail senden" nur bei status='vorschlag' & nicht begruessung_gesendet → öffnet Betterbird (type=begruessung, bestehende bbcompose-Integration); nach Öffnung manuelle Abfrage „Wurde die Mail gesendet?" → Ja setzt status='übernommen'. Grauer Hinweis „Bereits beantwortet" wenn begruessung_gesendet.
+
+**Verifiziert (Curl):** begruessungsvorlagen GET ✅; eml-meta/begruessung liefert to/subject/body korrekt je Stufe ✅; mark-Endpunkt setzt übernommen ✅ (Testdatensatz zurückgesetzt); Frontend compiled ✅.
+
+
 ## 📌 11.06.2026 — Auftrag B: Keyword-Prioritäten Frontend + Mail-Anfragen-Badges
 
 **2b — Settings-Tab „Keyword-Prioritäten":**

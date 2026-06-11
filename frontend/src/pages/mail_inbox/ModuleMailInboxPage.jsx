@@ -97,6 +97,30 @@ const ModuleMailInboxPage = () => {
     setUebernehmenEntry(entry);
   };
 
+  // Begrüßungsmail: öffnet Betterbird (bestehende bbcompose-Integration, type=begruessung).
+  // Nach Öffnung manuelle Bestätigung -> Status auf 'übernommen'.
+  const openBegruessung = (entry) => {
+    const token = localStorage.getItem("token") || "";
+    const base = process.env.REACT_APP_BACKEND_URL || "";
+    if (!base) { toast.error("Backend-Adresse fehlt"); return; }
+    const url = `bbcompose://compose?base=${encodeURIComponent(base)}&type=begruessung&id=${encodeURIComponent(entry.id)}&token=${encodeURIComponent(token)}&text=1`;
+    window.location.href = url;
+    toast.success("Betterbird wird geöffnet … (lokaler Helfer muss installiert sein)");
+    setTimeout(async () => {
+      const ok = window.confirm(
+        "Wurde die Begrüßungsmail gesendet?\n\nJa → Anfrage wird auf 'Übernommen' gesetzt.\nNein → Status bleibt unverändert."
+      );
+      if (!ok) return;
+      try {
+        await api.post(`/module-mail-inbox/begruessung-gesendet/${entry.id}`);
+        toast.success("Anfrage als beantwortet markiert");
+        await load();
+      } catch (err) {
+        toast.error(err?.response?.data?.detail || "Status konnte nicht gesetzt werden");
+      }
+    }, 800);
+  };
+
   const linkToExisting = async (kundeId) => {
     if (!dupCtx) return;
     try {
@@ -486,6 +510,16 @@ const ModuleMailInboxPage = () => {
                     </button>
                     {e.status === "vorschlag" && (
                       <>
+                        {!e.begruessung_gesendet && (
+                          <button
+                            onClick={() => openBegruessung(e)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-sm hover:bg-blue-700"
+                            data-testid={`btn-begruessung-${e.id}`}
+                            title="Begrüßungsmail in Betterbird öffnen (Vorlage je Priorität)"
+                          >
+                            <Mail className="w-3.5 h-3.5" /> Begrüßungsmail senden
+                          </button>
+                        )}
                         <button
                           onClick={() => accept(e)}
                           className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-sm hover:bg-emerald-700"
@@ -524,6 +558,12 @@ const ModuleMailInboxPage = () => {
                     )}
                   </div>
                 </div>
+
+                {e.begruessung_gesendet && (
+                  <div className="mb-2 text-xs text-muted-foreground italic" data-testid={`begruessung-done-${e.id}`}>
+                    Bereits beantwortet
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm" onClick={(ev) => ev.stopPropagation()}>
                   {p.email && (

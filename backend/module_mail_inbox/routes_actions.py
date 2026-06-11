@@ -10,6 +10,22 @@ from .helpers import _find_kunde_duplicates, _tombstone
 router = APIRouter()
 
 
+@router.post("/begruessung-gesendet/{entry_id}")
+async def begruessung_gesendet(entry_id: str, user=Depends(get_current_user)):
+    """Markiert eine Anfrage nach gesendeter Begrüßungsmail als bearbeitet:
+    status='übernommen', begruessung_gesendet=True, begruessung_at."""
+    entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.module_mail_inbox.update_one(
+        {"id": entry_id},
+        {"$set": {"status": "übernommen", "begruessung_gesendet": True, "begruessung_at": now}},
+    )
+    return {"ok": True, "id": entry_id, "status": "übernommen"}
+
+
+
 @router.post("/accept/{entry_id}")
 async def accept(entry_id: str, body: dict | None = None, user=Depends(get_current_user)):
     """Übernimmt eine Mail-Anfrage als neuen Kunden.

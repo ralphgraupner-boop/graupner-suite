@@ -17,7 +17,7 @@ router = APIRouter()
 
 _LABELS = {"quote": "Angebot", "order": "Auftragsbestätigung", "invoice": "Rechnung"}
 _NUMBER_KEYS = {"quote": "quote_number", "order": "order_number", "invoice": "invoice_number"}
-_COLLECTION = {"quote": "quotes", "order": "orders", "invoice": "invoices", "einsatz": "einsaetze"}
+_COLLECTION = {"quote": "quotes", "order": "orders", "invoice": "invoices", "einsatz": "einsaetze", "begruessung": "module_mail_inbox"}
 
 
 def _ascii_label(label: str) -> str:
@@ -148,10 +148,37 @@ async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Resp
     )
 
 
+async def _begruessung_meta(entry: dict, settings: dict) -> dict:
+    """Meta für Begrüßungsmail einer Mail-Anfrage: Empfänger + Betreff +
+    Vorlage je Prioritätsstufe (Helfer aus routes.anfragen wiederverwendet)."""
+    from routes.anfragen import _load_keyword_config, _stufe_of
+    from module_mail_inbox.routes_list import _mail_suchtext
+    from routes.settings import DEFAULT_BEGRUESSUNGSVORLAGEN
+
+    parsed = entry.get("parsed") or {}
+    to_email = parsed.get("email") or entry.get("from_email") or ""
+
+    config = await _load_keyword_config()
+    stufe = _stufe_of(_mail_suchtext(entry), config)
+
+    doc = await db.settings.find_one({"id": "begruessungsvorlagen"}, {"_id": 0})
+    if doc and doc.get("vorlagen"):
+        text = doc["vorlagen"].get(stufe) or DEFAULT_BEGRUESSUNGSVORLAGEN.get(stufe, "")
+    else:
+        text = DEFAULT_BEGRUESSUNGSVORLAGEN.get(stufe, "")
+
+    company = settings.get("company_name") or "Tischlerei Graupner"
+    subject = f"Ihre Anfrage bei {company}"
+    body = text.rstrip() + "\n\n" + _signature(settings)
+    return {"to": to_email, "subject": subject, "body": body}
+
+
 async def _build_meta_response(doc_type: str, doc: dict, with_text: bool) -> dict:
     """Liefert nur Empfaenger/Betreff/Body als JSON – fuer den lokalen
     Betterbird-Helfer (bbcompose), der das PDF separat ueber /api/pdf laedt."""
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
+    if doc_type == "begruessung":
+        return await _begruessung_meta(doc, settings)
     if doc_type == "einsatz":
         subject = doc.get("betreff") or "Einsatz"
         body = _compose_einsatz_body(doc, settings, with_text)
