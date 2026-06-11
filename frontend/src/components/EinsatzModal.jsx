@@ -157,6 +157,7 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
       if (link?.token) {
         setCreatedLink(`${window.location.origin}/m/${link.token}`);
       } else {
+        toast.warning("Einsatz gespeichert — der Mitarbeiter-Link konnte nicht erzeugt werden.");
         onClose?.();
       }
     } catch (err) {
@@ -357,7 +358,7 @@ export const EinsatzModal = ({ open, onClose, onSaved, context = {} }) => {
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || loadingMeta || keinProjektVorhanden}
+              disabled={saving || loadingMeta || keinProjektVorhanden || !form.projekt_id}
               className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50 inline-flex items-center gap-2"
               data-testid="btn-einsatz-speichern"
             >

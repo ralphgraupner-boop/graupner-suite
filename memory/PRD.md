@@ -4,6 +4,21 @@
 > Stand: 02.06.2026
 
 
+## 📌 10.06.2026 — Zentrales EinsatzModal (Planungsmodul Phase 1)
+
+**Auftrag Ralph (Max 3 Credits):** Neues kontextsensitives `EinsatzModal` als Kern eines künftigen zentralen Planungsmoduls (später Termine+Aufgaben zusammenführen). Erweiterbar gebaut nach 3 Design-Entscheidungen: (1) Kontext-Objekt statt Einzel-Props, (2) Pipeline-Save (Phase 2 nur anhängen), (3) `projekt_id` als gemeinsame Klammer.
+
+**Neu:** `frontend/src/components/EinsatzModal.jsx` — Props `{open, onClose, onSaved, context={kundeId, projektId?, projektTitel?, datum?, betreff?, notizen?}}`. Lädt live `/api/mitarbeiter`, `/api/module-projekte/?kunde_id=`, `/api/modules/kunden/data` (Adresse+Name+Kundentyp aus Kundenstamm, kein Hardcode). Felder: Kunde (auto), **Projekt = Pflichtfeld** (Einzelkunde→1. Projekt auto, Hausverwaltung→Dropdown, Save disabled ohne Projekt — „kein Einsatz ohne Projektzuordnung"), Datum+Uhrzeit (heute), Mitarbeiter, Notizen, Adresse (editierbar). Save-Pipeline: `POST /api/einsaetze` → bestehende `POST /api/module-kundenlink/create/{kunde_id}` (30-Tage Mitarbeiter-Link, Kopier-Button).
+
+**Backend additiv:** `module_einsaetze/routes.py` `create_einsatz` speichert jetzt zusätzlich `projekt_id` + `projekt_titel`. Sonst nichts geändert.
+
+**Buttons „Neuer Einsatz" eingebaut:** Kunden-Detail (`btn-to-einsatz-<id>`), Projekt-Werkbank (Aktionsleiste `btn-werkbank-einsatz` + pro Projektkarte `btn-projekt-einsatz-<id>` mit vorausgewähltem Projekt), Aufgaben (`btn-aufgabe-einsatz`), Termine (`btn-termin-einsatz`). Dashboard = Phase 2 (bewusst ausgelassen).
+
+**Getestet:** Testing-Agent 100% (Backend 4/4 pytest in `tests/test_einsatz_modal_feature.py`, alle 4 Frontend-Entry-Points + Save→Link-Flow, keine Bugs). 2 UX-Härtungen nachgezogen (Save erst aktiv wenn Projekt gewählt; Warn-Toast wenn Link fehlschlägt). NUR Preview, noch NICHT auf Live.
+
+**Phase 2 (offen):** Google Kalender, Termin+Aufgabe aus demselben Modal (Pipeline anhängen), Dashboard-Button mit Kundensuche.
+
+
 ## 📌 07.06.2026 (~18:10 MESZ) — Rollenbasiertes Dashboard + Team-Umschalter
 
 **Team-Konfig (DB, editierbar, kein Hardcode):** `db.settings._key='dashboard_team'` mappt Person→Konten-Aliase. Ralph=übrige admin-Konten (admin, admin-preview), Thorsten=thorsten.graupner+Tg-Admin, Heike=h.bolanka+Heike Bolanka. Neuer Endpoint `GET /api/dashboard/team`.
