@@ -8,9 +8,10 @@
  * Module-First: spricht ausschliesslich /api/module-wolke/* an.
  */
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
-import { Cloud, X, Send, Check, Trash2, Inbox, ArrowUpRight, Plus } from "lucide-react";
+import { Cloud, X, Send, Check, Trash2, Inbox, ArrowUpRight, Plus, User, Folder, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 const fmtZeit = (iso) => {
@@ -26,7 +27,7 @@ const fmtZeit = (iso) => {
   } catch { return iso; }
 };
 
-const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete }) => {
+const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete, onNavigate }) => {
   const isAufgabe = wolke.type === "aufgabe";
   const isErledigt = wolke.status === "erledigt";
   return (
@@ -46,8 +47,42 @@ const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete }) => {
         <span className="text-muted-foreground shrink-0">{fmtZeit(wolke.created_at)}</span>
       </div>
       <div className="text-sm whitespace-pre-wrap break-words">{wolke.text}</div>
-      {wolke.kunde_label && (
-        <div className="text-xs text-muted-foreground">📎 {wolke.kunde_label}</div>
+      {(wolke.kunde_id || wolke.projekt_id || wolke.einsatz_id) && (
+        <div className="flex flex-wrap gap-2" data-testid={`wolke-links-${wolke.id}`}>
+          {wolke.kunde_id && (
+            <button
+              type="button"
+              onClick={() => onNavigate?.(`/module/kunden?edit=${wolke.kunde_id}`)}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200"
+              data-testid={`wolke-link-kunde-${wolke.id}`}
+              title="Zum Kunden springen"
+            >
+              <User className="w-3.5 h-3.5" /> {wolke.kunde_label || "Kunde öffnen"}
+            </button>
+          )}
+          {wolke.projekt_id && (
+            <button
+              type="button"
+              onClick={() => onNavigate?.(`/module/projekte/werkbank/${wolke.projekt_id}`)}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200"
+              data-testid={`wolke-link-projekt-${wolke.id}`}
+              title="Zum Projekt springen"
+            >
+              <Folder className="w-3.5 h-3.5" /> {wolke.projekt_label || "Projekt öffnen"}
+            </button>
+          )}
+          {wolke.einsatz_id && (
+            <button
+              type="button"
+              onClick={() => onNavigate?.(`/einsaetze?id=${wolke.einsatz_id}`)}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200"
+              data-testid={`wolke-link-einsatz-${wolke.id}`}
+              title="Zum Einsatz springen"
+            >
+              <Wrench className="w-3.5 h-3.5" /> {wolke.einsatz_label || "Einsatz öffnen"}
+            </button>
+          )}
+        </div>
       )}
       <div className="flex items-center justify-between pt-1">
         <div className="text-xs">
@@ -231,6 +266,7 @@ const WolkeNeuForm = ({ mitarbeiter, onSent }) => {
 };
 
 export const WolkePopover = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("erhalten");
   const [count, setCount] = useState(0);
@@ -310,6 +346,13 @@ export const WolkePopover = () => {
     }
   };
 
+  // Sprung zum verknüpften Datensatz (Kunde/Projekt/Einsatz) – schließt das Slide-Over.
+  const openRecord = (to) => {
+    if (!to) return;
+    setOpen(false);
+    navigate(to);
+  };
+
   return (
     <>
       {/* Floating Cloud-Icon mit Badge */}
@@ -381,12 +424,12 @@ export const WolkePopover = () => {
               {tab === "erhalten" && (
                 erhalten.length === 0
                   ? <div className="text-center text-sm text-muted-foreground py-8">Keine Wolken erhalten</div>
-                  : erhalten.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="erhalten" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} />)
+                  : erhalten.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="erhalten" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} onNavigate={openRecord} />)
               )}
               {tab === "gesendet" && (
                 gesendet.length === 0
                   ? <div className="text-center text-sm text-muted-foreground py-8">Keine Wolken gesendet</div>
-                  : gesendet.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="gesendet" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} />)
+                  : gesendet.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="gesendet" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} onNavigate={openRecord} />)
               )}
               {tab === "neu" && (
                 <WolkeNeuForm
