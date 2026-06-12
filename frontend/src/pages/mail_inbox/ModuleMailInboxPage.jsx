@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download, BarChart3, Eye } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download, Upload, BarChart3, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -52,6 +52,54 @@ const ModuleMailInboxPage = () => {
   const [stats, setStats] = useState(null);
   const [statsOpen, setStatsOpen] = useState(false);
   const [statsDays, setStatsDays] = useState(30);
+
+  // Export/Import
+  const importInputRef = useRef(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exVon, setExVon] = useState("");
+  const [exBis, setExBis] = useState("");
+  const [exStatus, setExStatus] = useState("alle");
+  const [importing, setImporting] = useState(false);
+
+  const doExport = async (format) => {
+    try {
+      const params = new URLSearchParams({ format, status: exStatus });
+      if (exVon) params.append("von", exVon);
+      if (exBis) params.append("bis", exBis);
+      const res = await api.get(`/module-mail-inbox/export?${params.toString()}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "csv" ? "mail_anfragen.csv" : "mail_anfragen.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Export (${format.toUpperCase()}) erstellt`);
+      setExportOpen(false);
+    } catch {
+      toast.error("Export fehlgeschlagen");
+    }
+  };
+
+  const onImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api.post("/module-mail-inbox/import", fd);
+      const { neu, uebersprungen, gesamt } = res.data;
+      toast.success(`Import: ${neu} neu, ${uebersprungen} übersprungen (von ${gesamt})`);
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Import fehlgeschlagen");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const loadStats = async (days = statsDays) => {
     try {
@@ -312,6 +360,31 @@ const ModuleMailInboxPage = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={onImportFile}
+            className="hidden"
+            data-testid="mail-import-input"
+          />
+          <button
+            onClick={() => setExportOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
+            data-testid="btn-mail-export"
+            title="Anfragen als JSON oder CSV exportieren"
+          >
+            <Download className="w-4 h-4" /> Export
+          </button>
+          <button
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent disabled:opacity-50"
+            data-testid="btn-mail-import"
+            title="Anfragen aus JSON-Datei importieren (Duplikate werden übersprungen)"
+          >
+            {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Import
+          </button>
           <button
             onClick={() => setStatsOpen((v) => !v)}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
@@ -341,6 +414,38 @@ const ModuleMailInboxPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Export-Dialog */}
+      <Modal isOpen={exportOpen} onClose={() => setExportOpen(false)} title="Anfragen exportieren" size="sm">
+        <div className="space-y-3" data-testid="mail-export-dialog">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium mb-1 text-muted-foreground">Von</label>
+              <input type="date" value={exVon} onChange={(e) => setExVon(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="export-von" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-muted-foreground">Bis</label>
+              <input type="date" value={exBis} onChange={(e) => setExBis(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="export-bis" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-muted-foreground">Status</label>
+            <select value={exStatus} onChange={(e) => setExStatus(e.target.value)} className="w-full border rounded-sm p-2 text-sm" data-testid="export-status">
+              <option value="alle">Alle</option>
+              <option value="offen">Nur offen</option>
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground">Leerer Datumsbereich = alle Einträge. JSON für Re-Import, CSV für Excel/Steuerberater.</p>
+          <div className="flex justify-end gap-2 pt-1">
+            <button onClick={() => doExport("json")} className="inline-flex items-center gap-1 px-4 py-2 text-sm border rounded-sm hover:bg-accent" data-testid="export-json">
+              <Download className="w-4 h-4" /> JSON
+            </button>
+            <button onClick={() => doExport("csv")} className="inline-flex items-center gap-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-sm hover:bg-primary/90" data-testid="export-csv">
+              <Download className="w-4 h-4" /> CSV
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Statistik-Karte */}
       {statsOpen && (

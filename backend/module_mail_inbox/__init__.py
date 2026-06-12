@@ -18,6 +18,7 @@ from .routes_list import router as list_router
 from .routes_actions import router as actions_router
 from .routes_delete import router as delete_router
 from .routes_admin import router as admin_router
+from .routes_exportimport import router as exportimport_router
 from .accounts import router as accounts_router
 
 router = APIRouter()
@@ -26,6 +27,7 @@ router.include_router(list_router)
 router.include_router(actions_router)
 router.include_router(delete_router)
 router.include_router(admin_router)
+router.include_router(exportimport_router)
 router.include_router(accounts_router)
 
 __all__ = ["router"]

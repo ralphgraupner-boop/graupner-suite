@@ -4,6 +4,19 @@
 > Stand: 02.06.2026
 
 
+## 📌 12.06.2026 — Export/Import-Modul für Mail-Anfragen
+
+**Backend (additiv):** `module_mail_inbox/routes_exportimport.py` (in `__init__.py` registriert):
+- `GET /api/module-mail-inbox/export?format=json|csv&status=offen|alle&von=&bis=` — JSON (Re-Import) oder CSV mit BOM (Excel/Steuerberater: Datum, Name, E-Mail, Telefon, Status, Priorität, Betreff, Nachricht). status=offen→vorschlag, Datumsfilter über received_at/created_at.
+- `POST /api/module-mail-inbox/import` (UploadFile JSON) — Duplikat-Prüfung per message_id ODER content_hash; fehlende einfügen; Rückgabe {gesamt, neu, uebersprungen}. Läuft auf Preview UND Live (App-Feature → löst Live-Import ohne DB-Zugriff).
+
+**Frontend:** `ModuleMailInboxPage.jsx` — Export-Button (Dialog: von/bis + Status + JSON/CSV-Download via Blob) und Import-Button (versteckter File-Input → multipart Upload → Ergebnis-Toast → reload).
+
+**Verifiziert (Curl):** Export JSON 15 Einträge + Content-Disposition ✅; Export CSV mit BOM + Spalten ✅; Import 12er-Datei → 0 neu / 12 übersprungen (Dedup greift) ✅; Frontend compiled ✅.
+
+**Nutzen:** Live-Import jetzt per UI möglich — Preview exportieren, auf Live importieren (Duplikate werden übersprungen).
+
+
 ## 📌 11.06.2026 — Automatische Begrüßungsmail (Mail-Anfragen)
 
 **Backend (additiv):**
