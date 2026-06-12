@@ -76,9 +76,11 @@ const ModuleMailInboxPage = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
       toast.success(`Export (${format.toUpperCase()}) erstellt`);
-      setExportOpen(false);
     } catch {
       toast.error("Export fehlgeschlagen");
+    } finally {
+      setExportOpen(false);
+      await load();
     }
   };
 
@@ -86,6 +88,10 @@ const ModuleMailInboxPage = () => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      toast.error("Bitte eine .json-Datei wählen (keine ZIP/anderen Formate)");
+      return;
+    }
     setImporting(true);
     try {
       const fd = new FormData();
@@ -363,7 +369,7 @@ const ModuleMailInboxPage = () => {
           <input
             ref={importInputRef}
             type="file"
-            accept="application/json,.json"
+            accept=".json,application/json"
             onChange={onImportFile}
             className="hidden"
             data-testid="mail-import-input"
