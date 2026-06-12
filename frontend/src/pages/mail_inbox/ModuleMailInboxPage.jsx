@@ -32,6 +32,7 @@ const ModuleMailInboxPage = () => {
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [bulkAccepting, setBulkAccepting] = useState(false);
+  const [reprio, setReprio] = useState(false);
   const [statusFilter, setStatusFilter] = useState("vorschlag");
 
   // Übersprungene Mails – Vorschau-Modal
@@ -134,6 +135,19 @@ const ModuleMailInboxPage = () => {
   };
 
   useEffect(() => { load(); }, [statusFilter]);  // eslint-disable-line
+
+  const prioritaetenNeuPruefen = async () => {
+    setReprio(true);
+    try {
+      const res = await api.post("/module-mail-inbox/prioritaeten-neu-pruefen");
+      toast.success(`Prioritäten neu geprüft – ${res.data.updated} geändert`);
+      await load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Neu-Prüfen fehlgeschlagen");
+    } finally {
+      setReprio(false);
+    }
+  };
 
   const scan = async () => {
     setScanning(true);
@@ -415,6 +429,16 @@ const ModuleMailInboxPage = () => {
               Alle übernehmen
             </button>
           )}
+          <button
+            onClick={prioritaetenNeuPruefen}
+            disabled={reprio}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent disabled:opacity-50"
+            data-testid="btn-mail-reprio"
+            title="Prioritäten aller Anfragen anhand der aktuellen Keywords neu berechnen"
+          >
+            {reprio ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Neu prüfen
+          </button>
           <button
             onClick={() => setExportOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"

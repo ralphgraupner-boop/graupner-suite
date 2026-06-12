@@ -15,7 +15,17 @@
 
 **Frontend (additiv):** `QuickTerminDialog` (`TerminePanel.jsx`) um Projektauswahl erweitert — analog zu `QuickAufgabeDialog`: bei Kundenbezug ohne Projekt (`showProjektPicker`) wird ein Projekt-Select geladen (`/module-projekte/?kunde_id=`), Speichern ohne Projekt blockiert. In `WolkeAktionen` wird `kunde_id` nun auch an Termin durchgereicht. Verifiziert (Screenshot): Projekt-Pflichtfeld erscheint, Speichern ohne Projekt blockiert, nach Projektwahl gespeichert ✅.
 
-## 📌 12.06.2026 — Wartung-Tab: „Umlaute reparieren"-Button
+## 📌 12.06.2026 — Navigation-Fix + KI-Performance (Mail-Prioritäten)
+
+**Auftrag 1 — Navigation nach Dokument-Speichern** (`components/WysiwygDocumentEditor.jsx`): `handleSaveAndExit` und `handleExitWithSave` navigieren nach erfolgreichem Speichern jetzt zur Projekt-Werkbank des Kunden (`/module/projekte/werkbank/{selectedCustomerId}`) statt zur Dokumentliste/Dashboard. Fallback: Liste, falls Speichern fehlschlägt/kein Kunde. Verifiziert (Screenshot): Angebot „Speichern & schließen" → landet auf Werkbank inkl. gespeichertem Dokument ✅.
+
+**Auftrag 2 — prioritaet_stufe persistent statt bei jedem Laden** (`module_mail_inbox/routes_list.py`, `routes/settings.py`, `ModuleMailInboxPage.jsx`):
+- `/list` berechnet NICHT mehr bei jedem Laden; liest gespeicherte `prioritaet_stufe`, füllt nur Alt-Einträge ohne Feld einmalig nach (persistiert).
+- Neue zentrale `recompute_mail_prioritaeten()` + Endpoint `POST /api/module-mail-inbox/prioritaeten-neu-pruefen`.
+- Recompute nur bei: Keyword-Änderung (PUT `/keyword-prioritaeten` ruft Recompute) ODER manuellem „Neu prüfen"-Button (Mail-Anfragen-Toolbar).
+- Verifiziert: 43/43 Dokumente haben `prioritaet_stufe` in DB gespeichert; Button zeigt „Prioritäten neu geprüft" + lädt neu ✅.
+
+
 
 **Backend** (`routes/settings.py`): neuer Endpoint `POST /api/settings/wartung/umlaute-reparieren`. Erstellt VOR jeder Schreiboperation einen vollständigen JSON-Snapshot der betroffenen Collections (`/app/backend/snapshots/umlaute_<ts>/`), repariert dann Mojibake-Umlaute in `module_textvorlagen` (Textvorlagen) und `module_artikel` (Leistungen + Materialien, Feld `typ`). Gibt Snapshot-Pfad + Liste der geänderten Felder (alt→neu) zurück. `apply=false` = Dry-Run.
 

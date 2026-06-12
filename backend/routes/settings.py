@@ -170,6 +170,12 @@ async def update_keyword_prioritaeten(body: dict):
         {"$set": {"id": "keyword_prioritaeten", "stufen": clean}},
         upsert=True,
     )
+    # Keyword-Änderung -> Mail-Inbox-Prioritäten einmalig neu berechnen und am Dokument speichern.
+    try:
+        from module_mail_inbox.routes_list import recompute_mail_prioritaeten
+        await recompute_mail_prioritaeten()
+    except Exception:
+        pass
     return clean
 
 

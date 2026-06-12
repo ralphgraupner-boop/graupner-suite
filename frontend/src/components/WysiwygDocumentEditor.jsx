@@ -668,11 +668,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     return savedId;
   };
 
-  const handleSaveAndExit = async () => { await handleSave(); navigate(listPaths[type]); };
+  const handleSaveAndExit = async () => { const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const handleExit = () => { setShowExitConfirm(true); };
-  const handleExitWithSave = async () => { setShowExitConfirm(false); await handleSave(); navigate(listPaths[type]); };
+  const handleExitWithSave = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
   const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(listPaths[type]); };
 
   const handleDownloadPDF = async () => {

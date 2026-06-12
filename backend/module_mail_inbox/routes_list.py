@@ -79,14 +79,41 @@ async def list_inbox(status: str = "vorschlag", limit: int = 100, user=Depends(g
     items = []
     async for d in db.module_mail_inbox.find(q, {"_id": 0}).sort("received_at", -1).limit(limit):
         items.append(d)
-    # Keyword-Priorisierung (additiv): Helfer aus routes.anfragen wiederverwenden, nicht kopieren
-    from routes.anfragen import _load_keyword_config, _stufe_of, _STUFE_RANK
-    config = await _load_keyword_config()
-    for d in items:
-        d["prioritaet_stufe"] = _stufe_of(_mail_suchtext(d), config)
-    # items sind bereits received_at desc -> stabile Sortierung nach Stufe (Rot oben) genügt
+    # PERFORMANCE: prioritaet_stufe wird direkt am Dokument gespeichert und hier
+    # NICHT bei jedem Laden neu berechnet (nur bei Keyword-Änderung oder manuellem
+    # "Neu prüfen"). Alt-Einträge ohne Feld werden einmalig nachgefüllt (persistiert).
+    from routes.anfragen import _stufe_of, _STUFE_RANK, _load_keyword_config
+    missing = [d for d in items if not d.get("prioritaet_stufe")]
+    if missing:
+        config = await _load_keyword_config()
+        for d in missing:
+            stufe = _stufe_of(_mail_suchtext(d), config)
+            d["prioritaet_stufe"] = stufe
+            await db.module_mail_inbox.update_one({"id": d.get("id")}, {"$set": {"prioritaet_stufe": stufe}})
+    # items sind bereits received_at desc -> stabile Sortierung nach gespeicherter Stufe (Rot oben)
     items.sort(key=lambda x: _STUFE_RANK.get(x.get("prioritaet_stufe"), 9))
     return items
+
+
+async def recompute_mail_prioritaeten() -> int:
+    """Berechnet prioritaet_stufe für ALLE Mail-Inbox-Einträge neu und speichert sie
+    direkt am Dokument. Aufruf NUR bei Keyword-Änderung oder manuellem 'Neu prüfen'."""
+    from routes.anfragen import _load_keyword_config, _stufe_of
+    config = await _load_keyword_config()
+    updated = 0
+    async for d in db.module_mail_inbox.find({}):
+        neu = _stufe_of(_mail_suchtext(d), config)
+        if d.get("prioritaet_stufe") != neu:
+            await db.module_mail_inbox.update_one({"_id": d["_id"]}, {"$set": {"prioritaet_stufe": neu}})
+            updated += 1
+    return updated
+
+
+@router.post("/prioritaeten-neu-pruefen")
+async def prioritaeten_neu_pruefen(user=Depends(get_current_user)):
+    """Manueller 'Neu prüfen'-Button: alle Prioritäten anhand der aktuellen Keywords neu berechnen."""
+    updated = await recompute_mail_prioritaeten()
+    return {"ok": True, "updated": updated}
 
 
 def _mail_suchtext(d: dict) -> str:
