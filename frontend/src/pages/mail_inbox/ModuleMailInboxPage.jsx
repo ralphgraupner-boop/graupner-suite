@@ -31,6 +31,7 @@ const ModuleMailInboxPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [bulkAccepting, setBulkAccepting] = useState(false);
   const [statusFilter, setStatusFilter] = useState("vorschlag");
 
   // Übersprungene Mails – Vorschau-Modal
@@ -151,6 +152,32 @@ const ModuleMailInboxPage = () => {
   const accept = (entry) => {
     // Geführter 4-Schritt-Workflow im Modal (statt direkter Anlage + Navigation)
     setUebernehmenEntry(entry);
+  };
+
+  // Massen-Übernahme: alle offenen (vorschlag) Anfragen als neue Kunden anlegen.
+  // Nutzt den bestehenden accept-Endpunkt je Eintrag; mögliche Doppel-Kunden (HTTP 409)
+  // werden übersprungen, statt blind doppelt anzulegen.
+  const acceptAll = async () => {
+    const targets = items.filter((e) => e.status === "vorschlag");
+    if (targets.length === 0) { toast.info("Keine offenen Anfragen zum Übernehmen"); return; }
+    if (!window.confirm(
+      `${targets.length} offene Anfrage(n) als neue Kunden übernehmen?\n\nMögliche Doppel-Kunden werden automatisch übersprungen.`
+    )) return;
+    setBulkAccepting(true);
+    let angelegt = 0, uebersprungen = 0, fehler = 0;
+    for (const e of targets) {
+      try {
+        await api.post(`/module-mail-inbox/accept/${e.id}`);
+        angelegt++;
+      } catch (err) {
+        if (err?.response?.status === 409) uebersprungen++;
+        else fehler++;
+      }
+    }
+    try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
+    toast.success(`${angelegt} übernommen, ${uebersprungen} Duplikate übersprungen${fehler ? `, ${fehler} Fehler` : ""}`);
+    setBulkAccepting(false);
+    await load();
   };
 
   // Begrüßungsmail: öffnet Betterbird (bestehende bbcompose-Integration, type=begruessung).
@@ -376,6 +403,18 @@ const ModuleMailInboxPage = () => {
             className="hidden"
             data-testid="mail-import-input"
           />
+          {statusFilter === "vorschlag" && items.some((e) => e.status === "vorschlag") && (
+            <button
+              onClick={acceptAll}
+              disabled={bulkAccepting}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+              data-testid="btn-mail-accept-all"
+              title="Alle offenen Anfragen auf einmal als neue Kunden übernehmen (Duplikate werden übersprungen)"
+            >
+              {bulkAccepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Alle übernehmen
+            </button>
+          )}
           <button
             onClick={() => setExportOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
