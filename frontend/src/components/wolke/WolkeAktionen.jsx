@@ -151,9 +151,9 @@ export const WolkeAktionen = ({ onCreated, kunde }) => {
         <QuickAufgabeDialog kunde_id={kunde?.id || ""} projekt_id="" mitarbeiter={[]} onClose={reset} onSaved={fertig} />
       )}
 
-      {/* Termin (bestehender Dialog) */}
+      {/* Termin (bestehender Dialog; Kunde vorbelegt → Projektauswahl im Dialog) */}
       {aktion === "termin" && (
-        <QuickTerminDialog kunde_id="" projekt_id="" mitarbeiter={[]} onClose={reset} onSaved={fertig} />
+        <QuickTerminDialog kunde_id={kunde?.id || ""} projekt_id="" mitarbeiter={[]} onClose={reset} onSaved={fertig} />
       )}
 
       {/* Notiz (einfaches Freitextfeld → Notizen-Modul) */}

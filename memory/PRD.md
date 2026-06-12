@@ -11,6 +11,11 @@
 - **Neue Aufgabe** → `QuickAufgabeDialog` bekommt `kunde_id` vorbelegt (Projektauswahl im Dialog, da Backend Projekt verlangt).
 - **Termin:** bewusst NICHT vorbelegt — `QuickTerminDialog` hat keine Projektauswahl, Backend verlangt aber Projekt bei Kundenbezug (sonst 400). Sauberer Folge-Schritt: Projektauswahl im Termin-Schnelldialog ergänzen.
 
+## 📌 12.06.2026 — Projektauswahl im Termin-Schnelldialog (Kunde-Vorbelegung jetzt für alle 3)
+
+**Frontend (additiv):** `QuickTerminDialog` (`TerminePanel.jsx`) um Projektauswahl erweitert — analog zu `QuickAufgabeDialog`: bei Kundenbezug ohne Projekt (`showProjektPicker`) wird ein Projekt-Select geladen (`/module-projekte/?kunde_id=`), Speichern ohne Projekt blockiert. In `WolkeAktionen` wird `kunde_id` nun auch an Termin durchgereicht. Verifiziert (Screenshot): Projekt-Pflichtfeld erscheint, Speichern ohne Projekt blockiert, nach Projektwahl gespeichert ✅.
+
+
 
 
 **Frontend (additiv, kein Backend-Eingriff, Module-First — nur bestehende Module aufgerufen):**

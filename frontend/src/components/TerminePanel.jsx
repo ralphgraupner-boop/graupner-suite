@@ -281,9 +281,31 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
   const [saving, setSaving] = useState(false);
   const upd = (k, v) => setData(d => ({ ...d, [k]: v }));
 
+  // Kunde-Bezug: Backend verlangt bei Kunde zwingend ein Projekt → Projektauswahl einblenden.
+  const showProjektPicker = !!kunde_id && !projekt_id;
+  const [projekte, setProjekte] = useState([]);
+  const [projekteLoading, setProjekteLoading] = useState(false);
+  useEffect(() => {
+    if (!showProjektPicker) return;
+    let cancelled = false;
+    setProjekteLoading(true);
+    (async () => {
+      try {
+        const r = await api.get("/module-projekte/", { params: { kunde_id } });
+        if (!cancelled) setProjekte(Array.isArray(r.data) ? r.data : []);
+      } catch {
+        if (!cancelled) setProjekte([]);
+      } finally {
+        if (!cancelled) setProjekteLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [kunde_id, showProjektPicker]);
+
   const save = async () => {
     if (!data.titel.trim()) { toast.error("Titel erforderlich"); return; }
     if (!data.start.trim()) { toast.error("Startzeit erforderlich"); return; }
+    if (showProjektPicker && !data.projekt_id) { toast.error("Bitte Projekt wählen"); return; }
     setSaving(true);
     try {
       if (isEdit) {
@@ -343,6 +365,30 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
               />
             </div>
           </div>
+          {showProjektPicker && (
+            <div data-testid="quick-termin-projekt-block">
+              <label className="block text-sm font-medium mb-1">Projekt *</label>
+              {projekteLoading ? (
+                <p className="text-xs text-muted-foreground">Lade Projekte…</p>
+              ) : projekte.length === 0 ? (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2">
+                  Kein Projekt für diesen Kunden vorhanden. Bitte zuerst ein Projekt anlegen.
+                </div>
+              ) : (
+                <select
+                  value={data.projekt_id}
+                  onChange={(e) => upd("projekt_id", e.target.value)}
+                  className="w-full border rounded-sm p-2 text-sm"
+                  data-testid="quick-termin-select-projekt"
+                >
+                  <option value="">— bitte wählen —</option>
+                  {projekte.map(p => (
+                    <option key={p.id} value={p.id}>{p.titel || p.name || p.id}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1">Start *</label>
