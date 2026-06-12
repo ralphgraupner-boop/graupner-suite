@@ -1,0 +1,452 @@
+[
+  {
+    "id": "75a8fca3-d34f-43bc-828f-85f6abd06c3d",
+    "email_uid": "INBOX/2306",
+    "message_id": "<30027860.20260607100327.6a2541ef33d6a6.30010906@mail133-131.atl131.mandrillapp.com>",
+    "content_hash": "6283aff897827ceed63215b36f405cb9db04cb949b34d55c96294335d462b3c9",
+    "folder": "INBOX",
+    "from_email": "no-reply@jimdo.de",
+    "from_name": "Jimdo",
+    "reply_to": "artemis@hh.de",
+    "subject": "Nachricht über https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/",
+    "received_at": "2026-06-07T10:03:27+00:00",
+    "body_excerpt": "Hallo, du hast eine Nachricht über deine Creator-Seite https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/ erhalten:\r\n\r\n-------------------------------------\r\n\r\n Anrede: Herr\r\n\r\nVorname: Kai\r\n\r\nNachname: Gottschalk\r\n\r\nE-Mail: artemis@hh.de\r\n\r\nTelefon: 01604718114\r\n\r\nStraße: Schäperdresch 2a\r\n\r\nPLZ: 22399\r\n\r\nOrt: Hamburg\r\n\r\nNachricht: Sorry, als Nachklapp zu meiner vorherigen Mail: in Verbindung mit der Reparatur sollte auch eine Überprüfung der anderen Fenster gemacht werden ( sofern es sich parallel einrichten lässt. Zur Zeit machen die übrigen Fenster keine  Probleme, es wäre nur vorsorglich.\r\nVG Kai  Gottschalk\r\n\r\nNutzer hat die Datenschutzerklärung akzeptiert. Datum/Uhrzeit: 2026-06-07 12:03:26 CEST\r\n\r\n",
+    "parsed": {
+      "anrede": "Herr",
+      "vorname": "Kai",
+      "nachname": "Gottschalk",
+      "telefon": "01604718114",
+      "email": "artemis@hh.de",
+      "strasse": "Schäperdresch 2a",
+      "plz": "22399",
+      "ort": "Hamburg",
+      "nachricht": "Sorry, als Nachklapp zu meiner vorherigen Mail: in Verbindung mit der Reparatur sollte auch eine Überprüfung der anderen Fenster gemacht werden ( sofern es sich parallel einrichten lässt. Zur Zeit machen die übrigen Fenster keine  Probleme, es wäre nur vorsorglich.\nVG Kai  Gottschalk",
+      "source_url": "https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "f073560f-e196-4767-bcda-306f435bf6bc",
+    "account_label": "Hauptpostfach",
+    "account_username": "service24@tischlerei-graupner.de",
+    "created_at": "2026-06-07T16:34:23.189089+00:00"
+  },
+  {
+    "id": "955d1f61-d90b-4240-b5a7-0791e5be2769",
+    "email_uid": "INBOX/2303",
+    "message_id": "<30027860.20260607081521.6a252899e2c339.00015655@mail133-132.atl131.mandrillapp.com>",
+    "content_hash": "81f7f11f2a9142029e9e5c6558dcdeac056263af1281301ab2dffb21b60deb05",
+    "folder": "INBOX",
+    "from_email": "no-reply@jimdo.de",
+    "from_name": "Jimdo",
+    "reply_to": "artemis@hh.de",
+    "subject": "Nachricht über https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/",
+    "received_at": "2026-06-07T08:15:21+00:00",
+    "body_excerpt": "Hallo, du hast eine Nachricht über deine Creator-Seite https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/ erhalten:\r\n\r\n-------------------------------------\r\n\r\n Anrede: Herr\r\n\r\nVorname: Kai\r\n\r\nNachname: Gottschalk\r\n\r\nE-Mail: artemis@hh.de\r\n\r\nTelefon: 01604718114\r\n\r\nStraße: Schäperdresch 2a\r\n\r\nPLZ: 22399\r\n\r\nOrt: Hamburg\r\n\r\nNachricht: Guten Tag, meine Frau und ich haben ein Problem mit einer Schiebetür. Bei uns im Haus sind Svarre Fenster der Firma Vrögum verbaut. Eines der Schiebeelemente ist im unteren Bereich aus der Führung gerutscht und lässt sich nicht mehr schließen, daher können wir das Haus zur Zeit nicht verlassen. Wir würden den frühest möglichen Termin nehmen, am 18.06. fahren wir in Urlaub um den 60. meiner Frau zu feiern, bis dahin sollte es spätestens repariert sind. Freue mich über eine Rückmeldung per Mail oder Mobilnummer.\r\nVG Kai Gottschalk\r\n\r\nNutzer hat die Datenschutzerklärung akzeptiert. Datum/Uhrzeit: 2026-06-07 10:15:21 CEST\r\n\r\n",
+    "parsed": {
+      "anrede": "Herr",
+      "vorname": "Kai",
+      "nachname": "Gottschalk",
+      "telefon": "01604718114",
+      "email": "artemis@hh.de",
+      "strasse": "Schäperdresch 2a",
+      "plz": "22399",
+      "ort": "Hamburg",
+      "nachricht": "Guten Tag, meine Frau und ich haben ein Problem mit einer Schiebetür. Bei uns im Haus sind Svarre Fenster der Firma Vrögum verbaut. Eines der Schiebeelemente ist im unteren Bereich aus der Führung gerutscht und lässt sich nicht mehr schließen, daher können wir das Haus zur Zeit nicht verlassen. Wir würden den frühest möglichen Termin nehmen, am 18.06. fahren wir in Urlaub um den 60. meiner Frau zu feiern, bis dahin sollte es spätestens repariert sind. Freue mich über eine Rückmeldung per Mail oder Mobilnummer.\nVG Kai Gottschalk",
+      "source_url": "https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "f073560f-e196-4767-bcda-306f435bf6bc",
+    "account_label": "Hauptpostfach",
+    "account_username": "service24@tischlerei-graupner.de",
+    "created_at": "2026-06-07T16:34:23.275191+00:00"
+  },
+  {
+    "id": "908460b9-1647-495f-9cd2-a5493057091f",
+    "email_uid": "INBOX/2182",
+    "message_id": "<30027860.20260515074013.6a06cddd6182f6.45989513@mail133-132.atl131.mandrillapp.com>",
+    "content_hash": "061b31af4f1f5b712e4103987d5f93bbf6b247f22e4bc97499574cbb21ba0c9f",
+    "folder": "INBOX",
+    "from_email": "no-reply@jimdo.de",
+    "from_name": "Jimdo",
+    "reply_to": "bjoern_thiemann@web.de",
+    "subject": "Nachricht über https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/",
+    "received_at": "2026-05-15T07:40:13+00:00",
+    "body_excerpt": "Hallo, du hast eine Nachricht über deine Jimdo-Seite https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/ erhalten:\r\n\r\n-------------------------------------\r\n\r\n Anrede: Herr\r\n\r\nVorname: Björn\r\n\r\nNachname: Thiemann\r\n\r\nE-Mail: bjoern_thiemann@web.de\r\n\r\nTelefon: 015167272676\r\n\r\nStraße: Hohenzollernstraße 87\r\n\r\nPLZ: 47799\r\n\r\nOrt: Krefeld\r\n\r\nNachricht: Hallo,\r\n\r\nmeine Mieterin Frau Ilka Schmitt benötigt für meine Wohnung, EG links,  Herwigredder 90, Hamburg eine Reparatur der Schließung der Holz Terrassentür. Ich würde Sie hiermit beauftragen, einen Vorort Termin mit Frau Schmitt zu vereinbaren und die Terrassentür Schließung zu reparieren.\r\nBitte um Bestätigung des Auftrages und Kontaktaufnahme mit Frau Schmitt. Mobil: 0171-3277179.\r\nVG\r\nBjörn Thiemann \r\n0151-67272675\r\n\r\nNutzer hat die Datenschutzerklärung akzeptiert. Datum/Uhrzeit: 2026-05-15 09:40:12 CEST\r\n\r\n",
+    "parsed": {
+      "anrede": "Herr",
+      "vorname": "Björn",
+      "nachname": "Thiemann",
+      "telefon": "015167272676",
+      "email": "bjoern_thiemann@web.de",
+      "strasse": "Hohenzollernstraße 87",
+      "plz": "47799",
+      "ort": "Krefeld",
+      "nachricht": "Hallo,\n\nmeine Mieterin Frau Ilka Schmitt benötigt für meine Wohnung, EG links,  Herwigredder 90, Hamburg eine Reparatur der Schließung der Holz Terrassentür. Ich würde Sie hiermit beauftragen, einen Vorort Termin mit Frau Schmitt zu vereinbaren und die Terrassentür Schließung zu reparieren.\nBitte um Bestätigung des Auftrages und Kontaktaufnahme mit Frau Schmitt. Mobil: 0171-3277179.\nVG\nBjörn Thiemann \n0151-67272675",
+      "source_url": "https://www.tischlerei-graupner.de/schiebetür-reparatur-in-hamburg-schnelle-hilfe/",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "f073560f-e196-4767-bcda-306f435bf6bc",
+    "account_label": "Hauptpostfach",
+    "account_username": "service24@tischlerei-graupner.de",
+    "created_at": "2026-05-15T15:24:04.565100+00:00"
+  },
+  {
+    "id": "ab1ab241-0bfa-46c2-8e88-faffd08d5dc0",
+    "email_uid": "INBOX/2037",
+    "message_id": "<28938688f6df4f24ab8fe798e62f2e4a@hans-natur.de>",
+    "folder": "INBOX",
+    "from_email": "mhans@hans-natur.de",
+    "from_name": "Michael Hans | Hans Natur",
+    "reply_to": "",
+    "subject": "Auftragsbestätigung",
+    "received_at": "2026-04-23T08:53:19+00:00",
+    "body_excerpt": "Hallo Herr Graupner,\r\n\r\nnachdem unsere Geschäftsbeziehung ja etwas holperig begonnen hat,\r\ngehe ich von einer fachgerechten, zuverlässigen und zeitnahen Erledigung aus.\r\n\r\nFreundliche Grüße\r\nMichael Hans\r\n\r\n\r\n\r\nMichael Hans\r\nGeschäftsführung\r\n\r\n [cid:HNLogo_c7e56404-6779-4501-8eda-33e22439e9e7.png] <https://www.hans-natur.de/>\r\n\r\nTelefon +49 4641 9889-10<tel:+49%204641%209889-10>\r\n\r\nE-Mail mhans@hans-natur.de<mailto:mhans@hans-natur.de>\r\n\r\nHans Natur Handels GmbH & Co. KG · team Allee 11-19 · 24392 · Süderbrarup\r\n\r\nRegistergericht: Amtsgericht Flensburg, HRA 11062 FL\r\n\r\nGeschäftsführer: Michael Hans\r\n\r\n[facebook]<https://www.facebook.com/HansNatur>   [instagram] <https://www.instagram.com/hansnatur/?hl=de>    [youtube]  <https://www.youtube.com/channel/UC3uUGWWrl0l3rfi56ZCj1mQ>\r\n\r\n[Trustpilot rating]\r\n[Trustpilot Stars] <https://de.trustpilot.com/review/www.hans-natur.de?utm_medium=Trustbox&utm_source=EmailSignature2>\r\n[Trustpilot Logo] <https://de.trustpilot.com/review/www.hans-natur.de?utm_medium=Trustbox&utm_source=EmailSignature2>\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "mhans@hans-natur.de",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "f073560f-e196-4767-bcda-306f435bf6bc",
+    "account_label": "Hauptpostfach",
+    "account_username": "service24@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:47:02.524544+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "fcf928e8-2199-459b-bc7b-4f3bfa542af1",
+    "email_uid": "INBOX/2033",
+    "message_id": "<FR2P281MB2314031557EDB1E490E08472A92A2@FR2P281MB2314.DEUP281.PROD.OUTLOOK.COM>",
+    "folder": "INBOX",
+    "from_email": "Service@ottenhusen.de",
+    "from_name": "Service Ottenhusen",
+    "reply_to": "",
+    "subject": "Frauenthal 8, 20149 Hamburg, Reparatur Balkontür",
+    "received_at": "2026-04-23T06:32:23+00:00",
+    "body_excerpt": "Sehr geehrte Damen und Herren,\r\n\r\nin unserem Verwaltungsobjekt Frauenthal 8 ist der Türbeschlag einer Balkontür defekt – siehe Foto.\r\n\r\nKönnen Sie das reparieren und die Tür neu einstellen? Eventuell steht auch eine Wartung der anderen Fenster und Türen der Wohnung an.\r\n\r\nTermin bitte mit dem Mieter Herrn Thorsten Trede vereinbaren (0402208668 oder +49 1724010091).\r\n\r\nBis rund 500 Euro netto benötigen wir kein Angebot.\r\n\r\nRechnungsadresse ist: Trede Vermögensverwaltung GbR, c/o Ottenhusen Hausverwaltung oHG\r\n\r\nMit besten Grüßen\r\nMarkus Trede\r\nTel: +49 40 30377723\r\nMobil: +49 177 5426098\r\nWhatsApp: 04030377700\r\nThreema: KR6WCEC7\r\n\r\nOttenhusen Hausverwaltung oHG\r\nAm Born 12\r\n22765 Hamburg\r\nTel: + 49 40 30377700\r\nFax: +49 40 30377701\r\nTelefonsprechzeiten: Mo. bis Do. 8:30 – 12:30 Uhr\r\nwww.ottenhusen.de<http://www.ottenhusen.de/>\r\nHandelsregister Hamburg HRA 116260\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "Service@ottenhusen.de",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "f073560f-e196-4767-bcda-306f435bf6bc",
+    "account_label": "Hauptpostfach",
+    "account_username": "service24@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:41:50.331553+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "39bb2d0c-0fc6-4fe8-8630-f68c91959cb3",
+    "email_uid": "INBOX/2024",
+    "message_id": "<69a5ccc4499d44b8964b63b5a9067dc9@sznap.net>",
+    "folder": "INBOX",
+    "from_email": "thomas.roeder@sznap.net",
+    "from_name": "Thomas Roeder",
+    "reply_to": "",
+    "subject": "Wartung Reparatur Trifthof",
+    "received_at": "2026-04-22T09:54:56+00:00",
+    "body_excerpt": "Sehr geehrte Damen und Herren,\r\n\r\nbitte unterbreiten Sie mir ein Angebot zur Wartung von drei Balkontüren (Doppelflügel) ca. 1 Meter breit und 2 Meter hoch im EG.\r\n\r\n\r\n  *   Einstellen\r\n  *   Ölen\r\n  *   Abläufe säubern etc.\r\n  *   Abdichtung von außen erneuern Boden Wand falls nötig\r\n  *   Austausch der Dichtungsgummis falls nötig\r\n\r\nAngebot- und Rechnungsanschrift\r\nCaspar-David-Friedrich-Straße GmbH & Co KG\r\nHanauer Landstr. 175-179\r\n60314 Frankfurt\r\n\r\nBetr.  Objekt\r\n119\r\nWohnung Frau Bornholdt\r\nTrifthof 1a\r\n20075 Hamburg\r\n\r\nHaben Sie vielleicht noch einen Lösungsvorschlag zu den feuchtenstellen im Fenster bzw. Türbereich?\r\nAnsprechpartner vor Ort ist unser Hausmeister Herr Schade 015120936517\r\nFür Fragen stehe ich Ihnen gerne zur Verfügung.\r\n\r\n\r\nMit freundlichen Grüßen\r\n\r\ni.A. Thomas Roeder\r\n\r\nMAIK SZNAP Liegenschaften\r\nHanauer Landstraße 175-179\r\n60314 Frankfurt\r\n\r\nMobil +49 1787952601\r\nFax:    +49 69 2 47 49 73 20\r\nMailto: thomas.roeder@sznap.net<mailto:thomas.roeder@sznap.net>\r\n\r\n[Logo freigegeben]\r\n\r\nHAFTUNGSAUSSCHLUSS\r\nDiese E-Mail enthält persönliche, vertrauliche und vor Weitergabe geschützte Informationen und ist ausschließlich für den vorgesehenen o.g. Empfänger (Adressaten) bestimmt. Falls Sie diese E-Mail versehentlich erhalten haben und nicht der vorgesehene Empfänger sind, bitten wir Sie, diese E-Mail und deren Anhänge nicht aufzubewahren, nicht zu vervielfältigen, nicht zu nutzen und nicht weiterzugeben. Bitte informieren Sie uns als Absender über diesen Zustellungsfehler und löschen Sie diese E-Mail.\r\n\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "thomas.roeder@sznap.net",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "f073560f-e196-4767-bcda-306f435bf6bc",
+    "account_label": "Hauptpostfach",
+    "account_username": "service24@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:46:13.051948+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "e3ec3daa-5bd0-409d-9d7e-5f567d896862",
+    "email_uid": "INBOX/1698",
+    "message_id": "<001c01dcce52$9555caa0$c0015fe0$@freenet.de>",
+    "folder": "INBOX",
+    "from_email": "thomas.muroni@freenet.de",
+    "from_name": "Thomas",
+    "reply_to": "",
+    "subject": "Fehlende Abdeckung",
+    "received_at": "2026-04-17T12:11:39+02:00",
+    "body_excerpt": "Moin,\r\n\r\nim Anschluß an unser Telefonat von heute:\r\n\r\n \r\n\r\nMir fehlt noch die linke und rechte Abdeckung für meine Schiebe/Kipptür\r\nentsprechend der Reparatur vom Februar diesen Jahres.\r\n\r\nDein Mitarbeiter hat es wohl vergessen, ist aber nicht schlimm  schließlich\r\nfreue ich mich ja über die grundsätzliche Reparatur.\r\n\r\n \r\n\r\nAbgerechnet wurde es mit der Rechnungsnummer 02/26-00106 vom 24.2.26\r\n\r\n \r\n\r\nDu hattest angeboten es mir ggf. vorbeizubringen wenn ihr sowieso in\r\nBergedorf seid. Links neben der Haustür ist eine kleine Holztür \r\n\r\nDie auf die Terasse führt. Die ist immer offen und es wäre daher möglich die\r\nbeiden Teile unter die Terassenüberdeckung zu legen.\r\n\r\n \r\n\r\nDanke dafür (ich gehe mal davon aus das du nicht die Einrüstkostenpauschale\r\nvon 48,00 Euro dafür berechnest, oder?........)\r\n\r\n \r\n\r\nDanke und schönen Gruß von hier\r\n\r\nThomas\r\n\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "thomas.muroni@freenet.de",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "fb1220af-9cc6-4d40-85af-fccb49fa12ff",
+    "account_label": "kontakt@tischlerei-graupner.de",
+    "account_username": "kontakt@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:44:52.050420+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "a91d5be7-5e14-464b-a270-9fad411b59ac",
+    "email_uid": "INBOX/1693",
+    "message_id": "<FE04D27A-75CA-46D5-A7DB-DAA1C1E07415@eric-aerts.com>",
+    "folder": "INBOX",
+    "from_email": "eric@eric-aerts.com",
+    "from_name": "Eric Aerts",
+    "reply_to": "",
+    "subject": "Berlin",
+    "received_at": "2026-04-02T19:26:08+02:00",
+    "body_excerpt": "Hallo Herr Graupner,\r\nIch habe Bericht bekommen, können Sie bitte nochmals schicken?\r\n\r\nGrüße und Schönes Osterfest \r\nEric\r\n\r\n\r\nEric Aerts\r\nStrasse 5 Nr. 52\r\n13059 Berlin\r\n\r\n+49 1515 2525 466\r\n\r\n\r\n\r\n\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "eric@eric-aerts.com",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "fb1220af-9cc6-4d40-85af-fccb49fa12ff",
+    "account_label": "kontakt@tischlerei-graupner.de",
+    "account_username": "kontakt@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:44:27.182377+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "180643b8-d2fe-4a6b-8c90-67d2a134677d",
+    "email_uid": "INBOX/1689",
+    "message_id": "<004401dcc0f5$6e6b5280$4b41f780$@pcp-immo.de>",
+    "folder": "INBOX",
+    "from_email": "office@pcp-immo.de",
+    "from_name": "",
+    "reply_to": "",
+    "subject": "unser Telefonat von eben: Beisserstraße 41 - Mietung Kroos - Fensterreparatur",
+    "received_at": "2026-03-31T12:02:06+02:00",
+    "body_excerpt": "Hallo Herr Graupner, \r\n\r\n \r\n\r\nwir haben eben telefoniert, es geht um die Beisserstraße/Mietung Kroos. \r\n\r\nSie hatten mir mitgeteilt, dass Sie es diese Woche und nächste Woche nicht\r\nschaffen. \r\n\r\nDas haben wir dem Mieter mitgeteilt. Wenn irgendwie möglich, rufen Sie Herrn\r\nKroos unter \r\n\r\n0151 424 10 250 an und vereinbaren einen Termin für die übernächste Woche. \r\n\r\n \r\n\r\nDamit Sie uns zuordnen können: Sie hatten bei uns im Eppendorfer Baum 4/\r\nFrau Supplitt das Fenster \r\n\r\nrepariert und in der Rothenbaumchaussee 239/ Mietung Semrau eine defekte\r\nSchiebetür im Wohnzimmer. \r\n\r\n \r\n\r\nVielen Dank im Voraus für eine entsprechende Bearbeitung. \r\n\r\n\r\nFreundliche Grüße. \r\n\r\n \r\n\r\nPhilipp Holst\r\n\r\nPCP Grundbesitz GmbH\r\n\r\n \r\n\r\n.\r\nPCP Grundbesitz GmbH\r\nJungfrauenthal 9\r\n20149 Hamburg \r\n\r\nTel: 040-4106767 \r\nMail: office@pcp-immo.de\r\n\r\n \r\n\r\nVon: office@pcp-immo.de <office@pcp-immo.de> \r\nGesendet: Montag, 30. März 2026 09:34\r\nAn: 'kontakt@tischlerei-graupner.de' <kontakt@tischlerei-graupner.de>\r\nBetreff: Beisserstraße 41 - Mietung Kroos - Fensterreparatur\r\n\r\n \r\n\r\nHallo Herr Graupner, \r\n\r\n \r\n\r\nwir hatten vor einiger Zeit einen Auftrag an Sie erteilt für die Reparatur\r\neines Fensters bei Herrn Kroos in der Beisserstraße 41.\r\n\r\n \r\n\r\nHerr Kroos hat aber leider noch keinen Anruf von Ihnen erhalten. Könnten Sie\r\nihn bitte so bald als möglich anrufen, um einen \r\n\r\nVororttermin zwecks Reparatur zu vereinbaren. Seine Telefonnummer lautet\r\n0151 424 10 250.\r\n\r\n \r\n\r\nDie Rechnungsanschrift für die Abrechnung dieser Arbeiten lautet: \r\n\r\n \r\n\r\nPCP Grundbesitz GmbH\r\n\r\nJungfrauenthal 9\r\n\r\n20149 Hamburg \r\n\r\n \r\n\r\nVielen Dank im Voraus für eine entsprechende Erledigung. \r\n\r\n \r\n\r\nFreundliche Grüße. \r\n\r\n \r\n\r\nPCP Grundbesitz GmbH \r\n\r\n \r\n\r\n.\r\nPCP Grundbesitz GmbH\r\nJungfrauenthal 9\r\n20149 Hamburg \r\n\r\nTel: 040-4106767 \r\nMail: office@pcp-immo.de <mailto:office@pcp-immo.de> \r\n\r\n \r\n\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "office@pcp-immo.de",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "fb1220af-9cc6-4d40-85af-fccb49fa12ff",
+    "account_label": "kontakt@tischlerei-graupner.de",
+    "account_username": "kontakt@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:44:16.352615+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "ba943300-2e2c-4158-ac21-370857c324ef",
+    "email_uid": "INBOX/1686",
+    "message_id": "<003c01dcc017$a25c48d0$e714da70$@pcp-immo.de>",
+    "folder": "INBOX",
+    "from_email": "office@pcp-immo.de",
+    "from_name": "",
+    "reply_to": "",
+    "subject": "Beisserstraße 41 - Mietung Kroos - Fensterreparatur",
+    "received_at": "2026-03-30T09:34:24+02:00",
+    "body_excerpt": "Hallo Herr Graupner, \r\n\r\n \r\n\r\nwir hatten vor einiger Zeit einen Auftrag an Sie erteilt für die Reparatur\r\neines Fensters bei Herrn Kroos in der Beisserstraße 41.\r\n\r\n \r\n\r\nHerr Kroos hat aber leider noch keinen Anruf von Ihnen erhalten. Könnten Sie\r\nihn bitte so bald als möglich anrufen, um einen \r\n\r\nVororttermin zwecks Reparatur zu vereinbaren. Seine Telefonnummer lautet\r\n0151 424 10 250.\r\n\r\n \r\n\r\nDie Rechnungsanschrift für die Abrechnung dieser Arbeiten lautet: \r\n\r\n \r\n\r\nPCP Grundbesitz GmbH\r\n\r\nJungfrauenthal 9\r\n\r\n20149 Hamburg \r\n\r\n \r\n\r\nVielen Dank im Voraus für eine entsprechende Erledigung. \r\n\r\n \r\n\r\nFreundliche Grüße. \r\n\r\n \r\n\r\nPCP Grundbesitz GmbH \r\n\r\n \r\n\r\n.\r\nPCP Grundbesitz GmbH\r\nJungfrauenthal 9\r\n20149 Hamburg \r\n\r\nTel: 040-4106767 \r\nMail: office@pcp-immo.de\r\n\r\n \r\n\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "office@pcp-immo.de",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "fb1220af-9cc6-4d40-85af-fccb49fa12ff",
+    "account_label": "kontakt@tischlerei-graupner.de",
+    "account_username": "kontakt@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:43:48.083554+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "e5bfa06a-a0d8-438e-a123-7a599f37c06b",
+    "email_uid": "INBOX/1683",
+    "message_id": "<f096190f-66f8-4a8b-b3f6-65695bd421c3@Spark>",
+    "folder": "INBOX",
+    "from_email": "henningdotvoss@gmail.com",
+    "from_name": "Henning Voss",
+    "reply_to": "",
+    "subject": "AnfrageAltbau-Eingangstür – Absenkdichtung oder neueTürschwelle?",
+    "received_at": "2026-03-27T09:19:28+08:00",
+    "body_excerpt": "Guten Tag,\r\n\r\nich bin Vermieter einer Altbauwohnung in der Grindelallee 159, 2. OG rechts, 20146 Hamburg, und wollte Sie kurz wegen der Wohnungseingangstür anfragen.\r\n\r\nUnter der Tür gibt es einen sichtbaren Spalt, durch den gelegentlich Mäuse in die Wohnung gelangen. Fotos der Tür und des unteren Türbereichs habe ich beigefügt.\r\nKönnten Sie mir bitte anhand der Fotos eine erste Einschätzung geben, ob hier eher eine automatische Absenkdichtung oder eine neue Türschwelle sinnvoll wäre, um das Problem dauerhaft und zugleich optisch passend zur vorhandenen Altbau-Tür zu lösen?\r\nWichtig wäre mir, dass die Lösung nicht nur funktional ist, sondern auch ästhetisch stimmig und sauber ausgeführt werden kann.\r\n\r\nFalls eine Einschätzung auf Basis der Fotos noch nicht möglich ist, geben Sie mir gern Bescheid, ob ein Vor-Ort-Termin nötig wäre und ob Sie solche Arbeiten grundsätzlich übernehmen.\r\n\r\nVielen Dank und freundliche Grüße\r\n\r\nHenning Voss\r\n\r\nHenning Voss\r\n\r\n--\r\nHenning Voss\r\nmobile: +65 8338 8703\r\nwapp: +852 9886 9038\r\n\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "henningdotvoss@gmail.com",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "fb1220af-9cc6-4d40-85af-fccb49fa12ff",
+    "account_label": "kontakt@tischlerei-graupner.de",
+    "account_username": "kontakt@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:42:48.093934+00:00",
+    "content_hash": ""
+  },
+  {
+    "id": "ddb461a0-0ef7-4df5-9289-4ed769e1a511",
+    "email_uid": "INBOX/1681",
+    "message_id": "<F43CAAE2-9A68-4E4B-BC6A-0D8130272253@eric-aerts.com>",
+    "folder": "INBOX",
+    "from_email": "eric@eric-aerts.com",
+    "from_name": "Eric Aerts",
+    "reply_to": "",
+    "subject": "Schiebetür Berlin ",
+    "received_at": "2026-03-26T15:16:53+01:00",
+    "body_excerpt": "Hallo Ralf \r\nWie versprochen sende ich dich die Bilder \r\n\r\n",
+    "parsed": {
+      "anrede": "",
+      "vorname": "",
+      "nachname": "",
+      "telefon": "",
+      "email": "eric@eric-aerts.com",
+      "strasse": "",
+      "plz": "",
+      "ort": "",
+      "nachricht": "",
+      "source_url": "",
+      "format": "jimdo"
+    },
+    "spam": {
+      "is_spam": false,
+      "score": 0,
+      "reasons": []
+    },
+    "status": "vorschlag",
+    "account_id": "fb1220af-9cc6-4d40-85af-fccb49fa12ff",
+    "account_label": "kontakt@tischlerei-graupner.de",
+    "account_username": "kontakt@tischlerei-graupner.de",
+    "manual_import": true,
+    "manual_import_by": null,
+    "created_at": "2026-05-05T14:43:28.431877+00:00",
+    "content_hash": ""
+  }
+]
