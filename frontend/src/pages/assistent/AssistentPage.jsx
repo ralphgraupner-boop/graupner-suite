@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Card, Button, Badge } from "@/components/common";
 import { KiChatPanel } from "@/components/KiChatPanel";
+import { useF1Help } from "@/lib/useF1Help";
 
 const PRIORITAET_CONFIG = {
   kritisch: { label: "Kritisch", farbe: "bg-red-100 text-red-800 border-red-200" },
@@ -92,6 +93,7 @@ const HinweisKarte = ({ hinweis, onLesen, onIgnorieren, onOeffnen }) => {
 };
 
 export const AssistentPage = () => {
+  useF1Help("hilfe_assistent");
   const navigate = useNavigate();
   const [hinweise, setHinweise] = useState([]);
   const [loading, setLoading] = useState(true);

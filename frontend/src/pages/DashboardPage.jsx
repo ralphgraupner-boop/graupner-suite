@@ -8,8 +8,10 @@ import { Button, Card, StatCard } from "@/components/common";
 import { AnfragenFetcherButton } from "@/components/AnfragenFetcherButton";
 import { api, API } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useF1Help } from "@/lib/useF1Help";
 
 const DashboardPage = () => {
+  useF1Help("hilfe_dashboard");
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isBuchhaltung = user?.role === "buchhaltung";

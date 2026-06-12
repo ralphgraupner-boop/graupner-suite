@@ -7,6 +7,7 @@ import { Modal } from "@/components/common";
 import MailDetailModal from "@/components/MailDetailModal";
 import MailAcceptDuplicateDialog from "@/components/MailAcceptDuplicateDialog";
 import MailAnfrageUebernehmenModal from "@/components/MailAnfrageUebernehmenModal";
+import { useF1Help } from "@/lib/useF1Help";
 
 const STATUS_LABELS = {
   vorschlag: { label: "Offen", color: "bg-amber-100 text-amber-800" },
@@ -25,6 +26,7 @@ const STUFE_BADGE = {
 };
 
 const ModuleMailInboxPage = () => {
+  useF1Help("hilfe_mail_anfragen");
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);

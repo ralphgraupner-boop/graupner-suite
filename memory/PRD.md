@@ -4,6 +4,18 @@
 > Stand: 02.06.2026
 
 
+## 📌 12.06.2026 — F1-Hilfe auf fehlende Module erweitert (bestehendes System)
+
+**Befund (Regel 13):** F1-Hilfe-System existiert bereits (`HelpSlideOver.jsx`, `lib/useF1Help.js`, `lib/helpContent.js`). KEIN Neubau — bestehendes System genutzt (Regel 4: keine Doppelung).
+
+**Frontend (additiv, kein Deploy):**
+- `lib/helpContent.js`: neue `HELP_DEFAULTS` + `HELP_LABELS` für `hilfe_dashboard`, `hilfe_mail_anfragen`, `hilfe_dokumente`, `hilfe_einstellungen` (Texte für `hilfe_assistent` existierten bereits).
+- `useF1Help("hilfe_…")` ergänzt in: `DashboardPage.jsx`, `mail_inbox/ModuleMailInboxPage.jsx`, `DokumenteModulPage.jsx`, `assistent/AssistentPage.jsx`, `SettingsPage.jsx`.
+
+**Verifiziert (Screenshot):** F1 öffnet HelpSlideOver mit korrektem Titel/Inhalt auf Dashboard ("Hilfe: Dashboard") und Einstellungen ("Hilfe: Einstellungen") ✅. Übrige 3 Seiten nutzen identisches Muster. Frontend compiled ✅.
+
+
+
 ## 📌 12.06.2026 — Export/Import-Modul für Mail-Anfragen
 
 **Backend (additiv):** `module_mail_inbox/routes_exportimport.py` (in `__init__.py` registriert):

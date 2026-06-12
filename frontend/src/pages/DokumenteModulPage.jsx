@@ -7,6 +7,7 @@ import { QuotesPage } from "@/pages/QuotesPage";
 import { OrdersPage } from "@/pages/OrdersPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
 import { DocumentTemplatesPanel } from "@/components/DocumentTemplatesPanel";
+import { useF1Help } from "@/lib/useF1Help";
 
 const TABS = [
   { id: "quotes", label: "Angebote", icon: FileText },
@@ -16,6 +17,7 @@ const TABS = [
 ];
 
 const DokumenteModulPage = () => {
+  useF1Help("hilfe_dokumente");
   const [activeTab, setActiveTab] = useState("quotes");
   const [stats, setStats] = useState(null);
 

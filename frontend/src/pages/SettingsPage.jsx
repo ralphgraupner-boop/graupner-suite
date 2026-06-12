@@ -7,6 +7,7 @@ import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
 import { DocumentTemplatesPanel } from "@/components/DocumentTemplatesPanel";
 import { HilfeTab } from "@/components/HilfeTab";
 import { HelpTip } from "@/components/HelpTip";
+import { useF1Help } from "@/lib/useF1Help";
 
 import { FirmendatenTab } from "./settings/FirmendatenTab";
 import { KalkulationTab } from "./settings/KalkulationTab";
@@ -71,6 +72,7 @@ const SettingsShortcuts = () => {
 
 // ==================== MAIN SETTINGS PAGE ====================
 const SettingsPage = () => {
+  useF1Help("hilfe_einstellungen");
   const [activeTab, setActiveTab] = useState("firma");
   const [settings, setSettings] = useState({
     company_name: "", owner_name: "", address: "", phone: "", email: "",

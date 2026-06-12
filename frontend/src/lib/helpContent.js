@@ -158,6 +158,90 @@ export const HELP_DEFAULTS = {
         "4. Phase 4: KI arbeitet im Hintergrund und bereitet alles fuer dich vor.",
     },
   ],
+  hilfe_dashboard: [
+    {
+      title: "Was zeigt das Dashboard?",
+      content:
+        "1. Oben die wichtigsten Zahlen: offene Angebote, Aufträge, unbezahlte Rechnungen.\n" +
+        "2. Mitte: neue Mail-Anfragen und Portal-Aktivitäten.\n" +
+        "3. Unten: anstehende Termine und fällige Wiedervorlagen.\n" +
+        "4. Die Kacheln sind anklickbar und führen direkt zum jeweiligen Modul.",
+    },
+    {
+      title: "Anfragen abrufen",
+      content:
+        "1. Button 'Anfragen abrufen' holt neue Mail-Anfragen aus dem Postfach.\n" +
+        "2. Neue Anfragen erscheinen anschließend unter Mail-Anfragen.\n" +
+        "3. Die rote Zahl an 'Mail-Anfragen' zeigt offene Vorschläge.",
+    },
+  ],
+  hilfe_mail_anfragen: [
+    {
+      title: "Mail-Anfragen verstehen",
+      content:
+        "1. Hier landen eingehende Anfragen aus dem Postfach (Collection module_mail_inbox).\n" +
+        "2. Der farbige Punkt zeigt die Priorität (Rot = Sofort, Grün/Gelb/Blau = Stufe 1–3).\n" +
+        "3. Rote Anfragen stehen automatisch oben.\n" +
+        "4. Die Priorität richtet sich nach den Keyword-Prioritäten (Einstellungen).",
+    },
+    {
+      title: "Anfrage bearbeiten",
+      content:
+        "1. Klick auf die Zeile öffnet die Detail-Ansicht der Anfrage.\n" +
+        "2. 'Begrüßungsmail senden' öffnet Betterbird mit dem passenden Vorlagentext.\n" +
+        "3. 'Übernehmen' legt aus der Anfrage einen Kunden/Vorgang an.\n" +
+        "4. Ignorieren/Spam markiert die Anfrage, ohne sie zu löschen.",
+    },
+    {
+      title: "Export & Import",
+      content:
+        "1. 'Export' lädt die Anfragen als JSON (Re-Import) oder CSV (Excel/Steuerberater) herunter.\n" +
+        "2. Datums- und Status-Filter im Export-Dialog wählbar.\n" +
+        "3. 'Import' liest eine JSON-Datei ein – Duplikate werden automatisch übersprungen.\n" +
+        "4. So lassen sich Anfragen zwischen Preview und Live übertragen.",
+    },
+  ],
+  hilfe_dokumente: [
+    {
+      title: "Dokumente-Modul",
+      content:
+        "1. Tabs oben: Angebote, Aufträge, Rechnungen und Vorlagen.\n" +
+        "2. Jeder Tab zeigt die jeweilige Liste mit Such- und Filterfunktion.\n" +
+        "3. Über 'Vorlagen' werden Standard-Texte für die Dokumente gepflegt.",
+    },
+    {
+      title: "Vom Angebot zur Rechnung",
+      content:
+        "1. Angebot öffnen → Status auf 'Beauftragt' setzen → Speichern.\n" +
+        "2. Seite aktualisieren (F5).\n" +
+        "3. Tab 'Aufträge' → beim Auftrag auf das €-Icon klicken → Rechnung wird erstellt.\n" +
+        "4. Belegnummern werden automatisch fortlaufend vergeben.",
+    },
+  ],
+  hilfe_einstellungen: [
+    {
+      title: "Einstellungen – Überblick",
+      content:
+        "1. Firmendaten, Kalkulation und E-Mail sind die Basis-Tabs.\n" +
+        "2. Benutzer und Mitarbeiter verwalten Zugänge und Rollen.\n" +
+        "3. Dokument-Vorlagen steuern Aussehen von Angeboten/Rechnungen.\n" +
+        "4. Backup sichert alle Daten als ZIP-Datei.",
+    },
+    {
+      title: "Keyword-Prioritäten & Begrüßung",
+      content:
+        "1. Tab 'Keyword-Prioritäten': Begriffe festlegen, die Anfragen einstufen (Rot/Stufe 1–3).\n" +
+        "2. Tab 'Begrüßungsvorlagen': automatische Antworttexte je Prioritätsstufe.\n" +
+        "3. Diese Texte werden beim Senden der Begrüßungsmail genutzt.",
+    },
+    {
+      title: "Schnellzugriffe",
+      content:
+        "1. Über den Kacheln oben gelangt man zu Artikel, Textvorlagen, Duplikaten.\n" +
+        "2. 'Handy-Zugang' vergibt die PIN für die Monteur-App.\n" +
+        "3. 'Wissen & Tipps' enthält Anleitungen und Hilfe-Artikel.",
+    },
+  ],
   hilfe_workflows: [
     {
       title: "Rechnung aus Angebot erstellen",
@@ -177,5 +261,9 @@ export const HELP_LABELS = {
   hilfe_termine: "Hilfe: Termine",
   hilfe_einsaetze: "Hilfe: Einsätze",
   hilfe_assistent: "Hilfe: Mein Assistent",
+  hilfe_dashboard: "Hilfe: Dashboard",
+  hilfe_mail_anfragen: "Hilfe: Mail-Anfragen",
+  hilfe_dokumente: "Hilfe: Dokumente",
+  hilfe_einstellungen: "Hilfe: Einstellungen",
   hilfe_workflows: "Workflows – Übersicht",
 };
