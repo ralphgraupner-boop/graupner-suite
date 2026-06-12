@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Save, FileText, Building2, Users, Palette, Package, Calculator, BookOpen, HardHat, HelpCircle, Smartphone, FolderTree, Flag, MessageSquare } from "lucide-react";
+import { Mail, Save, FileText, Building2, Users, Palette, Package, Calculator, BookOpen, HardHat, HelpCircle, Smartphone, FolderTree, Flag, MessageSquare, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
@@ -36,6 +36,7 @@ const TABS = [
   { id: "diverses", label: "Diverses / Info", icon: BookOpen },
   { id: "backup", label: "Backup", icon: Save },
   { id: "module", label: "Module", icon: Package },
+  { id: "wartung", label: "Wartung", icon: Wrench },
   { id: "hilfe", label: "Hilfe", icon: HelpCircle },
 ];
 
@@ -71,6 +72,74 @@ const SettingsShortcuts = () => {
 };
 
 // ==================== MAIN SETTINGS PAGE ====================
+const WartungTab = () => {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const run = async () => {
+    if (!window.confirm(
+      "Umlaute in Textvorlagen, Leistungen & Materialien reparieren?\n\nVorher wird automatisch ein vollständiger DB-Snapshot der betroffenen Collections erstellt."
+    )) return;
+    setRunning(true);
+    try {
+      const res = await api.post("/wartung/umlaute-reparieren");
+      setResult(res.data);
+      toast.success(`${res.data.total_changed} Feld(er) repariert`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Fehler bei der Reparatur");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl space-y-4" data-testid="wartung-tab">
+      <div className="bg-background border rounded-lg p-5">
+        <h2 className="text-base font-semibold flex items-center gap-2">
+          <Wrench className="w-4 h-4 text-primary" /> Umlaute reparieren
+        </h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          Repariert kaputte Umlaute (z.&nbsp;B. „Ã¤" → „ä", „â‚¬" → „€") in
+          Textvorlagen sowie Leistungen &amp; Materialien. Vor der Reparatur wird
+          automatisch ein vollständiger DB-Snapshot der betroffenen Collections
+          (<code>module_textvorlagen</code>, <code>module_artikel</code>) gespeichert.
+        </p>
+        <button
+          onClick={run}
+          disabled={running}
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          data-testid="wartung-umlaute-btn"
+        >
+          <Wrench className="w-4 h-4" />
+          {running ? "Repariere…" : "Umlaute reparieren"}
+        </button>
+      </div>
+
+      {result && (
+        <div className="bg-background border rounded-lg p-5" data-testid="wartung-result">
+          <p className="text-sm">
+            <span className="font-semibold">{result.total_changed}</span> Feld(er) korrigiert
+            {result.total_changed === 0 && " – alles bereits sauber."}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">Snapshot: <code>{result.snapshot_dir}</code></p>
+          {result.changes?.length > 0 && (
+            <div className="mt-3 max-h-80 overflow-y-auto border rounded-sm divide-y">
+              {result.changes.map((c, i) => (
+                <div key={i} className="p-2 text-xs" data-testid={`wartung-change-${i}`}>
+                  <div className="text-muted-foreground">{c.collection} · id={c.id} · feld „{c.field}"</div>
+                  <div className="text-red-600 line-through break-words">{c.old}</div>
+                  <div className="text-emerald-700 break-words">{c.new}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 const SettingsPage = () => {
   useF1Help("hilfe_einstellungen");
   const [activeTab, setActiveTab] = useState("firma");
@@ -157,6 +226,7 @@ const SettingsPage = () => {
       {activeTab === "begruessung" && <BegruessungsvorlagenTab />}
       {activeTab === "backup" && <BackupTab />}
       {activeTab === "module" && <ModuleTab />}
+      {activeTab === "wartung" && <WartungTab />}
       {activeTab === "hilfe" && <HilfeTab />}
     </div>
   );

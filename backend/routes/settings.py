@@ -205,3 +205,81 @@ async def update_begruessungsvorlagen(body: dict):
         upsert=True,
     )
     return clean
+
+
+
+# --- Wartung: Umlaute (Mojibake) reparieren -------------------------------
+# Repariert kaputte Umlaute in Textvorlagen (module_textvorlagen) sowie
+# Leistungen & Materialien (module_artikel). Vor JEDER Schreiboperation wird
+# automatisch ein vollstaendiger DB-Snapshot der betroffenen Collections
+# als JSON abgelegt (Regel 5). Nur die genannten Collections werden angefasst.
+
+_UMLAUT_FIXES = {
+    "\u00c3\u00a4": "\u00e4",  # Ã¤ -> ä
+    "\u00c3\u00b6": "\u00f6",  # Ã¶ -> ö
+    "\u00c3\u00bc": "\u00fc",  # Ã¼ -> ü
+    "\u00c3\u0084": "\u00c4",  # Ã„ -> Ä
+    "\u00c3\u0096": "\u00d6",  # Ã– -> Ö
+    "\u00c3\u009c": "\u00dc",  # Ãœ -> Ü
+    "\u00c3\u009f": "\u00df",  # ÃŸ -> ß
+    "\u00c3\u0178": "\u00df",  # Ã -> ß (Variante)
+    "\u00e2\u0082\u00ac": "\u20ac",  # â‚¬ -> €
+}
+_UMLAUT_COLLECTIONS = ["module_textvorlagen", "module_artikel"]
+
+
+def _umlaut_fix_text(s: str) -> str:
+    for bad, good in _UMLAUT_FIXES.items():
+        s = s.replace(bad, good)
+    return s
+
+
+def _umlaut_has_artifact(s: str) -> bool:
+    return any(bad in s for bad in _UMLAUT_FIXES)
+
+
+@router.post("/wartung/umlaute-reparieren")
+async def wartung_umlaute_reparieren(apply: bool = True):
+    """Kaputte Umlaute in Textvorlagen/Leistungen/Materialien reparieren.
+
+    Vorher: automatischer Snapshot der betroffenen Collections (JSON).
+    apply=False => Dry-Run (zeigt nur, schreibt nichts).
+    """
+    import os
+    from datetime import datetime, timezone
+    from bson import json_util
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    snapshot_dir = os.path.join("/app/backend/snapshots", f"umlaute_{ts}")
+    os.makedirs(snapshot_dir, exist_ok=True)
+
+    changes = []
+    for col_name in _UMLAUT_COLLECTIONS:
+        col = db[col_name]
+        docs = await col.find({}).to_list(length=None)
+        # Vollstaendiger Snapshot (restaurierbar) VOR jeder Aenderung
+        with open(os.path.join(snapshot_dir, f"{col_name}.json"), "w", encoding="utf-8") as fh:
+            fh.write(json_util.dumps(docs, ensure_ascii=False, indent=2))
+        for doc in docs:
+            for field, value in doc.items():
+                if field in ("_id", "id"):
+                    continue
+                if isinstance(value, str) and _umlaut_has_artifact(value):
+                    new_value = _umlaut_fix_text(value)
+                    changes.append({
+                        "collection": col_name,
+                        "id": doc.get("id"),
+                        "field": field,
+                        "old": value,
+                        "new": new_value,
+                    })
+                    if apply:
+                        await col.update_one({"_id": doc["_id"]}, {"$set": {field: new_value}})
+
+    return {
+        "snapshot_dir": snapshot_dir,
+        "collections": _UMLAUT_COLLECTIONS,
+        "applied": apply,
+        "total_changed": len(changes),
+        "changes": changes,
+    }

@@ -1,0 +1,1974 @@
+[
+  {
+    "_id": {
+      "$oid": "69de90281080fe2abe751ba3"
+    },
+    "id": "a31001d4-f787-4aef-94ac-8effc72760ab",
+    "title": "Vielen Dank füer Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:",
+    "content": "sehr geehrte/r {kunde}\nWir freuen uns, dass Sie auf die Qualitätsprodukte der Tischlerei Graupner setzen. Sie erhalten heute freibleibend, das gewünschte Preisangebot, das wir sehr günstig für Sie kalkuliert haben.",
+    "doc_type": "allgemein",
+    "text_type": "vortext",
+    "created_at": "2026-04-14T19:06:16.985231+00:00",
+    "updated_at": "2026-05-31T08:29:45.131540+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69de90eb1080fe2abe751ba4"
+    },
+    "id": "c743360f-9c13-42d5-87d6-b674164cdeaf",
+    "title": "vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:",
+    "content": "{anrede_brief}, vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:",
+    "doc_type": "allgemein",
+    "text_type": "vortext",
+    "created_at": "2026-04-14T19:09:31.067018+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69de90eb1080fe2abe751ba5"
+    },
+    "id": "4174a11a-b9b9-499e-9642-7d54f65ef023",
+    "title": "Standard Angebot Schlusstext",
+    "content": "Dieses Angebot ist 30 Tage gültig. Wir würden uns freuen, den Auftrag für Sie ausführen zu dürfen.\n\nMit freundlichen Grüßen\n{firma}",
+    "doc_type": "angebot",
+    "text_type": "schlusstext",
+    "created_at": "2026-04-14T19:09:31.236965+00:00",
+    "updated_at": "2026-05-15T15:18:26.075157+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69de90eb1080fe2abe751ba6"
+    },
+    "id": "27efab7b-d99c-4a2b-9d65-1d22f341c095",
+    "title": "Angebot Fensterreparatur",
+    "content": "Angebot Nr. {dokument_nr} - Fensterreparatur",
+    "doc_type": "angebot",
+    "text_type": "betreff",
+    "created_at": "2026-04-14T19:09:31.373123+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69de90f61080fe2abe751ba7"
+    },
+    "id": "afdf83d5-3d75-4d74-9fba-6061cdd24485",
+    "title": "Gemäß unseren Erfahrungen \"seit 1960\", tauschen wir ab ein Alter von 8 - 10 Jahren ",
+    "content": "ls eingetragener Tischlereibetrieb in der Handwerkskammer Hamburg freuen wir uns, dass Sie auf die Qualitätsprodukte der Tischlerei Graupner setzen. Gemäß unseren Erfahrungen \"seit 1960\", tauschen wir ab ein Alter von 8 - 10 Jahren keine einzelnen Teile mehr aus. Die Gründe sind vielschichtig, zum einen sind die verbauten Einzelteile alle gleich alt, und somit ist das Risiko von einem nachfolgenden Defekt sehr hoch, somit beginnen die kosten erneut, ganz zu schweigen von der Möglichkeit das beim nächsten mal der Schaden und damit der Reparaturaufwand höher sein kann. Des Weiteren sind nicht alle Teile unbegrenzt lieferbar. Viele der verbauten Altbeschläge erfüllen nicht den heutigen Sicherheitsstandard. Ein letzter Grund ist das viele der Fenster/Türen keine jährliche Wartung bekommen haben, was zur Folge hat das die Getriebeteile trocken laufen und sich möglicherweise aufgerieben haben können. Eine echte Prüfung des verbauten Beschlages kann also nur erfolgen, wenn dieser fachgerecht demontiert wird! Und wenn er schon mal demontiert ist, sollte auch das neue Falzgetriebe montiert werden, im Übrigen, wenn Sie einen Neues Falzgetriebe von uns montieren lassen haben Sie eine Garantie von 5 Jahren auf unser arbeit. Der Lieferant gewährt bei dieser Konstellation auch 5 Jahre auf das verbaute Falzgetriebe. Sie erhalten heute das gewünschte Preisangebot freibleibend, das wir sehr günstig für Sie kalkuliert haben. die arbeiten werden sehr sauber ausgeführt, Sie benötigen hinterher kein Maurer und kein Maler.",
+    "doc_type": "allgemein",
+    "text_type": "vortext",
+    "created_at": "2026-04-14T19:09:42.413281+00:00",
+    "updated_at": "2026-04-15T19:44:23.675344+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69de92891080fe2abe751ba8"
+    },
+    "id": "e4bb79f8-6541-4aeb-a9da-040e5e20545e",
+    "title": "Hebe-Schiebe-Element Holz, HxB bis 2,5M Umbauen/reparieren wie nachstehend.",
+    "content": "Gern bieten wir Ihnen an: \nHebe-Schiebe-Element Holz, HxB bis 2,5M Umbauen/reparieren wie nachstehend. Als eingetragener Tischlereibetrieb in der Handwerkskammer Hamburg freuen wir uns, dass Sie auf die Qualitätsprodukte der Tischlerei Graupner setzen. Gemäß unseren Erfahrungen tauschen wir ab ein Alter von 8 - 10 Jahren keine einzelnen Teile mehr aus. Die Gründe sind vielschichtig, zum einen sind die verbauten Einzelteile alle gleich alt, und somit ist das Risiko von einem nachfolgenden Defekt an einer anderen stelle sehr hoch, somit beginnen die kosten erneut ganz zu schweigen von der Möglichkeit, das beim nächsten Mal der Schaden und damit der Reparaturaufwand und die Reparaturkosten höher sein können und oder der Hersteller die Lieferung eingestellt hat. Zustandsbericht: nach Besichtigung. Hebeschiebe-Getriebe defekt. Grund: Laufwagen & Getriebe defekt Hebeschiebeterrassentür mit Stulp: ? Ja/Nein: Nein Hebeschiebeterrassentür ? : Ja/Nein: Ja Hebeschiebeterrassentür überall Anliegend ?: Ja/Nein: Nein Reparatur/Umbau Notwendig ? : Ja/Nein: Ja Dringend Notwendige Maßnahmen: Hebeschiebe-Getriebe erneuern ? : Ja/Nein: Ja Laufwagen erneuern ?: Ja/Nein: Ja Dichtungen erneuern ?: Ja/Nein: Empfehlenswert = Beauftragung offen Vorteile: • Zeitaufwand: ca. 6-8 Stunden pro Element • Garantie 5 Jahre • Kein Mauern, kein Tapezieren, kein Malen • Markenqualität • Modernste Getriebe/Beschlagteile • Profitieren Sie von 45 Jahre Erfahrung • Handwerker Garantie und Material Garantie • Ausführung innerhalb von 5 Werktagen und schneller",
+    "doc_type": "allgemein",
+    "text_type": "vortext",
+    "created_at": "2026-04-14T19:16:25.087965+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69dfdae86b56f4def9fd5eac"
+    },
+    "id": "da85cf61-d40b-4a19-a4e6-ebfc7220223a",
+    "title": "PSK Angebotstext Hinweis Instandsetzung",
+    "content": "als eingetragener Tischlereibetrieb in der Handwerkskammer Hamburg freuen wir uns, dass Sie auf die Qualitätsprodukte der Tischlerei Graupner setzen. \n\nSie erhalten heute das gewünschte Preisangebot freibleibend, das wir sehr günstig für Sie kalkuliert haben. \n\nHinweis zur Instandsetzung von PSK-Fenstern und -Türen\n\nAuf Grundlage unserer Erfahrung seit 1960 tauschen wir bei Fenstern und Türen ab einem Alter von ca. 8–10 Jahren einzelne Beschlagteile ausschließlich nach vorheriger fachlicher Inspektion aus.\n\nGründe hierfür:\n\nGleichaltrigkeit der Bauteile\nSämtliche verbauten Komponenten sind in der Regel gleich alt und entsprechend gleichmäßig verschlissen. Der Austausch einzelner Teile führt häufig dazu, dass in kurzer Zeit weitere Bauteile ausfallen. Dadurch entstehen erneut Kosten, unter Umständen mit höherem Reparaturaufwand. Auch sicherheitstechnische Aspekte sind hierbei zu berücksichtigen.\n\nEingeschränkte Ersatzteilverfügbarkeit\nÄltere Beschlagsysteme sind häufig nicht dauerhaft oder nur eingeschränkt lieferbar.\n\nVeraltete Sicherheitsstandards\nViele Altbeschläge entsprechen nicht mehr den heutigen Anforderungen an Einbruchhemmung und Betriebssicherheit.\n\nFehlende Wartung bei PSK-Elementen\nZahlreiche PSK-Fenster und -Türen wurden nicht regelmäßig gewartet. Dies kann dazu führen, dass Getriebeteile trocken laufen und bereits Verschleiß oder Materialabrieb entstanden ist.\n\nEine sachgerechte Prüfung der verbauten Getriebekomponenten – insbesondere Griffgetriebe und gegenüberliegendem Steigegetriebe – ist nur nach fachgerechter Demontage möglich.\nIst der Beschlag demontiert, empfehlen wir aus technischen und wirtschaftlichen Gründen den Austausch des Falzgetriebes als zentrale Verschleißkomponente.\n\nGarantie\nBei Montage eines neuen Falzgetriebes durch unseren Betrieb erhalten Sie:\n5 Jahre Garantie auf unsere handwerkliche Leistung\n5 Jahre Herstellergarantie auf das verbaute Falzgetriebe\nSo stellen wir eine nachhaltige, sichere und technisch einwandfreie Lösung sicher.\n",
+    "doc_type": "angebot",
+    "text_type": "vortext",
+    "created_at": "2026-04-15T18:37:28.609722+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e3128eabb40e92571e16ef"
+    },
+    "title": "Bitte Fotos hochladen",
+    "content": "Sehr geehrte/r {kunde_name},\n\nbitte laden Sie über Ihr Kundenportal aktuelle Fotos des betroffenen Bereichs hoch. Das hilft uns, den Umfang der Arbeiten besser einzuschätzen und ein genaues Angebot zu erstellen.\n\nVielen Dank!\nIhr Team der Tischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "vortext",
+    "id": "8d90ff65-d332-4239-ad07-20bb4daf17c1",
+    "created_at": "2026-04-18T05:11:42.847794+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e3128eabb40e92571e16f0"
+    },
+    "title": "Terminbestätigung",
+    "content": "Sehr geehrte/r {kunde_name},\n\nwir bestätigen Ihnen hiermit den vereinbarten Termin. Unser Monteur wird zum abgesprochenen Zeitpunkt bei Ihnen vor Ort sein.\n\nBitte stellen Sie sicher, dass der Zugang zum Objekt gewährleistet ist.\n\nBei Rückfragen erreichen Sie uns unter 040 555 677 44.\n\nMit freundlichen Grüßen\nTischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "vortext",
+    "id": "0a3992ce-2f5f-4c20-b927-b390e38bae2f",
+    "created_at": "2026-04-18T05:11:42.853187+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e3128eabb40e92571e16f1"
+    },
+    "title": "Auftragsfortschritt",
+    "content": "Sehr geehrte/r {kunde_name},\n\nwir möchten Sie über den aktuellen Stand Ihres Auftrags informieren. Die Arbeiten laufen planmäßig.\n\nWir haben Ihnen aktuelle Fotos im Portal bereitgestellt. Bitte schauen Sie sich diese an und geben Sie uns bei Bedarf eine Rückmeldung.\n\nMit freundlichen Grüßen\nTischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "vortext",
+    "id": "0c51847c-50e8-47bc-81c0-35a2fcf3427c",
+    "created_at": "2026-04-18T05:11:42.853483+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e3128eabb40e92571e16f2"
+    },
+    "title": "Angebot bereitgestellt",
+    "content": "Sehr geehrte/r {kunde_name},\n\nwir haben Ihr Angebot in Ihrem Kundenportal hinterlegt. Bitte schauen Sie sich das Dokument in Ruhe an.\n\nBei Fragen oder Änderungswünschen können Sie uns direkt über das Portal eine Nachricht senden oder uns telefonisch erreichen.\n\nMit freundlichen Grüßen\nTischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "vortext",
+    "id": "4bccb285-e74f-48b4-a500-2533fbf34c5d",
+    "created_at": "2026-04-18T05:11:42.853665+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e3128eabb40e92571e16f3"
+    },
+    "title": "Rechnung im Portal",
+    "content": "Sehr geehrte/r {kunde_name},\n\nIhre Rechnung steht in Ihrem Kundenportal zum Download bereit.\n\nBitte überweisen Sie den Betrag innerhalb von 14 Tagen auf das angegebene Konto.\n\nBei Fragen stehen wir Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen\nTischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "vortext",
+    "id": "9584cd44-aac7-4237-b785-87067b7ba9f7",
+    "created_at": "2026-04-18T05:11:42.853847+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e3128eabb40e92571e16f4"
+    },
+    "title": "Fertigstellung / Abnahme",
+    "content": "Sehr geehrte/r {kunde_name},\n\ndie Arbeiten an Ihrem Objekt sind abgeschlossen. Wir haben Fotos der fertigen Arbeit in Ihrem Portal hinterlegt.\n\nBitte prüfen Sie das Ergebnis und teilen Sie uns mit, ob alles zu Ihrer Zufriedenheit ist. Eventuelle Korrekturwünsche können Sie direkt über das Portal melden.\n\nVielen Dank für Ihr Vertrauen!\nTischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "vortext",
+    "id": "9d9c10cd-8198-49a3-b4e7-edc35f17c69a",
+    "created_at": "2026-04-18T05:11:42.854002+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e3128eabb40e92571e16f5"
+    },
+    "title": "Rückfrage / Zusatzinfo benötigt",
+    "content": "Sehr geehrte/r {kunde_name},\n\nfür die weitere Bearbeitung Ihres Auftrags benötigen wir noch zusätzliche Informationen von Ihnen. Bitte senden Sie uns über das Portal eine Nachricht mit den fehlenden Angaben.\n\nVielen Dank!\nTischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "vortext",
+    "id": "4107ca68-1086-4710-b1bc-b1aaebe770ac",
+    "created_at": "2026-04-18T05:11:42.854162+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe909564"
+    },
+    "title": "Terminbestätigung Besichtigung",
+    "content": "Sehr geehrte/r {kunde_name},\n\nhiermit bestätigen wir den vereinbarten Besichtigungstermin.\n\nDatum: {termin_datum}\n\nUnser Monteur wird puenktlich vor Ort sein. Bitte stellen Sie den Zugang sicher.\n\nBei Fragen: 040 555 677 44\n\nMit freundlichen Grüßen\nTischlerei R. Graupner",
+    "doc_type": "einsatz",
+    "text_type": "vortext",
+    "id": "2f8eecc3-9423-4bc2-a47f-76eb867baf6c",
+    "created_at": "2026-04-18T07:03:12.028157+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe909565"
+    },
+    "title": "Auftragsbestätigung",
+    "content": "Sehr geehrte/r {kunde_name},\n\nvielen Dank für Ihren Auftrag. Wir bestätigen hiermit die Durchführung der Reparaturarbeiten.\n\nUmfang: {betreff}\nVoraussichtlicher Termin: {termin_datum}\n\nBei Rückfragen stehen wir Ihnen gerne zur Verfuegung.\n\nMit freundlichen Grüßen\nTischlerei R. Graupner",
+    "doc_type": "einsatz",
+    "text_type": "vortext",
+    "id": "b379f173-5c0b-4b3a-be4f-6f610dfe906f",
+    "created_at": "2026-04-18T07:03:12.031825+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe909566"
+    },
+    "title": "Fertigstellungsmeldung",
+    "content": "Sehr geehrte/r {kunde_name},\n\nwir freuen uns Ihnen mitteilen zu können, dass die Arbeiten an Ihrem Objekt erfolgreich abgeschlossen wurden.\n\nBitte pruefen Sie das Ergebnis bei Gelegenheit. Sollten Sie Anmerkungen haben, kontaktieren Sie uns gerne.\n\nMit freundlichen Grüßen\nTischlerei R. Graupner",
+    "doc_type": "einsatz",
+    "text_type": "vortext",
+    "id": "6c48f5dc-0cda-4cb8-811f-83c43992b203",
+    "created_at": "2026-04-18T07:03:12.032099+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe909567"
+    },
+    "title": "Materialbestellung Info",
+    "content": "Sehr geehrte/r {kunde_name},\n\nfür Ihren Auftrag muss Spezialmaterial bestellt werden. Die Lieferzeit beträgt ca. 2-3 Wochen.\n\nWir melden uns, sobald das Material eingetroffen ist und vereinbaren dann den Montagetermin.\n\nMit freundlichen Grüßen\nTischlerei R. Graupner",
+    "doc_type": "einsatz",
+    "text_type": "vortext",
+    "id": "3ecddc72-4500-4bce-a54d-1aaa0593882c",
+    "created_at": "2026-04-18T07:03:12.032378+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe909568"
+    },
+    "title": "Besichtigungstermin",
+    "content": "Besichtigung bei {kunde_name}\nAdresse: {kunde_adresse}\nTel: {kunde_telefon}\n\nAnliegen: {betreff}",
+    "doc_type": "termin",
+    "text_type": "vortext",
+    "id": "8f19b7bd-cc20-44de-92f6-696a14d64db2",
+    "created_at": "2026-04-18T07:03:12.032583+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe909569"
+    },
+    "title": "Reparaturtermin",
+    "content": "Reparatur bei {kunde_name}\nAdresse: {kunde_adresse}\nTel: {kunde_telefon}\n\nAuftrag: {betreff}\nMaterial: {material}",
+    "doc_type": "termin",
+    "text_type": "vortext",
+    "id": "11985bd1-3396-4c02-bbed-3c4ff964612e",
+    "created_at": "2026-04-18T07:03:12.032750+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe90956a"
+    },
+    "title": "Montagetermin",
+    "content": "Montage bei {kunde_name}\nAdresse: {kunde_adresse}\nTel: {kunde_telefon}\n\nEinbau: {betreff}\nMaterial vorbereitet: Ja",
+    "doc_type": "termin",
+    "text_type": "vortext",
+    "id": "ea7e7815-d7c5-4db4-b70a-41db25cccc59",
+    "created_at": "2026-04-18T07:03:12.032921+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e32cb09ee6624ffe90956b"
+    },
+    "title": "Abnahmetermin",
+    "content": "Abnahme bei {kunde_name}\nAdresse: {kunde_adresse}\nTel: {kunde_telefon}\n\nProjekt: {betreff}\nAbnahmeprotokoll mitnehmen!",
+    "doc_type": "termin",
+    "text_type": "vortext",
+    "id": "0b877e1d-870e-43c5-ab49-15c9279d8061",
+    "created_at": "2026-04-18T07:03:12.033078+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e4ba7fa51f92c755ccb0ed"
+    },
+    "id": "883d14ad-f81d-4386-a783-c1d293b0f21d",
+    "title": "Hebeschiebetüren Holz fachgerecht reparieren",
+    "content": "inhalt",
+    "doc_type": "angebot",
+    "text_type": "betreff",
+    "created_at": "2026-04-19T11:20:31.495010+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e4bb30a51f92c755ccb0ee"
+    },
+    "id": "e1899e7c-fded-45bb-bbe6-c4089f8fffe4",
+    "title": "Hebeschiebetür fachgerecht reparieren",
+    "content": "Hebeschiebetür fachgerecht reparieren",
+    "doc_type": "angebot",
+    "text_type": "betreff",
+    "created_at": "2026-04-19T11:23:28.234890+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e4bb6aa51f92c755ccb0ef"
+    },
+    "id": "74eb8d68-a8b7-474e-aeb7-f7b94a1c1254",
+    "title": "Hebeschiebetür Alu fachgerecht repariere...",
+    "content": "Hebeschiebetür Alu fachgerecht reparieren",
+    "doc_type": "angebot",
+    "text_type": "betreff",
+    "created_at": "2026-04-19T11:24:26.196856+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e4c3c926935d903a4f02ed"
+    },
+    "id": "c18acb36-361b-42d1-a292-46a67d87caf9",
+    "title": "Sonstige-Kosten",
+    "content": "Sonstige-Kosten",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "created_at": "2026-04-19T12:00:09.884615+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e4c57026935d903a4f02ee"
+    },
+    "id": "b513a8b7-181c-4920-a52d-c5be5675cc53",
+    "title": "Vorort Ersatzteilermittlung",
+    "content": "Vorort Ersatzteilermittlung",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "created_at": "2026-04-19T12:07:12.291480+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e65d1191289b627313fd58"
+    },
+    "id": "cf6d40e1-adfb-4b79-bd09-d86207167919",
+    "title": "Begrüßung + Bilder-Anfrage",
+    "content": "{anrede_brief},\n\nvielen Dank für Ihr Vertrauen und die Beauftragung unserer Tischlerei.\n\nDamit wir Ihren Auftrag optimal vorbereiten können, bitten wir Sie, uns über das Kundenportal einige Bilder der aktuellen Situation vor Ort hochzuladen (z.B. Tuer, Fenster, Raumsituation, Detailaufnahmen).\n\nSie können die Bilder einfach über den Upload-Button im Portal hochladen. So sparen wir uns gegenseitig Wege und können zuegig mit der Planung starten.\n\nVielen Dank und freundliche Gruesse\nIhre Tischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "portal_nachricht",
+    "created_at": "2026-04-20T17:06:25.841163+00:00",
+    "updated_at": "2026-05-16T09:44:55.113528+00:00",
+    "keywords": []
+  },
+  {
+    "_id": {
+      "$oid": "69e65d1191289b627313fd59"
+    },
+    "id": "60f0de1a-ae08-4d5a-9238-6c74e15b5ff3",
+    "title": "Weitere Bilder benötigt",
+    "content": "{anrede_brief},\n\nvielen Dank für die bereits hochgeladenen Bilder. Für eine präzise Planung benötigen wir noch zusätzliche Aufnahmen:\n\n- Gesamtansicht des Bereichs\n- Detail-/Nahaufnahmen der betroffenen Stellen\n- ggf. Massangaben (mit Zollstock sichtbar)\n\nBitte laden Sie die weiteren Bilder über das Kundenportal hoch. Bei Fragen melden Sie sich gerne.\n\nFreundliche Gruesse\nIhre Tischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "portal_nachricht",
+    "created_at": "2026-04-20T17:06:25.843992+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69e65d1191289b627313fd5a"
+    },
+    "id": "05ddd7ab-b875-46cf-b4cf-d89f9d1b930f",
+    "title": "Rückfrage / Eigene Frage",
+    "content": "{anrede_brief},\n\nzu Ihrem Auftrag hätten wir noch eine kurze Rückfrage:\n\n[Hier Ihre Frage einfügen]\n\nBitte antworten Sie uns einfach über das Kundenportal oder per E-Mail. Vielen Dank!\n\nFreundliche Gruesse\nIhre Tischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "portal_nachricht",
+    "created_at": "2026-04-20T17:06:25.844768+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69f03bfbb93ec243618f14c3"
+    },
+    "id": "abb09e23-20b5-4ab0-ade9-92df1c4b547b",
+    "title": "Aufmaß vor Ort",
+    "content": "Aufmaß beim Kunden durchführen. Fotos machen, Skizze anfertigen, alle Maße notieren (Höhe, Breite, Tiefe, Besonderheiten).",
+    "doc_type": "aufgabe",
+    "text_type": "titel",
+    "created_at": "2026-04-28T04:47:55.527382+00:00",
+    "updated_at": "2026-05-07T06:31:15.002593+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69f03bfbb93ec243618f14c4"
+    },
+    "id": "964c5ce2-ebb8-4445-bd32-282c82b074f9",
+    "title": "Fotos Bestand machen",
+    "content": "Vor Beginn der Arbeiten Bestandsfotos aller betroffenen Bereiche machen. Nahaufnahmen von Details und Übersichtsfotos.",
+    "doc_type": "aufgabe",
+    "text_type": "titel",
+    "created_at": "2026-04-28T04:47:55.530826+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69f03bfbb93ec243618f14c5"
+    },
+    "id": "9e332a30-1c5d-48b8-9bd8-f83b4316a9ee",
+    "title": "Werkzeug prüfen/zusammenstellen",
+    "content": "Werkzeugkiste auf Vollständigkeit prüfen. Akkus geladen? Verbrauchsmaterial (Schrauben, Dübel, Silikon) ausreichend?",
+    "doc_type": "aufgabe",
+    "text_type": "titel",
+    "created_at": "2026-04-28T04:47:55.531434+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69f03bfbb93ec243618f14c6"
+    },
+    "id": "5d547d56-6f0d-4831-bb4f-2a4a27d4e5ec",
+    "title": "Materiallieferung annehmen",
+    "content": "Lieferung auf Vollständigkeit und Beschädigungen prüfen. Lieferschein abzeichnen. Ware ordentlich einlagern.",
+    "doc_type": "aufgabe",
+    "text_type": "titel",
+    "created_at": "2026-04-28T04:47:55.531922+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69f03bfbb93ec243618f14c7"
+    },
+    "id": "b9bcb54e-6794-4518-966b-d9b8a464c1ae",
+    "title": "Rechnung stellen",
+    "content": "Nach Abschluss der Arbeiten Rechnung erstellen. Arbeitszeit, Material und ggf. Fahrtkosten erfassen.",
+    "doc_type": "aufgabe",
+    "text_type": "titel",
+    "created_at": "2026-04-28T04:47:55.532379+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb0585d8818b7b07431655"
+    },
+    "id": "9d22260d-1936-4883-a634-1c47d9a6375c",
+    "title": "Kunde hat sich anders entschieden",
+    "content": "Der Kunde hat sich gegen die Beauftragung entschieden.",
+    "doc_type": "abschlussgrund",
+    "text_type": "abschluss_grund",
+    "created_at": "2026-05-06T09:10:29.501686+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb0585d8818b7b07431656"
+    },
+    "id": "c5f97b83-6038-4d38-9f9d-30615c1f6682",
+    "title": "Angebot abgelehnt",
+    "content": "Der Kunde hat das Angebot abgelehnt.",
+    "doc_type": "abschlussgrund",
+    "text_type": "abschluss_grund",
+    "created_at": "2026-05-06T09:10:29.501686+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb0585d8818b7b07431657"
+    },
+    "id": "424cd7eb-9eca-4b5b-bf4b-a982ecfb8f2f",
+    "title": "Nicht mehr erreichbar",
+    "content": "Kunde war nach mehrfachen Kontaktversuchen nicht mehr erreichbar.",
+    "doc_type": "abschlussgrund",
+    "text_type": "abschluss_grund",
+    "created_at": "2026-05-06T09:10:29.501686+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb0585d8818b7b07431658"
+    },
+    "id": "d537a89c-c49c-4fb7-8ca6-b59a4568acde",
+    "title": "Termin / Auftrag erfüllt",
+    "content": "Der Auftrag wurde erledigt und abgeschlossen.",
+    "doc_type": "abschlussgrund",
+    "text_type": "abschluss_grund",
+    "created_at": "2026-05-06T09:10:29.501686+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb0585d8818b7b07431659"
+    },
+    "id": "26c7df3a-f897-41fa-8beb-e21118e35eae",
+    "title": "Preis zu hoch",
+    "content": "Kunde fand den Preis nicht akzeptabel, kein Auftrag.",
+    "doc_type": "abschlussgrund",
+    "text_type": "abschluss_grund",
+    "created_at": "2026-05-06T09:10:29.501686+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb0585d8818b7b0743165a"
+    },
+    "id": "6ef11716-05b3-4773-a734-b0a7b9a08b1e",
+    "title": "Material nicht lieferbar",
+    "content": "Benötigtes Material nicht verfügbar – Anfrage gestoppt.",
+    "doc_type": "abschlussgrund",
+    "text_type": "abschluss_grund",
+    "created_at": "2026-05-06T09:10:29.501686+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb0585d8818b7b0743165b"
+    },
+    "id": "3ceb7f82-3216-44c5-9ae6-ff0aee696438",
+    "title": "Auftrag storniert",
+    "content": "Der Auftrag wurde im Nachhinein storniert.",
+    "doc_type": "abschlussgrund",
+    "text_type": "abschluss_grund",
+    "created_at": "2026-05-06T09:10:29.501686+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54819"
+    },
+    "id": "f5199324-a3b1-4a98-b829-bbbccf9b0584",
+    "title": "Anfrage",
+    "content": "Anfrage",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 0,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5481a"
+    },
+    "id": "698ce2a9-754a-4da8-a3a7-5c4c6966a33a",
+    "title": "Neu",
+    "content": "Neu",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 1,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5481b"
+    },
+    "id": "4b3ebb96-88b7-40e6-a2f1-26a976acc1e4",
+    "title": "Interessent",
+    "content": "Interessent",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 2,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5481c"
+    },
+    "id": "58f95ae1-ba2c-4057-b30e-bdd669e1771a",
+    "title": "Kunde",
+    "content": "Kunde",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 3,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5481d"
+    },
+    "id": "72f482fd-24a0-4113-b253-9cb19e8a9861",
+    "title": "In Bearbeitung",
+    "content": "In Bearbeitung",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 4,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5481e"
+    },
+    "id": "144b3244-40b7-4f2e-a9d4-5948493fa44c",
+    "title": "Aufmaß",
+    "content": "Aufmaß",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 5,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5481f"
+    },
+    "id": "ffa8b59b-c41d-4d98-93dc-478ef2eb85a6",
+    "title": "Angebot",
+    "content": "Angebot",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 6,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54820"
+    },
+    "id": "69fb0beb-47b5-4599-a8ae-225f2525eb33",
+    "title": "Auftrag",
+    "content": "Auftrag",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 7,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54821"
+    },
+    "id": "1b907589-3d3b-4461-a5c9-45bf95b382f9",
+    "title": "Abgeschlossen",
+    "content": "Abgeschlossen",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 8,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-30T21:52:25.803494+00:00",
+    "keywords": []
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54822"
+    },
+    "id": "3c878715-cea3-489b-b4d7-0ef3f4ba184a",
+    "title": "Archiv",
+    "content": "Archiv",
+    "doc_type": "kunden_status",
+    "text_type": "titel",
+    "sort_order": 9,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54823"
+    },
+    "id": "2fe4612f-91ad-4562-82f2-8776f5ba1046",
+    "title": "Schiebetür",
+    "content": "Schiebetür",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "sort_order": 0,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54824"
+    },
+    "id": "2e59de07-35a5-4813-b07e-d49c274d69f9",
+    "title": "Fenster",
+    "content": "Fenster",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "sort_order": 1,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-28T20:50:27.217841+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54825"
+    },
+    "id": "f246d9fc-3f74-4fd7-8c27-d235355f3f39",
+    "title": "Innentür",
+    "content": "Innentür",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "sort_order": 2,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54826"
+    },
+    "id": "fde68199-77cc-4c80-b42f-f3c59fc3ec88",
+    "title": "Eingangstür",
+    "content": "Eingangstür",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "sort_order": 3,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54827"
+    },
+    "id": "261e03b7-f7b7-46c6-a43c-2f13047be4a6",
+    "title": "Sonstige Reparaturen",
+    "content": "Sonstige Reparaturen",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "sort_order": 4,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54828"
+    },
+    "id": "6b4176f0-d0df-44fc-b0e2-48ba27fe82e4",
+    "title": "Herr",
+    "content": "Herr",
+    "doc_type": "anrede",
+    "text_type": "titel",
+    "sort_order": 0,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b54829"
+    },
+    "id": "481fb93d-c2e9-47a0-a9e0-239aed5af12d",
+    "title": "Frau",
+    "content": "Frau",
+    "doc_type": "anrede",
+    "text_type": "titel",
+    "sort_order": 1,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5482a"
+    },
+    "id": "59c6b5e8-057c-407e-bca6-dd08b10f023d",
+    "title": "Familie",
+    "content": "Familie",
+    "doc_type": "anrede",
+    "text_type": "titel",
+    "sort_order": 2,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5482b"
+    },
+    "id": "8505d1f1-fb19-4141-b374-4226ec49f383",
+    "title": "Firma",
+    "content": "Firma",
+    "doc_type": "anrede",
+    "text_type": "titel",
+    "sort_order": 3,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fb6a599a2c69fa33b5482c"
+    },
+    "id": "5277acb7-d8b6-40c4-a8ac-f12023ce9c8b",
+    "title": "Divers",
+    "content": "Divers",
+    "doc_type": "anrede",
+    "text_type": "titel",
+    "sort_order": 4,
+    "created_at": "2026-05-06T16:20:41.726267+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0bec4f5c3b00221948f2"
+    },
+    "id": "317ff094-555b-40e6-9554-3032e82c688c",
+    "title": "Besichtigung Terminieren und im Kalender eintragen",
+    "content": "Besichtigung Terminieren und im Kalender eintragen",
+    "doc_type": "aufgabe",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:50:04.103928+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0d819f4a60f026b6ff80"
+    },
+    "id": "3574ec7f-af22-402c-9780-12b5f194e9d0",
+    "title": "Material",
+    "content": "",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:56:49.240034+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0d819f4a60f026b6ff81"
+    },
+    "id": "a249d679-385b-43ea-84dd-f17ef0d1c3d2",
+    "title": "Aufmaß2",
+    "content": "Aufmaß2",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:56:49.240034+00:00",
+    "updated_at": "2026-05-07T06:31:38.617395+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0d819f4a60f026b6ff82"
+    },
+    "id": "4c22967a-ab5b-44e4-8225-c8bc45ef3a08",
+    "title": "buero",
+    "content": "",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:56:49.240034+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0d819f4a60f026b6ff83"
+    },
+    "id": "3a732f2b-aeb4-4971-9533-a9300ed29b7d",
+    "title": "Kundengespräch",
+    "content": "",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:56:49.240034+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0d819f4a60f026b6ff84"
+    },
+    "id": "72dfec32-1a61-4589-88c1-feee77505586",
+    "title": "Sonstige",
+    "content": "",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:56:49.240034+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0d819f4a60f026b6ff85"
+    },
+    "id": "b8928237-3689-48e0-87f8-256a5aa535b9",
+    "title": "Montage",
+    "content": "",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:56:49.240034+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0d819f4a60f026b6ff86"
+    },
+    "id": "2450c0de-82f1-4551-8cd8-e04a3cb9c4c7",
+    "title": "Verwaltung",
+    "content": "",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:56:49.240034+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc0da88d2e8a1e8247b942"
+    },
+    "id": "4ae5bac5-47eb-4382-b691-c1423a48c3ca",
+    "title": "Lieferung",
+    "content": "",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T03:57:28.646683+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc10368d2e8a1e8247b943"
+    },
+    "id": "4e6a043b-d29c-43fb-bce8-2bb5ec32a712",
+    "title": "Besichtigung Terminieren",
+    "content": "Besichtigung Terminieren",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:08:22.393654+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc10878d2e8a1e8247b944"
+    },
+    "id": "87be6292-d887-426a-be8f-679394f3c355",
+    "title": "Besichtigung Terminieren",
+    "content": "Besichtigung Terminieren",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "vortext",
+    "created_at": "2026-05-07T04:09:43.076355+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc124cfce739732ca23834"
+    },
+    "id": "3cff1990-6a67-4bc8-88aa-9990ac6a1e4e",
+    "title": "Terminiere",
+    "content": "Besichtigung Terminieren&nbsp;",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:17:16.988445+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede298"
+    },
+    "id": "b985d5d9-35db-450d-b14a-65591fdf6743",
+    "title": "Holz",
+    "content": "",
+    "doc_type": "material",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede299"
+    },
+    "id": "f4b97fd2-0dd3-447c-83a7-30ffa3bfe911",
+    "title": "Kunststoff",
+    "content": "",
+    "doc_type": "material",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede29a"
+    },
+    "id": "af0ebd9b-7719-48ef-ab3a-1e5e9c41b428",
+    "title": "Aluminium",
+    "content": "",
+    "doc_type": "material",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede29b"
+    },
+    "id": "69c692e0-7044-4d21-8e9d-52a3aa1d4a7a",
+    "title": "Holz/Alu",
+    "content": "",
+    "doc_type": "material",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede29c"
+    },
+    "id": "3d74df8c-5934-440d-9c22-26638908dfd1",
+    "title": "Sonstiges",
+    "content": "",
+    "doc_type": "material",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede29d"
+    },
+    "id": "1239ad8e-9f40-4a64-936e-ccbcf98cb5ce",
+    "title": "niedrig",
+    "content": "",
+    "doc_type": "prioritaet",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede29e"
+    },
+    "id": "5d4692a8-a08a-4b42-ad88-e15180aca0c0",
+    "title": "normal",
+    "content": "",
+    "doc_type": "prioritaet",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede29f"
+    },
+    "id": "488cc647-7017-457e-92d8-8b7bbe38f481",
+    "title": "hoch",
+    "content": "",
+    "doc_type": "prioritaet",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede2a0"
+    },
+    "id": "c5389262-04ed-40c6-bf1c-48e6cd816b65",
+    "title": "dringend",
+    "content": "",
+    "doc_type": "prioritaet",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede2a1"
+    },
+    "id": "f09ad017-8b2b-4576-b701-e7f3a81172ed",
+    "title": "kundenanfrage",
+    "content": "",
+    "doc_type": "bild_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede2a2"
+    },
+    "id": "d94f900a-1578-4fa0-ab4a-cf9e55b98983",
+    "title": "besichtigung",
+    "content": "",
+    "doc_type": "bild_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede2a3"
+    },
+    "id": "291205b3-f31e-4de6-b38f-bbce2a2253e1",
+    "title": "waehrend_arbeit",
+    "content": "",
+    "doc_type": "bild_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede2a4"
+    },
+    "id": "0ecc22e9-c9bc-47e3-862e-4b37ca18ae5e",
+    "title": "abnahme",
+    "content": "",
+    "doc_type": "bild_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede2a5"
+    },
+    "id": "8a3f85b4-ba4e-45ed-9639-0123de2a704e",
+    "title": "hinweise",
+    "content": "",
+    "doc_type": "bild_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc18742f7435fbd1ede2a6"
+    },
+    "id": "1a047869-136d-4415-a5fc-29e65e90f871",
+    "title": "sonstiges",
+    "content": "",
+    "doc_type": "bild_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T04:43:32.632553+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc1f1a08c14c08de16d74b"
+    },
+    "id": "7202cea5-c751-4909-b63d-3a0940a765a2",
+    "title": "test",
+    "content": "test",
+    "doc_type": "aufgaben_kategorie",
+    "text_type": "titel",
+    "created_at": "2026-05-07T05:11:54.196081+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fc2a73045c6a02786f3db3"
+    },
+    "id": "79fe78fd-1c4d-43df-ba74-671a7355cb1a",
+    "title": "Gemäß unseren Erfahrungen \"seit 1960\", tauschen wir ab ein Alter von 8 - 10 Jahren",
+    "doc_type": "allgemein",
+    "text_type": "vortext",
+    "content": "ls eingetragener Tischlereibetrieb in der Handwerkskammer Hamburg freuen wir uns, dass Sie auf die Qualitätsprodukte der Tischlerei Graupner setzen. Gemäß unseren Erfahrungen \"seit 1960\", tauschen wir ab ein Alter von 8 - 10 Jahren keine einzelnen Teile mehr aus. Die Gründe sind vielschichtig, zum einen sind die verbauten Einzelteile alle gleich alt, und somit ist das Risiko von einem nachfolgenden Defekt sehr hoch, somit beginnen die kosten erneut, ganz zu schweigen von der Möglichkeit das beim nächsten mal der Schaden und damit der Reparaturaufwand höher sein kann. Des Weiteren sind nicht alle Teile unbegrenzt lieferbar. Viele der verbauten Altbeschläge erfüllen nicht den heutigen Sicherheitsstandard. Ein letzter Grund ist das viele der Fenster/Türen keine jährliche Wartung bekommen haben, was zur Folge hat das die Getriebeteile trocken laufen und sich möglicherweise aufgerieben haben können. Eine echte Prüfung des verbauten Beschlages kann also nur erfolgen, wenn dieser fachgerecht demontiert wird! Und wenn er schon mal demontiert ist, sollte auch das neue Falzgetriebe montiert werden, im Übrigen, wenn Sie einen Neues Falzgetriebe von uns montieren lassen haben Sie eine Garantie von 5 Jahren auf unser arbeit. Der Lieferant gewährt bei dieser Konstellation auch 5 Jahre auf das verbaute Falzgetriebe. Sie erhalten heute das gewünschte Preisangebot freibleibend, das wir sehr günstig für Sie kalkuliert haben. die arbeiten werden sehr sauber ausgeführt, Sie benötigen hinterher kein Maurer und kein Maler.",
+    "created_at": "2026-05-07T06:00:19.799703+00:00",
+    "updated_at": "2026-05-07T06:00:48.157141+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396835"
+    },
+    "id": "2198b249-a878-46c2-8155-6d063b04d27e",
+    "title": "Schiebetür",
+    "content": "Schiebetür-Reparatur",
+    "doc_type": "projekt_kategorie",
+    "text_type": "titel",
+    "keywords": [
+      "schiebetür",
+      "schiebetuer",
+      "fliegengitter",
+      "schiebt nicht",
+      "rahmen verzogen",
+      "faltschiebetür"
+    ],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396836"
+    },
+    "id": "45bd4f3f-54ac-4d6f-8b1b-d7c7948b8177",
+    "title": "Fenster",
+    "content": "Fenster-Reparatur",
+    "doc_type": "projekt_kategorie",
+    "text_type": "titel",
+    "keywords": [
+      "fenster",
+      "küchenfenster",
+      "schließt nicht",
+      "schliesst nicht",
+      "undicht",
+      "fensterflügel",
+      "fensterfluegel"
+    ],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396837"
+    },
+    "id": "a5775f52-dd65-4078-b793-393da015073f",
+    "title": "Haustür",
+    "content": "Haustür-Reparatur",
+    "doc_type": "projekt_kategorie",
+    "text_type": "titel",
+    "keywords": [
+      "haustür",
+      "haustuer",
+      "eingangstür",
+      "eingangstuer",
+      "schloss",
+      "einbruch",
+      "wohnungstür",
+      "wohnungstuer"
+    ],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396838"
+    },
+    "id": "f3d679e2-dd63-47a5-bc45-97fabc38446c",
+    "title": "Innentür",
+    "content": "Innentür-Reparatur",
+    "doc_type": "projekt_kategorie",
+    "text_type": "titel",
+    "keywords": [
+      "innentür",
+      "innentuer",
+      "zimmertür",
+      "zimmertuer",
+      "zarge",
+      "türblatt",
+      "tuerblatt",
+      "schleift"
+    ],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396839"
+    },
+    "id": "5c571505-e70c-46a8-88e6-dd6b6adb5ecc",
+    "title": "Terrassentür",
+    "content": "Terrassentür-Reparatur",
+    "doc_type": "projekt_kategorie",
+    "text_type": "titel",
+    "keywords": [
+      "terrassentür",
+      "terrassentuer",
+      "balkontür",
+      "balkontuer",
+      "hebeschiebetür"
+    ],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f15839683a"
+    },
+    "id": "cba6b235-e39b-4373-9904-d1e8aa546cce",
+    "title": "Sonstiges",
+    "content": "",
+    "doc_type": "projekt_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f15839683b"
+    },
+    "id": "80d38927-f3e1-4eb0-8acb-82a37f26dceb",
+    "title": "Anfrage",
+    "content": "",
+    "doc_type": "projekt_status",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f15839683c"
+    },
+    "id": "60b88ce4-017e-4dc4-b679-288533b2f65d",
+    "title": "In Bearbeitung",
+    "content": "",
+    "doc_type": "projekt_status",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f15839683d"
+    },
+    "id": "0214a312-f102-4c81-b8f2-175725668175",
+    "title": "Abgeschlossen",
+    "content": "",
+    "doc_type": "projekt_status",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f15839683e"
+    },
+    "id": "70ac11cd-1f52-466e-9d0b-328f07f9da11",
+    "title": "Archiv",
+    "content": "",
+    "doc_type": "projekt_status",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f15839683f"
+    },
+    "id": "7a1986ef-0fdd-4eaa-aab0-f0d827a43eed",
+    "title": "vorher",
+    "content": "",
+    "doc_type": "projekt_bild_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396840"
+    },
+    "id": "abc8622c-e4a3-4000-9899-6e823ebaee49",
+    "title": "schaden",
+    "content": "",
+    "doc_type": "projekt_bild_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396841"
+    },
+    "id": "d11012f3-0e90-40c5-98bd-4f4b45b96854",
+    "title": "nachher",
+    "content": "",
+    "doc_type": "projekt_bild_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "69fdb5e0628a73f158396842"
+    },
+    "id": "3d4a9291-1120-4e86-8c85-9b3c193f574b",
+    "title": "sonstiges",
+    "content": "",
+    "doc_type": "projekt_bild_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-08T10:07:28.505622+00:00",
+    "updated_at": "2026-05-08T10:07:28.505622+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a017d0e41cad5f9f4fdf94e"
+    },
+    "id": "ca356808-c1ef-4e24-8b80-08694802422e",
+    "title": "Hebeschiebetür Holz",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T06:54:06.296961+00:00",
+    "updated_at": "2026-05-11T06:54:06.296968+00:00",
+    "parent_category": "Hebeschiebetür"
+  },
+  {
+    "_id": {
+      "$oid": "6a017d7941cad5f9f4fdf94f"
+    },
+    "id": "88cb1c6d-00eb-481a-b041-9692578f59ba",
+    "title": "Hebeschiebetür Kunstoff",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T06:55:53.390127+00:00",
+    "updated_at": "2026-05-11T06:55:53.390133+00:00",
+    "parent_category": "Hebeschiebetür"
+  },
+  {
+    "_id": {
+      "$oid": "6a017d8241cad5f9f4fdf950"
+    },
+    "id": "9c501279-122e-4c39-bc09-f0f488806247",
+    "title": "Hebeschiebetür Alu",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T06:56:02.662030+00:00",
+    "updated_at": "2026-05-11T06:56:02.662037+00:00",
+    "parent_category": "Hebeschiebetür"
+  },
+  {
+    "_id": {
+      "$oid": "6a017d8f41cad5f9f4fdf951"
+    },
+    "id": "fe2473f7-3eab-4ad7-bfb8-b317475c3b47",
+    "title": "PSK-Holz",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T06:56:15.248381+00:00",
+    "updated_at": "2026-05-11T06:56:15.248388+00:00",
+    "parent_category": "PSK"
+  },
+  {
+    "_id": {
+      "$oid": "6a017d9a41cad5f9f4fdf952"
+    },
+    "id": "b7c8dbb4-c661-41a1-85e6-a08001def8f1",
+    "title": "PSK Kunstoff",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T06:56:26.064475+00:00",
+    "updated_at": "2026-05-11T06:56:26.064481+00:00",
+    "parent_category": "PSK"
+  },
+  {
+    "_id": {
+      "$oid": "6a017da041cad5f9f4fdf953"
+    },
+    "id": "aef28f3e-4077-49d2-bca4-e7026974522e",
+    "title": "PSK Alu",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T06:56:32.948861+00:00",
+    "updated_at": "2026-05-11T06:56:32.948868+00:00",
+    "parent_category": "PSK"
+  },
+  {
+    "_id": {
+      "$oid": "6a018851a11c0bb1c94122e7"
+    },
+    "id": "853c1dec-9113-4952-92d0-b7043da91172",
+    "title": "Privat",
+    "content": "",
+    "doc_type": "kunden_typ",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T07:42:09.644650+00:00",
+    "updated_at": "2026-05-11T07:42:09.644650+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a018851a11c0bb1c94122e8"
+    },
+    "id": "a5d4c94f-0a9e-4ef6-a223-18e1b7f42591",
+    "title": "Firma",
+    "content": "",
+    "doc_type": "kunden_typ",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T07:42:09.644650+00:00",
+    "updated_at": "2026-05-11T07:42:09.644650+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a018851a11c0bb1c94122e9"
+    },
+    "id": "c0b56383-32d4-426c-a92f-8eaffef68c4f",
+    "title": "Vermieter",
+    "content": "",
+    "doc_type": "kunden_typ",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T07:42:09.644650+00:00",
+    "updated_at": "2026-05-11T07:42:09.644650+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a018851a11c0bb1c94122ea"
+    },
+    "id": "348643d9-ead4-4078-9299-4a26f0e33d36",
+    "title": "Mieter",
+    "content": "",
+    "doc_type": "kunden_typ",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T07:42:09.644650+00:00",
+    "updated_at": "2026-05-11T07:42:09.644650+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a018851a11c0bb1c94122eb"
+    },
+    "id": "c0872c1e-0690-4e86-86c9-88c2c712a80b",
+    "title": "Gewerblich",
+    "content": "",
+    "doc_type": "kunden_typ",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T07:42:09.644650+00:00",
+    "updated_at": "2026-05-11T07:42:09.644650+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a018851a11c0bb1c94122ec"
+    },
+    "id": "e77433df-4c76-4a4d-b84c-18bb10ef9dfd",
+    "title": "Hausverwaltung",
+    "content": "",
+    "doc_type": "kunden_typ",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-11T07:42:09.644650+00:00",
+    "updated_at": "2026-05-11T07:42:09.644650+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a02fd7969f6cc59711454a0"
+    },
+    "id": "c811989d-0eeb-44e1-82b3-cc471f32b091",
+    "title": "Haustür-Reparatur",
+    "content": "",
+    "doc_type": "projekt_titel",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-12T10:14:17.530327+00:00",
+    "updated_at": "2026-05-12T10:14:17.530333+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a030859ff349ad81951f762"
+    },
+    "id": "9dfba653-3f93-4fa3-ae25-d28acf1506cb",
+    "title": "Besichtigung",
+    "content": "inhalt",
+    "doc_type": "termin",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-12T11:00:41.574650+00:00",
+    "updated_at": "2026-05-12T11:00:41.574656+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a030adbff349ad81951f764"
+    },
+    "id": "60e01fb4-c8c2-47e9-828c-5c1374685224",
+    "title": "Besichtigung 1",
+    "content": "inhalt 1",
+    "doc_type": "termin",
+    "text_type": "titel",
+    "keywords": [
+      "Besichtigung"
+    ],
+    "created_at": "2026-05-12T11:11:23.692713+00:00",
+    "updated_at": "2026-05-12T11:11:23.692720+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a030bd9ff349ad81951f767"
+    },
+    "id": "d25ea57b-8a04-4c4c-86b9-de1b26a17462",
+    "title": "elvis besichtigung",
+    "content": "",
+    "doc_type": "termin_titel",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-12T11:15:37.188735+00:00",
+    "updated_at": "2026-05-12T11:15:37.188743+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a083c76ebf4b99f73876ef8"
+    },
+    "id": "1d5d705e-ad95-4841-8221-cc075e3b4eec",
+    "title": "Begrüßung + Bilder-Anfrage (Kopie)",
+    "content": "{anrede_brief},\n\nvielen Dank für Ihr Vertrauen und die Beauftragung unserer Tischlerei.\n\nDamit wir Ihren Auftrag optimal vorbereiten können, bitten wir Sie, uns über das Kundenportal einige Bilder der aktuellen Situation vor Ort hochzuladen (z.B. Tuer, Fenster, Raumsituation, Detailaufnahmen).\n\nSie können die Bilder einfach über den Upload-Button im Portal hochladen. So sparen wir uns gegenseitig Wege und können zuegig mit der Planung starten.\n\nVielen Dank und freundliche Gruesse\nIhre Tischlerei Graupner",
+    "doc_type": "kundenportal",
+    "text_type": "portal_nachricht",
+    "keywords": [],
+    "created_at": "2026-05-16T09:44:22.292730+00:00",
+    "updated_at": "2026-05-16T09:44:22.292737+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a085c69752a765fc39aed4e"
+    },
+    "id": "b266106e-41fc-40a4-b649-f06e2d5e29f1",
+    "title": "einrüsten",
+    "content": "einrüsten",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-16T12:00:41.648087+00:00",
+    "updated_at": "2026-05-16T12:00:41.648094+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a085d86752a765fc39aed4f"
+    },
+    "id": "eaccd1b3-bb3f-4c4f-9b61-b2fdf065ba77",
+    "title": "Einrüsten",
+    "content": "Einrüsten",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-16T12:05:26.261682+00:00",
+    "updated_at": "2026-05-16T12:05:26.261689+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a085dde752a765fc39aed50"
+    },
+    "id": "e30e8284-082c-433d-a597-4a9a82b75156",
+    "title": "Einrüstkosten",
+    "content": "Einrüstkosten",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-16T12:06:54.487347+00:00",
+    "updated_at": "2026-05-16T12:06:54.487355+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a085e0b752a765fc39aed51"
+    },
+    "id": "0fddf500-2f46-4878-87a8-ee5deb116c51",
+    "title": "Dichtungsarbeiten",
+    "content": "Dichtungsarbeiten",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-16T12:07:39.796869+00:00",
+    "updated_at": "2026-05-16T12:07:39.796876+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a095611a079dbbe7f8ea9b8"
+    },
+    "id": "0df808b5-c8af-494f-9ecb-c82d6d53da04",
+    "title": "Terrassenelement fachgerecht rep.",
+    "content": "Terrassenelement fachgerecht rep.",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-17T05:45:53.865314+00:00",
+    "updated_at": "2026-05-17T05:45:53.865320+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a095633a079dbbe7f8ea9b9"
+    },
+    "id": "d199f97d-1551-4869-80c4-60a3f90c8467",
+    "title": "Entsorgungskosten",
+    "content": "Entsorgungskosten",
+    "doc_type": "allgemein",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-17T05:46:27.930240+00:00",
+    "updated_at": "2026-05-17T05:46:27.930247+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a09fb68d79d08c8ec56f472"
+    },
+    "id": "f10469ca-14ec-4a0c-9976-c59824be8eab",
+    "title": "Haben Sie noch Fragen zu diesem Angebot?...",
+    "content": "Haben Sie noch Fragen zu diesem Angebot? Wir beantworten sie gern!\nSie erreichen uns täglich von 7 bis 17 Uhr unter der Telefonnummer 01515 7437 305 +49 40 555 6 77 44\n\nBei Auftragserteilung erfolgt eine Vorauszahlung in Höhe von 0,00 € Euro.\n\nSelbstverständlich nehmen wir unter dieser Nummer auch Ihre Bestellung entgegen.\n\nDieses Angebot ist 30 Tage gültig. Wir würden uns freuen, den Auftrag für Sie ausführen zu dürfen.\n\nMit freundlichen Grüßen\nTischlerei Graupner",
+    "doc_type": "angebot",
+    "text_type": "schlusstext",
+    "keywords": [],
+    "created_at": "2026-05-17T17:31:20.997949+00:00",
+    "updated_at": "2026-05-17T17:31:20.997956+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a0aad08864fdf5db8e32b5c"
+    },
+    "id": "41572cd1-616c-4b4d-8718-33a5863743b2",
+    "title": "er soll singen",
+    "content": "",
+    "doc_type": "termin_titel",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-18T06:09:12.498352+00:00",
+    "updated_at": "2026-05-18T06:09:12.498359+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1016cab45bd1d0114bfac1"
+    },
+    "id": "e07cf505-1363-4839-ac18-e0d833972ed3",
+    "title": "Reparatur Einsatz",
+    "content": "",
+    "doc_type": "einsatz_betreff",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-22T08:41:46.464847+00:00",
+    "updated_at": "2026-05-22T08:41:46.464854+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a101c24077d039b7d1d2880"
+    },
+    "id": "b55b64a8-4d69-40e8-82aa-08a6e250f1ef",
+    "title": "Restarbeiten Fertigstellung",
+    "content": "",
+    "doc_type": "einsatz_betreff",
+    "text_type": "titel",
+    "keywords": [],
+    "created_at": "2026-05-22T09:04:36.472651+00:00",
+    "updated_at": "2026-05-22T09:04:36.472658+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a18aadb3058fabe6c76f28e"
+    },
+    "id": "c0144060-03f0-4162-991a-a3093ed81d62",
+    "title": "Fensterwartung",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "parent_category": "Fenster",
+    "created_at": "2026-05-28T20:51:39.017095+00:00",
+    "updated_at": "2026-05-28T20:51:52.852133+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a18ab053058fabe6c76f28f"
+    },
+    "id": "32ea2bdc-d4da-43e3-b48d-b8d154eba022",
+    "title": "Abdichten",
+    "content": "",
+    "doc_type": "kunden_kategorie",
+    "text_type": "titel",
+    "keywords": [],
+    "parent_category": "Fenster",
+    "created_at": "2026-05-28T20:52:21.578937+00:00",
+    "updated_at": "2026-05-28T20:52:25.835120+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4ad41e46aae1679fb85e"
+    },
+    "id": "fb763e2d-2c36-4dc7-bd28-f2b1eebe33e1",
+    "title": "Projekt anlegen",
+    "content": "1. Aus der Kundenansicht: '+ Neues Projekt' öffnet ein Popup oder ein Modal.\n2. Titel und Kategorie sind Pflichtfelder.\n3. Status (z.B. 'In Planung') über das Status-Dropdown setzen.\n4. Speichern legt das Projekt direkt unter dem Kunden ab.",
+    "doc_type": "hilfe_projekte",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:00.414973+00:00",
+    "updated_at": "2026-05-31T14:51:00.414980+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4ad41e46aae1679fb85f"
+    },
+    "id": "d75f894f-64fb-42b7-be19-ac0ae72de02d",
+    "title": "Aufgaben einem Projekt zuordnen",
+    "content": "1. Projekt-Werkbank des Kunden öffnen (Folder-Icon).\n2. Auf der Werkbank gibt es ein Aufgaben-Panel pro Projekt.\n3. Mit '+ Neu' eine Aufgabe anlegen. Sie wird automatisch mit projekt_id verknüpft.\n4. Die Aufgabe erscheint sowohl beim Projekt als auch beim Kunden.",
+    "doc_type": "hilfe_projekte",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:00.654987+00:00",
+    "updated_at": "2026-05-31T14:51:00.654995+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4ad41e46aae1679fb860"
+    },
+    "id": "7ab1f70d-e899-404c-80ad-32fc70625ebd",
+    "title": "Projekt mit Aufgaben/Terminen verknüpfen",
+    "content": "1. Aufgaben tragen projekt_id UND kunde_id - sie sind in beiden Listen sichtbar.\n2. Termine können entweder direkt auf einem Kunden oder auf einem Projekt hängen.\n3. Im Termin-Modul kann beim Anlegen das Projekt gewählt werden - kunde_id wird automatisch gesetzt.\n4. Wenn du nichts findest: prüfe ob Status-Filter aktiv ist (z.B. nur 'Offen').",
+    "doc_type": "hilfe_projekte",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:00.937597+00:00",
+    "updated_at": "2026-05-31T14:51:00.937605+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4aef1e46aae1679fb861"
+    },
+    "id": "a7694359-344a-40b7-8ad0-0ae51bea5e01",
+    "title": "Aufgabe anlegen",
+    "content": "1. Im Aufgaben-Modul: oben rechts auf '+ Neu' klicken.\n2. Im AufgabenPanel (in Kunde oder Projekt) ebenfalls '+ Neu'.\n3. Titel ist Pflichtfeld. Beschreibung optional.\n4. Priorität (niedrig/normal/hoch), Fälligkeitsdatum und Zuweisung setzen.\n5. Kategorie wird aus den Textvorlagen geladen.",
+    "doc_type": "hilfe_aufgaben",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:27.134631+00:00",
+    "updated_at": "2026-05-31T14:51:27.134641+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4aef1e46aae1679fb862"
+    },
+    "id": "0f73fbf6-c6c0-408c-9203-3fff1bae7db6",
+    "title": "Aufgabe bearbeiten",
+    "content": "1. KLICK AUF DIE ZEILE öffnet direkt den Bearbeiten-Dialog.\n2. Stift-Icon rechts macht dasselbe.\n3. Status-Dropdown in der Zeile ändert den Status sofort ohne Dialog.\n4. Mülleimer-Icon löscht (mit Sicherheitsabfrage).",
+    "doc_type": "hilfe_aufgaben",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:27.947029+00:00",
+    "updated_at": "2026-05-31T14:51:27.947039+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4af01e46aae1679fb863"
+    },
+    "id": "88d35e19-aecc-4b65-8eae-453bd2f3db22",
+    "title": "Wie Aufgaben und Projekte verbunden sind",
+    "content": "1. Jede Aufgabe kann an einen Kunden ODER ein Projekt ODER beides gebunden sein.\n2. Eine Aufgabe mit projekt_id erbt automatisch die kunde_id des Projekts.\n3. Im AufgabenPanel siehst du nur die Aufgaben des aktuellen Kontextes.\n4. Im Modul Aufgaben siehst du alle - mit Filter-Optionen.",
+    "doc_type": "hilfe_aufgaben",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:28.822074+00:00",
+    "updated_at": "2026-05-31T14:51:28.822083+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4afa1e46aae1679fb864"
+    },
+    "id": "5ee322b5-b5ad-4c96-bb6f-0be25c614a9f",
+    "title": "Neuen Kunden anlegen",
+    "content": "1. Oben rechts auf 'Neuer Kunde' klicken.\n2. Anrede, Vor- und Nachname (oder Firma) eintragen.\n3. E-Mail und Telefon sind optional, helfen aber bei der Kommunikation.\n4. Status (z.B. 'Anfrage', 'Kunde', 'Auftrag') zuweisen.\n5. Speichern. Der Kunde erscheint sofort oben in der Liste.",
+    "doc_type": "hilfe_kunden",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:38.456654+00:00",
+    "updated_at": "2026-05-31T14:51:38.456662+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4afa1e46aae1679fb865"
+    },
+    "id": "bf3aec6d-05b3-4eb0-b4e5-9eea807d17b2",
+    "title": "Kunden filtern und finden",
+    "content": "1. Volltext-Suche oben durchsucht Name, Firma, E-Mail und Nachricht.\n2. Kategorien-Leiste filtert nach Geschäftsfeld.\n3. Status-Leiste zeigt 'Aktiv' (alle Live-Stati) oder einzelne Stati.\n4. URL-Parameter ?filter=anfragen|aktiv|archiv funktionieren für Schnellzugriff.",
+    "doc_type": "hilfe_kunden",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:38.770467+00:00",
+    "updated_at": "2026-05-31T14:51:38.770476+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1c4afa1e46aae1679fb866"
+    },
+    "id": "e7aa5771-3d38-4834-a0ff-183ae3211eab",
+    "title": "Aktionen aus der Kundenansicht",
+    "content": "1. Zeile aufklappen mit Klick auf die Karte.\n2. 'Neues Projekt' öffnet die Projekt-Werkbank für diesen Kunden.\n3. 'Angebot erstellen' öffnet den WYSIWYG-Editor mit vorbelegtem Kunden.\n4. 'Kundenportal öffnen / anlegen' verlinkt zur Portalseite.\n5. 'Mailverlauf' zeigt alle IMAP-Mails von/an diesen Kunden.",
+    "doc_type": "hilfe_kunden",
+    "text_type": "hilfe",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-05-31T14:51:38.998746+00:00",
+    "updated_at": "2026-05-31T14:51:38.998753+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a1ee9dcbf68f7b848877f36"
+    },
+    "id": "5f9384d2-6afd-427b-966c-b51d5112f847",
+    "title": "Hebeschiebetür fachgerecht reparieren",
+    "content": "",
+    "doc_type": "projekt_titel",
+    "text_type": "titel",
+    "keywords": [],
+    "parent_category": null,
+    "created_at": "2026-06-02T14:34:04.833758+00:00",
+    "updated_at": "2026-06-02T14:35:22.096247+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2068c15a68c243eec97c81"
+    },
+    "id": "7f1bd330-0e52-4502-8592-2bdbc77b822b",
+    "title": "§35a Lohnanteil",
+    "content": "Steuerbonus Handwerkerleistung § 35a EStG (unser Text):\nEnthalten ist ein Lohnanteil von € {lohn_netto} zuzüglich {mwst_satz} MwSt. (= € {lohn_mwst}). Dies ergibt eine Gesamt-Lohnsumme von € {lohn_brutto}.\n20 % der Arbeitskosten sind als Steuerermäßigung nach § 35a EStG abzugsfähig (max. 1.200 € pro Jahr).",
+    "doc_type": "allgemein",
+    "text_type": "bemerkung",
+    "sort_order": 0,
+    "created_at": "2026-06-03T17:47:45.720874+00:00",
+    "updated_at": "2026-06-03T23:44:52.057143+00:00",
+    "seeded": true
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd6759"
+    },
+    "id": "9233253f-0608-41cb-8064-1f60647e25bf",
+    "title": "Hebeschiebekipptuer (HSK)",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd675a"
+    },
+    "id": "c1029ad4-d507-47dc-a2b1-2ef906faa4f0",
+    "title": "Schiebetuer",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd675b"
+    },
+    "id": "6de7cfef-08e1-4294-9f1a-40942aabc8ab",
+    "title": "Fenster",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd675c"
+    },
+    "id": "d4f4bbae-e2f5-431f-99fa-413f488672c7",
+    "title": "Eingangstuer",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd675d"
+    },
+    "id": "ae6dca90-b336-4fde-aa45-49c169e2324c",
+    "title": "Innentuer",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd675e"
+    },
+    "id": "9a6be47c-ba06-4109-b51d-b92d18f55ea3",
+    "title": "Rolllaeden",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd675f"
+    },
+    "id": "ecc78a87-fcad-4a3d-b708-6dc4ad5923a1",
+    "title": "Sonstige Reparaturen",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  },
+  {
+    "_id": {
+      "$oid": "6a2aae7b8dc63087becd6760"
+    },
+    "id": "f31a4560-bd63-4b17-8872-a676ab2c49c8",
+    "title": "Neubau/Einbau",
+    "content": "",
+    "doc_type": "reparaturgruppe",
+    "text_type": "titel",
+    "created_at": "2026-06-11T12:47:55.227249+00:00",
+    "updated_at": "2026-06-11T12:47:55.227249+00:00"
+  }
+]

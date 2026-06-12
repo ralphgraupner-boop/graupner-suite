@@ -15,7 +15,16 @@
 
 **Frontend (additiv):** `QuickTerminDialog` (`TerminePanel.jsx`) um Projektauswahl erweitert — analog zu `QuickAufgabeDialog`: bei Kundenbezug ohne Projekt (`showProjektPicker`) wird ein Projekt-Select geladen (`/module-projekte/?kunde_id=`), Speichern ohne Projekt blockiert. In `WolkeAktionen` wird `kunde_id` nun auch an Termin durchgereicht. Verifiziert (Screenshot): Projekt-Pflichtfeld erscheint, Speichern ohne Projekt blockiert, nach Projektwahl gespeichert ✅.
 
-## 📌 12.06.2026 — „+ Neu Projekt"-Button im Termin-Schnelldialog
+## 📌 12.06.2026 — Wartung-Tab: „Umlaute reparieren"-Button
+
+**Backend** (`routes/settings.py`): neuer Endpoint `POST /api/settings/wartung/umlaute-reparieren`. Erstellt VOR jeder Schreiboperation einen vollständigen JSON-Snapshot der betroffenen Collections (`/app/backend/snapshots/umlaute_<ts>/`), repariert dann Mojibake-Umlaute in `module_textvorlagen` (Textvorlagen) und `module_artikel` (Leistungen + Materialien, Feld `typ`). Gibt Snapshot-Pfad + Liste der geänderten Felder (alt→neu) zurück. `apply=false` = Dry-Run.
+
+**Frontend** (`SettingsPage.jsx`): neuer Tab „Wartung" mit `WartungTab` — Button „Umlaute reparieren" (Bestätigung → Aufruf → Ergebnisliste mit Snapshot-Pfad). Verifiziert (Screenshot): Tab + Button funktionieren, Snapshot erstellt, Ergebnis „0 Feld(er) – alles bereits sauber" (Preview ist sauber) ✅. Snapshot-Dateien bestätigt.
+
+## 📌 12.06.2026 — Befund Umlaute (Preview sauber)
+Vollscan Preview-DB: 0 Mojibake in `module_textvorlagen`/`module_artikel`/gesamter DB. Leistungen+Materialien liegen in `module_artikel` (Feld `typ`). Die 12 kaputten Umlaute liegen auf LIVE (kein Agent-Zugriff) — dort kann Ralph künftig denselben Wartung-Button nutzen.
+
+
 
 **Frontend (additiv):** `QuickTerminDialog` zeigt jetzt einen „+ Neu"-Button neben dem Projekt-Select (bzw. „+ Projekt jetzt anlegen", wenn der Kunde noch kein Projekt hat) → öffnet den bestehenden `NewProjektDialog`; das neu angelegte Projekt wird sofort übernommen und ausgewählt. Verifiziert (Screenshot): Button öffnet „Neues Projekt für Kunde"-Dialog ✅. Kompiliert sauber ✅.
 
