@@ -19,7 +19,7 @@
 
 **Backend** (`routes/settings.py`): neuer Endpoint `POST /api/settings/wartung/umlaute-reparieren`. Erstellt VOR jeder Schreiboperation einen vollständigen JSON-Snapshot der betroffenen Collections (`/app/backend/snapshots/umlaute_<ts>/`), repariert dann Mojibake-Umlaute in `module_textvorlagen` (Textvorlagen) und `module_artikel` (Leistungen + Materialien, Feld `typ`). Gibt Snapshot-Pfad + Liste der geänderten Felder (alt→neu) zurück. `apply=false` = Dry-Run.
 
-**Frontend** (`SettingsPage.jsx`): neuer Tab „Wartung" mit `WartungTab` — Button „Umlaute reparieren" (Bestätigung → Aufruf → Ergebnisliste mit Snapshot-Pfad). Verifiziert (Screenshot): Tab + Button funktionieren, Snapshot erstellt, Ergebnis „0 Feld(er) – alles bereits sauber" (Preview ist sauber) ✅. Snapshot-Dateien bestätigt.
+**Frontend** (`SettingsPage.jsx`): neuer Tab „Wartung" mit `WartungTab` — zwei Buttons: „Nur prüfen (Vorschau)" (Dry-Run, `apply=false`, kein Snapshot, nur Liste) und „Umlaute reparieren" (Bestätigung → Snapshot → Schreiben). Dry-Run verifiziert (curl: `applied=false`, kein neuer Snapshot; Screenshot: „Vorschau: 0 Feld(er) würden geändert") ✅. Endpoint-Pfad: `/api/wartung/umlaute-reparieren` (Settings-Router hängt Routen direkt unter `/api`).
 
 ## 📌 12.06.2026 — Befund Umlaute (Preview sauber)
 Vollscan Preview-DB: 0 Mojibake in `module_textvorlagen`/`module_artikel`/gesamter DB. Leistungen+Materialien liegen in `module_artikel` (Feld `typ`). Die 12 kaputten Umlaute liegen auf LIVE (kein Agent-Zugriff) — dort kann Ralph künftig denselben Wartung-Button nutzen.

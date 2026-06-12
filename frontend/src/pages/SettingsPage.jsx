@@ -76,15 +76,16 @@ const WartungTab = () => {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
 
-  const run = async () => {
-    if (!window.confirm(
+  const run = async (apply) => {
+    if (apply && !window.confirm(
       "Umlaute in Textvorlagen, Leistungen & Materialien reparieren?\n\nVorher wird automatisch ein vollständiger DB-Snapshot der betroffenen Collections erstellt."
     )) return;
     setRunning(true);
     try {
-      const res = await api.post("/wartung/umlaute-reparieren");
+      const res = await api.post(`/wartung/umlaute-reparieren?apply=${apply}`);
       setResult(res.data);
-      toast.success(`${res.data.total_changed} Feld(er) repariert`);
+      if (apply) toast.success(`${res.data.total_changed} Feld(er) repariert`);
+      else toast.info(`Vorschau: ${res.data.total_changed} Feld(er) würden geändert`);
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Fehler bei der Reparatur");
     } finally {
@@ -104,24 +105,40 @@ const WartungTab = () => {
           automatisch ein vollständiger DB-Snapshot der betroffenen Collections
           (<code>module_textvorlagen</code>, <code>module_artikel</code>) gespeichert.
         </p>
-        <button
-          onClick={run}
-          disabled={running}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          data-testid="wartung-umlaute-btn"
-        >
-          <Wrench className="w-4 h-4" />
-          {running ? "Repariere…" : "Umlaute reparieren"}
-        </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => run(false)}
+            disabled={running}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent disabled:opacity-50"
+            data-testid="wartung-umlaute-pruefen-btn"
+          >
+            {running ? "Prüfe…" : "Nur prüfen (Vorschau)"}
+          </button>
+          <button
+            onClick={() => run(true)}
+            disabled={running}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            data-testid="wartung-umlaute-btn"
+          >
+            <Wrench className="w-4 h-4" />
+            {running ? "Repariere…" : "Umlaute reparieren"}
+          </button>
+        </div>
       </div>
 
       {result && (
         <div className="bg-background border rounded-lg p-5" data-testid="wartung-result">
           <p className="text-sm">
-            <span className="font-semibold">{result.total_changed}</span> Feld(er) korrigiert
+            {result.applied ? (
+              <><span className="font-semibold">{result.total_changed}</span> Feld(er) korrigiert</>
+            ) : (
+              <>Vorschau: <span className="font-semibold">{result.total_changed}</span> Feld(er) würden geändert (nichts geschrieben)</>
+            )}
             {result.total_changed === 0 && " – alles bereits sauber."}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">Snapshot: <code>{result.snapshot_dir}</code></p>
+          {result.applied && result.snapshot_dir && (
+            <p className="text-xs text-muted-foreground mt-1">Snapshot: <code>{result.snapshot_dir}</code></p>
+          )}
           {result.changes?.length > 0 && (
             <div className="mt-3 max-h-80 overflow-y-auto border rounded-sm divide-y">
               {result.changes.map((c, i) => (

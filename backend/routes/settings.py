@@ -249,17 +249,20 @@ async def wartung_umlaute_reparieren(apply: bool = True):
     from datetime import datetime, timezone
     from bson import json_util
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    snapshot_dir = os.path.join("/app/backend/snapshots", f"umlaute_{ts}")
-    os.makedirs(snapshot_dir, exist_ok=True)
+    snapshot_dir = None
+    if apply:
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        snapshot_dir = os.path.join("/app/backend/snapshots", f"umlaute_{ts}")
+        os.makedirs(snapshot_dir, exist_ok=True)
 
     changes = []
     for col_name in _UMLAUT_COLLECTIONS:
         col = db[col_name]
         docs = await col.find({}).to_list(length=None)
-        # Vollstaendiger Snapshot (restaurierbar) VOR jeder Aenderung
-        with open(os.path.join(snapshot_dir, f"{col_name}.json"), "w", encoding="utf-8") as fh:
-            fh.write(json_util.dumps(docs, ensure_ascii=False, indent=2))
+        # Vollstaendiger Snapshot (restaurierbar) VOR jeder Aenderung – nur beim echten Schreiben
+        if apply:
+            with open(os.path.join(snapshot_dir, f"{col_name}.json"), "w", encoding="utf-8") as fh:
+                fh.write(json_util.dumps(docs, ensure_ascii=False, indent=2))
         for doc in docs:
             for field, value in doc.items():
                 if field in ("_id", "id"):
