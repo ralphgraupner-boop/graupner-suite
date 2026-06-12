@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { TerminSendDialog } from "@/components/TerminSendDialog";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
+import { NewProjektDialog } from "@/components/NewProjektDialog";
 import { makeGoogleCalendarLink } from "@/lib/gcalLink";
 
 const STATUS = {
@@ -285,6 +286,7 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
   const showProjektPicker = !!kunde_id && !projekt_id;
   const [projekte, setProjekte] = useState([]);
   const [projekteLoading, setProjekteLoading] = useState(false);
+  const [showNewProjekt, setShowNewProjekt] = useState(false);
   useEffect(() => {
     if (!showProjektPicker) return;
     let cancelled = false;
@@ -324,6 +326,7 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="termin-quick-dialog">
       <div className="bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
@@ -371,21 +374,39 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
               {projekteLoading ? (
                 <p className="text-xs text-muted-foreground">Lade Projekte…</p>
               ) : projekte.length === 0 ? (
-                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2">
-                  Kein Projekt für diesen Kunden vorhanden. Bitte zuerst ein Projekt anlegen.
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2 flex items-center justify-between gap-2">
+                  <span>Kein Projekt für diesen Kunden vorhanden.</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProjekt(true)}
+                    className="px-2 py-1 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 whitespace-nowrap"
+                    data-testid="quick-termin-btn-new-projekt-empty"
+                  >
+                    + Projekt jetzt anlegen
+                  </button>
                 </div>
               ) : (
-                <select
-                  value={data.projekt_id}
-                  onChange={(e) => upd("projekt_id", e.target.value)}
-                  className="w-full border rounded-sm p-2 text-sm"
-                  data-testid="quick-termin-select-projekt"
-                >
-                  <option value="">— bitte wählen —</option>
-                  {projekte.map(p => (
-                    <option key={p.id} value={p.id}>{p.titel || p.name || p.id}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={data.projekt_id}
+                    onChange={(e) => upd("projekt_id", e.target.value)}
+                    className="w-full border rounded-sm p-2 text-sm"
+                    data-testid="quick-termin-select-projekt"
+                  >
+                    <option value="">— bitte wählen —</option>
+                    {projekte.map(p => (
+                      <option key={p.id} value={p.id}>{p.titel || p.name || p.id}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProjekt(true)}
+                    className="text-xs px-2 py-2 border rounded-sm hover:bg-muted whitespace-nowrap"
+                    data-testid="quick-termin-btn-new-projekt"
+                  >
+                    + Neu
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -456,6 +477,20 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
         </div>
       </div>
     </div>
+    {showNewProjekt && (
+      <NewProjektDialog
+        kundeId={kunde_id}
+        onClose={() => setShowNewProjekt(false)}
+        onCreated={(p) => {
+          setShowNewProjekt(false);
+          if (p?.id) {
+            setProjekte(list => [p, ...list.filter(x => x.id !== p.id)]);
+            upd("projekt_id", p.id);
+          }
+        }}
+      />
+    )}
+    </>
   );
 };
 

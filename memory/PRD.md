@@ -15,6 +15,10 @@
 
 **Frontend (additiv):** `QuickTerminDialog` (`TerminePanel.jsx`) um Projektauswahl erweitert — analog zu `QuickAufgabeDialog`: bei Kundenbezug ohne Projekt (`showProjektPicker`) wird ein Projekt-Select geladen (`/module-projekte/?kunde_id=`), Speichern ohne Projekt blockiert. In `WolkeAktionen` wird `kunde_id` nun auch an Termin durchgereicht. Verifiziert (Screenshot): Projekt-Pflichtfeld erscheint, Speichern ohne Projekt blockiert, nach Projektwahl gespeichert ✅.
 
+## 📌 12.06.2026 — „+ Neu Projekt"-Button im Termin-Schnelldialog
+
+**Frontend (additiv):** `QuickTerminDialog` zeigt jetzt einen „+ Neu"-Button neben dem Projekt-Select (bzw. „+ Projekt jetzt anlegen", wenn der Kunde noch kein Projekt hat) → öffnet den bestehenden `NewProjektDialog`; das neu angelegte Projekt wird sofort übernommen und ausgewählt. Verifiziert (Screenshot): Button öffnet „Neues Projekt für Kunde"-Dialog ✅. Kompiliert sauber ✅.
+
 
 
 
