@@ -119,7 +119,7 @@ const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete, onNavigate }) => {
   );
 };
 
-const WolkeNeuForm = ({ mitarbeiter, onSent }) => {
+const WolkeNeuForm = ({ mitarbeiter, onSent, onKundeChange }) => {
   const [empfaengerId, setEmpfaengerId] = useState("");
   const [type, setType] = useState("aufgabe");
   const [text, setText] = useState("");
@@ -154,7 +154,7 @@ const WolkeNeuForm = ({ mitarbeiter, onSent }) => {
       });
       const banner = `${type === "aufgabe" ? "Aufgabe" : "Memo"} an ${empf?.name || "Empfänger"} verschickt`;
       toast.success(banner);
-      setText(""); setKundeId(""); setKundeLabel(""); setKundeSuche("");
+      setText(""); setKundeId(""); setKundeLabel(""); setKundeSuche(""); onKundeChange?.(null);
       onSent && onSent(banner);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Senden fehlgeschlagen");
@@ -207,7 +207,7 @@ const WolkeNeuForm = ({ mitarbeiter, onSent }) => {
         {kundeId ? (
           <div className="mt-1 flex items-center justify-between px-3 py-2 rounded-lg border bg-muted text-sm">
             <span>📎 {kundeLabel}</span>
-            <button onClick={() => { setKundeId(""); setKundeLabel(""); setKundeSuche(""); }} className="text-xs text-red-600">Entfernen</button>
+            <button onClick={() => { setKundeId(""); setKundeLabel(""); setKundeSuche(""); onKundeChange?.(null); }} className="text-xs text-red-600">Entfernen</button>
           </div>
         ) : (
           <div className="relative">
@@ -226,7 +226,7 @@ const WolkeNeuForm = ({ mitarbeiter, onSent }) => {
                     <button
                       key={k.id}
                       type="button"
-                      onClick={() => { setKundeId(k.id); setKundeLabel(label); setKundenTreffer([]); }}
+                      onClick={() => { setKundeId(k.id); setKundeLabel(label); setKundenTreffer([]); onKundeChange?.({ id: k.id, label }); }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
                     >
                       {label}
@@ -275,6 +275,7 @@ export const WolkePopover = () => {
   const [gesendet, setGesendet] = useState([]);
   const [mitarbeiter, setMitarbeiter] = useState([]);
   const [banner, setBanner] = useState("");
+  const [neuKunde, setNeuKunde] = useState(null);
 
   const reloadCount = useCallback(async () => {
     try {
@@ -434,9 +435,10 @@ export const WolkePopover = () => {
               )}
               {tab === "neu" && (
                 <>
-                <WolkeAktionen onCreated={() => { reloadListen(); reloadCount(); }} />
+                <WolkeAktionen onCreated={() => { reloadListen(); reloadCount(); }} kunde={neuKunde} />
                 <WolkeNeuForm
                   mitarbeiter={mitarbeiter}
+                  onKundeChange={setNeuKunde}
                   onSent={async (bannerText) => {
                     setBanner(bannerText || "Wolke verschickt");
                     setTab("gesendet");

@@ -27,7 +27,7 @@ const AKTIONEN = [
   { id: "notiz", label: "Notiz", icon: StickyNote, color: "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100" },
 ];
 
-export const WolkeAktionen = ({ onCreated }) => {
+export const WolkeAktionen = ({ onCreated, kunde }) => {
   const [aktion, setAktion] = useState(null);
 
   // Einsatz: Kunden-Auswahl davor (EinsatzModal braucht zwingend einen Kunden)
@@ -99,8 +99,8 @@ export const WolkeAktionen = ({ onCreated }) => {
       </div>
       <div className="my-3 border-t" />
 
-      {/* Einsatz: Kunden-Picker → EinsatzModal */}
-      {aktion === "einsatz" && !einsatzKundeId && (
+      {/* Einsatz: bei vorgewähltem Kunden Picker überspringen, sonst Kunden-Auswahl */}
+      {aktion === "einsatz" && !einsatzKundeId && !kunde?.id && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40" onClick={reset}>
           <div className="bg-background rounded-lg shadow-2xl border w-full max-w-sm flex flex-col max-h-[70vh]" onClick={(e) => e.stopPropagation()} data-testid="wolke-einsatz-picker">
             <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -142,13 +142,13 @@ export const WolkeAktionen = ({ onCreated }) => {
           </div>
         </div>
       )}
-      {aktion === "einsatz" && einsatzKundeId && (
-        <EinsatzModal open onClose={reset} onSaved={fertig} context={{ kundeId: einsatzKundeId }} />
+      {aktion === "einsatz" && (einsatzKundeId || kunde?.id) && (
+        <EinsatzModal open onClose={reset} onSaved={fertig} context={{ kundeId: einsatzKundeId || kunde.id }} />
       )}
 
-      {/* Aufgabe (bestehender Dialog, ohne Kunden-Bezug = Reminder) */}
+      {/* Aufgabe (bestehender Dialog; Kunde vorbelegt → Projektauswahl im Dialog) */}
       {aktion === "aufgabe" && (
-        <QuickAufgabeDialog kunde_id="" projekt_id="" mitarbeiter={[]} onClose={reset} onSaved={fertig} />
+        <QuickAufgabeDialog kunde_id={kunde?.id || ""} projekt_id="" mitarbeiter={[]} onClose={reset} onSaved={fertig} />
       )}
 
       {/* Termin (bestehender Dialog) */}

@@ -4,7 +4,14 @@
 > Stand: 02.06.2026
 
 
-## 📌 12.06.2026 — Wolke „+ Neu": Schnell-Aktionen (Einsatz/Aufgabe/Termin/Notiz)
+## 📌 12.06.2026 — Wolke „+ Neu": Kunde aus Formular automatisch vorbelegen
+
+**Frontend (additiv):** Gewählter Kunde im Wolke-„Neu"-Formular wird in `WolkePopover` hochgehoben (`onKundeChange`/`neuKunde`) und an `WolkeAktionen` als `kunde` übergeben:
+- **Neuer Einsatz** → Kunden-Picker wird übersprungen, `EinsatzModal` öffnet direkt mit vorbelegtem Kunden (Adresse/Projekt automatisch). Verifiziert (Screenshot) ✅.
+- **Neue Aufgabe** → `QuickAufgabeDialog` bekommt `kunde_id` vorbelegt (Projektauswahl im Dialog, da Backend Projekt verlangt).
+- **Termin:** bewusst NICHT vorbelegt — `QuickTerminDialog` hat keine Projektauswahl, Backend verlangt aber Projekt bei Kundenbezug (sonst 400). Sauberer Folge-Schritt: Projektauswahl im Termin-Schnelldialog ergänzen.
+
+
 
 **Frontend (additiv, kein Backend-Eingriff, Module-First — nur bestehende Module aufgerufen):**
 - Neu: `components/wolke/WolkeAktionen.jsx` — Button-Reihe im „+ Neu"-Tab der Wolke mit 4 Aktionen, erweiterbar:
