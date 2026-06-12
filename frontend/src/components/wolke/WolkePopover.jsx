@@ -11,6 +11,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
+import { WolkeAktionen } from "@/components/wolke/WolkeAktionen";
 import { Cloud, X, Send, Check, Trash2, Inbox, ArrowUpRight, Plus, User, Folder, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
@@ -432,6 +433,8 @@ export const WolkePopover = () => {
                   : gesendet.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="gesendet" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} onNavigate={openRecord} />)
               )}
               {tab === "neu" && (
+                <>
+                <WolkeAktionen onCreated={() => { reloadListen(); reloadCount(); }} />
                 <WolkeNeuForm
                   mitarbeiter={mitarbeiter}
                   onSent={async (bannerText) => {
@@ -441,6 +444,7 @@ export const WolkePopover = () => {
                     setTimeout(() => setBanner(""), 5000);
                   }}
                 />
+                </>
               )}
             </div>
           </div>

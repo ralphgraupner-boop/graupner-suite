@@ -4,6 +4,20 @@
 > Stand: 02.06.2026
 
 
+## 📌 12.06.2026 — Wolke „+ Neu": Schnell-Aktionen (Einsatz/Aufgabe/Termin/Notiz)
+
+**Frontend (additiv, kein Backend-Eingriff, Module-First — nur bestehende Module aufgerufen):**
+- Neu: `components/wolke/WolkeAktionen.jsx` — Button-Reihe im „+ Neu"-Tab der Wolke mit 4 Aktionen, erweiterbar:
+  - **Neuer Einsatz** → Kunden-Picker (`/modules/kunden/data?search=`) → bestehendes `EinsatzModal` (braucht kundeId).
+  - **Neue Aufgabe** → bestehender `QuickAufgabeDialog` (jetzt aus `AufgabenPanel.jsx` exportiert), ohne Kunden-Bezug = Reminder.
+  - **Neuer Termin** → bestehender `QuickTerminDialog` (jetzt aus `TerminePanel.jsx` exportiert).
+  - **Notiz** → einfaches Freitextfeld → POST `/module-feedback` (typ=idee).
+- `components/wolke/WolkePopover.jsx`: `<WolkeAktionen onCreated={reload}/>` über dem bestehenden „Wolke senden"-Formular eingebunden. Wolke-Kommunikationslogik unverändert.
+
+**Verifiziert (Screenshots):** alle 4 Buttons sichtbar; Aufgabe-, Termin-, Einsatz-Picker-Dialoge öffnen; Notiz real gespeichert (Toast „Notiz gespeichert") ✅. Frontend compiled ✅.
+
+
+
 ## 📌 12.06.2026 — „Alle übernehmen" (Mail-Anfragen) + Einsatz-Floating-Button
 
 **Aufgabe 1 — Mail-Anfragen „Alle übernehmen" (Frontend, kein Backend-Eingriff):**

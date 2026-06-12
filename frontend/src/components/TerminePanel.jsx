@@ -265,7 +265,7 @@ const toLocalInput = (s) => {
   } catch { return s.slice(0, 16); }
 };
 
-const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
+export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
   const isEdit = !!existing;
   const [data, setData] = useState({
     titel: existing?.titel || "",

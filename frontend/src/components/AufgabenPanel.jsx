@@ -202,7 +202,7 @@ export const AufgabenPanel = ({ kunde_id = "", projekt_id = "", title = "Aufgabe
   );
 };
 
-const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
+export const QuickAufgabeDialog = ({ existing, kunde_id, projekt_id, mitarbeiter, onClose, onSaved }) => {
   const isEdit = !!existing;
   // Tagesdatum (Hamburger/lokale Zeit) als Vorbelegung bei Neuanlage.
   const heuteISO = (() => {
