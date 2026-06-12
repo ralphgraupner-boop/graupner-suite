@@ -4,6 +4,16 @@
 > Stand: 02.06.2026
 
 
+## 📌 12.06.2026 — „Alle übernehmen" (Mail-Anfragen) + Einsatz-Floating-Button
+
+**Aufgabe 1 — Mail-Anfragen „Alle übernehmen" (Frontend, kein Backend-Eingriff):**
+- `pages/mail_inbox/ModuleMailInboxPage.jsx`: neuer grüner Button `btn-mail-accept-all` (nur Tab „Offen", wenn vorschlag-Einträge vorhanden). `acceptAll()` ruft je Eintrag den bestehenden `POST /module-mail-inbox/accept/{id}` auf; HTTP 409 (Doppel-Kunde) → übersprungen; Zusammenfassungs-Toast „X übernommen, Y Duplikate übersprungen". Verifiziert (Screenshot, Button sichtbar) ✅.
+
+**Aufgabe 2 — Einsatz-Floating-Button (Option b, Wolke unangetastet):**
+- Neu: `components/EinsatzFloatingButton.jsx` (global in `App.js`/MainLayout gemountet, oranges Werkzeug-Icon oberhalb der Wolke). Da `EinsatzModal` zwingend `context.kundeId` braucht, zeigt der Button zuerst einen Kunden-Picker (Suche `/modules/kunden/data?search=`), danach öffnet das bestehende `EinsatzModal` direkt — ohne Seitenwechsel. Wolken-Kommunikationsmodul bleibt unverändert. End-to-End verifiziert (Screenshot: Picker → EinsatzModal mit vorbelegtem Kunden/Adresse/Projekt) ✅.
+
+
+
 ## 📌 12.06.2026 — F1-Hilfe auf fehlende Module erweitert (bestehendes System)
 
 **Befund (Regel 13):** F1-Hilfe-System existiert bereits (`HelpSlideOver.jsx`, `lib/useF1Help.js`, `lib/helpContent.js`). KEIN Neubau — bestehendes System genutzt (Regel 4: keine Doppelung).
