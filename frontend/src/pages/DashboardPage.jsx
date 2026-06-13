@@ -109,11 +109,20 @@ const DashboardPage = () => {
   };
 
   const loadStats = async () => {
+    // Finanz-Statistiken nur fuer Admin/Buchhaltung. Monteure haben keinen Zugriff
+    // (/dashboard/stats liefert 403) und benoetigen sie auch nicht.
+    if (isMonteur) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await api.get("/dashboard/stats");
       setStats(res.data);
     } catch (err) {
-      toast.error("Fehler beim Laden der Statistiken");
+      // 403 (kein Zugriff) still ignorieren, kein Fehler-Toast
+      if (err?.response?.status !== 403) {
+        toast.error("Fehler beim Laden der Statistiken");
+      }
     } finally {
       setLoading(false);
     }

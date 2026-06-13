@@ -4,6 +4,19 @@
 > Stand: 02.06.2026
 
 
+## 📌 13.06.2026 — Dashboard Mobil Fix (403 für Mitarbeiter) [P0, erledigt]
+
+**Problem:** Monteur/Mitarbeiter-Rolle bekam 403 auf `GET /api/dashboard/stats`. Folge: Dashboard zeigte überall 0 + Fehler-Toast „Fehler beim Laden der Statistiken".
+
+**Fix (nur Frontend `frontend/src/pages/DashboardPage.jsx`, `loadStats()`):**
+- Aufruf von `/dashboard/stats` wird für `isMonteur` komplett übersprungen (kein 403-Request mehr).
+- Falls doch ein 403 auftritt: kein Fehler-Toast (nur ≠403 zeigt Toast).
+- Finanz-Kacheln bleiben wie bisher per `isAdmin`/`isBuchhaltung` gegated → Monteur sieht nur „Meine Aufgaben" + „Meine Termine".
+
+**Verifiziert (Screenshot, Login `Heike Bolanka`/mitarbeiter):** Dashboard lädt sauber, kein Fehler-Toast, keine Finanz-Kacheln, kein Crash. Kosten: 1 Credit.
+**Hinweis:** Bug existiert auf Live; Fix auf Preview → GitHub-Save + Redeploy durch Ralph nötig.
+
+
 ## 📌 13.06.2026 — Wolke: Löschen/Antworten/Archiv/Bestätigung/Pagination + Sprach-Vorbereitung
 
 **Backend `module_wolke/routes.py`:**
