@@ -26,6 +26,11 @@ const EinsaetzeModulPage = () => {
   const [statusFilter, setStatusFilter] = useState("aktiv");
   const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
+
+  // Beim Öffnen eines Einsatz-Datensatzes (Detail/Formular) nach oben scrollen
+  useEffect(() => {
+    if (selected || showForm) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [selected, showForm]);
   const [config, setConfig] = useState({ reparaturgruppen: [], materialien: [], bild_kategorien: [], prioritaeten: [] });
   const [mitarbeiter, setMitarbeiter] = useState([]);
   // Such-zuerst-Schema (Ralph 12.05.2026)

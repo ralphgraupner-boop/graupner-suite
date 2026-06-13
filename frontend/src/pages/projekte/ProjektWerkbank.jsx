@@ -57,6 +57,9 @@ const ProjektWerkbank = () => {
 
   useEffect(() => { load(); }, [kunde_id]);
 
+  // Beim Öffnen der Werkbank nach oben scrollen, damit der Datensatz voll sichtbar ist
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [kunde_id]);
+
   if (loading) return <div className="p-8 text-center text-muted-foreground">Lade…</div>;
   if (!data) return null;
 
