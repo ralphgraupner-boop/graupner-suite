@@ -110,6 +110,14 @@ const KundenModulPage = () => {
   const [openEdits, setOpenEdits] = useState([]); // mehrere "Kunde bearbeiten"-Fenster parallel
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+
+  // Nach Öffnen eines Datensatzes diesen oben in den sichtbaren Bereich scrollen
+  useEffect(() => {
+    if (!expandedId) return;
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-testid="kunden-modul-${expandedId}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [expandedId]);
   const [editingId, setEditingId] = useState(null);  // Inline-Bearbeiten: welcher Kunde gerade im Edit-Modus ist
   const [vcfUploading, setVcfUploading] = useState(false);
   const [vcfDuplicateDialog, setVcfDuplicateDialog] = useState(null);

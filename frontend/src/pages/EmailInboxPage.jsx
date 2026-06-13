@@ -11,6 +11,14 @@ const EmailInboxPage = () => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("alle");
   const [expandedId, setExpandedId] = useState(null);
+
+  // Nach Öffnen einer E-Mail diese oben in den sichtbaren Bereich scrollen
+  useEffect(() => {
+    if (!expandedId) return;
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-testid="inbox-mail-${expandedId}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [expandedId]);
   const [customers, setCustomers] = useState([]);
   const [assignDialog, setAssignDialog] = useState(null);
   const [customerSearch, setCustomerSearch] = useState("");

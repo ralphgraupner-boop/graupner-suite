@@ -13,6 +13,14 @@ const KontaktModulPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editContact, setEditContact] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+
+  // Nach Öffnen eines Kontakts diesen oben in den sichtbaren Bereich scrollen
+  useEffect(() => {
+    if (!expandedId) return;
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-testid="kontakt-${expandedId}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [expandedId]);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => { loadContacts(); }, []);
