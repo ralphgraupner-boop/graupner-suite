@@ -26,7 +26,7 @@ export const HelpToggle = () => {
       data-testid="btn-help-toggle"
       title={enabled ? "Hilfe-Modus ausschalten" : "Hilfe-Modus einschalten"}
       className={`
-        fixed bottom-24 lg:bottom-6 right-6 z-40
+        fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40
         w-14 h-14 rounded-full shadow-lg hover:shadow-xl
         flex items-center justify-center transition-all duration-200
         hover:scale-110 active:scale-95

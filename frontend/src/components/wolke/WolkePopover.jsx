@@ -461,7 +461,7 @@ export const WolkePopover = () => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed z-40 bottom-20 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full bg-sky-500 hover:bg-sky-600 text-white shadow-lg flex items-center justify-center"
+        className="fixed z-40 bottom-44 right-4 md:bottom-24 md:right-6 w-14 h-14 rounded-full bg-sky-500 hover:bg-sky-600 text-white shadow-lg flex items-center justify-center"
         data-testid="wolke-icon-button"
         title="Wolke öffnen"
       >
