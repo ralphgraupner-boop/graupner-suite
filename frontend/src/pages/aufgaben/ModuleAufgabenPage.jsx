@@ -633,10 +633,6 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, sel
 
   const save = async () => {
     if (!data.titel.trim()) { toast.error("Titel erforderlich"); return; }
-    if ((data.kunde_id || "").trim() && !(data.projekt_id || "").trim()) {
-      toast.error("Aufgaben mit Kundenbezug brauchen ein Projekt. Bitte oben ein Projekt wählen.");
-      return;
-    }
     setSaving(true);
     try {
       if (isEdit) {
@@ -709,12 +705,12 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, sel
             </div>
           )}
 
-          {/* Projekt-Auswahl: bei Kundenbezug erforderlich (Backend-Regel). Zeigt Projekte des gewählten Kunden. */}
-          {data.kunde_id && (
+          {/* Projekt-Auswahl: optional. Nur anzeigen, wenn der Kunde Projekte hat. */}
+          {data.kunde_id && Object.values(projekteMap).some(p => p.kunde_id === data.kunde_id) && (
             <div data-testid="aufgabe-projekt-wrap">
               <label className="block text-sm font-medium mb-1">
                 Projekt
-                <span className="text-xs text-muted-foreground font-normal"> · bei Kundenbezug erforderlich</span>
+                <span className="text-xs text-muted-foreground font-normal"> · optional</span>
               </label>
               <select
                 value={data.projekt_id || ""}
@@ -722,16 +718,13 @@ const AufgabeDialog = ({ aufgabe, meta, mitarbeiter, kundenMap, projekteMap, sel
                 className="w-full border rounded-sm p-2 text-sm"
                 data-testid="select-projekt"
               >
-                <option value="">— Projekt wählen —</option>
+                <option value="">— Kein Projekt —</option>
                 {Object.entries(projekteMap)
                   .filter(([, p]) => p.kunde_id === data.kunde_id)
                   .map(([id, p]) => (
                     <option key={id} value={id}>{p.titel || "(ohne Titel)"}</option>
                   ))}
               </select>
-              {Object.values(projekteMap).filter(p => p.kunde_id === data.kunde_id).length === 0 && (
-                <p className="text-xs text-amber-700 mt-1">Für diesen Kunden gibt es noch kein Projekt. Bitte zuerst ein Projekt anlegen.</p>
-              )}
             </div>
           )}
 

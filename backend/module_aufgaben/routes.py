@@ -266,10 +266,8 @@ async def create_aufgabe(payload: AufgabeCreate, user=Depends(get_current_user))
         raise HTTPException(400, "Titel darf nicht leer sein")
     _validate_enums(data)
     await _validate_kategorie_or_400(data)
-    # Regel: Wenn Kunde dranhaengt, muss auch ein Projekt dranhaengen.
-    # Reine Reminder ohne Kunde bleiben erlaubt.
-    if (data.get("kunde_id") or "").strip() and not (data.get("projekt_id") or "").strip():
-        raise HTTPException(400, "Aufgaben mit Kunden-Bezug müssen einem Projekt zugeordnet sein.")
+    # Projekt ist optional — auch Aufgaben mit Kundenbezug duerfen ohne Projekt
+    # gespeichert werden (Ralph 13.06.2026).
 
     now = datetime.now(timezone.utc).isoformat()
     item = {
@@ -326,11 +324,7 @@ async def update_aufgabe(aufgabe_id: str, payload: AufgabeUpdate, user=Depends(g
         update["erledigt_am"] = None
         update["erledigt_von"] = None
 
-    # Regel: Wenn nach dem Update ein kunde_id da ist, muss auch projekt_id da sein.
-    merged_kunde = update.get("kunde_id", existing.get("kunde_id", ""))
-    merged_projekt = update.get("projekt_id", existing.get("projekt_id", ""))
-    if (merged_kunde or "").strip() and not (merged_projekt or "").strip():
-        raise HTTPException(400, "Aufgaben mit Kunden-Bezug müssen einem Projekt zugeordnet sein.")
+    # Projekt ist optional — keine Pflichtbindung Kunde→Projekt mehr (Ralph 13.06.2026).
 
     await db.module_aufgaben.update_one({"id": aufgabe_id}, {"$set": update})
     return await db.module_aufgaben.find_one({"id": aufgabe_id}, {"_id": 0})
