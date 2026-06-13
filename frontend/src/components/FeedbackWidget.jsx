@@ -140,7 +140,7 @@ const FeedbackWidget = () => {
       {/* Floating Button — größer auf Mobile, Abstand zur iOS-Bottom-Bar */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-4 sm:bottom-4 sm:right-4 z-40 w-14 h-14 sm:w-12 sm:h-12 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 hover:scale-110 transition-transform flex items-center justify-center"
+        className="fixed bottom-20 right-4 md:bottom-4 md:right-6 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 hover:scale-110 transition-transform flex items-center justify-center"
         style={{ touchAction: "manipulation", marginBottom: "env(safe-area-inset-bottom)" }}
         data-testid="btn-feedback-open"
         title="Notizen / Bugs / Ideen"

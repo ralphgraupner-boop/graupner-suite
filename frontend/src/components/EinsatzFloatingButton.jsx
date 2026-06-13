@@ -49,7 +49,7 @@ export const EinsatzFloatingButton = () => {
       <button
         type="button"
         onClick={() => setPickerOpen(true)}
-        className="fixed z-40 bottom-64 right-4 md:bottom-44 md:right-6 w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg flex items-center justify-center"
+        className="fixed z-40 bottom-52 right-4 md:bottom-36 md:right-6 w-12 h-12 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg flex items-center justify-center"
         data-testid="einsatz-floating-button"
         title="Neuen Einsatz anlegen"
       >

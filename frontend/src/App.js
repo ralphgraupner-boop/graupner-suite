@@ -43,7 +43,6 @@ import AssistentPage from "@/pages/assistent/AssistentPage";
 import { ProjektDetail } from "@/pages/projekte/ProjektDetail";
 import { ProjektWerkbank } from "@/pages/projekte/ProjektWerkbank";
 import { HelpProvider } from "@/lib/helpContext";
-import { HelpToggle } from "@/components/HelpToggle";
 import { HelpSlideOver } from "@/components/HelpSlideOver";
 import { HealthBanner } from "@/components/HealthBanner";
 import FeedbackWidget from "@/components/FeedbackWidget";
@@ -59,7 +58,6 @@ const MainLayout = ({ children, onLogout }) => {
     <div className="min-h-screen bg-background">
       <Sidebar onLogout={onLogout} />
       <MobileNav onLogout={onLogout} />
-      <HelpToggle />
       <HelpSlideOver />
       <FeedbackWidget />
       <TrashStartupCheck />
