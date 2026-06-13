@@ -100,6 +100,9 @@ const ProjektWerkbank = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/module/kunden?edit=${kunde.id}`)} data-testid="btn-kundenuebersicht">
+              <UserIcon className="w-4 h-4" /> Kundenübersicht
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate(`/module/kunden?edit=${kunde.id}&returnTo=${encodeURIComponent(`/module/projekte/werkbank/${kunde.id}`)}`)} data-testid="btn-edit-kunde">
               <Edit className="w-4 h-4" /> Kunde bearbeiten
             </Button>

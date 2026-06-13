@@ -673,6 +673,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const handleExit = () => { setShowExitConfirm(true); };
   const handleExitWithSave = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
+  const handleExitWithSaveKunde = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/kunden?edit=${selectedCustomerId}` : listPaths[type]); };
+  const handleExitWithSaveProjekt = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
   const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(listPaths[type]); };
 
   const handleDownloadPDF = async () => {
@@ -1142,6 +1144,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
             <h3 className="text-lg font-semibold mb-2">Dokument beenden</h3>
             <p className="text-sm text-muted-foreground mb-6">Moechten Sie vor dem Beenden speichern?</p>
             <div className="flex flex-col gap-2">
+              <button onClick={handleExitWithSaveKunde} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" data-testid="btn-exit-save-kunde">
+                Speichern und zum Kunden
+              </button>
+              <button onClick={handleExitWithSaveProjekt} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" data-testid="btn-exit-save-projekt">
+                Speichern und zum Projekt
+              </button>
               <button onClick={handleExitWithSave} className="w-full px-4 py-2.5 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" data-testid="btn-exit-save">
                 Speichern und Beenden
               </button>
