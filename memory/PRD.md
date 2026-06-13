@@ -4,6 +4,19 @@
 > Stand: 02.06.2026
 
 
+## 📌 13.06.2026 — Wolke: Löschen/Antworten/Archiv/Bestätigung/Pagination + Sprach-Vorbereitung
+
+**Backend `module_wolke/routes.py`:**
+- **Soft-Delete** (b): DELETE blendet nur für die löschende Person aus (`ausgeblendet_fuer`, `$addToSet`); Absender & Empfänger dürfen. Listen filtern `ausgeblendet_fuer != me`.
+- **Antworten**: Feld `antwort_auf_id` + `POST /{id}/antwort` → verknüpfte Antwort-Wolke an Original-Absender, inkl. Push.
+- **Auto-Archiv** (c): Status `archiviert`; `_auto_archive_old()` setzt erledigte UND gelesene Nachrichten >30 Tage lazy auf archiviert. `GET /archiv`; Erhalten/Gesendet blenden Archiv aus.
+- **Empfangsbestätigung**: `gelesen_am`/`gelesen_von` + `PATCH /{id}/gelesen`. 3 Stufen: ✓ gesendet · ✓✓ empfangen · ✓✓✓ gelesen (blau).
+- **Pagination**: `/erhalten` `/gesendet` `/archiv` mit `limit=10` + `skip`.
+- **Sprach-Vorbereitung** (nur Datenstruktur): `eingabe_quelle` ("text") + `transkript_roh` (None) am Doc & in `WolkeCreate`/`WolkeAntwort`. Kein Sprach-Code.
+
+**Frontend `WolkePopover.jsx` (Regel 16):** Antworten-Box, Tab „Archiv", Lese-Häkchen, „gelesen" beim Anzeigen, Soft-Delete in beiden Tabs, „Mehr anzeigen" (+10), Polling nur aktiver Tab + Merge-Refresh → konstanter RAM. Verifiziert: curl (gelesen/Antwort) + Screenshot (4 Tabs, ✓-Häkchen, Antwort-Box, Löschen) ✅.
+
+
 ## 📌 12.06.2026 — Wolke „+ Neu": Kunde aus Formular automatisch vorbelegen
 
 **Frontend (additiv):** Gewählter Kunde im Wolke-„Neu"-Formular wird in `WolkePopover` hochgehoben (`onKundeChange`/`neuKunde`) und an `WolkeAktionen` als `kunde` übergeben:

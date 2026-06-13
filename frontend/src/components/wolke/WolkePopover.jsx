@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
 import { WolkeAktionen } from "@/components/wolke/WolkeAktionen";
-import { Cloud, X, Send, Check, Trash2, Inbox, ArrowUpRight, Plus, User, Folder, Wrench } from "lucide-react";
+import { Cloud, X, Send, Check, Trash2, Inbox, ArrowUpRight, Plus, User, Folder, Wrench, Reply, Archive } from "lucide-react";
 import { toast } from "sonner";
 
 const fmtZeit = (iso) => {
@@ -28,9 +28,21 @@ const fmtZeit = (iso) => {
   } catch { return iso; }
 };
 
-const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete, onNavigate }) => {
+const PAGE = 10;
+
+const StatusHaekchen = ({ wolke }) => {
+  // 3 Stufen: ✓ gesendet · ✓✓ empfangen · ✓✓✓ gelesen (blau)
+  if (wolke.gelesen_am) return <span title="Gelesen" className="text-sky-600 font-semibold" data-testid={`wolke-status-${wolke.id}`}>✓✓✓</span>;
+  if (wolke.erhalten_am) return <span title="Empfangen" className="text-muted-foreground" data-testid={`wolke-status-${wolke.id}`}>✓✓</span>;
+  return <span title="Gesendet" className="text-muted-foreground" data-testid={`wolke-status-${wolke.id}`}>✓</span>;
+};
+
+const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete, onNavigate, onReply }) => {
   const isAufgabe = wolke.type === "aufgabe";
   const isErledigt = wolke.status === "erledigt";
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [replySending, setReplySending] = useState(false);
   return (
     <div
       className={`p-3 rounded-lg border ${isAufgabe && !isErledigt ? "border-amber-400 bg-amber-50" : "border-border bg-card"} space-y-2`}
@@ -41,6 +53,9 @@ const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete, onNavigate }) => {
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${isAufgabe ? "bg-amber-200 text-amber-900" : "bg-slate-200 text-slate-700"}`}>
             {isAufgabe ? "Aufgabe" : "Memo"}
           </span>
+          {wolke.antwort_auf_id && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-100 text-sky-700" title="Antwort auf eine Nachricht">↩ Antwort</span>
+          )}
           <span className="text-muted-foreground truncate">
             {ansicht === "erhalten" ? `von ${wolke.absender_name}` : `an ${wolke.empfaenger_name}`}
           </span>
@@ -86,14 +101,15 @@ const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete, onNavigate }) => {
         </div>
       )}
       <div className="flex items-center justify-between pt-1">
-        <div className="text-xs">
+        <div className="text-xs flex items-center gap-2">
           {isErledigt ? (
             <span className="text-emerald-700">✓ erledigt {wolke.erledigt_am ? `· ${fmtZeit(wolke.erledigt_am)}` : ""}</span>
           ) : (
             <span className="text-amber-700">● offen</span>
           )}
+          {(ansicht === "gesendet" || ansicht === "archiv") && <StatusHaekchen wolke={wolke} />}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {ansicht === "erhalten" && isAufgabe && !isErledigt && (
             <button
               onClick={() => onErledigt(wolke.id)}
@@ -103,18 +119,57 @@ const WolkeKarte = ({ wolke, ansicht, onErledigt, onDelete, onNavigate }) => {
               <Check className="w-4 h-4" /> Erledigt
             </button>
           )}
-          {ansicht === "gesendet" && (
+          {ansicht === "erhalten" && (
             <button
-              onClick={() => onDelete(wolke.id)}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-red-600 hover:bg-red-50"
-              data-testid={`wolke-btn-delete-${wolke.id}`}
-              title="Löschen"
+              onClick={() => setReplyOpen(v => !v)}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-sky-700 hover:bg-sky-50"
+              data-testid={`wolke-btn-reply-${wolke.id}`}
+              title="Antworten"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Reply className="w-3.5 h-3.5" /> Antworten
             </button>
           )}
+          <button
+            onClick={() => onDelete(wolke.id)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-red-600 hover:bg-red-50"
+            data-testid={`wolke-btn-delete-${wolke.id}`}
+            title="Löschen"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
+      {replyOpen && ansicht === "erhalten" && (
+        <div className="pt-2 space-y-2" data-testid={`wolke-reply-box-${wolke.id}`}>
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            rows={2}
+            placeholder={`Antwort an ${wolke.absender_name}…`}
+            className="w-full border rounded-lg p-2 text-sm resize-y"
+            data-testid={`wolke-reply-text-${wolke.id}`}
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => { setReplyOpen(false); setReplyText(""); }}
+              className="px-3 py-1.5 text-xs border rounded-sm hover:bg-muted"
+            >Abbrechen</button>
+            <button
+              disabled={replySending || !replyText.trim()}
+              onClick={async () => {
+                setReplySending(true);
+                const ok = await onReply(wolke.id, replyText.trim());
+                setReplySending(false);
+                if (ok) { setReplyOpen(false); setReplyText(""); }
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-sky-600 text-white rounded-sm hover:bg-sky-700 disabled:opacity-50"
+              data-testid={`wolke-reply-send-${wolke.id}`}
+            >
+              <Send className="w-3.5 h-3.5" /> Senden
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -273,9 +328,14 @@ export const WolkePopover = () => {
   const [count, setCount] = useState(0);
   const [erhalten, setErhalten] = useState([]);
   const [gesendet, setGesendet] = useState([]);
+  const [archiv, setArchiv] = useState([]);
+  const [more, setMore] = useState({ erhalten: false, gesendet: false, archiv: false });
   const [mitarbeiter, setMitarbeiter] = useState([]);
   const [banner, setBanner] = useState("");
   const [neuKunde, setNeuKunde] = useState(null);
+
+  const setterFor = (which) => which === "erhalten" ? setErhalten : which === "gesendet" ? setGesendet : setArchiv;
+  const pathFor = (which) => which === "archiv" ? "archiv" : which;
 
   const reloadCount = useCallback(async () => {
     try {
@@ -284,16 +344,29 @@ export const WolkePopover = () => {
     } catch { /* ignore */ }
   }, []);
 
-  const reloadListen = useCallback(async () => {
+  // Pagination + Regel 16: refresht die erste Seite (10), merged Status in bereits geladene
+  // ältere Einträge -> RAM wächst nur, wenn der Nutzer aktiv "Mehr anzeigen" klickt.
+  const reloadActive = useCallback(async (which) => {
+    if (which === "neu") return;
     try {
-      const [a, b] = await Promise.all([
-        api.get("/module-wolke/erhalten"),
-        api.get("/module-wolke/gesendet"),
-      ]);
-      setErhalten(a.data || []);
-      setGesendet(b.data || []);
+      const res = await api.get(`/module-wolke/${pathFor(which)}?limit=${PAGE}&skip=0`);
+      const fresh = res.data || [];
+      const freshIds = new Set(fresh.map(f => f.id));
+      setterFor(which)(prev => [...fresh, ...prev.filter(x => !freshIds.has(x.id))]);
+      setMore(m => ({ ...m, [which]: fresh.length === PAGE }));
     } catch { /* ignore */ }
   }, []);
+
+  const loadMore = async (which) => {
+    const cur = which === "erhalten" ? erhalten : which === "gesendet" ? gesendet : archiv;
+    try {
+      const res = await api.get(`/module-wolke/${pathFor(which)}?limit=${PAGE}&skip=${cur.length}`);
+      const older = res.data || [];
+      const ids = new Set(cur.map(p => p.id));
+      setterFor(which)(prev => [...prev, ...older.filter(o => !ids.has(o.id))]);
+      setMore(m => ({ ...m, [which]: older.length === PAGE }));
+    } catch { /* ignore */ }
+  };
 
   // Polling Badge
   useEffect(() => {
@@ -309,19 +382,31 @@ export const WolkePopover = () => {
     api.get("/module-wolke/mitarbeiter").then(r => setMitarbeiter(r.data || [])).catch(() => {});
   }, []);
 
-  // Beim Öffnen: Listen laden + alle 10 s pollen, damit Absender Bestätigungen live sieht.
+  // Beim Öffnen / Tab-Wechsel: aktiven Tab laden; danach nur diesen Tab alle 10s pollen (Regel 16).
   useEffect(() => {
     if (!open) return;
-    reloadListen();
-    const t = setInterval(reloadListen, 10000);
+    reloadActive(tab);
+    const t = setInterval(() => reloadActive(tab), 10000);
     return () => clearInterval(t);
-  }, [open, reloadListen]);
+  }, [open, tab, reloadActive]);
+
+  // Empfangene Nachrichten beim Anzeigen als 'gelesen' markieren (3. Bestätigungsstufe).
+  useEffect(() => {
+    if (!open || tab !== "erhalten") return;
+    const ungelesen = erhalten.filter(w => !w.gelesen_am);
+    if (ungelesen.length === 0) return;
+    (async () => {
+      await Promise.all(ungelesen.map(w => api.patch(`/module-wolke/${w.id}/gelesen`).catch(() => {})));
+      reloadActive("erhalten");
+      reloadCount();
+    })();
+  }, [open, tab, erhalten, reloadActive, reloadCount]);
 
   const markErhalten = async (id) => {
     try {
       await api.patch(`/module-wolke/${id}/erhalten`);
       toast.success("Erhalten bestätigt");
-      await Promise.all([reloadListen(), reloadCount()]);
+      await Promise.all([reloadActive(tab), reloadCount()]);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Konnte nicht bestätigt werden");
     }
@@ -331,20 +416,35 @@ export const WolkePopover = () => {
     try {
       await api.patch(`/module-wolke/${id}/erledigt`);
       toast.success("Erledigt");
-      await Promise.all([reloadListen(), reloadCount()]);
+      await Promise.all([reloadActive(tab), reloadCount()]);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Konnte nicht erledigt werden");
     }
   };
 
   const del = async (id) => {
-    if (!window.confirm("Wolke wirklich löschen?")) return;
+    if (!window.confirm("Nachricht wirklich löschen? (wird nur für dich ausgeblendet)")) return;
     try {
       await api.delete(`/module-wolke/${id}`);
-      toast.success("Gelöscht");
-      await reloadListen();
+      setErhalten(prev => prev.filter(x => x.id !== id));
+      setGesendet(prev => prev.filter(x => x.id !== id));
+      setArchiv(prev => prev.filter(x => x.id !== id));
+      toast.success("Ausgeblendet");
+      reloadCount();
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Löschen fehlgeschlagen");
+    }
+  };
+
+  const reply = async (id, text) => {
+    try {
+      await api.post(`/module-wolke/${id}/antwort`, { text });
+      toast.success("Antwort gesendet");
+      await Promise.all([reloadActive(tab), reloadCount()]);
+      return true;
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Antwort fehlgeschlagen");
+      return false;
     }
   };
 
@@ -396,6 +496,7 @@ export const WolkePopover = () => {
               {[
                 { id: "erhalten", icon: Inbox, label: "Erhalten", n: erhalten.length },
                 { id: "gesendet", icon: ArrowUpRight, label: "Gesendet", n: gesendet.length },
+                { id: "archiv", icon: Archive, label: "Archiv", n: null },
                 { id: "neu", icon: Plus, label: "Neu", n: null },
               ].map(t => {
                 const Icon = t.icon;
@@ -426,23 +527,37 @@ export const WolkePopover = () => {
               {tab === "erhalten" && (
                 erhalten.length === 0
                   ? <div className="text-center text-sm text-muted-foreground py-8">Keine Wolken erhalten</div>
-                  : erhalten.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="erhalten" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} onNavigate={openRecord} />)
+                  : <>
+                      {erhalten.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="erhalten" onErledigt={markErledigt} onDelete={del} onNavigate={openRecord} onReply={reply} />)}
+                      {more.erhalten && <button onClick={() => loadMore("erhalten")} className="w-full py-2 text-sm text-sky-700 hover:bg-sky-50 rounded-lg" data-testid="wolke-more-erhalten">Mehr anzeigen</button>}
+                    </>
               )}
               {tab === "gesendet" && (
                 gesendet.length === 0
                   ? <div className="text-center text-sm text-muted-foreground py-8">Keine Wolken gesendet</div>
-                  : gesendet.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="gesendet" onErhalten={markErhalten} onErledigt={markErledigt} onDelete={del} onNavigate={openRecord} />)
+                  : <>
+                      {gesendet.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="gesendet" onErledigt={markErledigt} onDelete={del} onNavigate={openRecord} />)}
+                      {more.gesendet && <button onClick={() => loadMore("gesendet")} className="w-full py-2 text-sm text-sky-700 hover:bg-sky-50 rounded-lg" data-testid="wolke-more-gesendet">Mehr anzeigen</button>}
+                    </>
+              )}
+              {tab === "archiv" && (
+                archiv.length === 0
+                  ? <div className="text-center text-sm text-muted-foreground py-8">Archiv ist leer<br/><span className="text-xs">Erledigte &amp; gelesene Nachrichten älter als 30 Tage landen hier.</span></div>
+                  : <>
+                      {archiv.map(w => <WolkeKarte key={w.id} wolke={w} ansicht="archiv" onDelete={del} onNavigate={openRecord} />)}
+                      {more.archiv && <button onClick={() => loadMore("archiv")} className="w-full py-2 text-sm text-sky-700 hover:bg-sky-50 rounded-lg" data-testid="wolke-more-archiv">Mehr anzeigen</button>}
+                    </>
               )}
               {tab === "neu" && (
                 <>
-                <WolkeAktionen onCreated={() => { reloadListen(); reloadCount(); }} kunde={neuKunde} />
+                <WolkeAktionen onCreated={() => { reloadActive(tab); reloadCount(); }} kunde={neuKunde} />
                 <WolkeNeuForm
                   mitarbeiter={mitarbeiter}
                   onKundeChange={setNeuKunde}
                   onSent={async (bannerText) => {
                     setBanner(bannerText || "Wolke verschickt");
                     setTab("gesendet");
-                    await Promise.all([reloadListen(), reloadCount()]);
+                    await Promise.all([reloadActive("gesendet"), reloadCount()]);
                     setTimeout(() => setBanner(""), 5000);
                   }}
                 />
