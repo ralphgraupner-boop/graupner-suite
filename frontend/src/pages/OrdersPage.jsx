@@ -17,9 +17,11 @@ const OrdersPage = ({ readOnly = false }) => {
   const navigate = useNavigate();
 
   const filteredOrders = useMemo(() => {
-    if (!searchTerm.trim()) return orders;
+    // Abgerechnete Aufträge (Status "Abgerechnet") nicht mehr in der Auftrags-Liste anzeigen
+    const offen = orders.filter(o => o.status !== "Abgerechnet");
+    if (!searchTerm.trim()) return offen;
     const term = searchTerm.toLowerCase();
-    return orders.filter(o =>
+    return offen.filter(o =>
       (o.betreff || "").toLowerCase().includes(term) ||
       (o.customer_name || "").toLowerCase().includes(term) ||
       (o.order_number || "").toLowerCase().includes(term)
