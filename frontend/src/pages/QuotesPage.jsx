@@ -15,9 +15,11 @@ const QuotesPage = () => {
   const navigate = useNavigate();
 
   const filteredQuotes = useMemo(() => {
-    if (!searchTerm.trim()) return quotes;
+    // Weitergewandelte Angebote (Status "Beauftragt") nicht mehr in der Angebote-Liste anzeigen
+    const offen = quotes.filter(q => q.status !== "Beauftragt");
+    if (!searchTerm.trim()) return offen;
     const term = searchTerm.toLowerCase();
-    return quotes.filter(q =>
+    return offen.filter(q =>
       (q.betreff || "").toLowerCase().includes(term) ||
       (q.customer_name || "").toLowerCase().includes(term) ||
       (q.quote_number || "").toLowerCase().includes(term)
