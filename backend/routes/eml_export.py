@@ -6,12 +6,14 @@ oeffnen": Der Browser laedt die .eml, das lokale Mailprogramm (z.B. Betterbird)
 oeffnet sie inkl. PDF-Anhang. mailto: kann das nicht, .eml schon.
 """
 from email.message import EmailMessage
+import html as _html
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response, JSONResponse
 
 from database import db
 from utils.pdf_generator import generate_document_pdf
+from utils.email_signatur import wrap_email_body
 
 router = APIRouter()
 
@@ -87,6 +89,31 @@ def _compose_body(doc: dict, settings: dict, with_text: bool) -> str:
     return "\n\n".join(parts)
 
 
+def _parts_to_html(parts: list) -> str:
+    """Klartext-Absätze -> HTML-Absätze (escaped, Zeilenumbrüche als <br>)."""
+    html_parts = []
+    for p in parts:
+        safe = _html.escape(p).replace("\n", "<br>")
+        html_parts.append(f'<p style="margin:0 0 14px 0; line-height:1.6;">{safe}</p>')
+    return "".join(html_parts)
+
+
+def _compose_body_html(doc: dict, settings: dict) -> str:
+    """Profi-HTML-Inhalt (Vor-/Schlusstext + Grußformel) – OHNE Text-Signatur,
+    da wrap_email_body die professionelle HTML-Signatur selbst anhängt."""
+    parts = []
+    vortext = (doc.get("vortext") or "").strip()
+    schlusstext = (doc.get("schlusstext") or "").strip()
+    if vortext:
+        parts.append(vortext)
+    if schlusstext:
+        parts.append(schlusstext)
+    if not _has_signature(schlusstext):
+        company = settings.get("company_name") or "Tischlerei Graupner"
+        parts.append(f"Mit freundlichen Grüßen\n{company}")
+    return wrap_email_body(_parts_to_html(parts))
+
+
 async def _einsatz_email(einsatz: dict) -> str:
     if einsatz.get("kunde_email"):
         return einsatz["kunde_email"]
@@ -114,6 +141,18 @@ def _compose_einsatz_body(einsatz: dict, settings: dict, with_text: bool) -> str
     return "\n\n".join(parts)
 
 
+def _compose_einsatz_body_html(einsatz: dict, settings: dict) -> str:
+    """Profi-HTML-Inhalt für Einsätze – ohne Text-Signatur (wrap_email_body ergänzt sie)."""
+    parts = []
+    beschreibung = (einsatz.get("beschreibung") or "").strip()
+    if beschreibung:
+        parts.append(beschreibung)
+    if not _has_signature(beschreibung):
+        company = settings.get("company_name") or "Tischlerei Graupner"
+        parts.append(f"Mit freundlichen Grüßen\n{company}")
+    return wrap_email_body(_parts_to_html(parts))
+
+
 async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Response:
     settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0}) or {}
     label = _LABELS[doc_type]
@@ -131,6 +170,8 @@ async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Resp
         msg["To"] = to_email
     msg["Subject"] = subject
     msg.set_content(body if body else " ")
+    if with_text:
+        msg.add_alternative(_compose_body_html(doc, settings), subtype="html")
 
     safe = _ascii_label(label)
     msg.add_attachment(pdf_bytes, maintype="application", subtype="pdf",
@@ -247,6 +288,8 @@ async def get_einsatz_eml(einsatz_id: str, text: int = Query(1)):
         msg["To"] = to_email
     msg["Subject"] = subject
     msg.set_content(body if body else " ")
+    if bool(text):
+        msg.add_alternative(_compose_einsatz_body_html(einsatz, settings), subtype="html")
     name = (einsatz.get("kunde_name") or "Kunde").replace(" ", "_")
     msg.add_attachment(pdf_bytes, maintype="application", subtype="pdf",
                        filename=f"Reparaturauftrag_{name}.pdf")
