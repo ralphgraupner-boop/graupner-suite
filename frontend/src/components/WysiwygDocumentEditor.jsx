@@ -620,7 +620,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       if (isNew) {
         const _lohn = lohnanteilCustom === "" || lohnanteilCustom === null ? null : Number(String(lohnanteilCustom).replace(",", "."));
-        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: (Number.isFinite(_lohn) ? _lohn : null), ...(type === "quote" && { valid_days: 30 }), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
+        const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: (Number.isFinite(_lohn) ? _lohn : null), ...(type === "quote" && { valid_days: settings?.default_quote_validity_days ?? 30 }), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         const res = await api.post(`/${endpoint}`, payload);
         if (res?.data?.id) { navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); return res.data.id; }
         return null;
