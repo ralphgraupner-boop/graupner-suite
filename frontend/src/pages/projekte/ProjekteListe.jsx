@@ -28,6 +28,7 @@ const ProjekteListe = () => {
   // Such-zuerst-Schema (Ralph 12.05.2026): erst Kunde oder Projekt wählen
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKunde, setSelectedKunde] = useState(null); // {id, label}
+  const [kundeOhneProjekt, setKundeOhneProjekt] = useState(null); // {id, label} – Dialog: Kunde ohne Projekt angeklickt
   const [searchFocused, setSearchFocused] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -210,7 +211,17 @@ const ProjekteListe = () => {
                     {searchHits.kunden.map(k => (
                       <button
                         key={`k-${k.id}`}
-                        onClick={() => { setSelectedKunde({ id: k.id, label: k.label }); setSearchQuery(""); navigate(`/module/projekte/werkbank/${k.id}`); }}
+                        onClick={() => {
+                          setSearchQuery("");
+                          // Hat der Kunde bereits ein Projekt? -> direkt zur Werkbank.
+                          // Sonst Dialog: Projekt anlegen (Werkbank) oder zur Kundenakte.
+                          if (projekte.some(p => p.kunde_id === k.id)) {
+                            setSelectedKunde({ id: k.id, label: k.label });
+                            navigate(`/module/projekte/werkbank/${k.id}`);
+                          } else {
+                            setKundeOhneProjekt({ id: k.id, label: k.label });
+                          }
+                        }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted border-b last:border-b-0"
                         data-testid={`projekte-hit-kunde-${k.id}`}
                       >
@@ -338,6 +349,31 @@ const ProjekteListe = () => {
           onClose={() => setShowNew(false)}
           onCreated={(p) => { setShowNew(false); navigate(`/module/projekte/${p.id}`); }}
         />
+      )}
+
+      {kundeOhneProjekt && (
+        <Modal isOpen={true} onClose={() => setKundeOhneProjekt(null)} title="Kein Projekt vorhanden" size="sm">
+          <div className="space-y-5" data-testid="kunde-ohne-projekt-dialog">
+            <p className="text-sm">
+              Kunde <strong>{kundeOhneProjekt.label}</strong> hat noch kein Projekt. Möchten Sie ein Projekt anlegen?
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => { const id = kundeOhneProjekt.id; setKundeOhneProjekt(null); navigate(`/module/kunden?edit=${id}`); }}
+                data-testid="btn-kunde-ohne-projekt-nein"
+              >
+                Nein, zur Kundenakte
+              </Button>
+              <Button
+                onClick={() => { const { id, label } = kundeOhneProjekt; setKundeOhneProjekt(null); setSelectedKunde({ id, label }); navigate(`/module/projekte/werkbank/${id}`); }}
+                data-testid="btn-kunde-ohne-projekt-ja"
+              >
+                Ja, Projekt anlegen
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
