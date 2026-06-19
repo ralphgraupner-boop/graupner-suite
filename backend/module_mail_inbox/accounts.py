@@ -87,7 +87,7 @@ def filter_matches(rules: list, subject: str, from_email: str) -> bool:
     # enthält. So landen weitergeleitete Anfragen normal im Filter.
     s_low = (subject or "").strip().lower()
     jimdo_signatur = ("nachricht über" in s_low) and ("tischlerei-graupner.de" in s_low)
-    forward_jimdo_erlaubt = jimdo_signatur and s_low.startswith(("fw:", "wg:", "aw:"))
+    forward_jimdo_erlaubt = jimdo_signatur and s_low.startswith(("fw:", "fwd:", "wg:", "aw:"))
     if _is_reply_or_auto(subject) and not forward_jimdo_erlaubt:
         return False
     s = (subject or "").lower()
