@@ -404,8 +404,10 @@ const ModuleMailInboxPage = () => {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Inbox className="w-6 h-6" /> Mail-Anfragen
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Kontaktformular-Anfragen aus deinem service24-Postfach. Letzte 6 Wochen, max. 30 pro Scan.
+          <p className="text-sm text-muted-foreground mt-1" data-testid="mail-inbox-subtitle">
+            Kontaktformular-Anfragen aus {stats?.by_account?.length
+              ? stats.by_account.map((a) => a.label).filter(Boolean).join(", ")
+              : "deinem Postfach"}. Letzte 30 Tage, max. 30 pro Scan.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
