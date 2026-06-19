@@ -99,13 +99,21 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                     if a_found >= max_count:
                         break
                     try:
-                        typ, raw = imap.fetch(uid, "(RFC822)")
-                        if typ != "OK" or not raw or not raw[0]:
+                        # ── Schritt 1: NUR Header laden (spart den kompletten
+                        #    Mail-Download für bereits importierte oder durch den
+                        #    Filter herausfallende Mails – das war bisher unnötig,
+                        #    weil jede Mail erst voll geladen und dann ggf. als
+                        #    Duplikat verworfen wurde). ──
+                        typ, hraw = imap.fetch(
+                            uid,
+                            "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID REPLY-TO)])",
+                        )
+                        if typ != "OK" or not hraw or not hraw[0]:
                             continue
-                        msg = email.message_from_bytes(raw[0][1])
+                        hmsg = email.message_from_bytes(hraw[0][1])
 
-                        from_name, from_email = parseaddr(msg.get("From", ""))
-                        subject = _decode(msg.get("Subject", ""))
+                        from_name, from_email = parseaddr(hmsg.get("From", ""))
+                        subject = _decode(hmsg.get("Subject", ""))
 
                         # ── Custom-Filter pro Postfach (OR-Logik) ──
                         if not filter_matches(acc_rules, subject, from_email):
@@ -117,7 +125,7 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                             a_skipped += 1
                             continue
 
-                        message_id = (msg.get("Message-ID") or "").strip()
+                        message_id = (hmsg.get("Message-ID") or "").strip()
 
                         # 1) Duplikatsprüfung in Haupt-Collection
                         exists = await db.module_mail_inbox.find_one(
@@ -136,6 +144,13 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                             if tomb:
                                 a_dup += 1
                                 continue
+
+                        # ── Schritt 2: Erst JETZT (echte neue Mail) den vollen
+                        #    Body laden und parsen. ──
+                        typ, raw = imap.fetch(uid, "(RFC822)")
+                        if typ != "OK" or not raw or not raw[0]:
+                            continue
+                        msg = email.message_from_bytes(raw[0][1])
 
                         body = _extract_body(msg)
                         parsed = parse_anfrage(body, subject=subject, from_email=from_email)
