@@ -63,6 +63,11 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                 since_dt = last_dt - timedelta(days=2)
             except Exception:  # noqa: BLE001
                 since_dt = fallback_since_dt
+        # Harte Grenze (Ralph): niemals weiter als 30 Tage zurück scannen –
+        # auch nicht, wenn last_scan_at älter ist oder weeks größer wäre.
+        hard_floor = scan_started_at - timedelta(days=30)
+        if since_dt < hard_floor:
+            since_dt = hard_floor
         since_str = since_dt.strftime("%d-%b-%Y")
 
         try:
