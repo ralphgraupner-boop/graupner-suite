@@ -32,8 +32,12 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
 
     weeks = max(1, min(weeks, 26))
     max_count = max(1, min(max_count, 100))
-    since_dt = datetime.now(timezone.utc) - timedelta(weeks=weeks)
-    since_str = since_dt.strftime("%d-%b-%Y")
+    # Fallback-Zeitraum, falls ein Postfach noch nie gescannt wurde.
+    fallback_since_dt = datetime.now(timezone.utc) - timedelta(weeks=weeks)
+    # Startzeit merken: wird pro Postfach als neuer `last_scan_at` gespeichert.
+    # Bewusst die START-Zeit, damit während des Scans eingehende Mails beim
+    # nächsten Lauf nicht verloren gehen.
+    scan_started_at = datetime.now(timezone.utc)
 
     total_found, total_skipped, total_dup = 0, 0, 0
     per_account = []
@@ -44,6 +48,22 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
         acc_user = acc.get("username", "")
         acc_rules = acc.get("filter_rules") or []
         a_found, a_skipped, a_dup, a_error = 0, 0, 0, ""
+
+        # ── Inkrementell: ab letztem erfolgreichen Scan (mit 2-Tage-Puffer),
+        #    sonst Fallback auf `weeks` (Default 6 Wochen). IMAP SINCE ist
+        #    tag-genau; die Duplikat-Prüfung (message_id) fängt Überlappungen
+        #    sauber ab, daher gibt es keine Doppel-Importe. ──
+        since_dt = fallback_since_dt
+        last_scan_raw = acc.get("last_scan_at")
+        if last_scan_raw:
+            try:
+                last_dt = datetime.fromisoformat(last_scan_raw)
+                if last_dt.tzinfo is None:
+                    last_dt = last_dt.replace(tzinfo=timezone.utc)
+                since_dt = last_dt - timedelta(days=2)
+            except Exception:  # noqa: BLE001
+                since_dt = fallback_since_dt
+        since_str = since_dt.strftime("%d-%b-%Y")
 
         try:
             imap = imaplib.IMAP4_SSL(acc["server"], int(acc.get("port") or 993))
@@ -242,6 +262,14 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                 imap.logout()
             except Exception:
                 pass
+
+        # Zeitstempel nur bei fehlerfreiem Scan fortschreiben (sonst beim
+        # nächsten Lauf wieder den vollen Fallback-Zeitraum nutzen).
+        if not a_error:
+            await db.module_mail_inbox_accounts.update_one(
+                {"id": acc_id},
+                {"$set": {"last_scan_at": scan_started_at.isoformat()}},
+            )
 
         total_found += a_found
         total_skipped += a_skipped
