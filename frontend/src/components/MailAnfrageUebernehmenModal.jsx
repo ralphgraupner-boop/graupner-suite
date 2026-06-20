@@ -159,41 +159,101 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
 
       {step === 2 && (
         <div className="space-y-4" data-testid="uebernehmen-step2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kontaktdaten</h4>
-              <Input placeholder="Anrede" value={form.anrede} onChange={(e) => set("anrede", e.target.value)} data-testid="f-anrede" />
-              <Input placeholder="Firma" value={form.firma} onChange={(e) => set("firma", e.target.value)} data-testid="f-firma" />
-              <Input placeholder="Vorname" value={form.vorname} onChange={(e) => set("vorname", e.target.value)} data-testid="f-vorname" />
-              <Input placeholder="Nachname" value={form.nachname} onChange={(e) => set("nachname", e.target.value)} data-testid="f-nachname" />
-              <Input placeholder="E-Mail" value={form.email} onChange={(e) => set("email", e.target.value)} data-testid="f-email" />
-              <Input placeholder="Telefon" value={form.phone} onChange={(e) => set("phone", e.target.value)} data-testid="f-phone" />
+          {/* Kopfzeile: Anrede + Typ + Status + Firma kompakt */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Anrede</label>
+              <select className="w-full h-9 rounded-sm border border-input bg-background px-2 text-sm" value={form.anrede} onChange={(e) => set("anrede", e.target.value)} data-testid="f-anrede">
+                <option value="">—</option>
+                <option>Herr</option>
+                <option>Frau</option>
+                <option>Divers</option>
+              </select>
             </div>
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Details + Kategorien</h4>
-              <div className="flex gap-2">
-                <Input placeholder="Straße" value={form.strasse} onChange={(e) => set("strasse", e.target.value)} data-testid="f-strasse" />
-                <Input placeholder="Nr." className="w-20" value={form.hausnummer} onChange={(e) => set("hausnummer", e.target.value)} data-testid="f-hausnummer" />
-              </div>
-              <div className="flex gap-2">
-                <Input placeholder="PLZ" className="w-28" value={form.plz} onChange={(e) => set("plz", e.target.value)} data-testid="f-plz" />
-                <Input placeholder="Ort" value={form.ort} onChange={(e) => set("ort", e.target.value)} data-testid="f-ort" />
-              </div>
-              <select className="w-full h-10 rounded-sm border px-3 text-sm bg-background" value={form.customer_type} onChange={(e) => set("customer_type", e.target.value)} data-testid="f-type">
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Typ</label>
+              <select className="w-full h-9 rounded-sm border border-input bg-background px-2 text-sm" value={form.customer_type} onChange={(e) => set("customer_type", e.target.value)} data-testid="f-type">
                 <option>Privat</option>
                 <option>Gewerbe</option>
               </select>
-              <select className="w-full h-10 rounded-sm border px-3 text-sm bg-background" value={form.status} onChange={(e) => set("status", e.target.value)} data-testid="f-status">
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Status</label>
+              <select className="w-full h-9 rounded-sm border border-input bg-background px-2 text-sm" value={form.status} onChange={(e) => set("status", e.target.value)} data-testid="f-status">
                 <option>Neu</option>
                 <option>Anfrage</option>
                 <option>Aktiv</option>
               </select>
-              <Input placeholder="Kategorien (Komma-getrennt)" value={form.categories} onChange={(e) => set("categories", e.target.value)} data-testid="f-categories" />
             </div>
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notizen + Nachricht</h4>
-              <Textarea placeholder="Notizen" rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} data-testid="f-notes" />
-              <Textarea placeholder="Nachricht (aus Anfrage)" rows={6} value={form.nachricht} onChange={(e) => set("nachricht", e.target.value)} data-testid="f-nachricht" />
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Firma</label>
+              <Input className="h-9 text-sm" placeholder="optional" value={form.firma} onChange={(e) => set("firma", e.target.value)} data-testid="f-firma" />
+            </div>
+          </div>
+
+          {/* Vorname + Nachname */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Vorname</label>
+              <Input className="h-9 text-sm" value={form.vorname} onChange={(e) => set("vorname", e.target.value)} data-testid="f-vorname" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Nachname</label>
+              <Input className="h-9 text-sm" value={form.nachname} onChange={(e) => set("nachname", e.target.value)} data-testid="f-nachname" />
+            </div>
+          </div>
+
+          {/* Straße + Nr. */}
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-9">
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Straße</label>
+              <Input className="h-9 text-sm" value={form.strasse} onChange={(e) => set("strasse", e.target.value)} data-testid="f-strasse" />
+            </div>
+            <div className="col-span-3">
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Nr.</label>
+              <Input className="h-9 text-sm" value={form.hausnummer} onChange={(e) => set("hausnummer", e.target.value)} data-testid="f-hausnummer" />
+            </div>
+          </div>
+
+          {/* PLZ (schmal, max 5) + Ort */}
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-3">
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">PLZ</label>
+              <Input className="h-9 text-sm" maxLength={5} value={form.plz} onChange={(e) => set("plz", e.target.value.replace(/\D/g, "").slice(0, 5))} data-testid="f-plz" />
+            </div>
+            <div className="col-span-9">
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Ort</label>
+              <Input className="h-9 text-sm" value={form.ort} onChange={(e) => set("ort", e.target.value)} data-testid="f-ort" />
+            </div>
+          </div>
+
+          {/* Telefon + E-Mail */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Telefon</label>
+              <Input className="h-9 text-sm" value={form.phone} onChange={(e) => set("phone", e.target.value)} data-testid="f-phone" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">E-Mail</label>
+              <Input className="h-9 text-sm" value={form.email} onChange={(e) => set("email", e.target.value)} data-testid="f-email" />
+            </div>
+          </div>
+
+          {/* Kategorien */}
+          <div>
+            <label className="block text-[11px] font-medium text-muted-foreground mb-1">Kategorien</label>
+            <Input className="h-9 text-sm" placeholder="Komma-getrennt" value={form.categories} onChange={(e) => set("categories", e.target.value)} data-testid="f-categories" />
+          </div>
+
+          {/* Notizen + Nachricht */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Notizen</label>
+              <Textarea className="text-sm" placeholder="Interne Notizen" rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} data-testid="f-notes" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-1">Nachricht (aus Anfrage)</label>
+              <Textarea className="text-sm" rows={3} value={form.nachricht} onChange={(e) => set("nachricht", e.target.value)} data-testid="f-nachricht" />
             </div>
           </div>
           {dupError && (
