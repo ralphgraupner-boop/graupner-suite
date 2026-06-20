@@ -156,7 +156,8 @@ const KundenModulPage = () => {
       const k = kunden.find((x) => x.id === editId);
       if (k) {
         // Status auf "alle" stellen, damit der neue Kunde sicher sichtbar ist
-        setStatusFilter("alle");
+        // ("" = alle inkl. Archiv; "alle" war KEIN gültiger Filterwert -> Liste leer)
+        setStatusFilter("");
         const popupOpened = openEditFor(k, returnTo);
         // edit-Param aus URL entfernen, damit Refresh nicht erneut öffnet
         const cleaned = new URLSearchParams(location.search);
