@@ -266,11 +266,11 @@ const ProjekteListe = () => {
       </Card>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive</FilterButton>
+        <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive ({projekte.filter(p => p.status !== "Archiv").length})</FilterButton>
         {STATUSES.map(s => (
-          <FilterButton key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s}</FilterButton>
+          <FilterButton key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s} ({projekte.filter(p => p.status === s).length})</FilterButton>
         ))}
-        <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle</FilterButton>
+        <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle ({projekte.length})</FilterButton>
       </div>
 
       {kategorien.length > 0 && (
