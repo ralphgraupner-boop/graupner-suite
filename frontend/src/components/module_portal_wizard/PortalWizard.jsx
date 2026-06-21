@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Pencil, Camera, CheckCircle2, Loader2, MessageSquare, ImagePlus, X, Phone } from "lucide-react";
 import { api } from "@/lib/api";
+import { GraupnerBriefkopf } from "@/components/common/GraupnerBriefkopf";
 
 /**
  * PortalWizard — Öffentlicher Schritt-für-Schritt-Wizard für das Kundenportal.
@@ -285,9 +286,10 @@ const PortalWizard = ({ token: tokenProp }) => {
 
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="portal-wizard">
-      <div className="px-4 py-5 text-white" style={{ backgroundColor: GREEN }}>
+      <GraupnerBriefkopf />
+      <div className="px-4 pt-3 pb-4">
         <div className="mx-auto max-w-xl">
-          <p className="text-xs font-semibold uppercase tracking-wider opacity-90">Tischlerei Graupner · Ihr persönliches Kundenportal</p>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: GREEN }}>Ihr persönliches Kundenportal</p>
           <h1 className="mt-1 text-2xl font-bold" data-testid="portal-greeting">Guten Tag{kundenName ? `, ${kundenName}` : ""}!</h1>
         </div>
       </div>

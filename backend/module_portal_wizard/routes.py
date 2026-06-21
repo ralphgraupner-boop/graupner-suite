@@ -26,6 +26,29 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def graupner_briefkopf_html() -> str:
+    """Einheitlicher, gebrandeter Briefkopf für Portal-E-Mails (Inline-Styles für Mail-Clients).
+
+    Farben: Königsblau #003399 (Name/Web), Rot #cc0000 (seit 1960/E-Mail),
+    Grün #1a6e3c (Balken/Trennlinie/HWK), Grau #444444 (Telefon/Text). Schrift: Georgia.
+    Kontaktdaten identisch zur zentralen Signatur (keine Duplikate erfinden).
+    """
+    return (
+        '<div style="font-family:Georgia,\'Times New Roman\',serif;">'
+        '<div style="font-size:22px;font-weight:bold;color:#003399;">Tischlerei R. Graupner</div>'
+        '<div style="font-size:11px;font-weight:bold;letter-spacing:2px;color:#cc0000;margin-top:2px;">SEIT 1960 &middot; HAMBURG</div>'
+        '<div style="height:4px;background:#1a6e3c;border-radius:2px;margin:8px 0;"></div>'
+        '<div style="font-size:12px;color:#444444;line-height:1.6;">'
+        'Telefon: <a href="tel:+4915157437305" style="color:#444444;text-decoration:none;">01515 7437 305</a>'
+        ' &nbsp;|&nbsp; E-Mail: <a href="mailto:service24@tischlerei-graupner.de" style="color:#cc0000;text-decoration:none;">service24@tischlerei-graupner.de</a>'
+        ' &nbsp;|&nbsp; Web: <a href="https://www.tischlerei-graupner.de" style="color:#003399;text-decoration:none;">www.tischlerei-graupner.de</a>'
+        '</div>'
+        '<div style="font-size:12px;color:#1a6e3c;margin-top:4px;">Mitglied der Handwerkskammer Hamburg</div>'
+        '</div>'
+        '<hr style="border:none;border-top:1px solid #1a6e3c;margin:14px 0;">'
+    )
+
+
 @router.post("/link-erstellen")
 async def link_erstellen(data: dict, request: Request, user=Depends(get_current_user)):
     """Erzeugt einen eindeutigen Portal-Link für einen Kunden (+ optional Projekt)
@@ -81,7 +104,8 @@ async def link_erstellen(data: dict, request: Request, user=Depends(get_current_
             if auftrag_text else ""
         )
         body_html = (
-            f"<p>{anrede}</p>"
+            graupner_briefkopf_html()
+            + f"<p>{anrede}</p>"
             f"<p>vielen Dank für Ihre Anfrage. Über unser Kundenportal können Sie uns ganz "
             f"einfach eine Nachricht und Fotos schicken — Schritt für Schritt.</p>"
             f"{auftrag_block}"
@@ -271,7 +295,8 @@ async def admin_antwort(eintrag_id: str, data: dict, user=Depends(get_current_us
     mail_sent = False
     if customer_email and "@" in customer_email:
         body_html = (
-            "<p>" + text.replace("\n", "<br>") + "</p>"
+            graupner_briefkopf_html()
+            + "<p>" + text.replace("\n", "<br>") + "</p>"
             "<p>Freundliche Grüße<br>Ihre Tischlerei Graupner</p>"
         )
         try:

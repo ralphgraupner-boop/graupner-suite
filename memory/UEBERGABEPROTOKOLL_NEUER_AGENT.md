@@ -50,6 +50,7 @@
 10. **Profi-Mail im `.eml`-Versand** (Corporate-HTML+Signatur+DSGVO) — `routes/eml_export.py` (nutzt `utils/email_signatur.wrap_email_body`)
 11. Angebote/Aufträge-Listen filtern weitergewandelte aus — `QuotesPage.jsx`, `OrdersPage.jsx`
 12. Dashboard **ausgeblendet** (nicht zerstört) → Startseite = **Termine** — `App.js`, `Navigation.jsx`; + Aufgabe `95b4b4e8…` + `ROADMAP.md`
+13. **GraupnerBriefkopf** (gebrandeter Kopf): neue React-Komponente `frontend/src/components/common/GraupnerBriefkopf.jsx` ersetzt grünes Banner im Portal-Wizard; Backend `graupner_briefkopf_html()` in `module_portal_wizard/routes.py` im Kopf beider Portal-Mails (link-erstellen + admin/antwort). „Tischlerei R. Graupner" + „SEIT 1960 · HAMBURG" überall. `pdf_generator.py`/Rechnungen NICHT angefasst. (21.06.2026)
 
 > ⚠️ **WICHTIG:** Alle 12 Punkte liegen nur auf **Preview**. Ralph muss **„Save to Github" + Redeploy** machen, damit es auf Live wirkt.
 
