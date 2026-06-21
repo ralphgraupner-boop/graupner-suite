@@ -16,18 +16,20 @@ const GRAY = "#444444";
 export const GraupnerBriefkopf = ({ className = "" }) => (
   <div
     data-testid="graupner-briefkopf"
-    className={`bg-white px-4 py-4 ${className}`}
+    className={`bg-white w-full pt-4 ${className}`}
     style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
   >
-    <div className="mx-auto max-w-xl">
+    <div className="mx-auto max-w-xl px-4">
       <div className="text-2xl font-bold leading-tight" style={{ color: BLUE }}>
         Tischlerei R. Graupner
       </div>
       <div className="text-xs font-bold tracking-widest mt-0.5" style={{ color: RED }}>
         SEIT 1960 · HAMBURG
       </div>
-      <div className="h-1 w-full mt-2 rounded" style={{ backgroundColor: GREEN }} />
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs" style={{ color: GRAY }}>
+    </div>
+    <div className="h-1 w-full my-2" style={{ backgroundColor: GREEN }} />
+    <div className="mx-auto max-w-xl px-4 pb-4">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: GRAY }}>
         <span>
           Telefon:{" "}
           <a href="tel:+4915157437305" style={{ color: GRAY, textDecoration: "none" }}>
