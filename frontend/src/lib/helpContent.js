@@ -14,6 +14,18 @@
  */
 
 export const HELP_DEFAULTS = {
+  hilfe_kundenportal: [
+    {
+      title: "Kundenportal",
+      content:
+        "• Hier verwalten Sie alle Kundenportal-Links.\n" +
+        "• Mit 'Link erstellen' schicken Sie einem Kunden einen persönlichen Zugang — er erhält eine Mail mit dem Link direkt in sein Portal.\n" +
+        "• Der Kunde wird Schritt für Schritt geführt — er kann eine Nachricht schreiben und/oder Fotos schicken.\n" +
+        "• Der Status zeigt: ⚪ Kein Portal · 🔵 Link verschickt · 🟡 Portal geöffnet · 🟢 Kunde hat geantwortet.\n" +
+        "• Eingegangene Nachrichten und Fotos sehen Sie direkt hier aufgeklappt pro Kunde.\n" +
+        "• Der alte 'Kundenportale'-Bereich ist das frühere System — bitte nur das neue Kundenportal verwenden.",
+    },
+  ],
   hilfe_kunden: [
     {
       title: "Neuen Kunden anlegen",
@@ -255,6 +267,7 @@ export const HELP_DEFAULTS = {
 };
 
 export const HELP_LABELS = {
+  hilfe_kundenportal: "Hilfe: Kundenportal",
   hilfe_kunden: "Hilfe: Kunden",
   hilfe_projekte: "Hilfe: Projekte",
   hilfe_aufgaben: "Hilfe: Aufgaben",

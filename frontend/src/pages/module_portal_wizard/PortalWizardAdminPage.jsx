@@ -3,6 +3,7 @@ import { Share2, Search, RefreshCw, Link as LinkIcon, ChevronDown, MessageSquare
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import { useF1Help } from "@/lib/useF1Help";
 import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBadge";
 
 /**
@@ -11,6 +12,7 @@ import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBad
  * eingegangene Nachrichten/Fotos lesen.
  */
 const PortalWizardAdminPage = () => {
+  useF1Help("hilfe_kundenportal");
   const [kunden, setKunden] = useState([]);
   const [eintraege, setEintraege] = useState([]);
   const [loading, setLoading] = useState(true);
