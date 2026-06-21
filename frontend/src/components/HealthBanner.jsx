@@ -27,7 +27,7 @@ export const HealthBanner = () => {
   const [consistency, setConsistency] = useState(null);
   const [open, setOpen] = useState(false);
   const [cleanupIssue, setCleanupIssue] = useState(null);
-  const [hidden, setHidden] = useState(() => sessionStorage.getItem("health_banner_hidden") === "1");
+  const [hidden, setHidden] = useState(() => localStorage.getItem("health_banner_hidden") === "1");
   const env = detectEnvFromHost();
 
   const reloadConsistency = () => {
@@ -92,9 +92,9 @@ export const HealthBanner = () => {
         <span className="opacity-60">·</span>
         <span>v{ver}</span>
         <button
-          onClick={(e) => { e.stopPropagation(); setHidden(true); sessionStorage.setItem("health_banner_hidden", "1"); }}
+          onClick={(e) => { e.stopPropagation(); setHidden(true); localStorage.setItem("health_banner_hidden", "1"); }}
           className="ml-auto p-1 hover:bg-black/5 rounded-sm"
-          title="Bis zum nächsten Login ausblenden"
+          title="Dauerhaft ausblenden"
           data-testid="btn-health-banner-close"
         >
           <X className="w-3 h-3" />
