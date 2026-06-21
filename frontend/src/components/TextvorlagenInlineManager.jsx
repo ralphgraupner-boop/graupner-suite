@@ -89,17 +89,42 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
   const saveEdit = async () => {
     const t = editTitle.trim();
     if (!t) return;
+    const RENAME_SAFE_TYPES = ["projekt_kategorie", "kunden_kategorie"];
+    const current = items.find((x) => x.id === editId);
+    const oldTitle = (current?.title || "").trim();
+    const isRename = RENAME_SAFE_TYPES.includes(docType) && t !== oldTitle;
     setBusy(`edit:${editId}`);
     try {
-      const payload = { title: t };
-      if (supportsGroups) payload.parent_category = editParent.trim() || null;
-      await api.put(`/modules/textvorlagen/data/${editId}`, payload);
+      if (isRename) {
+        // Vorher-Zählung: wie viele Projekte/Kunden sind betroffen?
+        const usage = await api.get(`/modules/textvorlagen/category-usage?doc_type=${encodeURIComponent(docType)}&value=${encodeURIComponent(oldTitle)}`);
+        const pj = usage.data?.projekte_count || 0;
+        const kd = usage.data?.kunden_count || 0;
+        if (pj + kd > 0) {
+          const ok = window.confirm(
+            `Diese Kategorie wird aktuell genutzt von:\n` +
+            `• ${pj} Projekt(en)\n` +
+            `• ${kd} Kunde(n)\n\n` +
+            `Beim Umbenennen „${oldTitle}" → „${t}" werden alle Einträge automatisch mit umbenannt.\n\nFortfahren?`
+          );
+          if (!ok) { setBusy(""); return; }
+        }
+        // Sichere Migration (Snapshot + alt->neu + Verifikation) im Backend
+        const res = await api.post(`/modules/textvorlagen/rename-category`, { item_id: editId, new_name: t });
+        const m = res.data?.migrated || {};
+        const orphans = res.data?.orphans_remaining;
+        toast.success(`Umbenannt – ${m.projekte || 0} Projekte, ${m.kunden || 0} Kunden angepasst${orphans === 0 ? " (0 verwaist)" : ` (⚠️ ${orphans} verwaist!)`}`);
+      } else {
+        const payload = { title: t };
+        if (supportsGroups) payload.parent_category = editParent.trim() || null;
+        await api.put(`/modules/textvorlagen/data/${editId}`, payload);
+        toast.success("Gespeichert");
+      }
       setEditId("");
       setEditTitle("");
       setEditParent("");
       await reload();
       onChanged?.();
-      toast.success("Gespeichert");
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Fehler beim Speichern");
     } finally {
