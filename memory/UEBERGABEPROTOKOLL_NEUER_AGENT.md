@@ -10,13 +10,16 @@
 - **Arbeitsweise:** Nach **EINER Aktion stoppen und fragen** „Soll ich weitermachen?". **Niemals selbst entscheiden — Ralph entscheidet immer.**
 - **Credit-Regel (Regel 9):** MAX 1 Credit pro Aufgabe (Standard), MAX 3 pro Auftrag. Bei Drohen einer Überschreitung **sofort stoppen + melden**.
 - **Plan vor Code (Regel 1):** Erst Plan, dann auf **ausdrückliches „Ja"** von Ralph warten. Ausnahme nur bei klarer Direkt-Anweisung (Regel 7).
-- **Bestätigung:** Ralph erwartet bei Aufträgen die **16 Regeln einzeln nummeriert** bestätigt + Credit-Anzahl vor Start.
+- **Bestätigung:** Ralph erwartet bei Aufträgen die **18 Regeln einzeln nummeriert** bestätigt + Credit-Anzahl vor Start.
 - **Ehrlichkeit (Regel 12):** „Ich weiß es nicht" ist besser als eine falsche Antwort. Nie unsichere Zusagen.
 - **Vor Änderung prüfen (Regel 10/13):** Existiert Modul/Funktion/Feld schon? (Module-First, keine Hardcodes, keine Duplikate.)
 - **Regel 16:** Mobil-optimiert, minimaler RAM, erweiterbar bauen.
 
-### Die 16 Regeln (Kurzform)
-1 Plan vor Code · 2 Nur Ralph gibt frei · 3 Nur Deutsch, keine Werbung · 4 Module-First/keine Hardcodes · 5 Nie Live ohne Freigabe + DB-Snapshot vor Migration · 6 Bei Bugs Preview/Live klären · 7 Direkt umsetzen nur bei Anweisung · 8 Datei vor Bearbeitung lesen · 9 Credit-Limits strikt · 10 Vorher prüfen ob Modul existiert · 11 Deploy-Historie morgens (Hamburger Zeit) · 12 Brutal ehrlich · 13 Vor Änderung prüfen ob Feld existiert · 14 Credit-Limit exakt · 15 Eigene Verantwortung, Code selbst prüfen · 16 Mobil-optimiert/erweiterbar.
+### Die 18 Regeln (Kurzform)
+1 Plan vor Code · 2 Nur Ralph gibt frei · 3 Nur Deutsch, keine Werbung · 4 Module-First/keine Hardcodes · 5 Nie Live ohne Freigabe + DB-Snapshot vor Migration · 6 Bei Bugs Preview/Live klären · 7 Direkt umsetzen nur bei Anweisung · 8 Datei vor Bearbeitung lesen · 9 Credit-Limits strikt · 10 Vorher prüfen ob Modul existiert · 11 Deploy-Historie morgens (Hamburger Zeit) · 12 Brutal ehrlich · 13 Vor Änderung prüfen ob Feld existiert · 14 Credit-Limit exakt · 15 Eigene Verantwortung, Code selbst prüfen · 16 Mobil-optimiert/erweiterbar · 17 Abgeschlossene/bezahlte Einträge raus aus aktiven Listen · 18 Jeden Tag/jede Session zuerst dieses Protokoll lesen.
+
+- **Regel 17 — Abgeschlossen/bezahlt = nicht mehr aktiv:** Abgeschlossene UND bezahlte Einträge dürfen nicht mehr in aktiven Listen erscheinen. Gilt für ALLE Module: Rechnungen, Angebote, Aufgaben, Einsätze, Mail-Anfragen.
+- **Regel 18 — Protokoll zuerst lesen:** Jeden Tag und bei jeder neuen Session ZUERST `memory/UEBERGABEPROTOKOLL_NEUER_AGENT.md` lesen und den aktuellen Stand bestätigen — bevor irgendetwas getan wird.
 
 ---
 
