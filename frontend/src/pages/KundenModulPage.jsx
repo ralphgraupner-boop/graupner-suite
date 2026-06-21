@@ -347,8 +347,8 @@ const KundenModulPage = () => {
       <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-start lg:justify-between gap-3 mb-4 lg:mb-8">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Package className="w-6 h-6 text-primary flex-shrink-0" />
-            <h1 className="text-2xl lg:text-4xl font-bold">Kunden</h1>
+            <Package className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+            <h1 className="text-2xl lg:text-4xl font-bold text-emerald-700">Kunden</h1>
             <Badge variant="default" className="text-xs">Solo</Badge>
           </div>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">
