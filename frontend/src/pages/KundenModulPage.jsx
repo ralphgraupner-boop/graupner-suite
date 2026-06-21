@@ -752,6 +752,9 @@ const KundenModulPage = () => {
                           </span>
                         )}
                       </button>
+                      {/* Altes Portal ausgeblendet (Ralph 21.06.2026) — nicht gelöscht.
+                          Neuer Weg ist "🔗 Portal-Link erstellen" (module_portal_wizard). */}
+                      {false && (
                       <button
                         onClick={async () => {
                           try {
@@ -780,6 +783,7 @@ const KundenModulPage = () => {
                         <Globe className="w-4 h-4" />
                         Kundenportal öffnen / anlegen
                       </button>
+                      )}
                       <button
                         onClick={() => { setPortalLinkKunde(kunde); setPortalLinkText(""); setPortalLinkResult(""); }}
                         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
