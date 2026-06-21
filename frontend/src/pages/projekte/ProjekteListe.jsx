@@ -333,7 +333,7 @@ const ProjekteListe = () => {
                     <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {(p.created_at || "").slice(0, 10)}</span>
                   </div>
                   {p.beschreibung && (
-                    <p className="text-sm text-slate-700 mt-2 line-clamp-2">{p.beschreibung}</p>
+                    <p className="text-sm text-foreground mt-2 line-clamp-2">{p.beschreibung}</p>
                   )}
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
