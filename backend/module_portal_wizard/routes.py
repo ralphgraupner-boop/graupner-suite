@@ -7,12 +7,13 @@ Vier Endpunkte unter dem Prefix /api/kundenportal:
   GET  /status/{kunde_id}   (Auth)        — aktueller Portal-Status für Listen
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from database import db
+from database import db, logger
 from auth import get_current_user
+from utils import send_email, get_portal_bcc
 
 router = APIRouter(prefix="/kundenportal", tags=["kundenportal"])
 
@@ -26,8 +27,10 @@ def _now() -> str:
 
 
 @router.post("/link-erstellen")
-async def link_erstellen(data: dict, user=Depends(get_current_user)):
-    """Erzeugt einen eindeutigen Portal-Link für einen Kunden (+ optional Projekt)."""
+async def link_erstellen(data: dict, request: Request, user=Depends(get_current_user)):
+    """Erzeugt einen eindeutigen Portal-Link für einen Kunden (+ optional Projekt)
+    und schickt dem Kunden automatisch eine freundliche Mail mit dem Link
+    (Kopie an die konfigurierte Portal-BCC-Adresse)."""
     kunde_id = (data.get("kunde_id") or "").strip()
     if not kunde_id:
         raise HTTPException(400, "kunde_id ist erforderlich")
@@ -48,11 +51,64 @@ async def link_erstellen(data: dict, user=Depends(get_current_user)):
         "eingegangen": {"nachricht": None, "fotos": []},
     }
     await db[COLLECTION].insert_one(doc)
+
+    # Basis-URL aus Request-Header ableiten (Frontend ist tabu) -> vollen Link bauen
+    base = (request.headers.get("origin") or "").strip()
+    if not base:
+        ref = (request.headers.get("referer") or "").strip()
+        if ref:
+            from urllib.parse import urlparse
+            p = urlparse(ref)
+            if p.scheme and p.netloc:
+                base = f"{p.scheme}://{p.netloc}"
+    portal_path = f"/kundenportal/{token}"
+    full_link = f"{base.rstrip('/')}{portal_path}" if base else portal_path
+
+    # Kundendaten für Anrede + Empfänger-Mail
+    kunde = await db.module_kunden.find_one({"id": kunde_id}, {"_id": 0})
+    customer_email = ((kunde or {}).get("email") or "").strip()
+    kunde_name = ""
+    if kunde:
+        kunde_name = kunde.get("firma") or " ".join(
+            x for x in [kunde.get("vorname"), kunde.get("nachname")] if x
+        ) or ""
+
+    mail_sent = False
+    if customer_email and "@" in customer_email and base:
+        anrede = f"Guten Tag{', ' + kunde_name if kunde_name else ''},"
+        auftrag_block = (
+            f'<p style="background:#f0f7f2;border-left:4px solid #1a6e3c;padding:10px 14px;margin:14px 0;">{auftrag_text}</p>'
+            if auftrag_text else ""
+        )
+        body_html = (
+            f"<p>{anrede}</p>"
+            f"<p>vielen Dank für Ihre Anfrage. Über unser Kundenportal können Sie uns ganz "
+            f"einfach eine Nachricht und Fotos schicken — Schritt für Schritt.</p>"
+            f"{auftrag_block}"
+            f'<p><a href="{full_link}" style="display:inline-block;background:#1a6e3c;color:#fff;'
+            f'padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Zum Kundenportal</a></p>'
+            f'<p>Oder kopieren Sie diesen Link in Ihren Browser:<br>'
+            f'<a href="{full_link}">{full_link}</a></p>'
+            f"<p>Freundliche Grüße<br>Ihre Tischlerei Graupner</p>"
+        )
+        try:
+            send_email(
+                to_email=customer_email,
+                subject="Ihr persönliches Kundenportal – Tischlerei Graupner",
+                body_html=body_html,
+                bcc=await get_portal_bcc(),
+            )
+            mail_sent = True
+        except Exception as e:
+            logger.error(f"Portal-Wizard Mailversand fehlgeschlagen: {e}")
+
     return {
         "ok": True,
         "portal_token": token,
-        "portal_link": f"/portal/{token}",
+        "portal_link": portal_path,
         "status": "link_erstellt",
+        "mail_sent": mail_sent,
+        "customer_email": customer_email or None,
     }
 
 
