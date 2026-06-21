@@ -28,7 +28,12 @@ const allNavItems = [
   { path: "/module/dokumente-v6", icon: FileText, label: "Dokumente v6 (Sicherung)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/dokumente-v2", icon: FileText, label: "Dokumente v2 (defekt)", roles: ["admin"], variant: "deprecated", hideByDefault: true },
   { path: "/module/textvorlagen", icon: FileText, label: "Textvorlagen", roles: ["admin"], parentPath: "/settings" },
-  { path: "/portals", icon: Share2, label: "Kundenportale", roles: ["admin"], permKey: "modul_kundenportale" },
+  { path: "/module/kundenportal", icon: Share2, label: "Kundenportal", roles: ["admin"], permKey: "modul_kundenportale" },
+  // ACHTUNG: Dies ist das ALTE Kundenportal (routes_legacy.py / /portals).
+  // Nicht anfassen, nicht löschen, nicht mit module_portal_wizard verwechseln.
+  // Das neue Kundenportal-Modul ist: module_portal_wizard / /kundenportal
+  // Stand: 21.06.2026 — Ralph Graupner
+  { path: "/portals", icon: Globe, label: "Kundenportale (ALT)", roles: ["admin"], permKey: "modul_kundenportale", variant: "deprecated", hideByDefault: true },
   { path: "/portals-klon", icon: Globe, label: "Kundenportale (Arbeitskopie)", roles: ["admin"], hideByDefault: true },
   { path: "/monteur", icon: HardHat, label: "Monteur-App", roles: ["admin", "mitarbeiter", "buchhaltung"], permKey: "modul_monteur_app" },
   { path: "/handy-zugang", icon: Smartphone, label: "Handy-Zugang", roles: ["admin"], parentPath: "/settings" },

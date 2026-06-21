@@ -175,6 +175,37 @@ async def eingang_speichern(token: str, data: dict):
     return {"ok": True, "status": "genutzt"}
 
 
+@router.get("/admin/liste")
+async def admin_liste(user=Depends(get_current_user)):
+    """Zentrale Übersicht für das Kundenportal-Modul: alle Portal-Einträge,
+    verknüpft mit Kundenname/-mail. Eine Anfrage, kein Call pro Kunde."""
+    docs = await db[COLLECTION].find({}, {"_id": 0}).sort("erstellt_am", -1).to_list(100000)
+    kunden = await db.module_kunden.find({}, {"_id": 0, "id": 1, "vorname": 1, "nachname": 1, "firma": 1, "email": 1}).to_list(100000)
+    kmap = {}
+    for k in kunden:
+        name = k.get("firma") or " ".join(x for x in [k.get("vorname"), k.get("nachname")] if x) or ""
+        kmap[k.get("id")] = {"name": name, "email": k.get("email")}
+    out = []
+    for d in docs:
+        info = kmap.get(d.get("kunde_id")) or {}
+        eingegangen = d.get("eingegangen") or {"nachricht": None, "fotos": []}
+        out.append({
+            "id": d.get("id"),
+            "kunde_id": d.get("kunde_id"),
+            "kunde_name": info.get("name") or "(unbekannt)",
+            "kunde_email": info.get("email"),
+            "portal_token": d.get("portal_token"),
+            "auftrag_text": d.get("auftrag_text") or "",
+            "status": d.get("status"),
+            "erstellt_am": d.get("erstellt_am"),
+            "geoeffnet_am": d.get("geoeffnet_am"),
+            "genutzt_am": d.get("genutzt_am"),
+            "nachricht": eingegangen.get("nachricht"),
+            "fotos": eingegangen.get("fotos") or [],
+        })
+    return {"eintraege": out, "count": len(out)}
+
+
 @router.get("/status-alle")
 async def portal_status_alle(user=Depends(get_current_user)):
     """Status aller Kunden in EINER Anfrage (für Listen/Badges) — kein Call pro Kunde.

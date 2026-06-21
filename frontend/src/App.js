@@ -13,6 +13,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { EmailPage } from "@/pages/EmailPage";
 import CustomerPortalPage from "@/pages/CustomerPortalPage";
 import PortalWizard from "@/components/module_portal_wizard/PortalWizard";
+import { PortalWizardAdminPage } from "@/pages/module_portal_wizard/PortalWizardAdminPage";
 import SnoozePage from "@/pages/SnoozePage";
 import { KontaktModulPage } from "@/pages/KontaktModulPage";
 import { ArtikelModulPage } from "@/pages/ArtikelModulPage";
@@ -132,6 +133,7 @@ function App() {
                   entwickelt wird. Wird per "Alt-Module ausblenden" versteckt. */}
               <Route path="/module/dokumente-v6" element={<MainLayout onLogout={logout}><DokumenteModulPage /></MainLayout>} />
               <Route path="/module/textvorlagen" element={<MainLayout onLogout={logout}><TextvorlagenModulPage /></MainLayout>} />
+              <Route path="/module/kundenportal" element={<MainLayout onLogout={logout}><PortalWizardAdminPage /></MainLayout>} />
 
               {/* Dokument-Editor (Angebote/Auftraege/Rechnungen) */}
               <Route path="/quotes/new" element={<WysiwygDocumentEditor type="quote" />} />
