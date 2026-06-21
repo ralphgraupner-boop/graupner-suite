@@ -282,6 +282,94 @@ async def rename_category(data: dict, user=Depends(get_current_user)):
 
 
 
+# ── Geführte Kategorie-Routine (Datensatz für Datensatz) ────────────────────
+# Map: modul -> Konfiguration. Werte/Optionen kommen aus module_textvorlagen
+# (Module-First, keine Hardcodes). Vorschlag via vorhandene Keyword-Engine.
+CATEGORY_WALKTHROUGH_MAP = {
+    "projekte": {
+        "coll": "module_projekte", "field": "kategorie", "is_array": False,
+        "doc_type": "projekt_kategorie",
+        "text_fields": ["titel", "beschreibung", "notizen"], "name_field": "titel",
+    },
+    "kunden": {
+        "coll": "module_kunden", "field": "categories", "is_array": True,
+        "doc_type": "kunden_kategorie",
+        "text_fields": ["anliegen", "nachricht"], "name_field": None,
+    },
+}
+
+
+def _suggest_category(text: str, vorlagen: list) -> tuple[str | None, int]:
+    """Bester Kategorie-Vorschlag für einen Freitext über die Keyword-Engine."""
+    norm = _tokenize_text(text)
+    best_title, best_hits = None, 0
+    for v in vorlagen:
+        hits = 0
+        for kw in (v.get("keywords") or []):
+            h, _t = _count_keyword_hits(kw, norm)
+            hits += h
+        if hits > best_hits:
+            best_hits, best_title = hits, v.get("title")
+    return best_title, best_hits
+
+
+@router.get("/modules/textvorlagen/category-walkthrough")
+async def category_walkthrough(modul: str, user=Depends(get_current_user)):
+    """Liefert alle Datensätze eines Moduls mit aktueller Kategorie + Vorschlag.
+    Für die geführte Schritt-für-Schritt-Routine im Frontend."""
+    cfg = CATEGORY_WALKTHROUGH_MAP.get(modul)
+    if not cfg:
+        raise HTTPException(400, "modul muss 'projekte' oder 'kunden' sein")
+    vorlagen = await db.module_textvorlagen.find({"doc_type": cfg["doc_type"]}, {"_id": 0}).to_list(500)
+    options = sorted({(v.get("title") or "").strip() for v in vorlagen if v.get("title")})
+    records = await db[cfg["coll"]].find({}, {"_id": 0}).to_list(100000)
+    out = []
+    for r in records:
+        text = " ".join(str(r.get(f) or "") for f in cfg["text_fields"])
+        suggestion, hits = _suggest_category(text, vorlagen)
+        if cfg["is_array"]:
+            current = ", ".join(r.get(cfg["field"]) or [])
+        else:
+            current = r.get(cfg["field"]) or ""
+        if cfg["name_field"]:
+            name = r.get(cfg["name_field"]) or "(ohne Titel)"
+        else:
+            name = r.get("firma") or " ".join(x for x in [r.get("vorname"), r.get("nachname")] if x) or "(ohne Name)"
+        out.append({
+            "id": r.get("id"),
+            "name": name,
+            "preview": text.strip()[:160],
+            "current": current,
+            "suggestion": suggestion,
+            "suggestion_hits": hits,
+        })
+    return {"modul": modul, "options": options, "records": out, "count": len(out)}
+
+
+@router.post("/modules/textvorlagen/category-walkthrough/apply")
+async def category_walkthrough_apply(data: dict, user=Depends(get_current_user)):
+    """Setzt für EINEN Datensatz die neue Kategorie — mit Einzel-Snapshot."""
+    modul = data.get("modul")
+    rec_id = data.get("id")
+    new_value = (data.get("new_value") or "").strip()
+    cfg = CATEGORY_WALKTHROUGH_MAP.get(modul)
+    if not cfg or not rec_id or not new_value:
+        raise HTTPException(400, "modul, id und new_value sind erforderlich")
+    rec = await db[cfg["coll"]].find_one({"id": rec_id})
+    if not rec:
+        raise HTTPException(404, "Datensatz nicht gefunden")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    backup_coll = f"_backup_guided_{cfg['coll']}_{ts}"
+    await db[backup_coll].insert_one(dict(rec))
+    if cfg["is_array"]:
+        applied = [new_value]
+        await db[cfg["coll"]].update_one({"id": rec_id}, {"$set": {cfg["field"]: applied}})
+    else:
+        applied = new_value
+        await db[cfg["coll"]].update_one({"id": rec_id}, {"$set": {cfg["field"]: new_value}})
+    return {"ok": True, "id": rec_id, "modul": modul, "applied": applied, "backup_collection": backup_coll}
+
+
 @router.get("/modules/textvorlagen/export")
 async def export_textvorlagen(doc_type: str = "", text_type: str = "", user=Depends(get_current_user)):
     """Exportiert Textvorlagen als JSON. Optional gefiltert per Query-Parameter,

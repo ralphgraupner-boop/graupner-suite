@@ -277,7 +277,7 @@ const ProjekteListe = () => {
         <div className="flex flex-wrap gap-2 mb-4" data-testid="projekt-kategorie-filter">
           <FilterButton active={kategorieFilter === ""} onClick={() => setKategorieFilter("")}>Alle Kategorien</FilterButton>
           {kategorien.map(k => (
-            <FilterButton key={k} active={kategorieFilter === k} onClick={() => setKategorieFilter(k)}>{k}</FilterButton>
+            <FilterButton key={k} active={kategorieFilter === k} onClick={() => setKategorieFilter(k)}>{k} ({projekte.filter(p => p.kategorie === k).length})</FilterButton>
           ))}
         </div>
       )}

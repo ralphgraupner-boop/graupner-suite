@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Settings, Plus, Pencil, Trash2, Check, X, Loader2, Info } from "lucide-react";
+import { Settings, Plus, Pencil, Trash2, Check, X, Loader2, Info, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import KategorieWalkthroughDialog from "@/components/KategorieWalkthroughDialog";
 
 /**
  * TextvorlagenInlineManager
@@ -35,6 +36,7 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
   const [editParent, setEditParent] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [busy, setBusy] = useState("");
+  const [showWalk, setShowWalk] = useState(false);
 
   // Parent-Auswahl nur für Kategorien sinnvoll
   const supportsGroups = docType === "kunden_kategorie";
@@ -197,6 +199,16 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
             </div>
 
             {["projekt_kategorie", "kunden_kategorie"].includes(docType) && (
+              <button
+                onClick={() => setShowWalk(true)}
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-sm border border-primary/30 bg-primary/5 text-primary rounded-sm hover:bg-primary/10"
+                data-testid="btn-open-walkthrough"
+              >
+                <ListChecks className="w-4 h-4" /> Kategorien Schritt für Schritt durchgehen
+              </button>
+            )}
+
+            {["projekt_kategorie", "kunden_kategorie"].includes(docType) && (
               <div className="mb-3 flex items-start gap-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900" data-testid="rename-hilfe">
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>
@@ -278,6 +290,15 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {showWalk && (
+        <KategorieWalkthroughDialog
+          open={showWalk}
+          onClose={() => setShowWalk(false)}
+          onChanged={() => { reload(); onChanged?.(); }}
+          initialModul={docType === "kunden_kategorie" ? "kunden" : "projekte"}
+        />
       )}
     </>
   );
