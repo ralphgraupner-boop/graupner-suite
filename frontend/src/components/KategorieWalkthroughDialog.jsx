@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, Check, X, SkipForward, RotateCcw, ListChecks } from "lucide-react";
+import { Loader2, Check, X, SkipForward, RotateCcw, ListChecks, HelpCircle } from "lucide-react";
 import { Modal } from "@/components/common";
 import { api } from "@/lib/api";
 
@@ -22,6 +22,8 @@ const KategorieWalkthroughDialog = ({ open, onClose, onChanged, initialModul = "
   const [busy, setBusy] = useState(false);
   const [stats, setStats] = useState({ changed: 0, kept: 0, skipped: 0 });
   const [done, setDone] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [askMode, setAskMode] = useState(false); // Kunden: ersetzen/hinzufügen?
 
   const load = async (m) => {
     setLoading(true);
@@ -63,12 +65,23 @@ const KategorieWalkthroughDialog = ({ open, onClose, onChanged, initialModul = "
       setStats((s) => ({ ...s, kept: s.kept + 1 }));
       return advance();
     }
+    // Kunden mit bereits vorhandenen Kategorien: erst fragen ersetzen/hinzufügen
+    if (modul === "kunden" && (cur.current || "").trim()) {
+      setAskMode(true);
+      return;
+    }
+    await doApply("ersetzen");
+  };
+
+  const doApply = async (mode) => {
+    setAskMode(false);
     setBusy(true);
     try {
       await api.post("/modules/textvorlagen/category-walkthrough/apply", {
         modul,
         id: cur.id,
         new_value: choice,
+        mode,
       });
       setStats((s) => ({ ...s, changed: s.changed + 1 }));
       onChanged?.();
@@ -96,7 +109,7 @@ const KategorieWalkthroughDialog = ({ open, onClose, onChanged, initialModul = "
     <Modal isOpen={true} onClose={onClose} title="Kategorien Schritt für Schritt" size="md">
       <div className="p-4 space-y-4" data-testid="kategorie-walkthrough">
         {/* Modul-Umschalter */}
-        <div className="flex gap-2" data-testid="walkthrough-modul-switch">
+        <div className="flex items-center gap-2" data-testid="walkthrough-modul-switch">
           {["projekte", "kunden"].map((m) => (
             <button
               key={m}
@@ -109,7 +122,39 @@ const KategorieWalkthroughDialog = ({ open, onClose, onChanged, initialModul = "
               {m === "projekte" ? "Projekte" : "Kunden"}
             </button>
           ))}
+          <button
+            onClick={() => setShowHelp((v) => !v)}
+            className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            title="Hilfe (F1)"
+            data-testid="walkthrough-help-toggle"
+          >
+            <HelpCircle className="w-4 h-4" /> Hilfe
+          </button>
         </div>
+
+        {showHelp && (
+          <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900 space-y-1.5" data-testid="walkthrough-help">
+            <div className="font-semibold">F1-Hilfe — Kategorien Schritt für Schritt</div>
+            <p>
+              Dieser Dialog führt dich <b>einzeln</b> durch alle Projekte bzw. Kunden, damit du jedem Datensatz
+              die richtige Kategorie zuweisen kannst.
+            </p>
+            <p>
+              <b>Vorschlag:</b> Die Suite liest Titel/Beschreibung (bzw. Anliegen/Nachricht) und vergleicht sie
+              mit den <b>Stichwörtern</b> der Kategorien. Die beste Übereinstimmung wird mit Trefferzahl vorgeschlagen.
+              Im <b>Dropdown</b> kannst du den Vorschlag jederzeit von Hand korrigieren.
+            </p>
+            <p>
+              <b>Ja, übernehmen</b> = gewählte Kategorie speichern (mit automatischem Snapshot). ·
+              <b> Behalten</b> = aktuelle Kategorie unverändert lassen. ·
+              <b> Überspringen</b> = später entscheiden, nichts ändern.
+            </p>
+            <p>
+              <b>Nur bei Kunden:</b> Hat ein Kunde schon Kategorien, fragt die Suite nach —
+              <b> Ersetzen</b> (alte durch neue tauschen) oder <b>Hinzufügen</b> (neue zusätzlich behalten).
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="py-10 text-center text-sm text-muted-foreground">
@@ -205,9 +250,39 @@ const KategorieWalkthroughDialog = ({ open, onClose, onChanged, initialModul = "
               </button>
             </div>
 
-            {modul === "kunden" && (
+            {askMode && (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2" data-testid="walkthrough-ask-mode">
+                <p className="text-sm font-medium">Kategorie ersetzen oder hinzufügen?</p>
+                <p className="text-xs text-muted-foreground">
+                  Aktuell: <strong>{cur.current}</strong> → Neu: <strong>{choice}</strong>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => doApply("ersetzen")}
+                    disabled={busy}
+                    className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 disabled:opacity-50"
+                    data-testid="walkthrough-mode-ersetzen"
+                  >
+                    Ersetzen
+                  </button>
+                  <button
+                    onClick={() => doApply("hinzufuegen")}
+                    disabled={busy}
+                    className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-primary text-primary rounded-sm hover:bg-primary/10 disabled:opacity-50"
+                    data-testid="walkthrough-mode-hinzufuegen"
+                  >
+                    Hinzufügen
+                  </button>
+                </div>
+                <button onClick={() => setAskMode(false)} className="text-xs text-muted-foreground hover:text-foreground" data-testid="walkthrough-mode-cancel">
+                  Abbrechen
+                </button>
+              </div>
+            )}
+
+            {modul === "kunden" && !askMode && (
               <p className="text-[11px] text-amber-700">
-                Hinweis: Bei Kunden ersetzt „Ja" die Kategorien durch die gewählte. Ein Snapshot wird vorher gesichert.
+                Hinweis: Bei Kunden mit vorhandener Kategorie fragt die Suite nach „Ersetzen oder Hinzufügen". Ein Snapshot wird vorher gesichert.
               </p>
             )}
           </>

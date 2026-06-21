@@ -352,6 +352,7 @@ async def category_walkthrough_apply(data: dict, user=Depends(get_current_user))
     modul = data.get("modul")
     rec_id = data.get("id")
     new_value = (data.get("new_value") or "").strip()
+    mode = data.get("mode") or "ersetzen"  # nur relevant für Array-Felder (Kunden)
     cfg = CATEGORY_WALKTHROUGH_MAP.get(modul)
     if not cfg or not rec_id or not new_value:
         raise HTTPException(400, "modul, id und new_value sind erforderlich")
@@ -362,12 +363,16 @@ async def category_walkthrough_apply(data: dict, user=Depends(get_current_user))
     backup_coll = f"_backup_guided_{cfg['coll']}_{ts}"
     await db[backup_coll].insert_one(dict(rec))
     if cfg["is_array"]:
-        applied = [new_value]
+        if mode == "hinzufuegen":
+            existing = list(rec.get(cfg["field"]) or [])
+            applied = existing + ([new_value] if new_value not in existing else [])
+        else:
+            applied = [new_value]
         await db[cfg["coll"]].update_one({"id": rec_id}, {"$set": {cfg["field"]: applied}})
     else:
         applied = new_value
         await db[cfg["coll"]].update_one({"id": rec_id}, {"$set": {cfg["field"]: new_value}})
-    return {"ok": True, "id": rec_id, "modul": modul, "applied": applied, "backup_collection": backup_coll}
+    return {"ok": True, "id": rec_id, "modul": modul, "applied": applied, "mode": mode, "backup_collection": backup_coll}
 
 
 @router.get("/modules/textvorlagen/export")
