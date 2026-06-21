@@ -15,6 +15,7 @@ const PortalWizardAdminPage = () => {
   useF1Help("hilfe_kundenportal");
   const [kunden, setKunden] = useState([]);
   const [eintraege, setEintraege] = useState([]);
+  const [vorlagen, setVorlagen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState(null);
@@ -33,6 +34,9 @@ const PortalWizardAdminPage = () => {
       ]);
       setKunden(kRes.data || []);
       setEintraege(eRes.data?.eintraege || []);
+      // Vorhandene Portal-Texte aus dem alten Portal übernehmen (doc_type=kundenportal)
+      api.get("/modules/textvorlagen/data?doc_type=kundenportal&text_type=portal_nachricht")
+        .then(r => setVorlagen(r.data || [])).catch(() => {});
     } catch (e) {
       toast.error("Fehler beim Laden");
     } finally {
@@ -184,6 +188,22 @@ const PortalWizardAdminPage = () => {
               </p>
               <div>
                 <label className="text-sm font-medium block mb-1">Auftrag-Text</label>
+                {vorlagen.length > 0 && (
+                  <select
+                    className="w-full mb-2 border rounded-sm px-2 py-2 text-sm bg-background"
+                    data-testid="portal-admin-vorlage-select"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const v = vorlagen.find((x) => x.id === e.target.value);
+                      if (v) setLinkText(v.content || "");
+                    }}
+                  >
+                    <option value="">— Vorhandene Vorlage wählen —</option>
+                    {vorlagen.map((v) => (
+                      <option key={v.id} value={v.id}>{v.title}</option>
+                    ))}
+                  </select>
+                )}
                 <Textarea value={linkText} onChange={(e) => setLinkText(e.target.value)} rows={3} placeholder="z.B. Bitte schicken Sie Fotos vom Schaden" data-testid="portal-admin-link-text" />
               </div>
               <div className="flex justify-end gap-2">
