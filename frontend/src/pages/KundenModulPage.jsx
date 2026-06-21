@@ -523,6 +523,9 @@ const KundenModulPage = () => {
                         </span>
                       )}
                     </div>
+                    {(kunde.notes || kunde.nachricht) && (
+                      <p className="text-sm text-slate-700 mt-1 line-clamp-2" data-testid={`kunde-vorschau-${kunde.id}`}>{kunde.notes || kunde.nachricht}</p>
+                    )}
                   </div>
                   {(kunde.categories || []).length > 0 && (
                     <div className="hidden lg:flex flex-wrap gap-1">
