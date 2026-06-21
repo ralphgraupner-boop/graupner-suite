@@ -6,6 +6,7 @@ import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common
 import { api } from "@/lib/api";
 import { useF1Help } from "@/lib/useF1Help";
 import { openInPopup, useBroadcast } from "@/lib/windowSync";
+import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBadge";
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 const KATEGORIEN = ["Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"];
@@ -21,6 +22,7 @@ const ProjekteListe = () => {
   useF1Help("hilfe_projekte");
   const [projekte, setProjekte] = useState([]);
   const [kundenMap, setKundenMap] = useState({});
+  const [portalStatuses, setPortalStatuses] = useState({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("aktiv");
   const [kategorieFilter, setKategorieFilter] = useState("");
@@ -48,6 +50,7 @@ const ProjekteListe = () => {
       const km = {};
       (kRes.data || []).forEach(k => { km[k.id] = { vorname: k.vorname, nachname: k.nachname, firma: k.firma, anliegen: k.anliegen || "", nachricht: k.nachricht || "" }; });
       setKundenMap(km);
+      api.get("/kundenportal/status-alle").then(r => setPortalStatuses(r.data?.statuses || {})).catch(() => {});
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
     } finally {
@@ -321,6 +324,7 @@ const ProjekteListe = () => {
                     <h3 className="text-lg font-semibold">{p.titel}</h3>
                     <Badge className={`text-xs border ${STATUS_COLORS[p.status] || ""}`}>{p.status}</Badge>
                     {p.kategorie && <Badge variant="outline" className="text-xs">{p.kategorie}</Badge>}
+                    <PortalStatusBadge status={portalStatuses[p.kunde_id] || null} showLabel={false} />
                     {p.bilder?.length > 0 && (
                       <span className="inline-flex items-center gap-1 text-xs text-slate-600">
                         <ImageIcon className="w-3 h-3" /> {p.bilder.length}

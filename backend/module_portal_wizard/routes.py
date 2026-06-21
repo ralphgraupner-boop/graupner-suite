@@ -119,6 +119,20 @@ async def eingang_speichern(token: str, data: dict):
     return {"ok": True, "status": "genutzt"}
 
 
+@router.get("/status-alle")
+async def portal_status_alle(user=Depends(get_current_user)):
+    """Status aller Kunden in EINER Anfrage (für Listen/Badges) — kein Call pro Kunde.
+    Liefert {kunde_id: status} mit jeweils jüngstem Eintrag."""
+    docs = await db[COLLECTION].find(
+        {}, {"_id": 0, "kunde_id": 1, "status": 1, "erstellt_am": 1}
+    ).to_list(100000)
+    latest: dict[str, str] = {}
+    for d in sorted(docs, key=lambda x: x.get("erstellt_am") or ""):
+        if d.get("kunde_id"):
+            latest[d["kunde_id"]] = d.get("status")
+    return {"statuses": latest}
+
+
 @router.get("/status/{kunde_id}")
 async def portal_status(kunde_id: str, user=Depends(get_current_user)):
     """Aktueller Portal-Status eines Kunden (jüngster Eintrag) für Listen/Badges.

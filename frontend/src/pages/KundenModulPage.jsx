@@ -19,6 +19,7 @@ import MailHistoryModal from "@/components/MailHistoryModal";
 import { MailLink } from "@/components/MailLink";
 import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
+import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBadge";
 import NewProjektDialog from "@/components/NewProjektDialog";
 import EinsatzModal from "@/components/EinsatzModal";
 import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
@@ -127,6 +128,11 @@ const KundenModulPage = () => {
   const [mailHistoryFor, setMailHistoryFor] = useState(null);  // {email, name}
   const [linkDialogKunde, setLinkDialogKunde] = useState(null);  // Kunde-Objekt für Link-Dialog
   const [linkCounts, setLinkCounts] = useState({});  // {kunde_id: count_aktiver_links}
+  const [portalStatuses, setPortalStatuses] = useState({});  // {kunde_id: portal_status}
+  const [portalLinkKunde, setPortalLinkKunde] = useState(null);  // Kunde für Portal-Link-Dialog
+  const [portalLinkText, setPortalLinkText] = useState("");
+  const [portalLinkResult, setPortalLinkResult] = useState("");
+  const [portalLinkBusy, setPortalLinkBusy] = useState(false);
   const [projektCounts, setProjektCounts] = useState({});  // {kunde_id: count_projekte}
   const [neuesProjektFuer, setNeuesProjektFuer] = useState(null);  // Kunde-Objekt für Schnell-Projekt-Dialog
   const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId} — öffnet zentrales EinsatzModal
@@ -173,7 +179,7 @@ const KundenModulPage = () => {
     }
   }, [location.search, kunden]);  // eslint-disable-line
 
-  useEffect(() => { loadKunden(); loadLinkCounts(); }, []);
+  useEffect(() => { loadKunden(); loadLinkCounts(); loadPortalStatuses(); }, []);
 
   // Live-Sync mit Pop-Out-Fenstern: nach Speichern dort Liste hier neu laden
   useBroadcast("kunden-changed", () => { loadKunden(); loadLinkCounts(); });
@@ -217,6 +223,13 @@ const KundenModulPage = () => {
     try {
       const r = await api.get("/module-kundenlink/counts");
       setLinkCounts(r.data || {});
+    } catch { /* still ignore */ }
+  };
+
+  const loadPortalStatuses = async () => {
+    try {
+      const r = await api.get("/kundenportal/status-alle");
+      setPortalStatuses(r.data?.statuses || {});
     } catch { /* still ignore */ }
   };
 
@@ -499,6 +512,7 @@ const KundenModulPage = () => {
                       {kunde.firma && <Badge variant="info" className="text-xs hidden sm:inline-flex">{kunde.firma}</Badge>}
                       {kunde.customer_type && kunde.customer_type !== "Privat" && <Badge variant="default" className="text-xs hidden sm:inline-flex">{kunde.customer_type}</Badge>}
                       {(kunde.status || kunde.kontakt_status) && <Badge className={`text-xs ${STATUS_COLORS[kunde.status || kunde.kontakt_status]?.badge || "bg-gray-100 text-gray-600"}`}>{kunde.status || kunde.kontakt_status}</Badge>}
+                      <PortalStatusBadge status={portalStatuses[kunde.id] || null} showLabel={false} />
                       {search.trim() && (() => {
                         const q = search.trim().toLowerCase();
                         const nameLabel = (((kunde.vorname || kunde.nachname) ? `${kunde.vorname||''} ${kunde.nachname||''}`.trim() : kunde.name) || '').toLowerCase();
@@ -767,6 +781,15 @@ const KundenModulPage = () => {
                         Kundenportal öffnen / anlegen
                       </button>
                       <button
+                        onClick={() => { setPortalLinkKunde(kunde); setPortalLinkText(""); setPortalLinkResult(""); }}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                        data-testid={`btn-portal-link-erstellen-${kunde.id}`}
+                        title="Einmaligen Portal-Link für den Kunden erzeugen"
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                        🔗 Portal-Link erstellen
+                      </button>
+                      <button
                         onClick={() => setEinsatzCtx({ kundeId: kunde.id })}
                         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
                         data-testid={`btn-to-einsatz-${kunde.id}`}
@@ -836,6 +859,73 @@ const KundenModulPage = () => {
         onClose={() => setLinkDialogKunde(null)}
         kunde={linkDialogKunde}
       />
+
+      <Modal isOpen={!!portalLinkKunde} onClose={() => setPortalLinkKunde(null)} title="🔗 Portal-Link erstellen" size="sm">
+        <div className="p-4 space-y-4" data-testid="portal-link-dialog">
+          {!portalLinkResult ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Erstellt einen einmaligen Link für{" "}
+                <strong>{portalLinkKunde?.vorname || ""} {portalLinkKunde?.nachname || ""}{portalLinkKunde?.firma ? ` (${portalLinkKunde.firma})` : ""}</strong>.
+                Der Kunde kann darüber Nachricht und Fotos schicken.
+              </p>
+              <div>
+                <label className="text-sm font-medium block mb-1">Auftrag-Text (was soll der Kunde tun?)</label>
+                <Textarea
+                  value={portalLinkText}
+                  onChange={(e) => setPortalLinkText(e.target.value)}
+                  rows={3}
+                  placeholder="z.B. Bitte schicken Sie Fotos vom Schaden"
+                  data-testid="portal-link-text-input"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setPortalLinkKunde(null)}>Abbrechen</Button>
+                <Button
+                  disabled={portalLinkBusy}
+                  data-testid="portal-link-erstellen-submit"
+                  onClick={async () => {
+                    setPortalLinkBusy(true);
+                    try {
+                      const res = await api.post("/kundenportal/link-erstellen", {
+                        kunde_id: portalLinkKunde.id,
+                        auftrag_text: portalLinkText.trim(),
+                      });
+                      const full = `${window.location.origin}/kundenportal/${res.data.portal_token}`;
+                      setPortalLinkResult(full);
+                      loadPortalStatuses();
+                      toast.success("Portal-Link erstellt");
+                    } catch (err) {
+                      toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
+                    } finally {
+                      setPortalLinkBusy(false);
+                    }
+                  }}
+                >
+                  {portalLinkBusy ? "Erstelle…" : "Link erstellen"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3" data-testid="portal-link-result">
+              <p className="text-sm font-medium text-emerald-700">✅ Link erstellt — kopieren und per Mail an den Kunden schicken:</p>
+              <div className="flex items-center gap-2">
+                <Input value={portalLinkResult} readOnly className="text-sm" data-testid="portal-link-result-input" />
+                <Button
+                  variant="outline"
+                  data-testid="portal-link-copy"
+                  onClick={() => { navigator.clipboard.writeText(portalLinkResult); toast.success("Link kopiert"); }}
+                >
+                  Kopieren
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => setPortalLinkKunde(null)}>Fertig</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {neuesProjektFuer && (
         <NewProjektDialog

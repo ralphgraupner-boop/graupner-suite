@@ -12,6 +12,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { EmailPage } from "@/pages/EmailPage";
 import CustomerPortalPage from "@/pages/CustomerPortalPage";
+import PortalWizard from "@/components/module_portal_wizard/PortalWizard";
 import SnoozePage from "@/pages/SnoozePage";
 import { KontaktModulPage } from "@/pages/KontaktModulPage";
 import { ArtikelModulPage } from "@/pages/ArtikelModulPage";
@@ -103,6 +104,8 @@ function App() {
         <Routes>
           {/* Kundenportal (oeffentlich) */}
           <Route path="/portal/:token" element={<CustomerPortalPage />} />
+          {/* Neues Kundenportal — Wizard (oeffentlich) */}
+          <Route path="/kundenportal/:token" element={<PortalWizard />} />
           {/* Mitarbeiter-Kundenlink (oeffentlich, 30 Tage gueltig) */}
           <Route path="/m/:token" element={<KundenLinkPage />} />
           {/* Snooze-Seite (oeffentlich, Auth via push_token) */}
