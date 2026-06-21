@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Settings, Plus, Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
+import { Settings, Plus, Pencil, Trash2, Check, X, Loader2, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -195,6 +195,17 @@ const TextvorlagenInlineManager = ({ docType, label, onChanged }) => {
                 Hinzufügen
               </button>
             </div>
+
+            {["projekt_kategorie", "kunden_kategorie"].includes(docType) && (
+              <div className="mb-3 flex items-start gap-2 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900" data-testid="rename-hilfe">
+                <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>
+                  <b>Umbenennen ist sicher (F1-Hilfe):</b> Beim Ändern eines Namens zählt die Suite zuerst,
+                  wie viele Projekte/Kunden die Kategorie nutzen, legt automatisch ein <b>Backup mit Zeitstempel</b> an
+                  und benennt anschließend <b>alle betroffenen Einträge</b> mit um. Es gehen keine Zuordnungen verloren.
+                </span>
+              </div>
+            )}
 
             {/* Liste */}
             <div className="border rounded-sm divide-y max-h-[55vh] overflow-auto">
