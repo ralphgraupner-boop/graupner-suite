@@ -1,23 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Pencil, Camera, ArrowRight, CheckCircle2, Loader2, MessageSquare, ImagePlus, X } from "lucide-react";
+import { Pencil, Camera, CheckCircle2, Loader2, MessageSquare, ImagePlus, X, Phone } from "lucide-react";
 import { api } from "@/lib/api";
 
 /**
  * PortalWizard — Öffentlicher Schritt-für-Schritt-Wizard für das Kundenportal.
  *
- * 5 Karten (Akkordeon): aktive Karte ist grün umrandet + offen, die übrigen
- * sind zugeklappt (nur Nummer + Titel). Mobil-optimiert, groß & gut lesbar,
- * Hell-/Dunkel-Modus über Theme-Tokens. Grüner Akzent: #1a6e3c.
- *
- * Anbindung:
- *   Token aus URL /portal/{token} (useParams) — oder via prop `token`.
- *   GET  /api/kundenportal/portal/{token}   → Kundendaten + auftrag_text
- *   POST /api/kundenportal/eingang/{token}  → Nachricht und/oder Fotos
- *   Kein Login erforderlich (öffentlich).
+ * 5 Karten (Akkordeon): aktive Karte grün umrandet + offen, übrige zugeklappt.
+ * Mobil-optimiert, groß & gut lesbar, Hell-/Dunkel-Modus. Grüner Akzent: #1a6e3c.
+ * Kein Login (öffentlich). Fotos werden clientseitig komprimiert.
  */
 
 const GREEN = "#1a6e3c";
+const PHONE_HINT = "Sie erreichen uns auch telefonisch — wir helfen Ihnen gerne.";
 
 const CARD_TITLES = {
   1: "Begrüßung & Start",
@@ -27,21 +22,126 @@ const CARD_TITLES = {
   5: "Kontrolle & Absenden",
 };
 
+// ── Module-level Komponenten (NICHT im Render neu erzeugen → kein Fokusverlust) ──
+const Hint = ({ ok, children, testid }) => (
+  <div
+    className={`rounded-lg px-3 py-2 text-sm font-medium ${ok ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-amber-50 text-amber-900 border border-amber-200"}`}
+    data-testid={testid || (ok ? "hint-ok" : "hint-pending")}
+  >
+    {children}
+  </div>
+);
+
+const ChoiceButton = ({ active, onClick, icon: Icon, children, testid }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    data-testid={testid}
+    className={`w-full flex items-center gap-3 rounded-xl border-2 px-4 py-4 text-left text-base font-medium transition-colors ${
+      active ? "text-white" : "bg-background hover:bg-muted border-input"
+    }`}
+    style={active ? { backgroundColor: GREEN, borderColor: GREEN } : {}}
+  >
+    {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
+    <span>{children}</span>
+  </button>
+);
+
+const WeiterButton = ({ enabled, onClick, label = "Weiter →", testid }) => (
+  <button
+    type="button"
+    disabled={!enabled}
+    onClick={onClick}
+    data-testid={testid}
+    className="w-full rounded-xl px-4 py-4 text-base font-bold text-white transition-opacity disabled:cursor-not-allowed"
+    style={{ backgroundColor: enabled ? GREEN : "#9ca3af", opacity: enabled ? 1 : 0.7 }}
+  >
+    {label}
+  </button>
+);
+
+const Card = ({ n, step, onJump, children }) => {
+  const active = step === n;
+  const completed = step > n;
+  if (active) {
+    return (
+      <div className="rounded-2xl border-2 bg-background p-5 shadow-sm" style={{ borderColor: GREEN }} data-testid={`portal-card-${n}`}>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: GREEN }}>{n}</span>
+          <h2 className="text-lg font-bold">{CARD_TITLES[n]}</h2>
+        </div>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => completed && onJump(n)}
+      disabled={!completed}
+      className={`w-full flex items-center gap-2 rounded-2xl border bg-muted/40 px-4 py-3 text-left ${completed ? "hover:bg-muted cursor-pointer" : "opacity-60 cursor-default"}`}
+      data-testid={`portal-card-${n}-collapsed`}
+    >
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">{n}</span>
+      <span className="text-base font-medium text-muted-foreground">{CARD_TITLES[n]}</span>
+      {completed && <span className="ml-auto text-xs font-semibold" style={{ color: GREEN }}>✓ erledigt · ändern</span>}
+    </button>
+  );
+};
+
+// Bild clientseitig verkleinern + als JPEG-Base64 zurückgeben (klein halten)
+const compressImage = (file) =>
+  new Promise((resolve) => {
+    if (!file || !file.type?.startsWith("image/")) return resolve(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1280;
+        let { width, height } = img;
+        if (width > max || height > max) {
+          const r = Math.min(max / width, max / height);
+          width = Math.round(width * r);
+          height = Math.round(height * r);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        try {
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+          resolve({ name: file.name || `foto_${Date.now()}.jpg`, url: dataUrl, dataUrl });
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+
 const PortalWizard = ({ token: tokenProp }) => {
   const params = useParams();
   const token = tokenProp || params.token;
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [portal, setPortal] = useState(null);
 
   const [step, setStep] = useState(1);
-  const [msgChoice, setMsgChoice] = useState(null); // "ja" | "nein"
-  const [fotoChoice, setFotoChoice] = useState(null); // "ja" | "nein"
+  const [msgChoice, setMsgChoice] = useState(null);
+  const [fotoChoice, setFotoChoice] = useState(null);
   const [message, setMessage] = useState("");
-  const [files, setFiles] = useState([]); // [{ name, url }]
+  const [files, setFiles] = useState([]); // [{ name, url, dataUrl }]
+  const [fotoBusy, setFotoBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [friendlyError, setFriendlyError] = useState("");
+
+  const textareaRef = useRef(null);
+  const [pendingFocusMsg, setPendingFocusMsg] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -50,7 +150,7 @@ const PortalWizard = ({ token: tokenProp }) => {
         const r = await api.get(`/kundenportal/portal/${token}`);
         if (mounted) setPortal(r.data);
       } catch (e) {
-        if (mounted) setError(e?.response?.data?.detail || "Portal-Link ungültig oder abgelaufen.");
+        if (mounted) setLoadError(e?.response?.data?.detail || "Portal-Link ungültig oder abgelaufen.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -58,30 +158,86 @@ const PortalWizard = ({ token: tokenProp }) => {
     return () => { mounted = false; };
   }, [token]);
 
+  // Fokus in die Textarea setzen, wenn man über "Ändern" zu Karte 4 springt
+  useEffect(() => {
+    if (step === 4 && pendingFocusMsg && msgChoice === "ja") {
+      const t = setTimeout(() => textareaRef.current?.focus(), 50);
+      setPendingFocusMsg(false);
+      return () => clearTimeout(t);
+    }
+  }, [step, pendingFocusMsg, msgChoice]);
+
   const kundenName = portal?.kunde?.name || "";
   const auftragText = portal?.auftrag_text || "";
 
-  const goto = (n) => setStep(n);
+  const goto = (n) => { setFriendlyError(""); setStep(n); };
 
-  const onPickFiles = (e) => {
+  const onPickFiles = async (e) => {
     const picked = Array.from(e.target.files || []);
-    const mapped = picked.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }));
-    setFiles((prev) => [...prev, ...mapped]);
     e.target.value = "";
+    if (!picked.length) return;
+    setFriendlyError("");
+    setFotoBusy(true);
+    try {
+      const results = [];
+      for (const f of picked) {
+        const c = await compressImage(f);
+        if (c) results.push(c);
+      }
+      if (results.length === 0) {
+        setFriendlyError(`Die Fotos konnten leider nicht verarbeitet werden. Bitte versuchen Sie es nochmal — oder schicken Sie uns die Fotos per E-Mail. ${PHONE_HINT}`);
+      } else {
+        setFiles((prev) => [...prev, ...results]);
+      }
+    } catch {
+      setFriendlyError(`Das hat leider nicht geklappt. Bitte versuchen Sie es nochmal — oder schicken Sie uns die Fotos per E-Mail. ${PHONE_HINT}`);
+    } finally {
+      setFotoBusy(false);
+    }
   };
 
   const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
 
+  // "Ändern" springt direkt zur passenden Eingabe — Eingaben bleiben erhalten
+  const editMessage = () => { if (msgChoice === "ja") { setPendingFocusMsg(true); goto(4); } else goto(2); };
+  const editFotos = () => { if (fotoChoice === "ja") goto(4); else goto(3); };
+
+  const weiterToReview = () => {
+    setFriendlyError("");
+    if (msgChoice === "ja" && !message.trim() && !(fotoChoice === "ja" && files.length)) {
+      setFriendlyError("Bitte tragen Sie zuerst Ihre Nachricht ein — dann geht es weiter.");
+      return;
+    }
+    setStep(5);
+  };
+
   const submit = async () => {
+    setFriendlyError("");
+    if (msgChoice === "ja" && !message.trim() && !(fotoChoice === "ja" && files.length)) {
+      setFriendlyError("Bitte tragen Sie zuerst Ihre Nachricht ein — dann geht es weiter.");
+      return;
+    }
+    if (fotoChoice === "ja" && files.length === 0 && !(msgChoice === "ja" && message.trim())) {
+      setFriendlyError("Bitte wählen Sie zuerst mindestens ein Foto aus — oder gehen Sie zurück und wählen 'keine Fotos'.");
+      return;
+    }
     setSubmitting(true);
     try {
       await api.post(`/kundenportal/eingang/${token}`, {
         nachricht: msgChoice === "ja" ? message : null,
         fotos: fotoChoice === "ja" ? files.map((f) => f.name) : [],
+        fotos_data: fotoChoice === "ja" ? files.map((f) => f.dataUrl) : [],
       });
       setSubmitted(true);
     } catch (e) {
-      setError(e?.response?.data?.detail || "Absenden fehlgeschlagen. Bitte später erneut versuchen.");
+      const status = e?.response?.status;
+      if (!e?.response) {
+        setFriendlyError(`Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es nochmal. ${PHONE_HINT}`);
+      } else if (status === 413) {
+        setFriendlyError(`Die Fotos sind leider zu groß. Bitte senden Sie weniger oder kleinere Fotos — oder schicken Sie uns die Fotos per E-Mail. ${PHONE_HINT}`);
+      } else {
+        setFriendlyError(`Das hat leider nicht geklappt. Bitte versuchen Sie es nochmal — oder schicken Sie uns die Fotos per E-Mail. ${PHONE_HINT}`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -95,19 +251,18 @@ const PortalWizard = ({ token: tokenProp }) => {
       </div>
     );
   }
-  if (error && !portal) {
+  if (loadError && !portal) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6" data-testid="portal-wizard-error">
         <div className="max-w-md text-center space-y-2">
-          <X className="w-10 h-10 mx-auto text-red-500" />
+          <X className="w-10 h-10 mx-auto text-amber-500" />
           <p className="text-lg font-semibold">Hoppla</p>
-          <p className="text-muted-foreground">{error}</p>
+          <p className="text-muted-foreground">{loadError}</p>
+          <p className="text-sm text-muted-foreground">{PHONE_HINT}</p>
         </div>
       </div>
     );
   }
-
-  // ---- Erfolgsseite ----
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6" data-testid="portal-wizard-success">
@@ -121,80 +276,15 @@ const PortalWizard = ({ token: tokenProp }) => {
     );
   }
 
-  const Hint = ({ ok, children }) => (
-    <div
-      className={`rounded-lg px-3 py-2 text-sm font-medium ${ok ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-amber-50 text-amber-800 border border-amber-200"}`}
-      data-testid={ok ? "hint-ok" : "hint-pending"}
-    >
-      {children}
-    </div>
-  );
-
-  const ChoiceButton = ({ active, onClick, icon: Icon, children, testid }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      data-testid={testid}
-      className={`w-full flex items-center gap-3 rounded-xl border-2 px-4 py-4 text-left text-base font-medium transition-colors ${
-        active ? "text-white" : "bg-background hover:bg-muted border-input"
-      }`}
-      style={active ? { backgroundColor: GREEN, borderColor: GREEN } : {}}
-    >
-      {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
-      <span>{children}</span>
-    </button>
-  );
-
-  const WeiterButton = ({ enabled, onClick, label = "Weiter →", testid }) => (
-    <button
-      type="button"
-      disabled={!enabled}
-      onClick={onClick}
-      data-testid={testid}
-      className="w-full rounded-xl px-4 py-4 text-base font-bold text-white transition-opacity disabled:cursor-not-allowed"
-      style={{ backgroundColor: enabled ? GREEN : "#9ca3af", opacity: enabled ? 1 : 0.7 }}
-    >
-      {label}
-    </button>
-  );
-
-  // Wrapper für jede Karte (offen oder zugeklappt)
-  const Card = ({ n, children }) => {
-    const active = step === n;
-    const completed = step > n;
-    if (active) {
-      return (
-        <div
-          className="rounded-2xl border-2 bg-background p-5 shadow-sm"
-          style={{ borderColor: GREEN }}
-          data-testid={`portal-card-${n}`}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: GREEN }}>{n}</span>
-            <h2 className="text-lg font-bold">{CARD_TITLES[n]}</h2>
-          </div>
-          {children}
-        </div>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => completed && goto(n)}
-        disabled={!completed}
-        className={`w-full flex items-center gap-2 rounded-2xl border bg-muted/40 px-4 py-3 text-left ${completed ? "hover:bg-muted cursor-pointer" : "opacity-60 cursor-default"}`}
-        data-testid={`portal-card-${n}-collapsed`}
-      >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">{n}</span>
-        <span className="text-base font-medium text-muted-foreground">{CARD_TITLES[n]}</span>
-        {completed && <span className="ml-auto text-xs font-semibold" style={{ color: GREEN }}>✓ erledigt · ändern</span>}
-      </button>
-    );
-  };
+  const ErrorHint = () =>
+    friendlyError ? (
+      <Hint testid="portal-friendly-error">
+        <span className="flex items-start gap-2"><Phone className="w-4 h-4 mt-0.5 flex-shrink-0" /><span>{friendlyError}</span></span>
+      </Hint>
+    ) : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="portal-wizard">
-      {/* Banner */}
       <div className="px-4 py-5 text-white" style={{ backgroundColor: GREEN }}>
         <div className="mx-auto max-w-xl">
           <p className="text-xs font-semibold uppercase tracking-wider opacity-90">Tischlerei Graupner · Ihr persönliches Kundenportal</p>
@@ -203,16 +293,11 @@ const PortalWizard = ({ token: tokenProp }) => {
       </div>
 
       <div className="mx-auto max-w-xl px-4 py-5 space-y-3">
-        <Card n={1}>
+        <Card n={1} step={step} onJump={goto}>
           <div className="space-y-3 text-base">
-            <p>
-              Sie hatten uns eine Anfrage gesendet — vielen Dank dafür. Um Ihnen schnell und
-              gezielt helfen zu können, bitten wir Sie herzlich:
-            </p>
+            <p>Sie hatten uns eine Anfrage gesendet — vielen Dank dafür. Um Ihnen schnell und gezielt helfen zu können, bitten wir Sie herzlich:</p>
             {auftragText && (
-              <div className="rounded-xl border-l-4 bg-emerald-50 px-4 py-3 text-emerald-900" style={{ borderColor: GREEN }} data-testid="portal-auftrag-text">
-                {auftragText}
-              </div>
+              <div className="rounded-xl border-l-4 bg-emerald-50 px-4 py-3 text-emerald-900" style={{ borderColor: GREEN }} data-testid="portal-auftrag-text">{auftragText}</div>
             )}
             <p className="text-muted-foreground">Wir führen Sie jetzt Schritt für Schritt — das dauert nur wenige Minuten.</p>
             <p className="font-medium">Wir stellen Ihnen gleich zwei kurze Fragen — dann sind Sie fertig. Versprochen.</p>
@@ -220,52 +305,35 @@ const PortalWizard = ({ token: tokenProp }) => {
           </div>
         </Card>
 
-        <Card n={2}>
+        <Card n={2} step={step} onJump={goto}>
           <div className="space-y-3">
             <p className="text-lg font-semibold">Möchten Sie uns eine Nachricht schreiben?</p>
             <p className="text-muted-foreground">Haben Sie eine Frage, einen Hinweis oder eine Ergänzung für uns?</p>
-            <ChoiceButton active={msgChoice === "ja"} onClick={() => setMsgChoice("ja")} icon={Pencil} testid="portal-msg-ja">
-              Ja, ich schreibe eine Nachricht
-            </ChoiceButton>
-            <ChoiceButton active={msgChoice === "nein"} onClick={() => setMsgChoice("nein")} testid="portal-msg-nein">
-              Nein, keine Nachricht — ich möchte direkt zu den Fotos
-            </ChoiceButton>
-            {msgChoice ? (
-              <Hint ok>✅ Auswahl gespeichert. 👇 Bitte drücken Sie jetzt auf Weiter.</Hint>
-            ) : (
-              <Hint>☝️ Bitte wählen Sie eine Option — dann wird der Weiter-Button grün.</Hint>
-            )}
+            <ChoiceButton active={msgChoice === "ja"} onClick={() => setMsgChoice("ja")} icon={Pencil} testid="portal-msg-ja">Ja, ich schreibe eine Nachricht</ChoiceButton>
+            <ChoiceButton active={msgChoice === "nein"} onClick={() => setMsgChoice("nein")} testid="portal-msg-nein">Nein, keine Nachricht — ich möchte direkt zu den Fotos</ChoiceButton>
+            {msgChoice ? <Hint ok>✅ Auswahl gespeichert. 👇 Bitte drücken Sie jetzt auf Weiter.</Hint> : <Hint>☝️ Bitte wählen Sie eine Option — dann wird der Weiter-Button grün.</Hint>}
             <WeiterButton enabled={!!msgChoice} onClick={() => goto(3)} testid="portal-card2-weiter" />
           </div>
         </Card>
 
-        <Card n={3}>
+        <Card n={3} step={step} onJump={goto}>
           <div className="space-y-3">
             <p className="text-lg font-semibold">Möchten Sie uns Fotos schicken?</p>
-            <p className="text-muted-foreground">
-              {msgChoice === "ja" ? "Super! Möchten Sie zusätzlich Fotos schicken?" : "Kein Problem! Möchten Sie uns stattdessen Fotos schicken?"}
-            </p>
-            <ChoiceButton active={fotoChoice === "ja"} onClick={() => setFotoChoice("ja")} icon={Camera} testid="portal-foto-ja">
-              Ja, ich schicke Fotos
-            </ChoiceButton>
-            <ChoiceButton active={fotoChoice === "nein"} onClick={() => setFotoChoice("nein")} testid="portal-foto-nein">
-              Nein, keine Fotos — meine Nachricht reicht aus
-            </ChoiceButton>
-            {fotoChoice ? (
-              <Hint ok>✅ Auswahl gespeichert. 👇 Bitte drücken Sie jetzt auf Weiter.</Hint>
-            ) : (
-              <Hint>☝️ Bitte wählen Sie eine Option — dann wird der Weiter-Button grün.</Hint>
-            )}
+            <p className="text-muted-foreground">{msgChoice === "ja" ? "Super! Möchten Sie zusätzlich Fotos schicken?" : "Kein Problem! Möchten Sie uns stattdessen Fotos schicken?"}</p>
+            <ChoiceButton active={fotoChoice === "ja"} onClick={() => setFotoChoice("ja")} icon={Camera} testid="portal-foto-ja">Ja, ich schicke Fotos</ChoiceButton>
+            <ChoiceButton active={fotoChoice === "nein"} onClick={() => setFotoChoice("nein")} testid="portal-foto-nein">Nein, keine Fotos — meine Nachricht reicht aus</ChoiceButton>
+            {fotoChoice ? <Hint ok>✅ Auswahl gespeichert. 👇 Bitte drücken Sie jetzt auf Weiter.</Hint> : <Hint>☝️ Bitte wählen Sie eine Option — dann wird der Weiter-Button grün.</Hint>}
             <WeiterButton enabled={!!fotoChoice} onClick={() => goto(4)} testid="portal-card3-weiter" />
           </div>
         </Card>
 
-        <Card n={4}>
+        <Card n={4} step={step} onJump={goto}>
           <div className="space-y-4">
             {msgChoice === "ja" && (
               <div>
                 <label className="mb-1 block text-base font-semibold">Ihre Nachricht an uns</label>
                 <textarea
+                  ref={textareaRef}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={5}
@@ -278,11 +346,9 @@ const PortalWizard = ({ token: tokenProp }) => {
             {fotoChoice === "ja" && (
               <div>
                 <label className="mb-1 block text-base font-semibold">Fotos auswählen — Kamera oder Galerie</label>
-                <label
-                  className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-input px-4 py-6 text-base font-medium hover:bg-muted"
-                  data-testid="portal-foto-upload-label"
-                >
-                  <ImagePlus className="w-5 h-5" /> Fotos hinzufügen
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-input px-4 py-6 text-base font-medium hover:bg-muted" data-testid="portal-foto-upload-label">
+                  {fotoBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+                  {fotoBusy ? "Fotos werden vorbereitet …" : "Fotos hinzufügen"}
                   <input type="file" accept="image/*" multiple className="hidden" onChange={onPickFiles} data-testid="portal-foto-input" />
                 </label>
                 {files.length > 0 && (
@@ -290,12 +356,7 @@ const PortalWizard = ({ token: tokenProp }) => {
                     {files.map((f, i) => (
                       <div key={i} className="relative">
                         <img src={f.url} alt={f.name} className="h-20 w-full rounded-lg object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeFile(i)}
-                          className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white"
-                          data-testid={`portal-foto-remove-${i}`}
-                        >
+                        <button type="button" onClick={() => removeFile(i)} className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white" data-testid={`portal-foto-remove-${i}`}>
                           <X className="w-3 h-3" />
                         </button>
                       </div>
@@ -308,40 +369,33 @@ const PortalWizard = ({ token: tokenProp }) => {
               <p className="text-muted-foreground">Sie haben keine Eingabe gewählt — Sie können trotzdem absenden, um uns zu bestätigen, dass alles in Ordnung ist.</p>
             )}
             <Hint ok>👇 Wenn Sie fertig sind, drücken Sie bitte auf Weiter zur Kontrolle.</Hint>
-            <WeiterButton enabled onClick={() => goto(5)} label="Weiter zur Kontrolle →" testid="portal-card4-weiter" />
+            <ErrorHint />
+            <WeiterButton enabled={!fotoBusy} onClick={weiterToReview} label="Weiter zur Kontrolle →" testid="portal-card4-weiter" />
           </div>
         </Card>
 
-        <Card n={5}>
+        <Card n={5} step={step} onJump={goto}>
           <div className="space-y-3">
             <p className="text-lg font-semibold">Bitte prüfen Sie Ihre Angaben</p>
 
             <div className="rounded-xl border border-input p-3" data-testid="portal-review-message">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 font-medium"><MessageSquare className="w-4 h-4" /> Nachricht</span>
-                <button type="button" onClick={() => goto(2)} className="text-sm font-semibold" style={{ color: GREEN }} data-testid="portal-edit-message">
-                  ✏️ Ändern
-                </button>
+                <button type="button" onClick={editMessage} className="text-sm font-semibold" style={{ color: GREEN }} data-testid="portal-edit-message">✏️ Ändern</button>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {msgChoice === "ja" ? (message.trim() || "(noch keine Nachricht eingegeben)") : "Keine Nachricht"}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{msgChoice === "ja" ? (message.trim() || "(noch keine Nachricht eingegeben)") : "Keine Nachricht"}</p>
             </div>
 
             <div className="rounded-xl border border-input p-3" data-testid="portal-review-fotos">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 font-medium"><Camera className="w-4 h-4" /> Fotos</span>
-                <button type="button" onClick={() => goto(3)} className="text-sm font-semibold" style={{ color: GREEN }} data-testid="portal-edit-fotos">
-                  ✏️ Ändern
-                </button>
+                <button type="button" onClick={editFotos} className="text-sm font-semibold" style={{ color: GREEN }} data-testid="portal-edit-fotos">✏️ Ändern</button>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {fotoChoice === "ja" ? `${files.length} Foto(s) ausgewählt` : "Keine Fotos"}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{fotoChoice === "ja" ? `${files.length} Foto(s) ausgewählt` : "Keine Fotos"}</p>
             </div>
 
             <Hint ok>✅ Alles in Ordnung? Dann drücken Sie jetzt auf Absenden.</Hint>
-            {error && <Hint>⚠️ {error}</Hint>}
+            <ErrorHint />
             <button
               type="button"
               disabled={submitting}

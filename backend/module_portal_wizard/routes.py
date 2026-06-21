@@ -151,28 +151,43 @@ async def portal_oeffnen(token: str):
 
 @router.post("/eingang/{token}")
 async def eingang_speichern(token: str, data: dict):
-    """Öffentlich: speichert Nachricht/Fotos des Kunden und setzt Status auf genutzt."""
-    doc = await db[COLLECTION].find_one({"portal_token": token})
-    if not doc:
-        raise HTTPException(404, "Portal-Link ungültig oder abgelaufen")
+    """Öffentlich: speichert Nachricht/Fotos des Kunden und setzt Status auf genutzt.
+    Robust: Größen-Schutz (Mongo-16MB-Limit) + Fehler werden als saubere JSON-Antwort
+    zurückgegeben, damit der Proxy nie eine 'incomplete response' erhält."""
+    try:
+        doc = await db[COLLECTION].find_one({"portal_token": token})
+        if not doc:
+            raise HTTPException(404, "Portal-Link ungültig oder abgelaufen")
 
-    nachricht = data.get("nachricht")
-    fotos = data.get("fotos") or []
-    if not isinstance(fotos, list):
-        raise HTTPException(400, "fotos muss eine Liste sein")
+        nachricht = data.get("nachricht")
+        fotos = data.get("fotos") or []          # nur Dateinamen (für Admin-Anzeige)
+        fotos_data = data.get("fotos_data") or []  # komprimierte Bilddaten (base64)
+        if not isinstance(fotos, list) or not isinstance(fotos_data, list):
+            raise HTTPException(400, "fotos/fotos_data müssen Listen sein")
 
-    await db[COLLECTION].update_one(
-        {"portal_token": token},
-        {"$set": {
-            "eingegangen": {
-                "nachricht": (nachricht or "").strip() or None,
-                "fotos": [str(f) for f in fotos],
-            },
-            "status": "genutzt",
-            "genutzt_am": _now(),
-        }},
-    )
-    return {"ok": True, "status": "genutzt"}
+        # Größen-Schutz: gesamte Bilddaten begrenzen (Dokument-Limit 16MB)
+        total_bytes = sum(len(str(x)) for x in fotos_data)
+        if total_bytes > 12 * 1024 * 1024:
+            raise HTTPException(413, "Die Fotos sind zu groß. Bitte weniger oder kleinere Fotos senden.")
+
+        await db[COLLECTION].update_one(
+            {"portal_token": token},
+            {"$set": {
+                "eingegangen": {
+                    "nachricht": (nachricht or "").strip() or None,
+                    "fotos": [str(f) for f in fotos],
+                    "fotos_data": [str(x) for x in fotos_data],
+                },
+                "status": "genutzt",
+                "genutzt_am": _now(),
+            }},
+        )
+        return {"ok": True, "status": "genutzt"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Portal-Wizard eingang Fehler ({token}): {e}")
+        raise HTTPException(500, "Speichern fehlgeschlagen. Bitte erneut versuchen.")
 
 
 @router.get("/admin/liste")
