@@ -140,7 +140,7 @@ const Sidebar = ({ onLogout }) => {
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantSnoozeContext, setAssistantSnoozeContext] = useState(null);
-  const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0, assistent: 0, mail_anfragen: 0, projekte_neu: 0, aufgaben_offen: 0 });
+  const [unreadCounts, setUnreadCounts] = useState({ email: 0, portal: 0, termine_go: 0, assistent: 0, mail_anfragen: 0, projekte_neu: 0, aufgaben_offen: 0, kundenportal_neu: 0 });
 
   // URL-Param-Trigger: ?assistant=snooze&type=…&id=…&token=… öffnet das Sheet im Snooze-Modus
   useEffect(() => {
@@ -296,6 +296,7 @@ const Sidebar = ({ onLogout }) => {
           api.get("/module-mail-inbox/stats").catch(() => ({ data: { total: { vorschlag: 0 } } })),
           api.get("/module-projekte/count-neu").catch(() => ({ data: { count: 0 } })),
           api.get("/module-aufgaben/count-offen").catch(() => ({ data: { count: 0 } })),
+          api.get("/kundenportal/admin/unread-count").catch(() => ({ data: { count: 0 } })),
         ];
         if (emailModuleEnabled) {
           calls.unshift(api.get("/imap/inbox/stats").catch(() => ({ data: { unread: 0 } })));
@@ -310,6 +311,7 @@ const Sidebar = ({ onLogout }) => {
         const mailAnfragenCount = results[portalIdx + 3]?.data?.total?.vorschlag || 0;
         const projekteNeuCount = results[portalIdx + 4]?.data?.count || 0;
         const aufgabenOffenCount = results[portalIdx + 5]?.data?.count || 0;
+        const kundenportalNeuCount = results[portalIdx + 6]?.data?.count || 0;
         // Sound bei neuer Mail spielen (nur wenn Anzahl gestiegen)
         if (emailModuleEnabled && emailCount > prevEmailRef.current && prevEmailRef.current !== 0) {
           try {
@@ -319,7 +321,7 @@ const Sidebar = ({ onLogout }) => {
           } catch { /* ignore */ }
         }
         prevEmailRef.current = emailCount;
-        setUnreadCounts({ email: emailCount, portal: portalCount, termine_go: terminGoCount, assistent: assistentCount, mail_anfragen: mailAnfragenCount, projekte_neu: projekteNeuCount, aufgaben_offen: aufgabenOffenCount });
+        setUnreadCounts({ email: emailCount, portal: portalCount, termine_go: terminGoCount, assistent: assistentCount, mail_anfragen: mailAnfragenCount, projekte_neu: projekteNeuCount, aufgaben_offen: aufgabenOffenCount, kundenportal_neu: kundenportalNeuCount });
       } catch { /* ignore */ }
     };
     fetchCounts();
@@ -449,7 +451,9 @@ const Sidebar = ({ onLogout }) => {
                                 ? unreadCounts.projekte_neu
                                 : (path === "/module/aufgaben"
                                     ? unreadCounts.aufgaben_offen
-                                    : 0))))));
+                                    : (path === "/module/kundenportal"
+                                        ? unreadCounts.kundenportal_neu
+                                        : 0)))))));
           const isActive = location.pathname.startsWith(path);
           const hasBadge = badgeCount > 0 && !isActive;
           const helpKey = `nav.${path.split("/").filter(Boolean).pop()}`;

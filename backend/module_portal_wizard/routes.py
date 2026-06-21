@@ -180,6 +180,7 @@ async def eingang_speichern(token: str, data: dict):
                 },
                 "status": "genutzt",
                 "genutzt_am": _now(),
+                "admin_status": "neu",
             }},
         )
         return {"ok": True, "status": "genutzt"}
@@ -204,6 +205,9 @@ async def admin_liste(user=Depends(get_current_user)):
     for d in docs:
         info = kmap.get(d.get("kunde_id")) or {}
         eingegangen = d.get("eingegangen") or {"nachricht": None, "fotos": []}
+        fotos = eingegangen.get("fotos") or []
+        # admin_status: fehlend bei bereits genutzten Einträgen = "neu"
+        admin_status = d.get("admin_status") or ("neu" if d.get("status") == "genutzt" else None)
         out.append({
             "id": d.get("id"),
             "kunde_id": d.get("kunde_id"),
@@ -212,13 +216,91 @@ async def admin_liste(user=Depends(get_current_user)):
             "portal_token": d.get("portal_token"),
             "auftrag_text": d.get("auftrag_text") or "",
             "status": d.get("status"),
+            "admin_status": admin_status,
             "erstellt_am": d.get("erstellt_am"),
             "geoeffnet_am": d.get("geoeffnet_am"),
             "genutzt_am": d.get("genutzt_am"),
             "nachricht": eingegangen.get("nachricht"),
-            "fotos": eingegangen.get("fotos") or [],
+            "fotos": fotos,
+            "fotos_count": len(eingegangen.get("fotos_data") or fotos),
+            "antworten": d.get("antworten") or [],
         })
     return {"eintraege": out, "count": len(out)}
+
+
+ADMIN_STATUS_WERTE = {"neu", "gesehen", "in_bearbeitung", "erledigt"}
+
+
+@router.get("/admin/{eintrag_id}/fotos")
+async def admin_fotos(eintrag_id: str, user=Depends(get_current_user)):
+    """Lädt die Bilddaten eines Eintrags — nur beim Aufklappen (mobil-schonend)."""
+    d = await db[COLLECTION].find_one({"id": eintrag_id}, {"_id": 0, "eingegangen": 1})
+    if not d:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    eingegangen = d.get("eingegangen") or {}
+    return {
+        "fotos": eingegangen.get("fotos") or [],
+        "fotos_data": eingegangen.get("fotos_data") or [],
+    }
+
+
+@router.patch("/admin/{eintrag_id}/status")
+async def admin_set_status(eintrag_id: str, data: dict, user=Depends(get_current_user)):
+    """Setzt den Bearbeitungs-Status (neu/gesehen/in_bearbeitung/erledigt)."""
+    neu = (data.get("admin_status") or "").strip()
+    if neu not in ADMIN_STATUS_WERTE:
+        raise HTTPException(400, "Ungültiger Status")
+    res = await db[COLLECTION].update_one({"id": eintrag_id}, {"$set": {"admin_status": neu}})
+    if res.matched_count == 0:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    return {"ok": True, "admin_status": neu}
+
+
+@router.post("/admin/{eintrag_id}/antwort")
+async def admin_antwort(eintrag_id: str, data: dict, user=Depends(get_current_user)):
+    """Schickt dem Kunden eine Antwort per Mail (Kopie an Portal-BCC) und
+    speichert sie im Antwort-Verlauf. Textbausteine kommen aus dem Frontend."""
+    text = (data.get("text") or "").strip()
+    if not text:
+        raise HTTPException(400, "Text ist erforderlich")
+    d = await db[COLLECTION].find_one({"id": eintrag_id})
+    if not d:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    kunde = await db.module_kunden.find_one({"id": d.get("kunde_id")}, {"_id": 0})
+    customer_email = ((kunde or {}).get("email") or "").strip()
+    mail_sent = False
+    if customer_email and "@" in customer_email:
+        body_html = (
+            "<p>" + text.replace("\n", "<br>") + "</p>"
+            "<p>Freundliche Grüße<br>Ihre Tischlerei Graupner</p>"
+        )
+        try:
+            send_email(
+                to_email=customer_email,
+                subject="Nachricht von Tischlerei Graupner",
+                body_html=body_html,
+                bcc=await get_portal_bcc(),
+            )
+            mail_sent = True
+        except Exception as e:
+            logger.error(f"Portal-Wizard Antwort-Mail fehlgeschlagen: {e}")
+    eintrag = {"text": text, "gesendet_am": _now(), "mail_sent": mail_sent}
+    await db[COLLECTION].update_one(
+        {"id": eintrag_id},
+        {"$push": {"antworten": eintrag}, "$set": {"admin_status": "in_bearbeitung"}},
+    )
+    return {"ok": True, "mail_sent": mail_sent, "antwort": eintrag}
+
+
+@router.get("/admin/unread-count")
+async def admin_unread_count(user=Depends(get_current_user)):
+    """Anzahl ungelesener Eingänge (Kunde hat geantwortet, noch nicht gesehen)
+    für den roten Badge in der Navigation."""
+    docs = await db[COLLECTION].find(
+        {"status": "genutzt"}, {"_id": 0, "admin_status": 1}
+    ).to_list(100000)
+    count = sum(1 for d in docs if (d.get("admin_status") or "neu") == "neu")
+    return {"count": count}
 
 
 @router.get("/status-alle")
