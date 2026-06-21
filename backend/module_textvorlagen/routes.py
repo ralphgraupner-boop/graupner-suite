@@ -178,6 +178,110 @@ async def delete_textvorlage(item_id: str, user=Depends(get_current_user)):
     return {"message": "Geloescht"}
 
 
+# ── Sichere Kategorie-Umbenennung ───────────────────────────────────────────
+# Map: doc_type -> (Collection, Feldname, ist_Array)
+# Nur diese doc_types ziehen referenzierende Datensätze mit um.
+CATEGORY_USAGE_MAP = {
+    "projekt_kategorie": ("module_projekte", "kategorie", False),
+    "kunden_kategorie": ("module_kunden", "categories", True),
+}
+
+
+@router.get("/modules/textvorlagen/category-usage")
+async def category_usage(doc_type: str, value: str, user=Depends(get_current_user)):
+    """Vorher-Zählung: wie viele Projekte/Kunden nutzen diese Kategorie aktuell?"""
+    mapping = CATEGORY_USAGE_MAP.get(doc_type)
+    result = {"doc_type": doc_type, "value": value, "supported": bool(mapping),
+              "projekte_count": 0, "kunden_count": 0}
+    if not mapping:
+        return result
+    coll, field, _is_array = mapping
+    cnt = await db[coll].count_documents({field: value})
+    if coll == "module_projekte":
+        result["projekte_count"] = cnt
+    elif coll == "module_kunden":
+        result["kunden_count"] = cnt
+    return result
+
+
+@router.post("/modules/textvorlagen/rename-category")
+async def rename_category(data: dict, user=Depends(get_current_user)):
+    """Benennt eine Kategorie sicher um: Snapshot -> Migration alt->neu ->
+    Textvorlagen-Titel -> Verifikation (0 verwaiste Einträge)."""
+    item_id = data.get("item_id")
+    new_name = (data.get("new_name") or "").strip()
+    if not item_id or not new_name:
+        raise HTTPException(400, "item_id und new_name sind erforderlich")
+    item = await db.module_textvorlagen.find_one({"id": item_id})
+    if not item:
+        raise HTTPException(404, "Textvorlage nicht gefunden")
+    doc_type = item.get("doc_type")
+    old_name = item.get("title") or ""
+    if new_name == old_name:
+        raise HTTPException(400, "Neuer Name ist identisch mit dem alten")
+
+    # Kollisionsprüfung (case-insensitiv) im selben doc_type
+    dup = await db.module_textvorlagen.find_one({
+        "doc_type": doc_type,
+        "title": {"$regex": f"^{_re_escape(new_name)}$", "$options": "i"},
+        "id": {"$ne": item_id},
+    })
+    if dup:
+        raise HTTPException(409, f'Kategorie „{new_name}" existiert bereits')
+
+    mapping = CATEGORY_USAGE_MAP.get(doc_type)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    migrated = {"projekte": 0, "kunden": 0}
+    backup_info = {"backup_collection": None, "documents_backed_up": 0}
+
+    if mapping:
+        coll, field, is_array = mapping
+        # 1) Snapshot der betroffenen Dokumente -> Backup-Collection MIT Zeitstempel
+        affected = await db[coll].find({field: old_name}).to_list(100000)
+        backup_coll = f"_backup_rename_{coll}_{ts}"
+        if affected:
+            await db[backup_coll].insert_many(affected)
+        backup_info = {"backup_collection": backup_coll, "documents_backed_up": len(affected)}
+
+        # 2) Migration alt -> neu (case-exakt)
+        if is_array:
+            res = await db[coll].update_many(
+                {field: old_name},
+                {"$set": {f"{field}.$[el]": new_name}},
+                array_filters=[{"el": old_name}],
+            )
+        else:
+            res = await db[coll].update_many({field: old_name}, {"$set": {field: new_name}})
+        if coll == "module_projekte":
+            migrated["projekte"] = res.modified_count
+        elif coll == "module_kunden":
+            migrated["kunden"] = res.modified_count
+
+    # 3) Textvorlagen-Titel umbenennen
+    await db.module_textvorlagen.update_one(
+        {"id": item_id},
+        {"$set": {"title": new_name, "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+
+    # 4) Verifikation: 0 verwaiste Einträge?
+    orphans = 0
+    if mapping:
+        coll, field, _ = mapping
+        orphans = await db[coll].count_documents({field: old_name})
+
+    return {
+        "ok": True,
+        "old_name": old_name,
+        "new_name": new_name,
+        "doc_type": doc_type,
+        "migrated": migrated,
+        "orphans_remaining": orphans,
+        **backup_info,
+    }
+
+
+
+
 @router.get("/modules/textvorlagen/export")
 async def export_textvorlagen(doc_type: str = "", text_type: str = "", user=Depends(get_current_user)):
     """Exportiert Textvorlagen als JSON. Optional gefiltert per Query-Parameter,
