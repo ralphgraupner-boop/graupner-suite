@@ -5,12 +5,17 @@ import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
 import { DocumentPreview } from "@/components/DocumentPreview";
+import { useF1Help } from "@/lib/useF1Help";
+
+const QUOTE_STATUS_OPTIONS = ["Entwurf", "Gesendet", "Beauftragt", "Abgelehnt"];
 
 const OrdersPage = ({ readOnly = false }) => {
+  useF1Help("hilfe_auftraege");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewOrder, setPreviewOrder] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState(null); // { order, restoreStatus, changeQuote }
   const [searchTerm, setSearchTerm] = useState("");
   const [invoiceDialog, setInvoiceDialog] = useState(null); // { orderId, dueDays }
   const [defaultDueDays, setDefaultDueDays] = useState(14);
@@ -90,17 +95,51 @@ const OrdersPage = ({ readOnly = false }) => {
     navigate(`/orders/edit/${order.id}`);
   };
 
-  const handleDelete = async (id, e) => {
+  const performDelete = async (id) => {
+    try {
+      await api.delete(`/orders/${id}`);
+      toast.success("Auftragsbestätigung gelöscht");
+      setConfirmDeleteId(null);
+      loadOrders();
+    } catch (err) {
+      toast.error("Fehler beim Löschen");
+    }
+  };
+
+  const handleDelete = (order, e) => {
     e?.stopPropagation();
-    if (confirmDeleteId !== id) {
-      setConfirmDeleteId(id);
+    // Stammt die AB aus einem Angebot? -> Dialog mit Angebot-Rücksetzung
+    if (order.quote_id) {
+      setDeleteDialog({
+        order,
+        restoreStatus: order.quote_prev_status || "Gesendet",
+        changeQuote: true,
+      });
+      return;
+    }
+    // Ohne zugehöriges Angebot: bisherige 2-Klick-Bestätigung
+    if (confirmDeleteId !== order.id) {
+      setConfirmDeleteId(order.id);
       setTimeout(() => setConfirmDeleteId(null), 3000);
       return;
     }
+    performDelete(order.id);
+  };
+
+  const confirmDeleteWithRestore = async () => {
+    if (!deleteDialog) return;
+    const { order, restoreStatus, changeQuote } = deleteDialog;
     try {
-      await api.delete(`/orders/${id}`);
-      toast.success("Auftrag gelöscht");
-      setConfirmDeleteId(null);
+      await api.delete(`/orders/${order.id}`);
+      if (changeQuote && order.quote_id) {
+        await api.put(`/quotes/${order.quote_id}/status`, { status: restoreStatus });
+      }
+      toast.success(
+        changeQuote
+          ? `Auftragsbestätigung gelöscht · Angebot auf „${restoreStatus}" gesetzt`
+          : "Auftragsbestätigung gelöscht"
+      );
+      setDeleteDialog(null);
       loadOrders();
     } catch (err) {
       toast.error("Fehler beim Löschen");
@@ -245,7 +284,7 @@ const OrdersPage = ({ readOnly = false }) => {
                         )}
                         {!readOnly && <button
                           data-testid={`btn-delete-order-${order.id}`}
-                          onClick={(e) => handleDelete(order.id, e)}
+                          onClick={(e) => handleDelete(order, e)}
                           className={`p-2 rounded-sm transition-colors ${confirmDeleteId === order.id ? 'bg-red-500 text-white' : 'hover:bg-destructive/10 hover:text-destructive'}`}
                           title={confirmDeleteId === order.id ? "Nochmal klicken zum Löschen" : "Löschen"}
                         >
@@ -317,6 +356,64 @@ const OrdersPage = ({ readOnly = false }) => {
                 data-testid="invoice-create-confirm"
               >
                 Rechnung erstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteDialog && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeleteDialog(null); }}
+          data-testid="order-delete-dialog"
+        >
+          <div className="bg-background rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2"><Trash2 className="w-5 h-5 text-destructive" /> Auftragsbestätigung löschen</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {deleteDialog.order.order_number} wurde aus einem Angebot erstellt. Sie können das Angebot beim Löschen wieder auf einen passenden Status zurücksetzen.
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={!deleteDialog.changeQuote}
+                onChange={(e) => setDeleteDialog({ ...deleteDialog, changeQuote: !e.target.checked })}
+                data-testid="order-delete-keep-quote"
+              />
+              Angebot nicht ändern
+            </label>
+
+            {deleteDialog.changeQuote && (
+              <div>
+                <label className="text-sm font-medium">Angebot zurücksetzen auf:</label>
+                <select
+                  value={deleteDialog.restoreStatus}
+                  onChange={(e) => setDeleteDialog({ ...deleteDialog, restoreStatus: e.target.value })}
+                  className="mt-1 w-full px-3 py-2 border rounded-lg bg-background text-sm"
+                  data-testid="order-delete-restore-status"
+                >
+                  {QUOTE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">Vorschlag: der letzte Status vor „Beauftragt".</p>
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => setDeleteDialog(null)}
+                className="px-4 py-2 rounded-lg border hover:bg-muted text-sm"
+                data-testid="order-delete-cancel"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={confirmDeleteWithRestore}
+                className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-semibold"
+                data-testid="order-delete-confirm"
+              >
+                Löschen
               </button>
             </div>
           </div>

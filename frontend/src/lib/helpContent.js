@@ -14,6 +14,33 @@
  */
 
 export const HELP_DEFAULTS = {
+  hilfe_auftraege: [
+    {
+      title: "Was ist diese Seite?",
+      content:
+        "• Hier sehen Sie alle Auftragsbestätigungen.\n" +
+        "• Bereits abgerechnete (in Rechnung gestellte) erscheinen hier nicht mehr.\n" +
+        "• Tippen Sie auf eine Zeile, um die Vorschau zu öffnen.",
+    },
+    {
+      title: "Rechnung aus einer Auftragsbestätigung erstellen",
+      content:
+        "1. In der Zeile auf das Rechnungs-Symbol klicken.\n" +
+        "2. Zahlungsziel (Tage) prüfen oder anpassen.\n" +
+        "3. Auf 'Rechnung erstellen' klicken.\n" +
+        "→ Die Auftragsbestätigung wird dann automatisch auf 'Abgerechnet' gesetzt und verschwindet aus dieser Liste.",
+    },
+    {
+      title: "Auftragsbestätigung löschen — und Angebot zurücksetzen",
+      content:
+        "Wenn eine Auftragsbestätigung aus einem Angebot entstanden ist und Sie sie löschen (z. B. weil sie versehentlich erstellt wurde), fragt das Programm Sie kurz:\n\n" +
+        "1. Auf das Papierkorb-Symbol klicken.\n" +
+        "2. Im Fenster wählen Sie, auf welchen Status das Angebot zurückgesetzt werden soll — normalerweise der letzte Status (z. B. 'Gesendet').\n" +
+        "3. Möchten Sie das Angebot NICHT ändern, setzen Sie das Häkchen bei 'Angebot nicht ändern'.\n" +
+        "4. Auf 'Löschen' klicken.\n\n" +
+        "So bleibt Ihr Angebot im richtigen Zustand. Den Status können Sie jederzeit auch von Hand wieder ändern.",
+    },
+  ],
   hilfe_kundenportal: [
     {
       title: "Kundenportal",
@@ -267,6 +294,7 @@ export const HELP_DEFAULTS = {
 };
 
 export const HELP_LABELS = {
+  hilfe_auftraege: "Hilfe: Aufträge",
   hilfe_kundenportal: "Hilfe: Kundenportal",
   hilfe_kunden: "Hilfe: Kunden",
   hilfe_projekte: "Hilfe: Projekte",

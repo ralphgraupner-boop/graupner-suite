@@ -330,6 +330,7 @@ class Order(BaseModel):
     vat_amount: CoercedFloat = 0
     total_gross: CoercedFloat = 0
     status: str = "Offen"
+    quote_prev_status: str = ""
     is_template: bool = False
     show_lohnanteil: bool = False
     lohnanteil_custom: OptCoercedFloat = None

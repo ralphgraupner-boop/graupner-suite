@@ -54,7 +54,8 @@ async def copy_quote_to_order(quote_id: str):
     quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
     if not quote:
         raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
-    order = Order(order_number=await get_next_order_number(), quote_id=quote_id, **_copy_fields(quote))
+    order = Order(order_number=await get_next_order_number(), quote_id=quote_id,
+                  quote_prev_status=quote.get("status", ""), **_copy_fields(quote))
     await db.orders.insert_one(order.model_dump())
     await db.quotes.update_one({"id": quote_id}, {"$set": {"status": "Beauftragt"}})
     return order
