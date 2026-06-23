@@ -752,7 +752,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const [showMailDialog, setShowMailDialog] = useState(null);
-  const [mailMode, setMailMode] = useState("bb"); // "bb" = Betterbird direkt, "eml" = .eml-Datei
 
   const onOpenMailClient = () => {
     if (isNew) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
@@ -813,8 +812,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setShowMailDialog(null);
   };
 
-  const dispatchMail = (withText) =>
-    mailMode === "bb" ? executeBetterbirdDirect(withText) : executeMailClient(withText, false);
   const { subtotal, discountAmt, netAfterDiscount, vat, total, finalAmount } = calculateTotals();
   const titelGroups = hasTitels ? getTitelGroups() : [];
 
@@ -1117,52 +1114,55 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
               </h3>
               <p className="text-sm text-muted-foreground mt-1">Wie soll die E-Mail vorbereitet werden?</p>
             </div>
-            <div className="p-5 space-y-2">
-              <div className="flex gap-2 mb-1" data-testid="mail-mode-toggle">
+            <div className="p-5 space-y-3">
+              {/* Einfacher Hauptweg: funktioniert immer */}
+              <button
+                onClick={() => executeMailClient(true, false)}
+                className="w-full p-4 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-left flex items-start gap-3"
+                data-testid="btn-mail-prepare"
+              >
+                <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                <div>
+                  <div className="font-semibold text-primary">E-Mail jetzt vorbereiten</div>
+                  <div className="text-xs text-muted-foreground">Mit Anschreiben und PDF-Anhang. Öffnet sich in Ihrem Mailprogramm – funktioniert immer.</div>
+                </div>
+              </button>
+              <button
+                onClick={() => executeMailClient(false, false)}
+                className="w-full px-3 py-2 rounded-sm border hover:bg-muted/40 text-sm text-left text-muted-foreground"
+                data-testid="btn-mail-prepare-no-text"
+              >
+                Lieber ohne Anschreiben (leere E-Mail mit Anhang)
+              </button>
+
+              {/* Freundlicher Hinweis, falls Betterbird noch nicht eingerichtet ist */}
+              <div className="mt-2 rounded-sm border bg-muted/30 p-3 space-y-2">
+                <p className="text-sm font-medium">Betterbird öffnet sich nicht von selbst?</p>
+                <p className="text-xs text-muted-foreground">Dann ist es auf diesem PC noch nicht eingerichtet. Was möchten Sie tun?</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => executeMailClient(true, false)}
+                    className="flex-1 px-3 py-2 text-sm rounded-sm bg-primary text-primary-foreground font-medium hover:bg-primary/90"
+                    data-testid="btn-mail-do-for-me"
+                  >
+                    Mach das für mich
+                  </button>
+                  <button
+                    onClick={() => { setShowMailDialog(null); navigate("/settings?tab=hilfe"); }}
+                    className="flex-1 px-3 py-2 text-sm rounded-sm border bg-background hover:bg-muted/60"
+                    data-testid="btn-mail-show-setup"
+                  >
+                    Zeig mir, wie ich es einrichte
+                  </button>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => setMailMode("bb")}
-                  className={`flex-1 px-3 py-2 text-sm rounded-sm border ${mailMode === "bb" ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/40"}`}
-                  data-testid="btn-mode-betterbird"
+                  onClick={() => executeBetterbirdDirect(true)}
+                  className="text-xs text-primary underline underline-offset-2"
+                  data-testid="btn-mail-betterbird-direct"
                 >
-                  Betterbird direkt
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMailMode("eml")}
-                  className={`flex-1 px-3 py-2 text-sm rounded-sm border ${mailMode === "eml" ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/40"}`}
-                  data-testid="btn-mode-eml"
-                >
-                  .eml herunterladen
+                  Betterbird ist schon eingerichtet → mit einem Klick öffnen
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {mailMode === "bb"
-                  ? "Öffnet Betterbird direkt mit PDF-Anhang (lokaler Helfer nötig)."
-                  : "Lädt eine .eml-Datei zum Öffnen im Mailprogramm."}
-              </p>
-              <button
-                onClick={() => dispatchMail(true)}
-                className="w-full p-3 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-left flex items-start gap-3"
-                data-testid="btn-mail-with-text"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 font-bold">✓</div>
-                <div>
-                  <div className="font-semibold text-primary">Mit Vortext &amp; Schlusstext senden</div>
-                  <div className="text-xs text-muted-foreground">Vortext, Schlusstext und Grußformel werden in die E-Mail übernommen</div>
-                </div>
-              </button>
-              <button
-                onClick={() => dispatchMail(false)}
-                className="w-full p-3 rounded-sm border hover:bg-muted/40 text-left flex items-start gap-3"
-                data-testid="btn-mail-without-text"
-              >
-                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center flex-shrink-0 font-bold">—</div>
-                <div>
-                  <div className="font-semibold">Ohne Text (leer)</div>
-                  <div className="text-xs text-muted-foreground">E-Mail wird ohne Inhalt vorbereitet - du schreibst selbst</div>
-                </div>
-              </button>
             </div>
             <div className="p-4 border-t flex justify-end">
               <button

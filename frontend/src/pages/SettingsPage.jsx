@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Mail, Save, FileText, Building2, Users, Palette, Package, Calculator, BookOpen, HardHat, HelpCircle, Smartphone, FolderTree, Flag, MessageSquare, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -160,6 +160,11 @@ const WartungTab = () => {
 const SettingsPage = () => {
   useF1Help("hilfe_einstellungen");
   const [activeTab, setActiveTab] = useState("firma");
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t) setActiveTab(t);
+  }, [searchParams]);
   const [settings, setSettings] = useState({
     company_name: "", owner_name: "", address: "", phone: "", email: "",
     tax_id: "", bank_name: "", iban: "", bic: "",
