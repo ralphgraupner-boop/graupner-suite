@@ -56,6 +56,7 @@ async def copy_quote_to_order(quote_id: str):
         raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
     order = Order(order_number=await get_next_order_number(), quote_id=quote_id, **_copy_fields(quote))
     await db.orders.insert_one(order.model_dump())
+    await db.quotes.update_one({"id": quote_id}, {"$set": {"status": "Beauftragt"}})
     return order
 
 
@@ -66,6 +67,7 @@ async def copy_quote_to_invoice(quote_id: str):
         raise HTTPException(status_code=404, detail="Angebot nicht gefunden")
     inv = Invoice(invoice_number=await get_next_invoice_number(), **await _new_invoice_dates(), **_copy_fields(quote))
     await db.invoices.insert_one(inv.model_dump())
+    await db.quotes.update_one({"id": quote_id}, {"$set": {"status": "Beauftragt"}})
     return inv
 
 
@@ -76,4 +78,5 @@ async def copy_order_to_invoice(order_id: str):
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
     inv = Invoice(invoice_number=await get_next_invoice_number(), order_id=order_id, **await _new_invoice_dates(), **_copy_fields(order))
     await db.invoices.insert_one(inv.model_dump())
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "Abgerechnet"}})
     return inv
