@@ -58,6 +58,7 @@ const estPosH = (p) => {
 const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onEdit, onCreateDunning }) => {
   const [showMailDialog, setShowMailDialog] = useState(false);
   const [mailMode, setMailMode] = useState("bb"); // "bb" = Betterbird direkt, "eml" = .eml-Datei
+  const [showBetterbirdCheck, setShowBetterbirdCheck] = useState(false);
   const [settings, setSettings] = useState({});
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -220,8 +221,20 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
     if (!base) { toast.error("Backend-Adresse fehlt"); return; }
     const url = `bbcompose://compose?base=${encodeURIComponent(base)}&type=${ep}&id=${encodeURIComponent(doc.id)}&token=${encodeURIComponent(token)}&text=${withText ? 1 : 0}`;
     window.location.href = url;
-    toast.success("Betterbird wird geöffnet … (lokaler Helfer muss installiert sein)");
     setShowMailDialog(false);
+    // Da nicht prüfbar ist, ob der lokale Helfer installiert ist:
+    // nach 2 Sek. freundlich nachfragen, ob Betterbird aufgegangen ist.
+    setTimeout(() => setShowBetterbirdCheck(true), 2000);
+  };
+
+  const HELFER_URL = "https://raw.githubusercontent.com/ralphgraupner-boop/graupner-suite/main/windows-helfer/Graupner_Betterbird_Setup.bat";
+  const downloadBetterbirdHelfer = () => {
+    const a = window.document.createElement("a");
+    a.href = HELFER_URL;
+    a.download = "Graupner_Betterbird_Setup.bat";
+    window.document.body.appendChild(a); a.click(); a.remove();
+    toast.success("Helfer wird heruntergeladen – bitte per Doppelklick ausführen.");
+    setShowBetterbirdCheck(false);
   };
 
   const downloadEml = async (withText) => {
@@ -485,7 +498,35 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
         </div>
       )}
 
-      {/* ── Pages Area ── */}
+      {showBetterbirdCheck && (
+        <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4" data-testid="betterbird-check-dialog">
+          <div className="bg-background rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-5 border-b">
+              <h3 className="text-lg font-semibold">Hat sich Betterbird geöffnet?</h3>
+              <p className="text-sm text-muted-foreground mt-1">Manchmal dauert es einen kurzen Moment. Bitte schauen Sie kurz nach.</p>
+            </div>
+            <div className="p-5 space-y-2">
+              <button onClick={() => setShowBetterbirdCheck(false)} className="w-full p-3 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-left flex items-start gap-3" data-testid="btn-bb-yes">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                <div>
+                  <div className="font-semibold text-primary">Ja – alles gut</div>
+                  <div className="text-xs text-muted-foreground">Weiterarbeiten</div>
+                </div>
+              </button>
+              <button onClick={downloadBetterbirdHelfer} className="w-full p-3 rounded-sm border hover:bg-muted/40 text-left flex items-start gap-3" data-testid="btn-bb-no">
+                <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center flex-shrink-0 font-bold">↓</div>
+                <div>
+                  <div className="font-semibold">Nein – Helfer herunterladen</div>
+                  <div className="text-xs text-muted-foreground">Lädt das einmalige Einrichtungs-Programm herunter. Bitte die heruntergeladene Datei mit Doppelklick ausführen – dann funktioniert Betterbird automatisch.</div>
+                </div>
+              </button>
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <button onClick={() => setShowBetterbirdCheck(false)} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted" data-testid="btn-bb-close">Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex-1 overflow-auto" style={{ background: "#4a4a4f" }}>
         <div className="flex flex-col items-center py-6 px-4 gap-5">
           {pages.filter((_, pgIdx) => pgIdx === currentPage).map((pg, _) => {
