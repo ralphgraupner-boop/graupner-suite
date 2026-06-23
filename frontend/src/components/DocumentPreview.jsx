@@ -59,6 +59,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
   const [showMailDialog, setShowMailDialog] = useState(false);
   const [mailMode, setMailMode] = useState("bb"); // "bb" = Betterbird direkt, "eml" = .eml-Datei
   const [settings, setSettings] = useState({});
+  const [showHelferDialog, setShowHelferDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
@@ -220,8 +221,9 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
     if (!base) { toast.error("Backend-Adresse fehlt"); return; }
     const url = `bbcompose://compose?base=${encodeURIComponent(base)}&type=${ep}&id=${encodeURIComponent(doc.id)}&token=${encodeURIComponent(token)}&text=${withText ? 1 : 0}`;
     window.location.href = url;
-    toast.success("Betterbird wird geöffnet … (lokaler Helfer muss installiert sein)");
+    toast.success("Betterbird wird geöffnet …");
     setShowMailDialog(false);
+    setTimeout(() => setShowHelferDialog(true), 2000);
   };
 
   const downloadEml = async (withText) => {
@@ -480,6 +482,41 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
             </div>
             <div className="p-4 border-t flex justify-end">
               <button onClick={() => setShowMailDialog(false)} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted" data-testid="btn-mail-cancel">Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Betterbird Helfer Dialog ── */}
+      {showHelferDialog && (
+        <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-5 border-b">
+              <h3 className="text-lg font-semibold">Hat sich Betterbird geöffnet?</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <button
+                onClick={() => setShowHelferDialog(false)}
+                className="w-full p-3 rounded-sm border-2 border-green-500 bg-green-50 hover:bg-green-100 text-left font-semibold text-green-700"
+              >
+                ✅ Ja — alles gut, weiter arbeiten
+              </button>
+              <div className="border rounded-sm p-4 space-y-3">
+                <p className="font-semibold text-red-600">❌ Nein — Helfer einmalig installieren:</p>
+                <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                  <li>Datei herunterladen (Button unten)</li>
+                  <li>Im Download-Ordner auf <strong>Graupner_Betterbird_Setup.bat</strong> doppelklicken</li>
+                  <li>Windows fragt „Möchten Sie es ausführen?" — <strong>Ja</strong> klicken — fertig</li>
+                </ol>
+                <a
+                  href="https://github.com/ralphgraupner-boop/graupner-suite/raw/main/windows-helfer/Graupner_Betterbird_Setup.bat"
+                  download="Graupner_Betterbird_Setup.bat"
+                  className="block w-full p-3 rounded-sm border-2 border-primary bg-primary/5 hover:bg-primary/10 text-center font-semibold text-primary"
+                  onClick={() => setTimeout(() => setShowHelferDialog(false), 1000)}
+                >
+                  📥 Helfer herunterladen
+                </a>
+              </div>
             </div>
           </div>
         </div>
