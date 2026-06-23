@@ -15,11 +15,13 @@ from .routes_legacy import router as _legacy
 from .routes_manager import router as _manager
 from .routes_templates import router as _templates
 from .routes_data import router as _data
+from .routes_copy import router as _copy
 
 router = APIRouter()
 router.include_router(_legacy)
 router.include_router(_manager)
 router.include_router(_templates)
 router.include_router(_data)
+router.include_router(_copy)
 
 __all__ = ["router"]

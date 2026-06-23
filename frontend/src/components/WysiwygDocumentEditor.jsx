@@ -107,6 +107,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const [showPreview, setShowPreview] = useState(false);
   const [showLohnanteil, setShowLohnanteil] = useState(type === "invoice");
+  const [copying, setCopying] = useState(false);
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
   const [showLohnkosten, setShowLohnkosten] = useState(false);
   const [showDocCheck, setShowDocCheck] = useState(false);
@@ -670,6 +671,26 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const handleSaveAndExit = async () => { const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
 
+  // Kopier-Buttons: 1:1-Kopie als neuer Vorgang (gleicher Kunde, neue Nummer, Quelle bleibt unveraendert)
+  const handleCopyTo = async (target) => {
+    if (isNew || !id) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
+    setCopying(true);
+    try {
+      const cfg = {
+        order: { url: `/documents/copy/quote-to-order/${id}`, open: "/orders/edit", label: "Auftragsbestätigung" },
+        "invoice-from-quote": { url: `/documents/copy/quote-to-invoice/${id}`, open: "/invoices/edit", label: "Rechnung" },
+        "invoice-from-order": { url: `/documents/copy/order-to-invoice/${id}`, open: "/invoices/edit", label: "Rechnung" },
+      }[target];
+      const res = await api.post(cfg.url);
+      toast.success(`${cfg.label} erstellt`);
+      navigate(`${cfg.open}/${res.data.id}`);
+    } catch {
+      toast.error("Erstellen fehlgeschlagen. Bitte erneut versuchen.");
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const handleExit = () => { setShowExitConfirm(true); };
   const handleExitWithSave = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
@@ -851,13 +872,31 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           <div style={{ width: '794px', transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}>
             {/* Status Dropdown */}
             {!isNew && (
-              <div className="mb-3 lg:mb-4">
+              <div className="mb-3 lg:mb-4 flex flex-wrap items-center gap-2">
                 <select value={status} onChange={(e) => setStatus(e.target.value)}
                   className="h-8 lg:h-9 rounded-sm border border-border bg-background text-foreground px-2 lg:px-3 text-xs lg:text-sm">
                   {type === "quote" && (<><option value="Entwurf">Status: Entwurf</option><option value="Gesendet">Status: Gesendet</option><option value="Beauftragt">Status: Beauftragt</option><option value="Abgelehnt">Status: Abgelehnt</option></>)}
                   {type === "order" && (<><option value="Offen">Status: Offen</option><option value="In Arbeit">Status: In Arbeit</option><option value="Abgeschlossen">Status: Abgeschlossen</option></>)}
                   {type === "invoice" && (<><option value="Offen">Status: Offen</option><option value="Gesendet">Status: Gesendet</option><option value="Bezahlt">Status: Bezahlt</option><option value="Überfällig">Status: Überfällig</option></>)}
                 </select>
+                {type === "quote" && (
+                  <>
+                    <button type="button" onClick={() => handleCopyTo("order")} disabled={copying} data-testid="btn-create-order-from-quote"
+                      className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#1a6e3c" }}>
+                      Auftragsbestätigung erstellen
+                    </button>
+                    <button type="button" onClick={() => handleCopyTo("invoice-from-quote")} disabled={copying} data-testid="btn-create-invoice-from-quote"
+                      className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#003399" }}>
+                      Rechnung erstellen
+                    </button>
+                  </>
+                )}
+                {type === "order" && (
+                  <button type="button" onClick={() => handleCopyTo("invoice-from-order")} disabled={copying} data-testid="btn-create-invoice-from-order"
+                    className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#003399" }}>
+                    Rechnung erstellen
+                  </button>
+                )}
               </div>
             )}
 

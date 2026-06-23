@@ -51,6 +51,7 @@
 11. Angebote/Aufträge-Listen filtern weitergewandelte aus — `QuotesPage.jsx`, `OrdersPage.jsx`
 12. Dashboard **ausgeblendet** (nicht zerstört) → Startseite = **Termine** — `App.js`, `Navigation.jsx`; + Aufgabe `95b4b4e8…` + `ROADMAP.md`
 13. **GraupnerBriefkopf** (gebrandeter Kopf): neue React-Komponente `frontend/src/components/common/GraupnerBriefkopf.jsx` ersetzt grünes Banner im Portal-Wizard; Backend `graupner_briefkopf_html()` in `module_portal_wizard/routes.py` im Kopf beider Portal-Mails (link-erstellen + admin/antwort). „Tischlerei R. Graupner" + „SEIT 1960 · HAMBURG" überall. `pdf_generator.py`/Rechnungen NICHT angefasst. (21.06.2026)
+14. **Dokument-Kopier-Buttons** (im geöffneten Dokument): NEU `module_dokumente/routes_copy.py` mit 3 additiven Endpunkten — `POST /documents/copy/quote-to-order/{id}`, `/quote-to-invoice/{id}`, `/order-to-invoice/{id}`. 1:1-Kopie (Positionen/Preise/Kunde/Texte), neue Nummer, **KEINE Statusänderung an der Quelle**. Frontend `WysiwygDocumentEditor.jsx`: im Angebot Buttons „Auftragsbestätigung erstellen" + „Rechnung erstellen", in der AB „Rechnung erstellen"; öffnet danach automatisch das neue Dokument. „Rechnung" = altes `/invoices`-System (Vorgangs-Strang). Backend per curl getestet (Quelle unverändert), Frontend kompiliert sauber. `routes_v1`/`pdf_generator` NICHT angefasst. (23.06.2026)
 
 > ⚠️ **WICHTIG:** Alle 12 Punkte liegen nur auf **Preview**. Ralph muss **„Save to Github" + Redeploy** machen, damit es auf Live wirkt.
 
