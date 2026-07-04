@@ -141,6 +141,12 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                         subject = _decode(hmsg.get("Subject", ""))
 
                         # ── Custom-Filter pro Postfach (OR-Logik) ──
+                        # Sicherheits-Filter: eigene Firmenadressen niemals als Kunde importieren
+                        own_domains = ["tischlerei-graupner.de", "xn--schiebetr-reparatur-hamburg-p3c.de"]
+                        if from_email and any(from_email.lower().endswith("@" + d) for d in own_domains):
+                            a_skipped += 1
+                            continue
+                        
                         if not filter_matches(acc_rules, subject, from_email):
                             a_skipped += 1
                             continue
@@ -250,7 +256,7 @@ async def scan(weeks: int = 6, max_count: int = 30, user=Depends(get_current_use
                         await db.module_mail_inbox.insert_one(entry)
                         a_found += 1
                     except Exception as e:  # noqa: BLE001
-                        logger.warning(f"mail-inbox[{acc_label}] scan: Mail-Fehler {e}")
+                        import traceback; traceback.print_exc(); logger.warning(f"mail-inbox[{acc_label}] scan: Mail-Fehler {e}")
                         continue
 
             try:

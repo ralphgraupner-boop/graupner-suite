@@ -434,6 +434,7 @@ class CompanySettings(BaseModel):
     imap_password: str = ""
     imap_folder: str = "INBOX"
     imap_enabled: bool = False
+    imap_lookback_days: int = 30
     # Kalkulation Settings
     kalk_meister: float = 58.0
     kalk_geselle: float = 45.0

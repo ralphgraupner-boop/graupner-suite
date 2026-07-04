@@ -118,9 +118,6 @@ async def accept_link(entry_id: str, body: dict, user=Depends(get_current_user))
 
     Body: { kunde_id: str, append_nachricht: bool=True }
     - Inbox-Eintrag wird auf status='übernommen' gesetzt + kunde_id eingetragen.
-    - Leere Felder beim bestehenden Kunden (Anrede, Vorname, Nachname, Telefon,
-      Straße, PLZ, Ort) werden automatisch aus der neuen Mail nachgefuellt,
-      sofern der bestehende Kunde dort noch nichts gespeichert hat.
     - Optional wird die Anfrage-Nachricht als neuer Notiz-Block an die
       bestehende kunde.nachricht angehängt (mit Datums-Header), so dass
       keine bestehenden Daten überschrieben werden.
@@ -143,48 +140,14 @@ async def accept_link(entry_id: str, body: dict, user=Depends(get_current_user))
     parsed = entry.get("parsed") or {}
     new_nachricht = (parsed.get("nachricht") or "").strip()
 
-    update_set = {}
-
-    # ── Leere Felder beim bestehenden Kunden automatisch nachfuellen ──
-    # Nur Felder, die beim bestehenden Kunden WIRKLICH leer sind, werden
-    # aus der neuen (verknuepften) Mail ergaenzt. Bereits vorhandene Werte
-    # bleiben unangetastet, damit nichts ueberschrieben wird.
-    _fill_map = {
-        "anrede": parsed.get("anrede", ""),
-        "vorname": parsed.get("vorname", ""),
-        "nachname": parsed.get("nachname", ""),
-        "phone": parsed.get("telefon", ""),
-        "strasse": parsed.get("strasse", ""),
-        "plz": parsed.get("plz", ""),
-        "ort": parsed.get("ort", ""),
-    }
-    for field, new_val in _fill_map.items():
-        new_val = (new_val or "").strip()
-        existing_val = (kunde.get(field) or "").strip()
-        if new_val and not existing_val:
-            update_set[field] = new_val
-
-    # Name neu zusammensetzen, falls Vorname/Nachname ergaenzt wurden
-    if "vorname" in update_set or "nachname" in update_set:
-        vn = update_set.get("vorname", kunde.get("vorname", ""))
-        nn = update_set.get("nachname", kunde.get("nachname", ""))
-        joined = f"{(vn or '').strip()} {(nn or '').strip()}".strip()
-        existing_name = (kunde.get("name") or "").strip()
-        if joined and not existing_name:
-            update_set["name"] = joined
-
     if body.get("append_nachricht", True) and new_nachricht:
         existing = (kunde.get("nachricht") or "").strip()
         stamp = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
         block = f"[Neue Anfrage {stamp}]\n{new_nachricht}"
         merged = (existing + "\n\n" + block).strip() if existing else block
-        update_set["nachricht"] = merged
-
-    if update_set:
-        update_set["updated_at"] = datetime.now(timezone.utc).isoformat()
         await db.module_kunden.update_one(
             {"id": target_kunde_id},
-            {"$set": update_set},
+            {"$set": {"nachricht": merged, "updated_at": datetime.now(timezone.utc).isoformat()}},
         )
 
     await db.module_mail_inbox.update_one(
@@ -255,3 +218,5 @@ async def abschliessen(entry_id: str, body: dict, user=Depends(get_current_user)
         }},
     )
     return {"ok": True, "id": entry_id, "status": "abgeschlossen"}
+
+

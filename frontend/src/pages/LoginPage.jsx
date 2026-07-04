@@ -105,7 +105,7 @@ const LoginPage = ({ onLogin }) => {
       >
         <div className="h-full w-full bg-black/40 flex items-end p-12">
           <div className="text-white">
-            <h2 className="text-4xl font-bold mb-4">Graupner Suite</h2>
+            <h2 className="text-4xl font-bold mb-4">Graupner Suite (IONOS TEST)</h2>
             <p className="text-lg opacity-90">Ihre komplette Handwerker-Software</p>
           </div>
         </div>
@@ -123,7 +123,7 @@ const LoginPage = ({ onLogin }) => {
             <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">
               {isRegister ? "Erstellen Sie Ihr Konto" : "Willkommen zurück"}
             </p>
-            <p className="lg:hidden text-xs text-muted-foreground mt-2">Graupner Suite</p>
+            <p className="lg:hidden text-xs text-muted-foreground mt-2">Graupner Suite (IONOS TEST)</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

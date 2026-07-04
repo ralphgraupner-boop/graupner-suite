@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download, Upload, BarChart3, Eye, Wrench, ChevronDown } from "lucide-react";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Mail, RefreshCw, Loader2, Inbox, Check, X, Phone, MapPin, ExternalLink, Trash2, Search, Download, Upload, BarChart3, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
@@ -176,34 +175,21 @@ const ModuleMailInboxPage = () => {
     const targets = items.filter((e) => e.status === "vorschlag");
     if (targets.length === 0) { toast.info("Keine offenen Anfragen zum Übernehmen"); return; }
     if (!window.confirm(
-      `${targets.length} offene Anfrage(n) verarbeiten?\n\nNeue Kunden werden angelegt. Eindeutige Doppel-Kunden werden automatisch mit dem bestehenden Kunden verknüpft (leere Felder wie Vorname/Telefon/Adresse werden dabei ergänzt). Uneindeutige Fälle (mehrere mögliche Kunden) werden zur manuellen Prüfung übersprungen.`
+      `${targets.length} offene Anfrage(n) als neue Kunden übernehmen?\n\nMögliche Doppel-Kunden werden automatisch übersprungen.`
     )) return;
     setBulkAccepting(true);
-    let angelegt = 0, verknuepft = 0, uebersprungen = 0, fehler = 0;
+    let angelegt = 0, uebersprungen = 0, fehler = 0;
     for (const e of targets) {
       try {
         await api.post(`/module-mail-inbox/accept/${e.id}`);
         angelegt++;
       } catch (err) {
-        if (err?.response?.status === 409) {
-          const dups = err?.response?.data?.detail?.duplicates || [];
-          if (dups.length === 1) {
-            try {
-              await api.post(`/module-mail-inbox/accept-link/${e.id}`, { kunde_id: dups[0].id });
-              verknuepft++;
-            } catch {
-              uebersprungen++;
-            }
-          } else {
-            uebersprungen++;
-          }
-        } else {
-          fehler++;
-        }
+        if (err?.response?.status === 409) uebersprungen++;
+        else fehler++;
       }
     }
     try { window.dispatchEvent(new CustomEvent("graupner:data-changed")); } catch { /* noop */ }
-    toast.success(`${angelegt} neu angelegt, ${verknuepft} automatisch verknüpft, ${uebersprungen} zur manuellen Prüfung übersprungen${fehler ? `, ${fehler} Fehler` : ""}`);
+    toast.success(`${angelegt} übernommen, ${uebersprungen} Duplikate übersprungen${fehler ? `, ${fehler} Fehler` : ""}`);
     setBulkAccepting(false);
     await load();
   };
@@ -439,42 +425,48 @@ const ModuleMailInboxPage = () => {
               disabled={bulkAccepting}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
               data-testid="btn-mail-accept-all"
-              title="Alle offenen Anfragen verarbeiten: neue Kunden anlegen, eindeutige Duplikate automatisch verknüpfen"
+              title="Alle offenen Anfragen auf einmal als neue Kunden übernehmen (Duplikate werden übersprungen)"
             >
               {bulkAccepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Alle übernehmen
             </button>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
-                data-testid="btn-mail-werkzeuge"
-              >
-                <Wrench className="w-4 h-4" /> Werkzeuge <ChevronDown className="w-3 h-3 opacity-60" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Selten gebraucht</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={prioritaetenNeuPruefen} disabled={reprio} data-testid="btn-mail-reprio">
-                {reprio ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                Neu prüfen <span className="ml-auto text-xs text-muted-foreground">Priorität neu berechnen</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatsOpen((v) => !v)} data-testid="btn-mail-stats-toggle">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                {statsOpen ? "Statistik ausblenden" : "Statistik anzeigen"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Für Steuerberater/Sicherung</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setExportOpen(true)} data-testid="btn-mail-export">
-                <Download className="w-4 h-4 mr-2" /> Export (JSON/CSV)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => importInputRef.current?.click()} disabled={importing} data-testid="btn-mail-import">
-                {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />} Import (JSON)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <button
+            onClick={prioritaetenNeuPruefen}
+            disabled={reprio}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent disabled:opacity-50"
+            data-testid="btn-mail-reprio"
+            title="Prioritäten aller Anfragen anhand der aktuellen Keywords neu berechnen"
+          >
+            {reprio ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Neu prüfen
+          </button>
+          <button
+            onClick={() => setExportOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
+            data-testid="btn-mail-export"
+            title="Anfragen als JSON oder CSV exportieren"
+          >
+            <Download className="w-4 h-4" /> Export
+          </button>
+          <button
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent disabled:opacity-50"
+            data-testid="btn-mail-import"
+            title="Anfragen aus JSON-Datei importieren (Duplikate werden übersprungen)"
+          >
+            {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Import
+          </button>
+          <button
+            onClick={() => setStatsOpen((v) => !v)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"
+            data-testid="btn-mail-stats-toggle"
+            title="Statistik nach Postfach anzeigen"
+          >
+            <BarChart3 className="w-4 h-4" />
+            {statsOpen ? "Statistik ausblenden" : "Statistik anzeigen"}
+          </button>
           <button
             onClick={openPreview}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm border border-input bg-background hover:bg-accent"

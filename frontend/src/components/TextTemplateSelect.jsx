@@ -379,7 +379,7 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
                   data-testid={`overlay-template-${t.id}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm truncate">{t.title}</span>
+                    <span className="font-medium text-sm truncate text-foreground">{t.title}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
                       t.text_type === "vortext" ? "bg-blue-100 text-blue-700" :
                       t.text_type === "schlusstext" ? "bg-green-100 text-green-700" :

@@ -197,20 +197,29 @@ export const HELP_DEFAULTS = {
         "4. Die Priorität richtet sich nach den Keyword-Prioritäten (Einstellungen).",
     },
     {
+      title: "Neue Anfragen abholen",
+      content:
+        "1. 'Postfach prüfen' (grüner Button) holt neue Mails aus dem Postfach – bis zu 30 auf einmal, 6 Wochen zurück.\n" +
+        "2. 'Übersprungene anzeigen' zeigt ALLE Mails der letzten 6 Wochen, auch die vom Filter aussortierten – falls eine echte Anfrage fälschlich rausgefallen ist.\n" +
+        "3. Beide Buttons stehen immer sichtbar oben rechts.",
+    },
+    {
       title: "Anfrage bearbeiten",
       content:
         "1. Klick auf die Zeile öffnet die Detail-Ansicht der Anfrage.\n" +
         "2. 'Begrüßungsmail senden' öffnet Betterbird mit dem passenden Vorlagentext.\n" +
-        "3. 'Übernehmen' legt aus der Anfrage einen Kunden/Vorgang an.\n" +
-        "4. Ignorieren/Spam markiert die Anfrage, ohne sie zu löschen.",
+        "3. 'Übernehmen' legt aus der Anfrage einen Kunden/Vorgang an. Existiert der Kunde schon (gleiche E-Mail/Telefon), bietet die Suite 'Zuordnen' an und ergänzt automatisch nur die leeren Felder.\n" +
+        "4. Ignorieren/Spam markiert die Anfrage, ohne sie zu löschen.\n" +
+        "5. 'Alle übernehmen' verarbeitet alle offenen Anfragen auf einmal: neue Kunden werden angelegt, eindeutige Duplikate automatisch verknüpft.",
     },
     {
-      title: "Export & Import",
+      title: "Werkzeuge-Menü (selten gebraucht)",
       content:
-        "1. 'Export' lädt die Anfragen als JSON (Re-Import) oder CSV (Excel/Steuerberater) herunter.\n" +
-        "2. Datums- und Status-Filter im Export-Dialog wählbar.\n" +
-        "3. 'Import' liest eine JSON-Datei ein – Duplikate werden automatisch übersprungen.\n" +
-        "4. So lassen sich Anfragen zwischen Preview und Live übertragen.",
+        "Im Dropdown 'Werkzeuge' oben rechts:\n" +
+        "1. 'Neu prüfen' holt KEINE neuen Mails, sondern berechnet nur die Priorität der bereits gelisteten Anfragen neu (z.B. nach Änderung der Keyword-Regeln).\n" +
+        "2. 'Statistik anzeigen' zeigt eine kleine Übersicht pro Postfach.\n" +
+        "3. 'Export' lädt die Anfragen als JSON (Re-Import) oder CSV (Excel/Steuerberater) herunter.\n" +
+        "4. 'Import' liest eine JSON-Datei ein – Duplikate werden automatisch übersprungen.",
     },
   ],
   hilfe_dokumente: [

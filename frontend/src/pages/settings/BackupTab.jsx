@@ -118,7 +118,7 @@ const BackupTab = () => {
       formData.append('file', file);
       formData.append('mode', importMode);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/backup/import?mode=${importMode}`, {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/backup/import?mode=${importMode}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: formData
@@ -311,27 +311,26 @@ const BackupTab = () => {
           className="hidden"
           id="backup-upload"
         />
-        <label htmlFor="backup-upload">
-          <Button
-            as="span"
-            variant="outline"
-            disabled={importing}
-            className="w-full cursor-pointer"
-            size="lg"
-          >
-            {importing ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Wird importiert...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                Backup-Datei auswählen (.zip)
-              </>
-            )}
-          </Button>
-        </label>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={importing}
+          className="w-full cursor-pointer"
+          size="lg"
+          onClick={() => document.getElementById('backup-upload').click()}
+        >
+          {importing ? (
+            <>
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              Wird importiert...
+            </>
+          ) : (
+            <>
+              <Upload className="w-4 h-4 mr-2" />
+              Backup-Datei auswählen (.zip)
+            </>
+          )}
+        </Button>
       </Card>
 
       {/* Future: Auto-Backup */}

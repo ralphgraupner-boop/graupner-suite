@@ -267,7 +267,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
     ignore_doc = await db.settings.find_one({"id": "email_ignore_list"}, {"_id": 0})
     ignore_patterns = [p.lower().strip() for p in (ignore_doc.get("patterns", []) if ignore_doc else []) if p.strip()]
 
-    for eid in email_ids[-1000:]:
+    for eid in email_ids[-50:]:
         status, msg_data = mail.fetch(eid, "(BODY.PEEK[])")
         if status != "OK":
             continue
@@ -297,40 +297,23 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                 continue
 
         # Extract attachments metadata (store data separately)
-        # Groessen-Schutz (03.07.2026, Ralph): MongoDB erlaubt max. ~16MB pro
-        # Dokument. Anhaenge (z.B. hochaufgeloeste Fotos) koennen das nach
-        # Base64-Kodierung leicht sprengen und haben bisher den GESAMTEN
-        # Abruf-Durchlauf abgebrochen (keine Fehlerbehandlung). Jetzt: zu
-        # grosse Anhaenge werden uebersprungen (nur Metadaten gespeichert),
-        # und ein Fehler bei einem einzelnen Anhang bricht nicht mehr den
-        # kompletten Durchlauf ab.
-        MAX_ATTACHMENT_BYTES = 10_000_000  # 10 MB Sicherheitsgrenze
         raw_attachments = get_attachments(msg)
         attachment_meta = []
         for att in raw_attachments:
             att_id = str(uuid.uuid4())
-            too_large = (att.get("size") or 0) > MAX_ATTACHMENT_BYTES
-            try:
-                if not too_large:
-                    # Store attachment data in separate collection
-                    await db.email_attachments.insert_one({
-                        "id": att_id,
-                        "filename": att["filename"],
-                        "content_type": att["content_type"],
-                        "size": att["size"],
-                        "data_b64": att["data_b64"],
-                    })
-                else:
-                    logger.warning(f"IMAP: Anhang '{att['filename']}' ({att.get('size')} bytes) zu gross - nicht gespeichert, nur Metadaten")
-            except Exception as att_err:
-                logger.error(f"IMAP: Anhang '{att.get('filename')}' konnte nicht gespeichert werden: {att_err}")
-                too_large = True
+            # Store attachment data in separate collection
+            await db.email_attachments.insert_one({
+                "id": att_id,
+                "filename": att["filename"],
+                "content_type": att["content_type"],
+                "size": att["size"],
+                "data_b64": att["data_b64"],
+            })
             attachment_meta.append({
                 "id": att_id,
                 "filename": att["filename"],
                 "content_type": att["content_type"],
                 "size": att["size"],
-                "too_large": too_large,
             })
 
         # Classify with match details
@@ -381,12 +364,8 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
         else:
             mail.store(eid, "+FLAGS", "\\Seen")
         
-        # Auto-Import ins Kontakt-Modul DEAKTIVIERT (03.07.2026, Ralph):
-        # Hat unbemerkt fehlerhafte Kunden angelegt (Spam, eigene Adresse,
-        # Lieferanten-Mails). Neue Anfragen sollen ausschliesslich ueber die
-        # geprueften module_mail_inbox-Warteliste angelegt werden (Als Kunde
-        # uebernehmen / Zuordnen), nie automatisch im Hintergrund.
-        if False and classification == "anfrage":
+        # Auto-import ins Kontakt-Modul wenn "anfrage" klassifiziert
+        if classification == "anfrage":
             try:
                 import re as _re
                 

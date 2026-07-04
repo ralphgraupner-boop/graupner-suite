@@ -387,7 +387,7 @@ const Sidebar = ({ onLogout }) => {
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold text-primary">Graupner Suite</h1>
+              <h1 className="text-2xl font-bold text-primary">Graupner Suite (IONOS TEST)</h1>
               {APP_ENV.kind !== "unknown" && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-bold tracking-wider ${ENV_BADGE_CLASSES[APP_ENV.color]}`} data-testid="sidebar-env-badge">
                   {APP_ENV.short}
@@ -750,7 +750,7 @@ const MobileNav = ({ onLogout }) => {
     <>
       <header className="app-sidebar lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b flex items-center justify-between px-4 z-30">
         <div className="flex items-center gap-1.5 min-w-0">
-          <h1 className="text-lg font-bold text-primary">Graupner Suite</h1>
+          <h1 className="text-lg font-bold text-primary">Graupner Suite (IONOS TEST)</h1>
           {APP_ENV.kind !== "unknown" && (
             <span className={`text-[9px] px-1.5 py-0.5 rounded-sm font-bold tracking-wider ${ENV_BADGE_CLASSES[APP_ENV.color]}`} data-testid="mobile-env-badge">
               {APP_ENV.short}
