@@ -93,7 +93,7 @@ async def accept(entry_id: str, body: dict | None = None, user=Depends(get_curre
         "bemerkung": _pick("bemerkung", ""),
         "categories": body.get("categories") if isinstance(body.get("categories"), list) else [],
         "source_url": parsed.get("source_url", ""),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": entry.get("received_at") or datetime.now(timezone.utc).isoformat(),
         "created_by": getattr(user, "username", "system") if not isinstance(user, dict) else (user.get("username") or "system"),
         "imported_from_mail_id": entry_id,
     }
