@@ -108,6 +108,7 @@ const KundenModulPage = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("aktiv");
+  const [sortMode, setSortMode] = useState("created_at");
   const [openEdits, setOpenEdits] = useState([]); // mehrere "Kunde bearbeiten"-Fenster parallel
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
@@ -340,7 +341,8 @@ const KundenModulPage = () => {
     return searchMatch && catMatch && finalStatusMatch;
   }).sort((a, b) => {
     // Primär nach Anlage-Datum (neueste zuerst) — User-Wunsch 12.05.2026
-    return (b.created_at || "").localeCompare(a.created_at || "");
+    const field = sortMode === "updated_at" ? "updated_at" : "created_at";
+    return (b[field] || "").localeCompare(a[field] || "");
   });
 
   const statusCounts = {};
@@ -389,6 +391,24 @@ const KundenModulPage = () => {
             <Plus className="w-4 h-4" /> Neuer Kunde
           </Button>
         </div>
+      </div>
+
+      {/* Sortierung */}
+      <div className="flex gap-2 mb-2">
+        <Button
+          variant={sortMode === "created_at" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSortMode("created_at")}
+        >
+          Anlegedatum
+        </Button>
+        <Button
+          variant={sortMode === "updated_at" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSortMode("updated_at")}
+        >
+          Zuletzt bearbeitet
+        </Button>
       </div>
 
       {/* Suche */}
