@@ -210,7 +210,7 @@ const BuchhaltungPage = () => {
         </div>
       ) : (
         <>
-          {tab === "uebersicht" && <UebersichtTab stats={stats} />}
+          {tab === "uebersicht" && <UebersichtTab stats={stats} offenePosten={offenePosten} />}
           {tab === "buchungen" && (
             <BuchungenTab buchungen={filtered} search={search} setSearch={setSearch}
               typFilter={typFilter} setTypFilter={setTypFilter}
@@ -320,13 +320,14 @@ const HilfeOverlay = ({ onClose }) => {
 
 
 // ==================== ÜBERSICHT TAB ====================
-const UebersichtTab = ({ stats }) => {
+const UebersichtTab = ({ stats, offenePosten }) => {
+  const offenTotal = (offenePosten || []).reduce((sum, p) => sum + (p.betrag || 0), 0);
   if (!stats) return null;
   const maxMonat = Math.max(...(stats.monatlich || []).map(m => Math.max(m.einnahmen, m.ausgaben)), 1);
 
   return (
     <div className="space-y-6" data-testid="tab-content-uebersicht">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -358,6 +359,18 @@ const UebersichtTab = ({ stats }) => {
               </p>
             </div>
             {stats.gewinn_brutto >= 0 ? <TrendingUp className="w-8 h-8 text-green-500/30" /> : <TrendingDown className="w-8 h-8 text-red-500/30" />}
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Offene Forderungen</p>
+              <p className="text-2xl font-bold text-amber-600" data-testid="kpi-offene-forderungen">
+                {offenTotal.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+              </p>
+              <p className="text-xs text-muted-foreground">{(offenePosten || []).length} offene Rechnung(en)</p>
+            </div>
+            <CreditCard className="w-8 h-8 text-amber-500/30" />
           </div>
         </Card>
       </div>

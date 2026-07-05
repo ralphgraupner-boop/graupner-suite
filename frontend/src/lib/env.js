@@ -6,7 +6,7 @@ export const detectAppEnv = () => {
   if (typeof window === "undefined") return { kind: "unknown", short: "?", color: "slate" };
   const h = window.location.hostname;
   if (h.includes("85.215.145.155")) {
-    return { kind: "ionos-test", short: "IONOS TEST", color: "orange" };
+    return { kind: "live", short: "IONOS LIVE", color: "red" };
   }
   if (h.includes("preview") || h.includes("emergentagent.com")) {
     return { kind: "preview", short: "PREVIEW", color: "blue" };

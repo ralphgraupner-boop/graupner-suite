@@ -10,7 +10,10 @@ const detectLoginEnv = () => {
   if (h.includes("preview") || h.includes("emergentagent.com")) {
     return { kind: "preview", label: "PREVIEW · TEST-UMGEBUNG", style: "blue" };
   }
-  if (h.includes("emergent.host") || h.includes("graupner") || h === "localhost") {
+  if (h.includes("85.215.145.155")) {
+      return { kind: "live", label: "IONOS LIVE", style: "red" };
+    }
+    if (h.includes("emergent.host") || h.includes("graupner") || h === "localhost") {
     return { kind: "live", label: "LIVE · PRODUKTIV", style: "red" };
   }
   return { kind: "unknown", label: h, style: "slate" };
@@ -105,7 +108,7 @@ const LoginPage = ({ onLogin }) => {
       >
         <div className="h-full w-full bg-black/40 flex items-end p-12">
           <div className="text-white">
-            <h2 className="text-4xl font-bold mb-4">Graupner Suite (IONOS TEST)</h2>
+            <h2 className="text-4xl font-bold mb-4">Graupner Suite 2.0</h2>
             <p className="text-lg opacity-90">Ihre komplette Handwerker-Software</p>
           </div>
         </div>
@@ -123,7 +126,7 @@ const LoginPage = ({ onLogin }) => {
             <p className="text-muted-foreground mt-1 lg:mt-2 text-sm lg:text-base">
               {isRegister ? "Erstellen Sie Ihr Konto" : "Willkommen zurück"}
             </p>
-            <p className="lg:hidden text-xs text-muted-foreground mt-2">Graupner Suite (IONOS TEST)</p>
+            <p className="lg:hidden text-xs text-muted-foreground mt-2">Graupner Suite 2.0</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
