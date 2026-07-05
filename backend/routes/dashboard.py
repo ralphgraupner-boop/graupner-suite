@@ -72,7 +72,16 @@ async def serve_storage_file(path: str):
     try:
         from utils.storage import get_object
         content, content_type = get_object(path)
-        return Response(content=content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+        filename = path.split("/")[-1]
+        if content_type.startswith("image/") or content_type == "application/pdf":
+            disposition = f'inline; filename="{filename}"'
+        else:
+            disposition = f'attachment; filename="{filename}"'
+        return Response(
+            content=content,
+            media_type=content_type,
+            headers={"Cache-Control": "public, max-age=86400", "Content-Disposition": disposition}
+        )
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Datei nicht gefunden: {str(e)}")
 

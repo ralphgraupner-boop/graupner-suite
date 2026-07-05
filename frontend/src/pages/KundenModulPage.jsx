@@ -728,6 +728,7 @@ const KundenModulPage = () => {
                     {/* Aktionen */}
                     <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                       <Button size="sm" onClick={() => setEditingId(kunde.id)} data-testid={`btn-detail-edit-inline-${kunde.id}`}><Edit className="w-4 h-4" /> Bearbeiten</Button>
+                <Button size="sm" variant="outline" onClick={() => openEditFor(kunde)} data-testid={`btn-detail-files-${kunde.id}`}><Upload className="w-4 h-4" /> Dateien</Button>
                       <Button
                         size="sm"
                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
