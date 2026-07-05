@@ -64,7 +64,7 @@ const ProjektWerkbank = () => {
   if (!data) return null;
 
   const { kunde, projekte, stats } = data;
-  const kundeName = kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim() || "(ohne Name)";
+  const kundeName = `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim() || kunde.name || "(ohne Name)";
 
   return (
     <div data-testid="projekt-werkbank-page" className="pb-12">
@@ -118,7 +118,7 @@ const ProjektWerkbank = () => {
             <button
               onClick={() => setMailHistoryFor({
                 email: kunde.email,
-                name: kunde.name || `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim() || kunde.email,
+                name: `${kunde.vorname || ""} ${kunde.nachname || ""}`.trim() || kunde.name || kunde.email,
               })}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors"
               data-testid="btn-werkbank-mail-history"
