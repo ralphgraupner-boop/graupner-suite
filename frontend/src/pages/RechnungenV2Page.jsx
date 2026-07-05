@@ -256,7 +256,19 @@ const CreateDialog = ({ orders, onClose, onCreate }) => {
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
-          <Button onClick={() => onCreate(orderId, mode)} disabled={!orderId} data-testid="btn-confirm-create">
+          <Button onClick={async () => {
+          try {
+            const preview = await api.get("/v2/rechnungen/next-number-preview");
+            const nummer = preview.data?.preview_number || "?";
+            if (window.confirm(`Diese Rechnung erhaelt die Nummer ${nummer}.\n\nFortfahren?`)) {
+              onCreate(orderId, mode);
+            }
+          } catch (err) {
+            if (window.confirm("Rechnungsnummer konnte nicht vorab geprueft werden.\nTrotzdem fortfahren?")) {
+              onCreate(orderId, mode);
+            }
+          }
+        }} disabled={!orderId} data-testid="btn-confirm-create">
             Rechnung erstellen
           </Button>
         </div>

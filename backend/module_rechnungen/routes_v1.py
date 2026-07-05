@@ -19,6 +19,30 @@ async def _get_default_due_days() -> int:
         return 14
 
 
+@router.get("/v2/rechnungen/next-number-preview")
+async def preview_next_invoice_number():
+    """Zeigt die naechste Rechnungsnummer an, OHNE den Zaehler zu erhoehen."""
+    settings = await db.settings.find_one({"id": "company_settings"}, {"_id": 0})
+    if not settings:
+        settings = {"invoice_number_format": "R-{MM}/{YY}-{NNNNN}", "invoice_number_next": 1}
+    try:
+        seq = int(settings.get("invoice_number_next") or 1)
+    except (TypeError, ValueError):
+        seq = 1
+    if seq < 1:
+        seq = 1
+    fmt = settings.get("invoice_number_format") or "R-{MM}/{YY}-{NNNNN}"
+    now = datetime.now()
+    out = fmt
+    out = out.replace("{MM}", f"{now.month:02d}")
+    out = out.replace("{YYYY}", str(now.year))
+    out = out.replace("{YY}", f"{now.year % 100:02d}")
+    out = out.replace("{NNNNNN}", f"{seq:06d}")
+    out = out.replace("{NNNNN}", f"{seq:05d}")
+    out = out.replace("{NNNN}", f"{seq:04d}")
+    return {"preview_number": out}
+
+
 async def get_next_invoice_number():
     """Liest Format und nächste Nummer aus settings; inkrementiert atomar.
     Platzhalter: {MM}, {YY}, {YYYY}, {NNNN}, {NNNNN}, {NNNNNN}
