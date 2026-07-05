@@ -34,6 +34,7 @@ const ProjekteListe = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [sortMode, setSortMode] = useState("manuell");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -123,6 +124,8 @@ const ProjekteListe = () => {
     if (kategorieFilter && p.kategorie !== kategorieFilter) return false;
     return true;
   });
+
+  const sortedFiltered = sortMode === "manuell" ? filtered : [...filtered].sort((a, b) => (b[sortMode] || "").localeCompare(a[sortMode] || ""));
 
   const handleRowDrop = async (dropIdx) => {
     if (dragIndex === null || dragIndex === dropIdx) {
@@ -268,6 +271,12 @@ const ProjekteListe = () => {
         )}
       </Card>
 
+      <div className="flex gap-2 mb-4">
+        <Button variant={sortMode === "manuell" ? "default" : "outline"} size="sm" onClick={() => setSortMode("manuell")}>Manuell (Ziehen)</Button>
+        <Button variant={sortMode === "created_at" ? "default" : "outline"} size="sm" onClick={() => setSortMode("created_at")}>Anlegedatum</Button>
+        <Button variant={sortMode === "updated_at" ? "default" : "outline"} size="sm" onClick={() => setSortMode("updated_at")}>Zuletzt bearbeitet</Button>
+      </div>
+
       <div className="flex flex-wrap gap-2 mb-4">
         <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive ({projekte.filter(p => p.status !== "Archiv").length})</FilterButton>
         {STATUSES.map(s => (
@@ -297,7 +306,7 @@ const ProjekteListe = () => {
         </Card>
       ) : (
         <div className="grid gap-3">
-          {filtered.map((p, idx) => (
+          {sortedFiltered.map((p, idx) => (
             <Card
               key={p.id}
               draggable
@@ -311,14 +320,16 @@ const ProjekteListe = () => {
               data-testid={`projekt-row-${p.id}`}
             >
               <div className="flex items-start justify-between gap-3">
+                  {sortMode === "manuell" && (
                 <div
-                  className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0"
-                  title="Zum Sortieren ziehen"
-                  onClick={(e) => e.stopPropagation()}
-                  data-testid={`drag-handle-${p.id}`}
-                >
-                  <GripVertical className="w-4 h-4" />
-                </div>
+                    className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/40 hover:text-muted-foreground flex-shrink-0"
+                    title="Zum Sortieren ziehen"
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid={`drag-handle-${p.id}`}
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </div>
+                  )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-lg font-semibold">{p.titel}</h3>
