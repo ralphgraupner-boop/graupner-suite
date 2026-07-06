@@ -65,7 +65,12 @@ const MailAcceptDuplicateDialog = ({ open, duplicates = [], onLink, onForce, onC
                   </span>
                 </div>
               </div>
-              <button
+              {k.nachricht && (
+            <div className="text-xs text-muted-foreground mt-1.5 p-2 bg-muted/40 rounded-sm max-h-24 overflow-y-auto whitespace-pre-line" data-testid={`dup-nachricht-${k.id}`}>
+              <span className="font-medium">Bisherige Nachricht: </span>{k.nachricht}
+            </div>
+          )}
+          <button
                 onClick={() => handleLink(k.id)}
                 disabled={!!busy}
                 className="px-3 py-2 text-xs bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 inline-flex items-center gap-1 disabled:opacity-50 flex-shrink-0"

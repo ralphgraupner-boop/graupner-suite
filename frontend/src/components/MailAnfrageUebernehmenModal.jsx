@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Mail, Check, X, ArrowRight, Loader2, Send, FileText, CalendarPlus, Folder } from "lucide-react";
 import { Button, Input, Textarea, Modal } from "@/components/common";
 import { api } from "@/lib/api";
+import { openInPopup } from "@/lib/windowSync";
 import NewProjektDialog from "@/components/NewProjektDialog";
 
 const STEP_TITLES = {
@@ -48,6 +49,24 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
   const [kunde, setKunde] = useState(null);
   const [projektId, setProjektId] = useState(null);
   const [dupError, setDupError] = useState(false);
+  const [dupKunden, setDupKunden] = useState([]);
+  const zuordnenZuBestehendem = async (kundeId) => {
+    setBusy(true);
+    try {
+      const r = await api.post(`/module-mail-inbox/accept-link/${entry.id}`, {
+kunde_id: kundeId,
+        append_nachricht: true,
+      });
+      setKunde({ id: r.data.kunde_id, name: r.data.kunde_name });
+      toast.success(`Anfrage zu „${r.data.kunde_name}“ hinzugefuegt`);
+      setStep(3);
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Zuordnen fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -102,6 +121,7 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
       const detail = err?.response?.data?.detail;
       if (err?.response?.status === 409 && detail && detail.code === "duplicate_kunde") {
         setDupError(true);
+        setDupKunden(detail.duplicates || []);
         toast.error("Möglicher Doppel-Kunde — du kannst trotzdem neu anlegen.");
       } else {
         toast.error(typeof detail === "string" ? detail : "Anlegen fehlgeschlagen");
@@ -260,6 +280,41 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-sm p-2" data-testid="uebernehmen-dup">
               Möglicher Doppel-Kunde erkannt. {`„Trotzdem neu anlegen"`} überspringt die Prüfung.
             </div>
+          )}
+          {dupError && dupKunden.length > 0 && (
+          <>
+            <p className="text-sm font-semibold text-green-700 mt-1 flex items-center gap-1">
+                <span>⚠️</span> Kunde schon vorhanden – bitte Text anhängen
+              </p>
+              <div className="flex flex-wrap gap-2 mt-1">
+              {dupKunden.map((d) => (
+                <>
+                <Button
+                  key={d.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openInPopup(`/popup/kunde/${d.id}`)}
+                  data-testid={`dup-open-${d.id}`}
+                >
+                  {d.name || d.email || "Kunde"} in neuem Fenster oeffnen
+                </Button>
+                <Button
+                  key={`link-${d.id}`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="!bg-green-600 !text-white !border-green-700 hover:!bg-green-700 animate-pulse font-semibold"
+                  onClick={() => zuordnenZuBestehendem(d.id)}
+                  disabled={busy}
+                  data-testid={`dup-link-${d.id}`}
+                >
+                  Diesem Kunden zuordnen (Nachricht anhaengen)
+                </Button>
+              </>
+              ))}
+            </div>
+          </>
           )}
           <div className="flex justify-between gap-2 pt-2">
             <Button variant="outline" onClick={() => setStep(1)} disabled={busy}>Zurück</Button>

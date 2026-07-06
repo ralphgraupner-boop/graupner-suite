@@ -8,6 +8,7 @@ import { Modal } from "@/components/common";
 import MailDetailModal from "@/components/MailDetailModal";
 import MailAcceptDuplicateDialog from "@/components/MailAcceptDuplicateDialog";
 import MailAnfrageUebernehmenModal from "@/components/MailAnfrageUebernehmenModal";
+import { VorlagenPicker } from "@/components/VorlagenPicker";
 import { useF1Help } from "@/lib/useF1Help";
 
 const STATUS_LABELS = {
@@ -694,6 +695,72 @@ const ModuleMailInboxPage = () => {
                     >
                       <Eye className="w-3.5 h-3.5" /> Öffnen / Prüfen
                     </button>
+          <button onClick={() => {
+            const em = p.email || e.email || "";
+            if (em) {
+              const ta = document.createElement("textarea");
+              ta.value = em;
+              ta.style.position = "fixed";
+              ta.style.opacity = "0";
+              document.body.appendChild(ta);
+              ta.focus();
+              ta.select();
+              try {
+                document.execCommand("copy");
+                toast.success(`E-Mail kopiert: ${em}`);
+              } catch (err) {
+                toast.error("Kopieren fehlgeschlagen");
+              }
+              document.body.removeChild(ta);
+            }
+            window.open("https://webmail.jimdo.com", "_blank");
+          }} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border rounded-sm hover:bg-muted" data-testid={`btn-webmail-${e.id}`} title="Webmail oeffnen, um die E-Mail-Adresse selbst zu pruefen">
+            <Mail className="w-3.5 h-3.5" /> Webmail
+          </button>
+          <VorlagenPicker
+            doc_type="mail_antwort"
+            label="Antwort-Vorlage"
+            compact={true}
+          onSelect={({ content, title }) => {
+            const kundeName = [p.vorname, p.nachname].filter(Boolean).join(" ") || p.name || e.name || "";
+            const anrede = p.anrede === "Frau" ? "Frau" : p.anrede === "Herr" ? "Herr" : "";
+            let html = content
+              .replace(/Sehr geehrte \{anrede_brief\}/g, anrede === "Herr" ? "Sehr geehrter Herr" : anrede === "Frau" ? "Sehr geehrte Frau" : "Sehr geehrte Damen und Herren,")
+              .replace(/\{anrede_brief\}/g, anrede)
+              .replace(/\{kunde_name\}/g, kundeName)
+              .replace(/\{datum\}/g, new Date().toLocaleDateString("de-DE"))
+              .replace(/\{bearbeiter\}/g, "Ihre Tischlerei Graupner")
+              .replace(/\{dokument_nr\}/g, "");
+
+    const kundeEmail = p.email || e.email || "";
+    const adressBlock = `<div style="margin-bottom:16px;padding:10px 14px;border:1px solid #ccc;border-radius:6px;"><strong>Ihre Adresse</strong><br/>${kundeName}<br/>${kundeEmail}</div><div style="margin-bottom:16px;"><strong>Betreff:</strong> ${title}</div><div style="font-size:11px;color:#666;margin-bottom:16px;">Diese Nachricht ist ausschließlich für ${kundeName} (${kundeEmail}) bestimmt. Sollten Sie nicht der richtige Empfänger sein, informieren Sie bitte den Absender und löschen Sie diese Nachricht.</div>`;
+    html = adressBlock + html;
+            const div = document.createElement("div");
+            div.setAttribute("contenteditable", "true");
+            div.style.position = "fixed";
+            div.style.top = "0";
+            div.style.left = "0";
+            div.style.opacity = "0.01";
+            div.style.pointerEvents = "none";
+            div.innerHTML = html;
+            document.body.appendChild(div);
+            const range = document.createRange();
+            range.selectNodeContents(div);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            try {
+              document.execCommand("copy");
+              toast.success("Vorlage kopiert (mit Formatierung)");
+        window.open("https://webmail.jimdo.com", "_blank");
+            } catch (err) {
+              toast.error("Kopieren fehlgeschlagen");
+            }
+            sel.removeAllRanges();
+            document.body.removeChild(div);
+          }}
+        />
+          />
                     {e.status === "vorschlag" && (
                       <>
                         {!e.begruessung_gesendet && (
