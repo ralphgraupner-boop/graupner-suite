@@ -145,6 +145,7 @@ kunde_id: kundeId,
       <ProjektAuswahlDialog
         kunde={kunde}
         entryId={entry.id}
+        mailText={`${parsed.nachricht || ""} ${entry?.subject || ""}`}
         onClose={() => setStep(4)}
         onPicked={(gewaehltProjektId) => { setProjektId(gewaehltProjektId); setStep(4); }}
         onCreateNew={() => setShowNewProjekt(true)}

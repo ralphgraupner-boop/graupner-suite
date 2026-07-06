@@ -273,9 +273,21 @@ export const HELP_DEFAULTS = {
         "4. Dokumente → Aufträge → beim Auftrag auf das €-Icon (Rechnung) klicken → die Rechnung wird erstellt.",
     },
   ],
+  hilfe_projekt_zuordnen: [
+    {
+      title: "Projekt zuordnen - was passiert hier?",
+      content:
+        "1. Diese Mail-Anfrage wird einem bestehenden Projekt des Kunden zugeordnet.\n" +
+        "2. Das Programm schlaegt automatisch das passendste Projekt vor (gruenes Badge 'bester Vorschlag').\n" +
+        "3. Der Vorschlag basiert auf Stichwoertern aus der Mail UND darauf, welches Projekt zuletzt bearbeitet wurde.\n" +
+        "4. Du kannst jederzeit ein anderes Projekt anklicken und ueber 'Zuordnen' bestaetigen.\n" +
+        "5. Gibt es noch kein passendes Projekt, einfach '+ Neues Projekt anlegen' waehlen.",
+    },
+  ],
 };
 
 export const HELP_LABELS = {
+  hilfe_projekt_zuordnen: "Hilfe: Projekt zuordnen",
   hilfe_kundenportal: "Hilfe: Kundenportal",
   hilfe_kunden: "Hilfe: Kunden",
   hilfe_projekte: "Hilfe: Projekte",
