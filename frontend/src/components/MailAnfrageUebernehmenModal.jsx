@@ -6,6 +6,7 @@ import { Button, Input, Textarea, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { openInPopup } from "@/lib/windowSync";
 import NewProjektDialog from "@/components/NewProjektDialog";
+import ProjektAuswahlDialog from "@/components/ProjektAuswahlDialog";
 
 const STEP_TITLES = {
   1: "Schritt 1/4 · Mail prüfen",
@@ -48,6 +49,7 @@ const MailAnfrageUebernehmenModal = ({ entry, onClose, onDone }) => {
   const [busy, setBusy] = useState(false);
   const [kunde, setKunde] = useState(null);
   const [projektId, setProjektId] = useState(null);
+  const [showNewProjekt, setShowNewProjekt] = useState(false);
   const [dupError, setDupError] = useState(false);
   const [dupKunden, setDupKunden] = useState([]);
   const zuordnenZuBestehendem = async (kundeId) => {
@@ -137,14 +139,38 @@ kunde_id: kundeId,
     if (to) navigate(to);
   };
 
-  // Schritt 3: Projekt-Dialog (eigenes Modal) mit vorausgefülltem Kunden
-  if (step === 3 && kunde) {
+  // Schritt 3a: Bestehendes Projekt auswaehlen
+  if (step === 3 && kunde && !showNewProjekt) {
+    return (
+      <ProjektAuswahlDialog
+        kunde={kunde}
+        entryId={entry.id}
+        onClose={() => setStep(4)}
+        onPicked={(gewaehltProjektId) => { setProjektId(gewaehltProjektId); setStep(4); }}
+        onCreateNew={() => setShowNewProjekt(true)}
+      />
+    );
+  }
+
+  // Schritt 3b: Neues Projekt anlegen (und mit Mail verknuepfen)
+  if (step === 3 && kunde && showNewProjekt) {
     return (
       <NewProjektDialog
         kundeId={kunde.id}
         kunde={kunde}
         onClose={() => setStep(4)}
-        onCreated={(p) => { setProjektId(p?.id || null); setStep(4); }}
+        onCreated={async (p) => {
+          const neueProjektId = p?.id || null;
+          setProjektId(neueProjektId);
+          if (neueProjektId) {
+            try {
+              await api.patch(`/module-mail-inbox/${entry.id}/projekt`, { projekt_id: neueProjektId });
+            } catch (e) {
+              // Verknuepfung fehlgeschlagen - Projekt wurde trotzdem angelegt
+            }
+          }
+          setStep(4);
+        }}
       />
     );
   }

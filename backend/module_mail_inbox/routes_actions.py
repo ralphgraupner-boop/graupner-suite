@@ -230,6 +230,20 @@ async def reject_all_spam(user=Depends(get_current_user)):
     return {"ok": True, "rejected": r.modified_count}
 
 
+@router.patch("/{entry_id}/projekt")
+async def set_projekt(entry_id: str, body: dict, user=Depends(get_current_user)):
+    """Setzt oder entfernt die optionale projekt_id bei einer Mail-Anfrage."""
+    projekt_id = (body.get("projekt_id") or "").strip() or None
+    entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+    await db.module_mail_inbox.update_one(
+        {"id": entry_id},
+        {"$set": {"projekt_id": projekt_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"ok": True, "projekt_id": projekt_id}
+
+
 
 @router.post("/{entry_id}/abschliessen")
 async def abschliessen(entry_id: str, body: dict, user=Depends(get_current_user)):
