@@ -232,7 +232,8 @@ async def reject_all_spam(user=Depends(get_current_user)):
 
 @router.patch("/{entry_id}/projekt")
 async def set_projekt(entry_id: str, body: dict, user=Depends(get_current_user)):
-    """Setzt oder entfernt die optionale projekt_id bei einer Mail-Anfrage."""
+    """Setzt oder entfernt die optionale projekt_id bei einer Mail-Anfrage.
+    Beim Setzen wird der Mailtext zusaetzlich mit Datum an die Projekt-Notizen angehaengt."""
     projekt_id = (body.get("projekt_id") or "").strip() or None
     entry = await db.module_mail_inbox.find_one({"id": entry_id}, {"_id": 0})
     if not entry:
@@ -241,6 +242,21 @@ async def set_projekt(entry_id: str, body: dict, user=Depends(get_current_user))
         {"id": entry_id},
         {"$set": {"projekt_id": projekt_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
+    if projekt_id:
+        parsed = entry.get("parsed") or {}
+        mailtext = (parsed.get("nachricht") or entry.get("body_excerpt") or "").strip()
+        if mailtext:
+            projekt = await db.module_projekte.find_one({"id": projekt_id}, {"_id": 0})
+            if projekt:
+                zeitstempel = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M")
+                subject = entry.get("subject") or ""
+                neuer_eintrag = f"[Mail-Anfrage {zeitstempel}] {subject}\n{mailtext}"
+                bestehende_notizen = (projekt.get("notizen") or "").strip()
+                aktualisierte_notizen = f"{bestehende_notizen}\n\n{neuer_eintrag}".strip() if bestehende_notizen else neuer_eintrag
+                await db.module_projekte.update_one(
+                    {"id": projekt_id},
+                    {"$set": {"notizen": aktualisierte_notizen, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
     return {"ok": True, "projekt_id": projekt_id}
 
 

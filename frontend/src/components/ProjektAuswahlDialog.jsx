@@ -31,13 +31,21 @@ const zuStichwoertern = (text) =>
 
 // Zaehlt, wie viele (eindeutige) Stichwoerter aus dem Mailtext auch im
 // Projekttitel bzw. der Kategorie vorkommen.
-const berechneUebereinstimmung = (mailStichwoerter, projekt) => {
+const gewichtVon = (wort, keywordPrio) => {
+  if (!keywordPrio) return 1;
+  const inListe = (liste) => (liste || []).some((kw) => (kw || "").toLowerCase().trim() === wort);
+  if (inListe(keywordPrio.sofort) || inListe(keywordPrio.stufe1)) return 3;
+  if (inListe(keywordPrio.stufe2)) return 2;
+  return 1;
+};
+
+const berechneUebereinstimmung = (mailStichwoerter, projekt, keywordPrio) => {
   if (mailStichwoerter.length === 0) return 0;
   const projektText = `${projekt.titel || ""} ${projekt.kategorie || ""}`;
   const projektStichwoerter = new Set(zuStichwoertern(projektText));
   let treffer = 0;
   for (const wort of new Set(mailStichwoerter)) {
-    if (projektStichwoerter.has(wort)) treffer += 1;
+    if (projektStichwoerter.has(wort)) treffer += gewichtVon(wort, keywordPrio);
   }
   return treffer;
 };
@@ -48,6 +56,7 @@ const ProjektAuswahlDialog = ({ kunde, entryId, mailText, onClose, onPicked, onC
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [keywordPrio, setKeywordPrio] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -69,6 +78,21 @@ const ProjektAuswahlDialog = ({ kunde, entryId, mailText, onClose, onPicked, onC
     };
   }, [kunde.id]);
 
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const r = await api.get("/keyword-prioritaeten");
+        if (active) setKeywordPrio(r.data || null);
+      } catch (e) {
+        if (active) setKeywordPrio(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Bestes Projekt ermitteln: Stichwort-Treffer zaehlt am meisten, bei
   // Gleichstand (auch bei 0 Treffern) gewinnt automatisch das neueste
   // Projekt, da die Liste bereits chronologisch (neuestes zuerst) sortiert ist.
@@ -78,7 +102,7 @@ const ProjektAuswahlDialog = ({ kunde, entryId, mailText, onClose, onPicked, onC
     const mailStichwoerter = zuStichwoertern(mailText);
     const mitScore = projekte.map((p, index) => ({
       ...p,
-      _score: berechneUebereinstimmung(mailStichwoerter, p),
+      _score: berechneUebereinstimmung(mailStichwoerter, p, keywordPrio),
       _index: index,
     }));
 
@@ -91,7 +115,7 @@ const ProjektAuswahlDialog = ({ kunde, entryId, mailText, onClose, onPicked, onC
     // Bestes Projekt nach vorne, Rest bleibt chronologisch (neuestes zuerst)
     const rest = mitScore.filter((p) => p.id !== bestes.id);
     return { sortierteProjekte: [bestes, ...rest], bestId: bestes.id };
-  }, [projekte, mailText]);
+  }, [projekte, mailText, keywordPrio]);
 
   const zuordnen = async () => {
     if (!selected) return;
