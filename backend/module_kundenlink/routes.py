@@ -453,7 +453,7 @@ async def view_by_token(token: str):
         raise HTTPException(410, "Link ist abgelaufen")
 
     kunde = await _sanitize_customer_for_public(link["kunde_id"])
-    if not kunde:
+    if kunde is None:
         raise HTTPException(404, "Zugehöriger Kunde nicht mehr vorhanden")
 
     projekt = None
@@ -494,6 +494,16 @@ async def _validate_token_or_404(token: str) -> dict:
     if _now() > exp:
         raise HTTPException(410, "Link ist abgelaufen")
     return link
+@router.get("/view/{token}/mitarbeiter")
+async def get_mitarbeiter_liste(token: str):
+    """Oeffentliche Liste aktiver Mitarbeiter-Namen fuer die Handy-Ansicht.
+    NUR Vorname/Nachname - keine sensiblen Daten (Gehalt, IBAN etc.)."""
+    await _validate_token_or_404(token)
+    out = []
+    async for m in db.mitarbeiter.find({"status": "aktiv"}, {"_id": 0, "vorname": 1, "nachname": 1}):
+        out.append({"vorname": m.get("vorname", ""), "nachname": m.get("nachname", "")})
+
+    return out
 
 
 @router.post("/view/{token}/note")
@@ -514,15 +524,26 @@ async def add_note(token: str, body: dict):
     head = f"[{now.strftime('%d.%m.%Y %H:%M')} Mitarbeiter{(' ' + author) if author else ''}]"
     note_line = f"{head} {text}"
 
-    kunde = await db.module_kunden.find_one({"id": link["kunde_id"]}, {"_id": 0, "notes": 1})
-    if not kunde:
-        raise HTTPException(404, "Kunde nicht mehr vorhanden")
-    existing = (kunde.get("notes") or "").rstrip()
-    new_notes = f"{existing}\n\n{note_line}" if existing else note_line
-    await db.module_kunden.update_one(
-        {"id": link["kunde_id"]},
-        {"$set": {"notes": new_notes, "updated_at": _iso(now)}},
-    )
+    if link.get("projekt_id"):
+        projekt = await db.module_projekte.find_one({"id": link["projekt_id"]}, {"_id": 0, "vor_ort_notizen": 1})
+        if projekt is None:
+            raise HTTPException(404, "Projekt nicht mehr vorhanden")
+        existing = (projekt.get("vor_ort_notizen") or "").rstrip()
+        new_notizen = f"{existing}\n\n{note_line}" if existing else note_line
+        await db.module_projekte.update_one(
+            {"id": link["projekt_id"]},
+            {"$set": {"vor_ort_notizen": new_notizen, "updated_at": _iso(now)}},
+        )
+    else:
+        kunde = await db.module_kunden.find_one({"id": link["kunde_id"]}, {"_id": 0, "notes": 1})
+        if kunde is None:
+            raise HTTPException(404, "Kunde nicht mehr vorhanden")
+        existing = (kunde.get("notes") or "").rstrip()
+        new_notes = f"{existing}\n\n{note_line}" if existing else note_line
+        await db.module_kunden.update_one(
+            {"id": link["kunde_id"]},
+            {"$set": {"notes": new_notes, "updated_at": _iso(now)}},
+        )
     # Auch den Link selber als "wurde benutzt" markieren
     await db.module_kundenlink.update_one(
         {"id": link["id"]},
@@ -552,7 +573,7 @@ async def add_photo(
         raise HTTPException(400, "Nur Bilder erlaubt")
 
     safe_name = (file.filename or "foto.jpg").replace(" ", "_")
-    storage_path = f"module_kunden/{link['kunde_id']}/m_{uuid.uuid4().hex[:8]}_{safe_name}"
+    storage_path = f"module_projekte/{link['projekt_id']}/m_{uuid.uuid4().hex[:8]}_{safe_name}" if link.get("projekt_id") else f"module_kunden/{link['kunde_id']}/m_{uuid.uuid4().hex[:8]}_{safe_name}"
     result = put_object(storage_path, content, ct)
     if not result:
         raise HTTPException(500, "Upload fehlgeschlagen")
@@ -566,13 +587,17 @@ async def add_photo(
         "uploaded_by_link": link["id"],
         "uploaded_by_label": (author or "").strip()[:60] or "Mitarbeiter",
     }
-    await db.module_kunden.update_one(
-        {"id": link["kunde_id"]},
-        {
-            "$push": {"photos": photo_entry},
-            "$set": {"updated_at": _iso(_now())},
-        },
-    )
+    if link.get("projekt_id"):
+        photo_entry["kategorie"] = "sonstiges"
+        await db.module_projekte.update_one(
+            {"id": link["projekt_id"]},
+            {"$push": {"bilder": photo_entry}, "$set": {"updated_at": _iso(_now())}},
+        )
+    else:
+        await db.module_kunden.update_one(
+            {"id": link["kunde_id"]},
+            {"$push": {"photos": photo_entry}, "$set": {"updated_at": _iso(_now())}},
+        )
     await db.module_kundenlink.update_one(
         {"id": link["id"]},
         {"$inc": {"contribution_count": 1}, "$set": {"last_contribution_at": _iso(_now())}},

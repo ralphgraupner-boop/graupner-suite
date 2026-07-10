@@ -58,7 +58,7 @@ export const VorlagenPicker = ({ doc_type = "aufgabe", onSelect, label = "Vorlag
           >
             <div className="flex items-center justify-between p-3 border-b bg-muted/40 sticky top-0 z-10">
               <span className="text-sm font-semibold">Aus Vorlage wählen</span>
-              <button onClick={() => setOpen(false)} className="p-1 hover:bg-muted rounded-sm" aria-label="Schließen">
+              <button onClick={() => setOpen(false)} className="p-1 bg-muted/40 hover:bg-muted rounded-sm border border-border text-foreground" aria-label="Schließen">
                 <X className="w-4 h-4" />
               </button>
             </div>

@@ -20,6 +20,8 @@ const KundenLinkPage = () => {
 
   // Mitarbeiter-Beitrag (Notiz + Foto)
   const [author, setAuthor] = useState("");
+  const [mitarbeiterListe, setMitarbeiterListe] = useState([]);
+  const [andereAuswahl, setAndereAuswahl] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [savedNoteFlash, setSavedNoteFlash] = useState(false);
@@ -114,6 +116,11 @@ const KundenLinkPage = () => {
     if (saved) setAuthor(saved);
   }, []);
 
+  useEffect(() => {
+    axios.get(`${API}/api/module-kundenlink/view/${token}/mitarbeiter`)
+      .then(r => setMitarbeiterListe(r.data || []))
+      .catch(() => setMitarbeiterListe([]));
+  }, [token]);
   const saveAuthor = (v) => {
     setAuthor(v);
     try { window.localStorage.setItem("graupner_link_author", v || ""); } catch { /* noop */ }
@@ -480,16 +487,44 @@ const KundenLinkPage = () => {
           {/* Mitarbeiter-Name */}
           <div>
             <label className="block text-[11px] font-medium text-amber-900 mb-1">Dein Name <span className="text-amber-700 font-normal">(einmalig — wird auf diesem Handy gemerkt)</span></label>
-            <input
-              type="text"
-              value={author}
-              onChange={(e) => saveAuthor(e.target.value)}
-              placeholder="z.B. Thorsten"
-              className="w-full px-3 py-2 text-sm border rounded-sm bg-white"
-              data-testid="kundenlink-author"
-            />
-          </div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => { setAndereAuswahl(false); saveAuthor("Thorsten Graupner"); }}
+                className={`px-4 py-2 text-sm rounded-sm border font-medium ${author === "Thorsten Graupner" && !andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300"}`}
+                data-testid="kundenlink-author-thorsten"
+              >
+                Thorsten
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAndereAuswahl(false); saveAuthor("Ralph Graupner"); }}
+                className={`px-4 py-2 text-sm rounded-sm border font-medium ${author === "Ralph Graupner" && !andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300"}`}
+                data-testid="kundenlink-author-ralph"
+              >
+                Ralph
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAndereAuswahl(true); saveAuthor(""); }}
+                className={`px-4 py-2 text-sm rounded-sm border font-medium ${andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300"}`}
+                data-testid="kundenlink-author-andere"
+              >
+                Andere Person
+              </button>
+            </div>
+            {andereAuswahl && (
+              <input
+                type="text"
+                value={author}
+                onChange={(e) => saveAuthor(e.target.value)}
+                placeholder="Name eintippen"
+                className="w-full mt-2 px-3 py-2 text-sm border rounded-sm bg-white"
+                data-testid="kundenlink-author"
+              />
+            )}
 
+          </div>
           {/* Notiz */}
           <div>
             <label className="block text-[11px] font-medium text-amber-900 mb-1">Notiz / Bemerkung</label>

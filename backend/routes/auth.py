@@ -65,7 +65,7 @@ def get_default_berechtigungen(role: str) -> dict:
     }
 
 
-@router.post("/auth/register", response_model=TokenResponse)
+@router.post("/auth/register", response_model=dict)
 async def register(user: UserCreate):
     existing = await db.users.find_one({"username": user.username}, {"_id": 0})
     if existing:
@@ -77,17 +77,30 @@ async def register(user: UserCreate):
         "username": user.username,
         "password": hashed,
         "email": user.email,
-        "role": user.role,
+        "role": "mitarbeiter",
+        "freigabe_status": "wartet",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_doc)
 
-    token = jwt.encode(
-        {"username": user.username, "role": user.role, "exp": datetime.now(timezone.utc).timestamp() + 86400 * 30},
-        JWT_SECRET,
-        algorithm="HS256"
-    )
-    return TokenResponse(token=token, username=user.username, role=user.role)
+    try:
+        from utils import send_email
+        body = f"""
+        <p>Ein neues Benutzerkonto wartet auf Freigabe in der Graupner Suite:</p>
+        <p><strong>Benutzername:</strong> {user.username}<br>
+        <strong>E-Mail:</strong> {user.email}</p>
+        <p>Bitte in der Suite unter Einstellungen &rarr; Benutzer freigeben oder ablehnen.</p>
+        """
+        send_email(
+            to_email="service24@tischlerei-graupner.de",
+            subject="Graupner Suite: Neue Registrierung wartet auf Freigabe",
+            body_html=body,
+            bcc="hhgraupner@gmail.com"
+        )
+    except Exception as e:
+        print(f"Freigabe-Benachrichtigung konnte nicht gesendet werden: {e}")
+
+    return {"message": "Konto angelegt. Bitte warten Sie auf die Freigabe durch den Admin."}
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -111,6 +124,9 @@ async def login(user: UserLogin):
         else:
             raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
 
+    if db_user.get("freigabe_status") == "wartet":
+        raise HTTPException(status_code=403, detail="Ihr Konto wartet noch auf Freigabe durch den Admin")
+
     if not bcrypt.checkpw(user.password.encode(), db_user["password"].encode()):
         raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten")
 
@@ -120,6 +136,37 @@ async def login(user: UserLogin):
         algorithm="HS256"
     )
     return TokenResponse(token=token, username=db_user["username"], role=db_user.get("role", "admin"))
+
+
+@router.get("/users/pending")
+async def list_pending_users(user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Nur Admins")
+    pending = await db.users.find({"freigabe_status": "wartet"}, {"_id": 0, "password": 0}).to_list(100)
+    return pending
+
+
+@router.put("/users/{username}/freigabe")
+async def freigeben_user(username: str, user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Nur Admins")
+    result = await db.users.update_one(
+        {"username": username},
+        {"$set": {"freigabe_status": "freigegeben"}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    return {"message": "Benutzer freigegeben"}
+
+
+@router.delete("/users/{username}/ablehnen")
+async def ablehnen_user(username: str, user=Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Nur Admins")
+    result = await db.users.delete_one({"username": username, "freigabe_status": "wartet"})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Wartender Benutzer nicht gefunden")
+    return {"message": "Registrierung abgelehnt und gelöscht"}
 
 
 @router.get("/auth/me")

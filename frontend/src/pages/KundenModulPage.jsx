@@ -108,7 +108,7 @@ const KundenModulPage = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("aktiv");
-  const [sortMode, setSortMode] = useState("created_at");
+  const [sortMode, setSortMode] = useState("updated_at");
   const [openEdits, setOpenEdits] = useState([]); // mehrere "Kunde bearbeiten"-Fenster parallel
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
@@ -364,7 +364,6 @@ const KundenModulPage = () => {
           <div className="flex items-center gap-2">
             <Package className="w-6 h-6 text-emerald-600 flex-shrink-0" />
             <h1 className="text-2xl lg:text-4xl font-bold text-emerald-700">Kunden</h1>
-            <Badge variant="default" className="text-xs">Solo</Badge>
           </div>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">
             {kunden.length} Kunden gesamt · <span className="text-primary font-medium">{aktivCount} aktiv</span> · {archivCount} archiviert
@@ -396,14 +395,14 @@ const KundenModulPage = () => {
       {/* Sortierung */}
       <div className="flex gap-2 mb-2">
         <Button
-          variant={sortMode === "created_at" ? "default" : "outline"}
+          variant="outline" className={sortMode === "created_at" ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white font-bold" : ""}
           size="sm"
           onClick={() => setSortMode("created_at")}
         >
           Anlegedatum
         </Button>
         <Button
-          variant={sortMode === "updated_at" ? "default" : "outline"}
+          variant="outline" className={sortMode === "updated_at" ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white font-bold" : ""}
           size="sm"
           onClick={() => setSortMode("updated_at")}
         >
@@ -545,6 +544,7 @@ const KundenModulPage = () => {
                     </div>
                     <div className="flex items-center gap-x-3 gap-y-0.5 text-xs sm:text-sm text-muted-foreground flex-wrap">
                       {kunde.phone && <span>{kunde.phone}</span>}
+                      {kunde.mobile && <span>{kunde.mobile}</span>}
                       {kunde.email && <MailLink email={kunde.email} className="truncate" />}
                       {kunde.photos?.length > 0 && <span className="text-primary flex items-center gap-1"><File className="w-3 h-3" />{kunde.photos.length}</span>}
                       {(linkCounts[kunde.id] || 0) > 0 && (
@@ -613,6 +613,7 @@ const KundenModulPage = () => {
                           {kunde.nachname && <p className="text-sm"><span className="font-medium">Nachname:</span> {kunde.nachname}</p>}
                           {kunde.email && <p className="text-sm flex items-center gap-2"><span className="font-medium">E-Mail:</span> <MailLink email={kunde.email} /></p>}
                           {kunde.phone && <p className="text-sm"><span className="font-medium">Telefon:</span> {kunde.phone}</p>}
+                          {kunde.mobile && <p className="text-sm"><span className="font-medium">Mobil:</span> {kunde.mobile}</p>}
                           {(kunde.strasse || kunde.address) && (
                             <div>
                               <span className="text-sm font-medium">Adresse:</span>
@@ -1017,7 +1018,7 @@ const DuplicateDialog = ({ title, duplicates, onCancel, onOpen, onForce, loading
 const KundeInlineEdit = ({ kunde, onSaved, onCancel }) => {
   const [form, setForm] = useState({
     anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "",
-    firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "",
+    firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", mobile: kunde.mobile || "",
     strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "",
     customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage",
     categories: kunde.categories || [], notes: kunde.notes || "",
@@ -1067,6 +1068,7 @@ const KundeInlineEdit = ({ kunde, onSaved, onCancel }) => {
           <div><label className={lblCls}>Firma</label><Input className={inputCls} value={form.firma} onChange={e => setForm({ ...form, firma: e.target.value })} data-testid={`edit-firma-${kunde.id}`} /></div>
           <div><label className={lblCls}>E-Mail</label><Input className={inputCls} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} data-testid={`edit-email-${kunde.id}`} /></div>
           <div><label className={lblCls}>Telefon</label><Input className={inputCls} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} data-testid={`edit-phone-${kunde.id}`} /></div>
+          <div><label className={lblCls}>Mobil / Handy</label><Input className={inputCls} value={form.mobile} onChange={e => setForm({ ...form, mobile: e.target.value })} data-testid={`edit-mobile-${kunde.id}`} /></div>
         </div>
 
         {/* Spalte 2 — Details & Adresse */}
@@ -1139,9 +1141,9 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
 
   useEffect(() => {
     if (kunde) {
-      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", objekt_strasse: kunde.objekt_strasse || "", objekt_plz: kunde.objekt_plz || "", objekt_ort: kunde.objekt_ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "", abschluss_grund: kunde.abschluss_grund || "", abschluss_at: kunde.abschluss_at || "" });
+      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", mobile: kunde.mobile || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", objekt_strasse: kunde.objekt_strasse || "", objekt_plz: kunde.objekt_plz || "", objekt_ort: kunde.objekt_ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "", abschluss_grund: kunde.abschluss_grund || "", abschluss_at: kunde.abschluss_at || "" });
     } else {
-      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", strasse: "", hausnummer: "", plz: "", ort: "", objekt_strasse: "", objekt_plz: "", objekt_ort: "", customer_type: "Privat", status: "Anfrage", categories: [], notes: "", nachricht: "" });
+      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", mobile: "", strasse: "", hausnummer: "", plz: "", ort: "", objekt_strasse: "", objekt_plz: "", objekt_ort: "", customer_type: "Privat", status: "Anfrage", categories: [], notes: "", nachricht: "" });
     }
     setSelectedFiles([]);
   }, [kunde]);
@@ -1222,6 +1224,9 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     if (files.some(f => f.size > 10 * 1024 * 1024)) { toast.error("Eine Datei ist groesser als 10 MB. Bitte komprimieren oder kleinere Datei waehlen."); return; }
+    const gesamtgroesse_neu = files.reduce((sum, f) => sum + f.size, 0);
+    const gesamtgroesse_bestehend = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+    if (gesamtgroesse_neu + gesamtgroesse_bestehend > 45 * 1024 * 1024) { toast.error("Die ausgewaehlten Dateien sind zusammen zu gross (max. 45 MB gesamt). Bitte weniger Dateien auf einmal hochladen."); return; }
     const noch_moeglich = Math.max(0, MAX_FILES_TOTAL - bestehendeAnzahl - selectedFiles.length);
     if (noch_moeglich === 0) {
       toast.error(`Maximum von ${MAX_FILES_TOTAL} Dateien erreicht. Bitte zuerst Dateien loeschen.`);
@@ -1303,6 +1308,7 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
         <div className="grid grid-cols-2 gap-4">
           <div><label className="block text-sm font-medium mb-2">E-Mail</label><Input type="text" value={form.email || ""} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
           <div><label className="block text-sm font-medium mb-2">Telefon</label><Input value={form.phone || ""} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+          <div><label className="block text-sm font-medium mb-2">Mobil / Handy</label><Input value={form.mobile || ""} onChange={e => setForm({ ...form, mobile: e.target.value })} /></div>
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">

@@ -49,7 +49,7 @@ const ProjektWerkbank = () => {
       setData(res.data);
     } catch (err) {
       toast.error(err?.response?.data?.detail || err.message);
-      navigate("/module/projekte");
+      if (!data) navigate("/module/projekte");
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ const ProjektWerkbank = () => {
   // Beim Öffnen der Werkbank nach oben scrollen, damit der Datensatz voll sichtbar ist
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [kunde_id]);
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground">Lade…</div>;
+  if (loading && !data) return <div className="p-8 text-center text-muted-foreground">Lade…</div>;
   if (!data) return null;
 
   const { kunde, projekte, stats } = data;
@@ -76,6 +76,7 @@ const ProjektWerkbank = () => {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="min-w-0 flex-1">
+              <span className="inline-block px-3 py-1.5 rounded-sm text-sm font-bold bg-blue-600 text-white mb-1.5">Projekte-Werkbank</span>
               <div className="flex items-center gap-2 flex-wrap">
                 <UserIcon className="w-5 h-5 text-primary flex-shrink-0" />
                 <h1 className="text-xl lg:text-2xl font-bold truncate">{kundeName}</h1>
@@ -278,6 +279,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
         adresse: data.adresse,
         status: data.status,
         notizen: data.notizen,
+        vor_ort_notizen: data.vor_ort_notizen,
       });
       setData(res.data);
       toast.success("Projekt gespeichert");
@@ -435,6 +437,10 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
               <div className="md:col-span-2">
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Notizen (intern)</label>
                 <Textarea value={data.notizen || ""} onChange={(e) => update("notizen", e.target.value)} rows={2} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Vor-Ort-Notizen (Mitarbeiter-Link, per Sprache)</label>
+                <Textarea value={data.vor_ort_notizen || ""} onChange={(e) => update("vor_ort_notizen", e.target.value)} rows={4} />
               </div>
             </div>
           )}

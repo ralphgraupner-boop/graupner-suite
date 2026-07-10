@@ -496,20 +496,18 @@ const Sidebar = ({ onLogout }) => {
                     ? "text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100/70 border-l-4 border-emerald-300 font-medium"
                     : isSandbox
                     ? "text-amber-700 hover:bg-amber-50 border-l-2 border-dashed border-amber-300"
-                    : hasBadge
-                    ? "text-foreground bg-red-50 hover:bg-red-100"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <div className="relative shrink-0">
-                  <Icon className={`w-4 h-4 ${hasBadge ? "text-red-600" : isNew ? "text-emerald-600" : ""}`} />
+                  <Icon className={`w-4 h-4 ${isNew ? "text-emerald-600" : ""}`} />
                   {hasBadge && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[9px] font-bold ring-2 ring-background" data-testid={`badge-${path.slice(1)}`}>
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </div>
-                <span className={`${hasBadge ? "text-red-700 font-medium" : ""}`}>{label}</span>
+                <span>{label}</span>
                 {isNew && !isActive && (
                   <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 text-white tracking-wider">NEU</span>
                 )}
@@ -519,9 +517,7 @@ const Sidebar = ({ onLogout }) => {
                 {isSandbox && !isActive && (
                   <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 tracking-wider border border-amber-300">TEST</span>
                 )}
-                {hasBadge && !isNew && !isDeprecated && !isSandbox && (
-                  <span className="ml-auto w-2 h-2 rounded-full bg-red-500" />
-                )}
+                
                 {hasChildren && children.length > 0 && (
                   <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleParent(path); }}

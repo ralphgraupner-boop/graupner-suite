@@ -25,6 +25,7 @@ import { PortalsPage } from "@/pages/PortalsPage";
 import PortalsKlonPage from "@/pages/PortalsKlonPage";
 import { BuchhaltungPage } from "@/pages/BuchhaltungPage";
 import { InvoicesPage } from "@/pages/InvoicesPage";
+import { QuotesPage } from "@/pages/QuotesPage";
 import { MitarbeiterModulPage } from "@/pages/MitarbeiterModulPage";
 import { EinsaetzeModulPage } from "@/pages/EinsaetzeModulPage";
 import { RechnungenV2Page } from "@/pages/RechnungenV2Page";
@@ -148,6 +149,7 @@ function App() {
               <Route path="/portals-klon" element={<MainLayout onLogout={logout}><PortalsKlonPage /></MainLayout>} />
               <Route path="/buchhaltung" element={<MainLayout onLogout={logout}><BuchhaltungPage /></MainLayout>} />
               <Route path="/invoices" element={<MainLayout onLogout={logout}><InvoicesPage /></MainLayout>} />
+              <Route path="/quotes" element={<MainLayout onLogout={logout}><QuotesPage /></MainLayout>} />
               <Route path="/rechnungen-v2" element={<MainLayout onLogout={logout}><RechnungenV2Page /></MainLayout>} />
               {/* Monteur-App (mobile, eigenes Modul) */}
               <Route path="/monteur" element={<MainLayout onLogout={logout}><MonteurAppPage /></MainLayout>} />

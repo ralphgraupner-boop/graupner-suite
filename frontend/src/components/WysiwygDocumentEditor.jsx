@@ -696,7 +696,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleExitWithSave = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
   const handleExitWithSaveKunde = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/kunden?edit=${selectedCustomerId}` : listPaths[type]); };
   const handleExitWithSaveProjekt = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
-  const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(listPaths[type]); };
+  const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
 
   const handleDownloadPDF = async () => {
     if (!validateTextFields()) return;
@@ -830,7 +830,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   return (
     <div className="min-h-screen bg-[#E7E3DA] dark:bg-[#3A3632]">
       <EditorToolbar
-        type={type} isNew={isNew} titles={titles} listPaths={listPaths} docNumber={docNumber} status={status}
+        type={type} isNew={isNew} titles={titles} listPaths={listPaths} docNumber={docNumber} status={status} selectedCustomerId={selectedCustomerId}
         isRecording={isRecording} aiLoading={aiLoading} saving={saving}
         navigate={navigate} setShowSettings={setShowSettings} startRecording={startRecording} stopRecording={stopRecording}
         handleSave={handleSave} handleExit={handleExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}

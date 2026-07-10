@@ -156,7 +156,7 @@ export const CustomerDocumentsPanel = ({ customerId, projektId = null }) => {
       {loading ? (
         <div className="text-xs text-muted-foreground py-3">Lade Dokumente...</div>
       ) : total === 0 ? (
-        <CreateDocPrompt onQuote={newQuote} onOrder={newOrder} onInvoice={newInvoice} />
+        null
       ) : (
         <>
           <div className="flex gap-1 mb-3 border-b">

@@ -168,7 +168,7 @@ async def create_quote(quote: QuoteCreate):
     vat_amount = net_after_discount * (quote.vat_rate / 100) if quote.vat_rate > 0 else 0
     total_gross = net_after_discount + vat_amount
 
-    valid_until = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    valid_until = None
 
     quote_obj = Quote(
         quote_number=quote_number,

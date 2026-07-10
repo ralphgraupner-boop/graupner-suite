@@ -337,7 +337,7 @@ const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, se
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">Vorlage auswaehlen fuer: <strong>{label}</strong></p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-sm"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-2 bg-muted/40 hover:bg-muted rounded-sm border border-border text-foreground" aria-label="Schließen"><X className="w-5 h-5" /></button>
         </div>
 
         {/* Filter-Tabs */}

@@ -158,7 +158,6 @@ const ProjekteListe = () => {
           <div className="flex items-center gap-2">
             <Folder className="w-6 h-6 text-primary" />
             <h1 className="text-2xl lg:text-4xl font-bold">Projekte</h1>
-            <Badge className="bg-amber-100 text-amber-700 border-amber-300">NEU</Badge>
           </div>
           <p className="text-muted-foreground mt-1 text-sm lg:text-base">
             {loading ? "Lade…" : selectedKunde ? `${filtered.length} Projekt${filtered.length === 1 ? "" : "e"} für ${selectedKunde.label}` : `${filtered.length} von ${projekte.length} Projekten · sortiert nach Datum`}
@@ -168,14 +167,6 @@ const ProjekteListe = () => {
           <Button variant="outline" size="sm" onClick={load} disabled={loading} data-testid="btn-refresh-projekte">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Aktualisieren
           </Button>
-          {selectedKunde && (
-            <Button size="sm" onClick={() => {
-              const url = `/popup/projekt/new?kunde_id=${selectedKunde.id}`;
-              if (!openInPopup(url)) setShowNew(true);
-            }} data-testid="btn-new-projekt">
-              <Plus className="w-4 h-4" /> Neues Projekt
-            </Button>
-          )}
         </div>
       </div>
 
@@ -273,8 +264,16 @@ const ProjekteListe = () => {
 
       <div className="flex gap-2 mb-4">
         <Button variant={sortMode === "manuell" ? "default" : "outline"} size="sm" onClick={() => setSortMode("manuell")}>Manuell (Ziehen)</Button>
-        <Button variant={sortMode === "created_at" ? "default" : "outline"} size="sm" onClick={() => setSortMode("created_at")}>Anlegedatum</Button>
-        <Button variant={sortMode === "updated_at" ? "default" : "outline"} size="sm" onClick={() => setSortMode("updated_at")}>Zuletzt bearbeitet</Button>
+        <Button variant="outline" size="sm" className={sortMode === "created_at" ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white font-bold" : ""} onClick={() => setSortMode("created_at")}>Anlegedatum</Button>
+        <Button variant="outline" size="sm" className={sortMode === "updated_at" ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white font-bold" : ""} onClick={() => setSortMode("updated_at")}>Zuletzt bearbeitet</Button>
+        {selectedKunde && (
+          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700 font-bold" onClick={() => {
+            const url = `/popup/projekt/new?kunde_id=${selectedKunde.id}`;
+            if (!openInPopup(url)) setShowNew(true);
+          }} data-testid="btn-new-projekt">
+            <Plus className="w-4 h-4" /> Neu erstellen
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">

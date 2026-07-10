@@ -4,7 +4,7 @@ import { Button, Badge } from "@/components/common";
 import { HelpTip } from "@/components/HelpTip";
 
 const EditorToolbar = ({
-  type, isNew, titles, listPaths, docNumber, status,
+  type, isNew, titles, listPaths, docNumber, status, selectedCustomerId,
   isRecording, aiLoading, saving,
   navigate, setShowSettings, startRecording, stopRecording,
   handleSave, handleExit, handleDownloadPDF, handlePrint,
@@ -28,7 +28,7 @@ const EditorToolbar = ({
     <div className="fixed top-0 left-0 right-0 bg-card text-card-foreground border-b z-40 shadow-sm">
       <div className="lg:max-w-[1600px] lg:mx-auto flex items-center justify-between px-3 lg:px-4 py-2 lg:py-3">
         <div className="flex items-center gap-2 lg:gap-4 min-w-0">
-          <Button variant="ghost" size="sm" onClick={() => navigate(listPaths[type])} className="text-foreground">
+          <Button variant="ghost" size="sm" onClick={() => navigate(selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type])} className="text-foreground">
             <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
             <span className="hidden sm:inline">Zurück</span>
           </Button>

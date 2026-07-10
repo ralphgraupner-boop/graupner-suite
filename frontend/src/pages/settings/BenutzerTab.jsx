@@ -194,6 +194,29 @@ const BenutzerTab = () => {
     } finally { setSendingEmail(false); }
   };
 
+      const pendingUsers = users.filter(u => u.freigabe_status === "wartet");
+      const activeUsers = users.filter(u => u.freigabe_status !== "wartet");
+
+      const handleFreigeben = async (username) => {
+        try {
+          await api.put(`/users/${username}/freigabe`);
+          toast.success("Benutzer freigegeben");
+          loadUsers();
+        } catch (err) {
+          toast.error(err.response?.data?.detail || "Freigabe fehlgeschlagen");
+        }
+      };
+
+      const handleAblehnen = async (username) => {
+        try {
+          await api.delete(`/users/${username}/ablehnen`);
+          toast.success("Registrierung abgelehnt und geloescht");
+          loadUsers();
+        } catch (err) {
+          toast.error(err.response?.data?.detail || "Ablehnen fehlgeschlagen");
+        }
+      };
+
   return (
     <Card className="p-4 lg:p-6" data-testid="user-management">
       <div className="flex items-center justify-between mb-4">
@@ -204,8 +227,28 @@ const BenutzerTab = () => {
         <Button onClick={() => setShowNew(true)} data-testid="btn-add-user"><Plus className="w-4 h-4" /> Neuer Benutzer</Button>
       </div>
 
+      {pendingUsers.length > 0 && (
+        <div className="mb-4 p-4 rounded-lg border border-amber-300 bg-amber-50" data-testid="pending-users-section">
+          <h4 className="text-sm font-semibold text-amber-800 mb-2">Wartet auf Freigabe ({pendingUsers.length})</h4>
+          <div className="space-y-2">
+            {pendingUsers.map((u) => (
+              <div key={u.username} className="flex items-center gap-4 p-3 bg-white rounded-lg border" data-testid={`pending-${u.username}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">{u.username}</p>
+                  <p className="text-xs text-muted-foreground">{u.email || "Keine E-Mail"}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => handleFreigeben(u.username)} data-testid={`btn-freigeben-${u.username}`}>Freigeben</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleAblehnen(u.username)} data-testid={`btn-ablehnen-${u.username}`}>Ablehnen</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {users.map((u) => (
+        {activeUsers.map((u) => (
           <div key={u.username} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg border" data-testid={`user-${u.username}`}>
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
               {u.username.charAt(0).toUpperCase()}
@@ -234,7 +277,7 @@ const BenutzerTab = () => {
             </div>
           </div>
         ))}
-        {users.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Keine Benutzer gefunden</p>}
+        {activeUsers.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Keine Benutzer gefunden</p>}
       </div>
 
 

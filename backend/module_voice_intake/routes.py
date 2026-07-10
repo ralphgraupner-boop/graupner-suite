@@ -17,16 +17,16 @@ router = APIRouter(prefix="/voice-intake", tags=["voice-intake"])
 
 
 def _key() -> str:
-    k = os.getenv("EMERGENT_LLM_KEY")
+    k = os.getenv("OPENAI_API_KEY")
     if not k:
-        raise HTTPException(500, "EMERGENT_LLM_KEY fehlt im Backend")
+        raise HTTPException(500, "OPENAI_API_KEY fehlt im Backend")
     return k
 
 
 async def _transcribe_bytes(data: bytes, filename: str, language: str = "de") -> str:
     """Audio-Bytes → Plain-Transkript via Whisper."""
-    from emergentintegrations.llm.openai import OpenAISpeechToText
-    stt = OpenAISpeechToText(api_key=_key())
+    from openai import AsyncOpenAI
+    client = AsyncOpenAI(api_key=_key())
     # Buffer, damit der Client filename+content_type sauber bekommt
     buf = io.BytesIO(data)
     buf.name = filename or "aufnahme.webm"
@@ -38,7 +38,7 @@ async def _transcribe_bytes(data: bytes, filename: str, language: str = "de") ->
             "GU, Gretsch-Unitas, Kunststoff, Holz/Alu, Aluminium, Lichtraum, "
             "Aufmass, Rolllaeden, Rolladen, Innentür, Eingangstür, Fenster."
         )
-        resp = await stt.transcribe(
+        resp = await client.audio.transcriptions.create(
             file=buf,
             model="whisper-1",
             response_format="json",
@@ -54,7 +54,7 @@ async def _transcribe_bytes(data: bytes, filename: str, language: str = "de") ->
 
 async def _structure_text(text: str) -> dict:
     """Transkript → strukturierte Felder via GPT (deutsch)."""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    from openai import AsyncOpenAI
     if not text or not text.strip():
         return {}
     system = (
@@ -69,12 +69,17 @@ async def _structure_text(text: str) -> dict:
         "- beschreibung (1–2 Sätze, Profi-Sprache, ohne Floskeln)\n"
         "- farbe / abmessungen / sonstiges (frei, optional)"
     )
-    chat = (
-        LlmChat(api_key=_key(), session_id="voice-intake", system_message=system)
-        .with_model("openai", "gpt-5.2")
-    )
+    client = AsyncOpenAI(api_key=_key())
     try:
-        raw = await chat.send_message(UserMessage(text=text))
+        resp = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": text},
+            ],
+            temperature=0.0,
+        )
+        raw = (resp.choices[0].message.content or "").strip()
         raw = (raw or "").strip()
         # GPT liefert oft Markdown-Codefence — entfernen
         if raw.startswith("```"):

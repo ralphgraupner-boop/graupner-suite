@@ -56,7 +56,7 @@ async def create_backup_data():
         selected = [
             # KERN
             "module_kunden", "module_artikel", "module_textvorlagen",
-            "settings", "users", "mitarbeiter",
+            "settings", "users", "mitarbeiter", "counters",
             # KUNDENPORTAL (aktiv)
             "portals", "portals_klon", "portal_settings", "portal_files",
             "portal_klon_files", "portal_klon_settings",

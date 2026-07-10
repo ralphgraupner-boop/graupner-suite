@@ -37,6 +37,7 @@ const ContactForm = ({
     firma: "",
     email: "",
     phone: "",
+    mobile: "",
     strasse: "",
     hausnummer: "",
     plz: "",
@@ -89,6 +90,7 @@ const ContactForm = ({
         firma: contact.firma || "",
         email: contact.email || "",
         phone: contact.phone || "",
+        mobile: contact.mobile || "",
         strasse: contact.strasse || strasse,
         hausnummer: contact.hausnummer || hausnummer,
         plz: contact.plz || plz,
@@ -108,7 +110,7 @@ const ContactForm = ({
     } else {
       setForm({
         anrede: "", vorname: "", nachname: "", name: "", firma: "",
-        email: "", phone: "",
+        email: "", phone: "", mobile: "",
         strasse: "", hausnummer: "", plz: "", ort: "",
         address: "", notes: "", customer_type: "Privat", categories: [], status: "Neu",
         nachricht: "", objekt_strasse: "", objekt_hausnummer: "", objekt_plz: "", objekt_ort: "",
@@ -317,11 +319,19 @@ const ContactForm = ({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Telefon</label>
+            <label className="block text-sm font-medium mb-2">Telefon (Festnetz)</label>
             <Input
               data-testid={`input-${mode}-phone`}
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Mobil / Handy</label>
+            <Input
+              data-testid={`input-${mode}-mobile`}
+              value={form.mobile}
+              onChange={(e) => setForm({ ...form, mobile: e.target.value })}
             />
           </div>
         </div>
