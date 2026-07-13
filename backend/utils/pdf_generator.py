@@ -635,6 +635,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         y_betreff -= 0.5 * cm
 
     # === Vortext ===
+    footer_y_limit = 2.8 * cm  # konsistenter Sicherheitsabstand zum Fusstext (13.07.2026)
     y_vt = y_betreff - 0.3 * cm
     vortext = data.get("vortext", "")
     if vortext:
@@ -666,10 +667,25 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
                     c.setFillColor(text_color)
                 for raw_line in seg.split("\n"):
                     if not raw_line.strip():
-                        # Leerzeile zwischen Absaetzen: vollen Zeilenraum reservieren
+                        if y_vt < footer_y_limit:
+                            _draw_footer(c, width, settings, page_num)
+                            c.showPage()
+                            page_num += 1
+                            _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                            y_vt = height - 3.5 * cm
+                            c.setFont("Helvetica", body_font_size)
+                            c.setFillColor(text_color)
                         y_vt -= body_line_height * cm
                         continue
                     for wl in _wrap_text(c, raw_line, "Helvetica", body_font_size, wrap_width):
+                        if y_vt < footer_y_limit:
+                            _draw_footer(c, width, settings, page_num)
+                            c.showPage()
+                            page_num += 1
+                            _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                            y_vt = height - 3.5 * cm
+                            c.setFont("Helvetica", body_font_size)
+                            c.setFillColor(text_color)
                         c.drawString(body_margin_left, y_vt, wl)
                         y_vt -= body_line_height * cm
         y_vt -= 0.2 * cm
@@ -681,7 +697,7 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
 
     y_pos = _draw_table_header(c, width, y_table, text_color)
 
-    footer_y_limit = 4.0 * cm
+    footer_y_limit = 2.8 * cm  # 13.07.2026: von 4.0cm gesenkt, war unnoetig viel verschenkter Platz
 
     # Compute dynamic numbering
     positions = data.get("positions", [])
@@ -734,6 +750,12 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
         if pos.get("type") == "titel":
             if pos_idx > 0:
                 y_pos -= 0.2 * cm
+            if y_pos - 0.7 * cm - 0.4 * cm < footer_y_limit:
+                _draw_footer(c, width, settings, page_num)
+                c.showPage()
+                page_num += 1
+                _draw_continuation_header(c, width, height, settings, doc_type, doc_number, page_num)
+                y_pos = _draw_table_header(c, width, height - 4.0 * cm, text_color)
             c.setFont("Helvetica-Bold", 10)
             c.setFillColor(text_color)
             titel_text = f"Titel: {numbering[pos_idx]}  {pos.get('description', '') or ''}"
