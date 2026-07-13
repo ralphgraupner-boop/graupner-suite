@@ -131,8 +131,18 @@ const ProjektAuswahlDialog = ({ kunde, entryId, mailText, onClose, onPicked, onC
     }
   };
 
+  const handleClose = () => {
+    if (!selected) {
+      const bestaetigt = window.confirm(
+        "Ohne Projekt-Zuordnung fortfahren? Diese Mail-Anfrage bleibt dann ohne Projekt-Verknüpfung."
+      );
+      if (!bestaetigt) return;
+    }
+    onClose();
+  };
+
   return (
-    <Modal isOpen={true} onClose={onClose} title={`Projekt zuordnen für ${kunde.name || ""}`} size="md">
+    <Modal isOpen={true} onClose={handleClose} title={`Projekt zuordnen für ${kunde.name || ""}`} size="md">
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">Zu welchem Projekt gehört diese Mail?</p>
 
@@ -179,7 +189,7 @@ const ProjektAuswahlDialog = ({ kunde, entryId, mailText, onClose, onPicked, onC
         </Button>
 
         <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={handleClose}>
             Abbrechen
           </Button>
           <Button disabled={!selected || saving} onClick={zuordnen}>
