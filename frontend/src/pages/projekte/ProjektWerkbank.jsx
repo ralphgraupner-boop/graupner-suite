@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, User as UserIcon, MapPin, Phone, Mail, Edit, Plus,
   Folder, Image as ImageIcon, Upload, Trash2, X, Save, Sparkles,
-  ChevronDown, ChevronUp, Calendar, Edit3, Globe, Wrench, FileText,
+  ChevronDown, ChevronUp, Calendar, Edit3, Globe, Wrench, FileText, Link as LinkIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge, Input, Textarea, Modal } from "@/components/common";
@@ -41,6 +41,10 @@ const ProjektWerkbank = () => {
   const [showNew, setShowNew] = useState(false);
   const [mailHistoryFor, setMailHistoryFor] = useState(null);
   const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId, projektId?} — zentrales EinsatzModal
+  const [showPortalLinkDialog, setShowPortalLinkDialog] = useState(false);
+  const [portalLinkText, setPortalLinkText] = useState("");
+  const [portalLinkResult, setPortalLinkResult] = useState("");
+  const [portalLinkBusy, setPortalLinkBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -128,6 +132,9 @@ const ProjektWerkbank = () => {
               <Mail className="w-4 h-4" /> Mailverlauf
             </button>
           )}
+          {/* Altes Portal ausgeblendet (13.07.2026) — nicht gelöscht.
+              Richtiger Weg ist jetzt "Kundenportal" links in der Navigation (module_portal_wizard). */}
+          {false && (
           <button
             onClick={async () => {
               try {
@@ -150,6 +157,16 @@ const ProjektWerkbank = () => {
             data-testid="btn-werkbank-portal"
           >
             <Globe className="w-4 h-4" /> Kundenportal öffnen / anlegen
+          </button>
+          )}
+          <button
+            onClick={() => { setShowPortalLinkDialog(true); setPortalLinkText(""); setPortalLinkResult(""); }}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+            data-testid="btn-werkbank-portal-link-erstellen"
+            title="Einmaligen Portal-Link für den Kunden erzeugen"
+          >
+            <LinkIcon className="w-4 h-4" />
+            🔗 Portal-Link erstellen
           </button>
           <button
             onClick={() => setEinsatzCtx({ kundeId: kunde_id })}
@@ -223,6 +240,41 @@ const ProjektWerkbank = () => {
         onClose={() => setEinsatzCtx(null)}
         onSaved={() => {}}
       />
+      <Modal isOpen={showPortalLinkDialog} onClose={() => setShowPortalLinkDialog(false)} title="🔗 Portal-Link erstellen" size="sm">
+        <div className="p-4 space-y-4">
+          {!portalLinkResult ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Erstellt einen einmaligen Link für <strong>{kunde?.vorname || ""} {kunde?.nachname || ""}{kunde?.firma ? ` (${kunde.firma})` : ""}</strong>.
+                Der Kunde kann darüber Nachricht und Fotos schicken.
+              </p>
+              <div>
+                <label className="text-sm font-medium block mb-1">Auftrag-Text (was soll der Kunde tun?)</label>
+                <Textarea value={portalLinkText} onChange={(e) => setPortalLinkText(e.target.value)} rows={3} placeholder="z.B. Bitte schicken Sie Fotos vom Schaden" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowPortalLinkDialog(false)}>Abbrechen</Button>
+                <Button disabled={portalLinkBusy} onClick={async () => {
+                  setPortalLinkBusy(true);
+                  try {
+                    const res = await api.post("/kundenportal/link-erstellen", { kunde_id: kunde_id, auftrag_text: portalLinkText.trim() });
+                    setPortalLinkResult(`${window.location.origin}/kundenportal/${res.data.portal_token}`);
+                    toast.success(res.data.mail_sent ? "Portal-Link erstellt + Mail gesendet" : "Portal-Link erstellt (keine E-Mail hinterlegt)");
+                  } catch (err) {
+                    toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
+                  } finally { setPortalLinkBusy(false); }
+                }}>{portalLinkBusy ? "Erstelle…" : "Link erstellen"}</Button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-emerald-700 font-medium">✓ Portal-Link erstellt!</p>
+              <p className="text-xs break-all bg-muted p-2 rounded">{portalLinkResult}</p>
+              <Button className="w-full" onClick={() => setShowPortalLinkDialog(false)}>Schließen</Button>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

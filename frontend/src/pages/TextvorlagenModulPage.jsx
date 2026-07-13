@@ -8,6 +8,19 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", kundenportal: "Kundenportal", einsatz: "Einsatz", termin: "Termin", aufgabe: "Aufgabe", aufgaben_kategorie: "Aufgaben-Kategorie", reparaturgruppe: "Reparaturgruppe", material: "Material", prioritaet: "Priorität", bild_kategorie: "Bild-Kategorie", abschlussgrund: "Abschlussgrund", kunden_status: "Kunden-Status", kunden_kategorie: "Kunden-Kategorie", kunden_typ: "Kunden-Typ", anrede: "Anrede", allgemein: "Allgemein", projekt_status: "Projekt-Status", projekt_kategorie: "Projekt-Kategorie", projekt_bild_kategorie: "Projekt-Bild-Kategorie", projekt_titel: "Projekt-Titel", hilfe_kunden: "Hilfe: Kunden", hilfe_projekte: "Hilfe: Projekte", hilfe_aufgaben: "Hilfe: Aufgaben", hilfe_termine: "Hilfe: Termine", hilfe_einsaetze: "Hilfe: Einsätze", hilfe_assistent: "Hilfe: Assistent", mail_antwort: "Mail-Antwort" };
 const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung", portal_nachricht: "Portal-Nachricht", hilfe: "Hilfe" };
 const TEXT_TYPE_COLORS = { vortext: "bg-blue-100 text-blue-800", schlusstext: "bg-green-100 text-green-800", betreff: "bg-purple-100 text-purple-800", bemerkung: "bg-gray-100 text-gray-800", titel: "bg-amber-100 text-amber-800", email: "bg-cyan-100 text-cyan-800", mahnung: "bg-red-100 text-red-800", portal_nachricht: "bg-emerald-100 text-emerald-800" };
+const DOC_TYPE_EXPLANATIONS = {
+  projekt_status: "Diese Liste füllt das Status-Dropdown in der Projekt-Werkbank. Der oberste Wert (alphabetisch/numerisch sortiert, z.B. \'1.0.0\' vor \'2.0.0\') wird automatisch der Status für neu angelegte Projekte.",
+  projekt_kategorie: "Diese Liste füllt das Kategorie-Dropdown beim Anlegen und Bearbeiten von Projekten (z.B. \'Schiebetür\', \'Fenster\').",
+  projekt_bild_kategorie: "Diese Liste bestimmt die Kategorien, die Sie beim Hochladen von Projekt-Fotos auswählen können (z.B. \'Schaden\', \'Vorher/Nachher\').",
+  kunden_status: "Diese Liste füllt das Status-Dropdown bei den Kunden (z.B. \'Anfrage\', \'Kunde\', \'Interessent\').",
+  kunden_kategorie: "Diese Liste füllt das Kategorie-Dropdown bei den Kunden.",
+  kunden_typ: "Diese Liste bestimmt die auswählbaren Kundentypen (z.B. Privat/Firma).",
+  bild_kategorie: "Diese Liste bestimmt die Foto-Kategorien im Besichtigungs-Tool.",
+  prioritaet: "Diese Liste füllt das Prioritäts-Dropdown bei Aufgaben.",
+  reparaturgruppe: "Diese Liste bestimmt die auswählbaren Reparaturgruppen.",
+  abschlussgrund: "Diese Liste füllt das Dropdown \'Abschlussgrund\' beim Beenden eines Vorgangs.",
+  anrede: "Diese Liste füllt das Anrede-Dropdown bei Kunden (z.B. \'Herr\', \'Frau\').",
+};
 
 const TextvorlagenModulPage = () => {
   const [items, setItems] = useState([]);
@@ -285,6 +298,13 @@ const TextvorlagenModulPage = () => {
           </button>
         ))}
       </div>
+      {filterDocType && DOC_TYPE_EXPLANATIONS[filterDocType] && (
+        <Card className="p-3 mb-4 bg-amber-50 border-amber-200">
+          <p className="text-xs text-amber-800">
+            <strong>⚠️ Achtung, das ist ein aktiver Filter, kein reiner Text:</strong> {DOC_TYPE_EXPLANATIONS[filterDocType]} Änderungen wirken sich sofort überall aus, wo diese Liste benutzt wird.
+          </p>
+        </Card>
+      )}
 
       <Card className="p-3 mb-4">
         <div className="relative">

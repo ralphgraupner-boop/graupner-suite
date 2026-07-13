@@ -119,6 +119,16 @@ async def _validate_against_textvorlagen(value: str, doc_type: str, label: str):
         )
 
 
+async def _default_projekt_status() -> str:
+    """Liest den ersten gültigen Projekt-Status live aus den Textvorlagen.
+    Passt sich automatisch an, wenn Ralph die Werte umbenennt oder ergänzt.
+    Fail-safe: falls nichts gepflegt ist, alter Fallback "Anfrage"."""
+    allowed = await _allowed_titles(PROJEKT_STATUS_DOCTYPE)
+    if allowed:
+        return sorted(allowed)[0]
+    return "Anfrage"
+
+
 # ===================== Models =====================
 
 
@@ -128,7 +138,7 @@ class ProjektCreate(BaseModel):
     beschreibung: Optional[str] = ""
     kategorie: Optional[str] = "Sonstiges"
     adresse: Optional[str] = ""
-    status: Optional[str] = "Anfrage"
+    status: Optional[str] = None
     notizen: Optional[str] = ""
     # Wenn True und der Kunde hat noch kein Projekt: Photos vom Kunden werden
     # als initiale Projekt-Bilder übernommen (Kategorie 'schaden').
@@ -366,6 +376,8 @@ async def get_projekt(projekt_id: str, user=Depends(get_current_user)):
 @router.post("/")
 async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user)):
     k = await _kunde_or_404(payload.kunde_id)
+    if not payload.status:
+        payload.status = await _default_projekt_status()
     await _validate_against_textvorlagen(payload.status, PROJEKT_STATUS_DOCTYPE, "Status")
     await _validate_against_textvorlagen(payload.kategorie, PROJEKT_KATEGORIE_DOCTYPE, "Kategorie")
     now = datetime.now(timezone.utc).isoformat()
@@ -401,7 +413,7 @@ async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user))
         "beschreibung": (payload.beschreibung or "").strip(),
         "kategorie": payload.kategorie or "Sonstiges",
         "adresse": (payload.adresse or "").strip() or _projekt_addr_from_kunde(k),
-        "status": payload.status or "Anfrage",
+        "status": payload.status,
         "notizen": (payload.notizen or "").strip(),
         "bilder": bilder,
         "erledigt_am": None,
@@ -607,7 +619,7 @@ async def create_from_kunde(kunde_id: str, payload: FromKundePayload = FromKunde
         "beschreibung": (k.get("nachricht") or "").strip(),
         "kategorie": kategorie,
         "adresse": _projekt_addr_from_kunde(k),
-        "status": "Anfrage",
+        "status": await _default_projekt_status(),
         "notizen": "",
         "bilder": bilder,
         "erledigt_am": None,

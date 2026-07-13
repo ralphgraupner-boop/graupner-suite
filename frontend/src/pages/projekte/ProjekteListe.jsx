@@ -10,6 +10,8 @@ import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBad
 
 const STATUSES = ["Anfrage", "In Bearbeitung", "Abgeschlossen", "Archiv"];
 const KATEGORIEN = ["Innentür", "Fenster", "Haustür", "Schiebetür", "Sonstiges"];
+const ARCHIV_STATES = ["Abgeschlossen", "Archiv"];
+const STATUSES_ANZEIGE = STATUSES.filter(s => !ARCHIV_STATES.includes(s));
 
 const STATUS_COLORS = {
   "Anfrage": "bg-blue-100 text-blue-700 border-blue-300",
@@ -119,8 +121,9 @@ const ProjekteListe = () => {
 
   const filtered = projekte.filter(p => {
     if (selectedKunde && p.kunde_id !== selectedKunde.id) return false;
-    if (statusFilter === "aktiv" && p.status === "Archiv") return false;
-    if (statusFilter !== "aktiv" && statusFilter !== "" && p.status !== statusFilter) return false;
+    if (statusFilter === "aktiv" && ARCHIV_STATES.includes(p.status)) return false;
+    if (statusFilter === "abgeschlossen" && !ARCHIV_STATES.includes(p.status)) return false;
+    if (statusFilter !== "aktiv" && statusFilter !== "abgeschlossen" && statusFilter !== "" && p.status !== statusFilter) return false;
     if (kategorieFilter && p.kategorie !== kategorieFilter) return false;
     return true;
   });
@@ -277,10 +280,11 @@ const ProjekteListe = () => {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive ({projekte.filter(p => p.status !== "Archiv").length})</FilterButton>
-        {STATUSES.map(s => (
+        <FilterButton active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")}>Aktive ({projekte.filter(p => !ARCHIV_STATES.includes(p.status)).length})</FilterButton>
+        {STATUSES_ANZEIGE.map(s => (
           <FilterButton key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>{s} ({projekte.filter(p => p.status === s).length})</FilterButton>
         ))}
+        <FilterButton active={statusFilter === "abgeschlossen"} onClick={() => setStatusFilter("abgeschlossen")}>Abgeschlossen ({projekte.filter(p => ARCHIV_STATES.includes(p.status)).length})</FilterButton>
         <FilterButton active={statusFilter === ""} onClick={() => setStatusFilter("")}>Alle ({projekte.length})</FilterButton>
       </div>
 
@@ -288,7 +292,13 @@ const ProjekteListe = () => {
         <div className="flex flex-wrap gap-2 mb-4" data-testid="projekt-kategorie-filter">
           <FilterButton active={kategorieFilter === ""} onClick={() => setKategorieFilter("")}>Alle Kategorien</FilterButton>
           {kategorien.map(k => (
-            <FilterButton key={k} active={kategorieFilter === k} onClick={() => setKategorieFilter(k)}>{k} ({projekte.filter(p => p.kategorie === k).length})</FilterButton>
+            <FilterButton key={k} active={kategorieFilter === k} onClick={() => setKategorieFilter(k)}>{k} ({projekte.filter(p => {
+            if (p.kategorie !== k) return false;
+            if (statusFilter === "aktiv") return !ARCHIV_STATES.includes(p.status);
+            if (statusFilter === "abgeschlossen") return ARCHIV_STATES.includes(p.status);
+            if (statusFilter === "") return true;
+            return p.status === statusFilter;
+          }).length})</FilterButton>
           ))}
         </div>
       )}

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from database import db, logger
+from utils import get_default_kunden_status
 from auth import get_current_user
 from security.admin_check import require_admin
 from pydantic import BaseModel
@@ -463,7 +464,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                         "plz": "",
                         "ort": "",
                         "customer_type": "Privat",
-                        "kontakt_status": "Anfrage",
+                        "kontakt_status": await get_default_kunden_status(),
                         "categories": [],
                         "notes": f"Quelle: Kontaktformular\nBetreff: {subject}\n\n{extracted.get('nachricht', '')}",
                         "source": "email_auto_import",
@@ -496,7 +497,7 @@ async def fetch_imap_to_inbox(creds: dict) -> int:
                         "plz": "",
                         "ort": "",
                         "customer_type": "Privat",
-                        "kontakt_status": "Anfrage",
+                        "kontakt_status": await get_default_kunden_status(),
                         "categories": [],
                         "notes": f"Betreff: {subject}\n\n{body[:1000]}",
                         "source": "email_auto_import",
@@ -626,7 +627,7 @@ async def create_anfrage_from_email(email_id: str, user=Depends(get_current_user
         "plz": "",
         "ort": "",
         "customer_type": "Privat",
-        "kontakt_status": "Anfrage",
+        "kontakt_status": await get_default_kunden_status(),
         "categories": [],
         "notes": notes,
         "source": "e-mail",

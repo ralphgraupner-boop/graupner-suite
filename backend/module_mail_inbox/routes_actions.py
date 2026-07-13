@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from database import db, logger
+from utils import get_default_kunden_status
 from routes.auth import get_current_user
 from .helpers import _find_kunde_duplicates, _tombstone
 
@@ -86,7 +87,7 @@ async def accept(entry_id: str, body: dict | None = None, user=Depends(get_curre
         "strasse": _pick("strasse", parsed.get("strasse", "")),
         "plz": _pick("plz", parsed.get("plz", "")),
         "ort": _pick("ort", parsed.get("ort", "")),
-        "kontakt_status": _pick("kontakt_status", "Anfrage"),
+        "kontakt_status": _pick("kontakt_status", await get_default_kunden_status()),
         "customer_type": _pick("customer_type", "Privat"),
         "quelle": _pick("quelle", "Jimdo Kontaktformular"),
         "nachricht": _pick("nachricht", parsed.get("nachricht", "")),

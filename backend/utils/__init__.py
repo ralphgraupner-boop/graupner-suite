@@ -29,6 +29,20 @@ async def get_smtp_config():
     }
 
 
+async def get_default_kunden_status() -> str:
+    """Liest den ersten gültigen Kunden-Status live aus den Textvorlagen (kunden_status).
+    Passt sich automatisch an, wenn Ralph die Werte umbenennt oder ergänzt.
+    Fail-safe: falls nichts gepflegt ist, alter Fallback "Anfrage"."""
+    titles = set()
+    async for v in db.module_textvorlagen.find({"doc_type": "kunden_status"}, {"_id": 0, "title": 1}):
+        t = (v.get("title") or "").strip()
+        if t:
+            titles.add(t)
+    if titles:
+        return sorted(titles)[0]
+    return "Anfrage"
+
+
 async def get_portal_bcc():
     """Liest die BCC-Adresse aus den Einstellungen, an die alle Kundenportal-Mails (Admin-out, Kunde-in, Invite)
     als Kopie gesendet werden sollen. Leerer String oder None deaktiviert die Funktion.
