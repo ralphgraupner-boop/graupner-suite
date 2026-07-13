@@ -26,8 +26,10 @@ const KundenLinkPage = () => {
   const [savingNote, setSavingNote] = useState(false);
   const [savedNoteFlash, setSavedNoteFlash] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoDesc, setPhotoDesc] = useState("");
   const [uploadedFlash, setUploadedFlash] = useState(false);
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   // ── Sprachaufnahme (Whisper + KI-Strukturierung) ──
   const [recording, setRecording] = useState(false);
@@ -159,6 +161,7 @@ const KundenLinkPage = () => {
         const fd = new FormData();
         fd.append("file", f);
         fd.append("author", author || "");
+        fd.append("beschreibung", photoDesc || "");
         await axios.post(`${API}/api/module-kundenlink/view/${token}/photo`, fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
@@ -171,6 +174,7 @@ const KundenLinkPage = () => {
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
     }
   };
 
@@ -291,7 +295,7 @@ const KundenLinkPage = () => {
           <section className="bg-white border rounded-sm p-3">
             <h3 className="text-xs font-semibold text-slate-500 uppercase mb-2">Adresse</h3>
             {k.address_lines?.length > 0 && (
-              <div className="text-sm">
+              <div className="text-sm text-slate-900 font-medium">
                 {k.address_lines.map((l, i) => <div key={i}>{l}</div>)}
               </div>
             )}
@@ -315,6 +319,112 @@ const KundenLinkPage = () => {
           </section>
         )}
 
+        {/* Mitarbeiter-Beitrag (Name + Notiz), ganz oben */}
+        <section className="bg-amber-50 border border-amber-200 rounded-sm p-3 space-y-3">
+          <div>
+            <h3 className="text-xs font-semibold text-amber-800 uppercase mb-1">Beitrag vom Mitarbeiter</h3>
+            <p className="text-[11px] text-amber-700">
+              Was du hier eintraegst, geht direkt zurueck in den Kundendatensatz beim Auftraggeber.
+            </p>
+          </div>
+          {/* Mitarbeiter-Name */}
+          <div>
+            <label className="block text-[11px] font-medium text-amber-900 mb-1">Dein Name <span className="text-amber-700 font-normal">(einmalig — wird auf diesem Handy gemerkt)</span></label>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => { setAndereAuswahl(false); saveAuthor("Thorsten Graupner"); }}
+                className={`px-4 py-2 text-sm rounded-sm border font-medium ${author === "Thorsten Graupner" && !andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300 text-slate-900"}`}
+                data-testid="kundenlink-author-thorsten"
+              >
+                Thorsten
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAndereAuswahl(false); saveAuthor("Ralph Graupner"); }}
+                className={`px-4 py-2 text-sm rounded-sm border font-medium ${author === "Ralph Graupner" && !andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300 text-slate-900"}`}
+                data-testid="kundenlink-author-ralph"
+              >
+                Ralph
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAndereAuswahl(true); saveAuthor(""); }}
+                className={`px-4 py-2 text-sm rounded-sm border font-medium ${andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300 text-slate-900"}`}
+                data-testid="kundenlink-author-andere"
+              >
+                Andere Person
+              </button>
+            </div>
+            {andereAuswahl && (
+              <input
+                type="text"
+                value={author}
+                onChange={(e) => saveAuthor(e.target.value)}
+                placeholder="Name eintippen"
+                className="w-full mt-2 px-3 py-2 text-sm border rounded-sm bg-white placeholder-slate-500"
+                data-testid="kundenlink-author"
+              />
+            )}
+
+          </div>
+          {/* Notiz */}
+          <div>
+            <label className="block text-[11px] font-medium text-amber-900 mb-1">Notiz / Bemerkung</label>
+            {/* Sprachaufnahme – diktieren statt tippen */}
+            <div className="mb-2 flex items-center gap-2 flex-wrap">
+              {!recording && !voiceProcessing && (
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-sm bg-violet-600 text-white hover:bg-violet-700"
+                  data-testid="kundenlink-voice-start"
+                >
+                  <Mic className="w-4 h-4" />
+                  Sprachnotiz aufnehmen
+                </button>
+              )}
+              {recording && (
+                <button
+                  type="button"
+                  onClick={stopRecording}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-sm bg-red-600 text-white animate-pulse"
+                  data-testid="kundenlink-voice-stop"
+                >
+                  <Square className="w-4 h-4" />
+                  Stop ({Math.floor(voiceSeconds / 60)}:{String(voiceSeconds % 60).padStart(2, "0")})
+                </button>
+              )}
+              {voiceProcessing && (
+                <div className="inline-flex items-center gap-2 px-3 py-2 text-sm text-violet-800">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Transkribiere…
+                </div>
+              )}
+              <span className="text-[10px] text-amber-700 inline-flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Frei sprechen — KI macht Text + erkennt Material/Hersteller
+              </span>
+            </div>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              rows={4}
+              placeholder="z.B. Besichtigung erfolgt – Tür ausgehängt, Material für nächste Woche bestellen…"
+              className="w-full px-3 py-2 text-sm border rounded-sm bg-white placeholder-slate-500"
+              data-testid="kundenlink-note-text"
+            />
+            <button
+              type="button"
+              onClick={submitNote}
+              disabled={savingNote || !noteText.trim()}
+              className="mt-2 w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-sm hover:bg-amber-700 disabled:opacity-50"
+              data-testid="kundenlink-note-submit"
+            >
+              {savingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : savedNoteFlash ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+              {savedNoteFlash ? "Gespeichert" : "Notiz speichern"}
+            </button>
+          </div>
+
+        </section>
         {/* Anliegen */}
         {k.nachricht && (
           <section className="bg-white border rounded-sm p-3">
@@ -484,106 +594,26 @@ const KundenLinkPage = () => {
             </p>
           </div>
 
-          {/* Mitarbeiter-Name */}
-          <div>
-            <label className="block text-[11px] font-medium text-amber-900 mb-1">Dein Name <span className="text-amber-700 font-normal">(einmalig — wird auf diesem Handy gemerkt)</span></label>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => { setAndereAuswahl(false); saveAuthor("Thorsten Graupner"); }}
-                className={`px-4 py-2 text-sm rounded-sm border font-medium ${author === "Thorsten Graupner" && !andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300"}`}
-                data-testid="kundenlink-author-thorsten"
-              >
-                Thorsten
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAndereAuswahl(false); saveAuthor("Ralph Graupner"); }}
-                className={`px-4 py-2 text-sm rounded-sm border font-medium ${author === "Ralph Graupner" && !andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300"}`}
-                data-testid="kundenlink-author-ralph"
-              >
-                Ralph
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAndereAuswahl(true); saveAuthor(""); }}
-                className={`px-4 py-2 text-sm rounded-sm border font-medium ${andereAuswahl ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-300"}`}
-                data-testid="kundenlink-author-andere"
-              >
-                Andere Person
-              </button>
-            </div>
-            {andereAuswahl && (
-              <input
-                type="text"
-                value={author}
-                onChange={(e) => saveAuthor(e.target.value)}
-                placeholder="Name eintippen"
-                className="w-full mt-2 px-3 py-2 text-sm border rounded-sm bg-white"
-                data-testid="kundenlink-author"
-              />
-            )}
-
-          </div>
-          {/* Notiz */}
-          <div>
-            <label className="block text-[11px] font-medium text-amber-900 mb-1">Notiz / Bemerkung</label>
-            {/* Sprachaufnahme – diktieren statt tippen */}
-            <div className="mb-2 flex items-center gap-2 flex-wrap">
-              {!recording && !voiceProcessing && (
-                <button
-                  type="button"
-                  onClick={startRecording}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-sm bg-violet-600 text-white hover:bg-violet-700"
-                  data-testid="kundenlink-voice-start"
-                >
-                  <Mic className="w-4 h-4" />
-                  Sprachnotiz aufnehmen
-                </button>
-              )}
-              {recording && (
-                <button
-                  type="button"
-                  onClick={stopRecording}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-sm bg-red-600 text-white animate-pulse"
-                  data-testid="kundenlink-voice-stop"
-                >
-                  <Square className="w-4 h-4" />
-                  Stop ({Math.floor(voiceSeconds / 60)}:{String(voiceSeconds % 60).padStart(2, "0")})
-                </button>
-              )}
-              {voiceProcessing && (
-                <div className="inline-flex items-center gap-2 px-3 py-2 text-sm text-violet-800">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Transkribiere…
-                </div>
-              )}
-              <span className="text-[10px] text-amber-700 inline-flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Frei sprechen — KI macht Text + erkennt Material/Hersteller
-              </span>
-            </div>
-            <textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              rows={4}
-              placeholder="z.B. Besichtigung erfolgt – Tür ausgehängt, Material für nächste Woche bestellen…"
-              className="w-full px-3 py-2 text-sm border rounded-sm bg-white"
-              data-testid="kundenlink-note-text"
-            />
-            <button
-              type="button"
-              onClick={submitNote}
-              disabled={savingNote || !noteText.trim()}
-              className="mt-2 w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-amber-600 text-white rounded-sm hover:bg-amber-700 disabled:opacity-50"
-              data-testid="kundenlink-note-submit"
-            >
-              {savingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : savedNoteFlash ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-              {savedNoteFlash ? "Gespeichert" : "Notiz speichern"}
-            </button>
-          </div>
-
           {/* Foto-Upload */}
           <div>
             <label className="block text-[11px] font-medium text-amber-900 mb-1">Foto hinzufügen</label>
+            <textarea
+              value={photoDesc}
+              onChange={(e) => setPhotoDesc(e.target.value)}
+              placeholder="Beschreibung zum Foto (optional), z.B. Fehlerbeschreibung oder Hinweis fuer Kollegen"
+              rows={2}
+              className="w-full px-3 py-2 text-sm border rounded-sm bg-white mb-2 placeholder-slate-500"
+              data-testid="kundenlink-photo-desc"
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => submitPhoto(e.target.files)}
+              className="hidden"
+              data-testid="kundenlink-camera-input"
+            />
             <input
               ref={fileInputRef}
               type="file"
@@ -593,16 +623,28 @@ const KundenLinkPage = () => {
               className="hidden"
               data-testid="kundenlink-photo-input"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingPhoto}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-slate-800 text-white rounded-sm hover:bg-slate-900 disabled:opacity-50"
-              data-testid="kundenlink-photo-trigger"
-            >
-              {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : uploadedFlash ? <Check className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-              {uploadingPhoto ? "Lade hoch…" : uploadedFlash ? "Hochgeladen" : "Foto aufnehmen / auswählen"}
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-slate-800 text-white rounded-sm hover:bg-slate-900 disabled:opacity-50"
+                data-testid="kundenlink-camera-trigger"
+              >
+                {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                Foto aufnehmen
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-slate-600 text-white rounded-sm hover:bg-slate-700 disabled:opacity-50"
+                data-testid="kundenlink-photo-trigger"
+              >
+                {uploadedFlash ? <Check className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
+                {uploadedFlash ? "Hochgeladen" : "Aus Galerie"}
+              </button>
+            </div>
           </div>
         </section>
 

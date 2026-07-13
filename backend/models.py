@@ -292,7 +292,7 @@ class Quote(BaseModel):
     total_gross: CoercedFloat = 0
     status: str = "Entwurf"
     is_template: bool = False
-    valid_until: str = ""
+    valid_until: Optional[str] = None
     followup_sent: bool = False
     show_lohnanteil: bool = False
     lohnanteil_custom: OptCoercedFloat = None

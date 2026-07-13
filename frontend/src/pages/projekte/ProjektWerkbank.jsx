@@ -489,7 +489,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
                   Keine Bilder. Wähle Kategorie und lade Bilder hoch.
                 </div>
               ) : (
-                <BilderGrid bilder={bilder} onDelete={deleteBild} />
+                <BilderGrid bilder={bilder} onDelete={deleteBild} projektId={data.id} />
               )}
             </div>
           )}
@@ -498,7 +498,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
             <Button variant="outline" size="sm" onClick={handleDelete} className="text-red-600 hover:bg-red-50" data-testid={`btn-delete-${data.id}`}>
               <Trash2 className="w-4 h-4" /> Löschen
             </Button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -547,7 +547,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
   );
 };
 
-const BilderGrid = ({ bilder, onDelete }) => {
+const BilderGrid = ({ bilder, onDelete, projektId }) => {
   const bildKats = useTextvorlagen("projekt_bild_kategorie");
   const kategorien = bildKats.map(b => b.title).filter(Boolean);
   // Bilder ohne bekannte Kategorie unter "sonstiges" gruppieren
@@ -568,7 +568,7 @@ const BilderGrid = ({ bilder, onDelete }) => {
           <div className="text-xs font-medium text-slate-600 capitalize mb-1">{kat} ({groups[kat].length})</div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
             {groups[kat].map(b => (
-              <ProjektBild key={b.id} bild={b} onDelete={onDelete} />
+              <ProjektBild key={b.id} bild={b} onDelete={onDelete} projektId={projektId} />
             ))}
           </div>
         </div>

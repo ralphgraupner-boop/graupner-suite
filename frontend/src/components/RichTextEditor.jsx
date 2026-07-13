@@ -18,6 +18,9 @@ const RichTextEditor = ({ value, onChange, placeholder, compact = false, classNa
     onChange(editorRef.current.innerHTML);
   }, [onChange]);
 
+  const handleFocus = () => {
+    document.execCommand("defaultParagraphSeparator", false, "p");
+  };
   const execCommand = (cmd, val) => {
     document.execCommand(cmd, false, val || null);
     editorRef.current?.focus();
@@ -52,6 +55,7 @@ const RichTextEditor = ({ value, onChange, placeholder, compact = false, classNa
         ref={editorRef}
         contentEditable
         onInput={handleInput}
+        onFocus={handleFocus}
         data-placeholder={placeholder}
         className={`outline-none text-sm leading-relaxed ${compact ? "min-h-[60px] px-3 py-2" : "min-h-[100px] px-3 py-3"} empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground`}
         style={{ wordBreak: "break-word" }}

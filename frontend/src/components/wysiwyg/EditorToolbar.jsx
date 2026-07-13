@@ -9,7 +9,7 @@ const EditorToolbar = ({
   navigate, setShowSettings, startRecording, stopRecording,
   handleSave, handleExit, handleDownloadPDF, handlePrint,
   onOpenMailClient, onToggleVorlagen, onTogglePreview,
-  onOpenDocTemplates, onToggleLohnkosten, onOpenDocCheck, onOpenPdfPreview,
+  onOpenDocTemplates, onToggleLohnkosten, onToggleLeistungen, onOpenDocCheck, onOpenPdfPreview,
   zoomLevel, setZoomLevel,
 }) => {
   // Werkzeuge-Dropdown (Einstellungen, Vorlage, Bausteine, Vorschau)
@@ -90,6 +90,10 @@ const EditorToolbar = ({
               </div>
             )}
           </div>
+          <Button variant="outline" size="sm" onClick={onToggleLeistungen} data-testid="btn-leistungen-topbar" title="Leistungen & Artikel ein-/ausblenden" className="bg-background text-foreground border-border">
+            <Wrench className="w-4 h-4" />
+            <span className="hidden sm:inline">Leistungen</span>
+          </Button>
           <Button variant="outline" size="sm" onClick={onToggleLohnkosten} data-testid="btn-lohnkosten-topbar" title="Lohnkosten ein-/ausblenden" className="bg-background text-foreground border-border">
             <Calculator className="w-4 h-4" />
             <span className="hidden sm:inline">Lohnkosten</span>

@@ -23,7 +23,10 @@ import { api } from "@/lib/api";
  *   bild: { id, url, thumb_url, filename, beschreibung, kategorie }
  *   onDelete(id)
  */
-const ProjektBild = ({ bild, onDelete }) => {
+const ProjektBild = ({ bild, onDelete, projektId }) => {
+  const [beschreibung, setBeschreibung] = useState(bild.beschreibung || "");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [savingDesc, setSavingDesc] = useState(false);
   const [thumbUrl, setThumbUrl] = useState("");
   const [fullUrl, setFullUrl] = useState("");
   const [error, setError] = useState(false);
@@ -105,8 +108,13 @@ const ProjektBild = ({ bild, onDelete }) => {
             <ZoomIn className="w-3 h-3 text-slate-700" />
           </div>
         )}
-        {bild.beschreibung && (
-          <div className="text-[10px] text-slate-600 px-1 py-0.5 truncate">{bild.beschreibung}</div>
+        {editingDesc ? (
+          <div className="p-1 flex gap-1" onClick={e=>e.stopPropagation()}>
+            <input type="text" value={beschreibung} onChange={e=>setBeschreibung(e.target.value)} className="flex-1 text-[10px] border rounded px-1 min-w-0" autoFocus />
+            <button onClick={async()=>{setSavingDesc(true);try{await api.put(`/module-projekte/${projektId}/bilder/${bild.id}`,{beschreibung});setEditingDesc(false);}catch{}finally{setSavingDesc(false);}}} className="text-[10px] px-1 bg-primary text-primary-foreground rounded">{savingDesc?"...":"OK"}</button>
+          </div>
+        ) : (
+          <button type="button" onClick={e=>{e.stopPropagation();setEditingDesc(true);}} className="text-[10px] text-slate-600 px-1 py-0.5 truncate w-full text-left hover:bg-slate-50">{beschreibung || "+ Beschreibung"}</button>
         )}
       </div>
 

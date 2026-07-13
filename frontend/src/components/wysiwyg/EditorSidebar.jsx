@@ -225,7 +225,8 @@ const EditorSidebar = ({
 
   return (
     <div className="hidden lg:block">
-      <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto space-y-3 pr-1 bg-[#E7E3DA] dark:bg-[#3A3632]">
+      <div className="sticky top-20 h-[calc(100vh-6rem)] flex flex-col bg-[#E7E3DA] dark:bg-[#3A3632]">
+        <div className="space-y-3 pr-1 pb-3 shrink-0">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
@@ -252,6 +253,8 @@ const EditorSidebar = ({
           </button>
         </div>
 
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         {/* Items List */}
         {sidebarTab !== "blocks" ? (
         <div className="space-y-1.5">
@@ -294,6 +297,7 @@ const EditorSidebar = ({
           )}
         </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -110,6 +110,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const [copying, setCopying] = useState(false);
   const [lohnanteilCustom, setLohnanteilCustom] = useState("");
   const [showLohnkosten, setShowLohnkosten] = useState(false);
+  const [showLeistungenPanel, setShowLeistungenPanel] = useState(false);
+  const [copyFlow, setCopyFlow] = useState(null);
   const [showDocCheck, setShowDocCheck] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -571,10 +573,12 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   // ==================== SAVE / PDF / EMAIL / PRINT ====================
   const validateTextFields = () => {
-    if (!betreff?.trim()) { toast.error("Betrefffeld ist leer - bitte ausfuellen"); return false; }
-    if (!vortext?.trim()) { toast.error("Vortext ist leer - bitte ausfuellen"); return false; }
-    if (!schlusstext?.trim()) { toast.error("Schlusstext ist leer - bitte ausfuellen"); return false; }
-    return true;
+    const problems = [];
+    if (!betreff?.trim()) problems.push("Betreff ist leer");
+    if (!vortext?.trim()) problems.push("Vortext ist leer");
+    if (!schlusstext?.trim()) problems.push("Schlusstext ist leer");
+    if (problems.length === 0) return true;
+    return window.confirm(`Folgende Felder sind leer:\n\n${problems.join("\n")}\n\nTrotzdem speichern?`);
   };
 
   const validatePositions = () => {
@@ -613,7 +617,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const persistDocument = async () => {
     // Silent save - gibt savedId oder null zurueck, ohne Template-Dialog
     if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return null; }
-    if (positions.length === 0 || !positions.some(p => p.description && p.description.trim())) { toast.error("Bitte fügen Sie mindestens eine Position hinzu"); return null; }
     if (!validateTextFields()) return null;
     if (!validatePositions()) return null;
     setSaving(true);
@@ -623,7 +626,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const _lohn = lohnanteilCustom === "" || lohnanteilCustom === null ? null : Number(String(lohnanteilCustom).replace(",", "."));
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: (Number.isFinite(_lohn) ? _lohn : null), ...(type === "quote" && { valid_days: settings?.default_quote_validity_days ?? 30 }), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         const res = await api.post(`/${endpoint}`, payload);
-        if (res?.data?.id) { navigate(`/${endpoint}/${res.data.id}/edit`, { replace: true }); return res.data.id; }
+        if (res?.data?.id) { navigate(`/${endpoint}/edit/${res.data.id}`, { replace: true }); return res.data.id; }
         return null;
       } else {
         const _lohn = lohnanteilCustom === "" || lohnanteilCustom === null ? null : Number(String(lohnanteilCustom).replace(",", "."));
@@ -672,17 +675,24 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleSaveAndExit = async () => { const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
 
   // Kopier-Buttons: 1:1-Kopie als neuer Vorgang (gleicher Kunde, neue Nummer, Quelle bleibt unveraendert)
-  const handleCopyTo = async (target) => {
+  const copyTargetDocType = { order: "auftrag", "invoice-from-quote": "rechnung", "invoice-from-order": "rechnung" };
+  const copyTargetLabel = { order: "Auftragsbestätigung", "invoice-from-quote": "Rechnung", "invoice-from-order": "Rechnung" };
+  const handleCopyTo = (target) => {
     if (isNew || !id) { toast.error("Bitte speichern Sie zuerst das Dokument"); return; }
+    setCopyFlow({ target, step: "vortext", vortext, schlusstext });
+  };
+  const finishCopyFlow = async () => {
+    if (!copyFlow) return;
     setCopying(true);
     try {
       const cfg = {
-        order: { url: `/documents/copy/quote-to-order/${id}`, open: "/orders/edit", label: "Auftragsbestätigung" },
-        "invoice-from-quote": { url: `/documents/copy/quote-to-invoice/${id}`, open: "/invoices/edit", label: "Rechnung" },
-        "invoice-from-order": { url: `/documents/copy/order-to-invoice/${id}`, open: "/invoices/edit", label: "Rechnung" },
-      }[target];
-      const res = await api.post(cfg.url);
-      toast.success(`${cfg.label} erstellt`);
+        order: { url: `/documents/copy/quote-to-order/${id}`, open: "/orders/edit" },
+        "invoice-from-quote": { url: `/documents/copy/quote-to-invoice/${id}`, open: "/invoices/edit" },
+        "invoice-from-order": { url: `/documents/copy/order-to-invoice/${id}`, open: "/invoices/edit" },
+      }[copyFlow.target];
+      const res = await api.post(cfg.url, { vortext_override: copyFlow.vortext, schlusstext_override: copyFlow.schlusstext });
+      toast.success(`${copyTargetLabel[copyFlow.target]} erstellt`);
+      setCopyFlow(null);
       navigate(`${cfg.open}/${res.data.id}`);
     } catch {
       toast.error("Erstellen fehlgeschlagen. Bitte erneut versuchen.");
@@ -699,7 +709,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
 
   const handleDownloadPDF = async () => {
-    if (!validateTextFields()) return;
     if (!(await ensureLohnanteilOrConfirm())) return;
     // Immer zuerst speichern → PDF zeigt dann aktuellen Stand, nicht die alte Version
     const savedId = await persistDocument();
@@ -723,7 +732,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
   };
 
   const handlePrint = async () => {
-    if (!validateTextFields()) return;
     if (!(await ensureLohnanteilOrConfirm())) return;
     // Immer zuerst speichern → Druck zeigt aktuellen Stand
     const savedId = await persistDocument();
@@ -839,35 +847,20 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         onTogglePreview={() => setShowPreview(true)}
         onOpenDocTemplates={() => setShowLoadTemplate(true)}
         onToggleLohnkosten={() => setShowLohnkosten(v => !v)}
+        onToggleLeistungen={() => setShowLeistungenPanel(v => !v)}
         onOpenDocCheck={() => setShowDocCheck(true)}
         onOpenPdfPreview={() => setShowPdfPreview(true)}
         zoomLevel={zoomLevel}
         setZoomLevel={setZoomLevel}
       />
 
-      <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 overflow-x-auto">
+      <div className="pt-14 lg:pt-20 pb-4 lg:pb-8 overflow-x-auto overflow-y-visible">
         <div
           className="mx-auto"
           style={{
-            width: `${340 + 16 + 794 * (zoomLevel / 100)}px`,
-            display: 'grid',
-            gridTemplateColumns: `340px ${794 * (zoomLevel / 100)}px`,
-            gap: '16px',
+            width: `${794 * (zoomLevel / 100)}px`,
           }}
         >
-
-          <EditorSidebar
-            sidebarSearch={sidebarSearch} setSidebarSearch={setSidebarSearch}
-            sidebarTab={sidebarTab} setSidebarTab={setSidebarTab}
-            filteredServices={filteredServices} filteredArticles={filteredArticles}
-            leistungsBloecke={leistungsBloecke}
-            selectedItem={selectedItem} setSelectedItem={setSelectedItem}
-            addFromStamm={addFromStamm} deleteLeistungsBlock={deleteLeistungsBlock}
-            insertLeistungsBlock={insertLeistungsBlock}
-            handleDragStart={handleDragStart} navigate={navigate}
-            settings={settings} onApplyKalkPrice={handleApplyKalkPrice}
-            onItemUpdated={loadData}
-          />
 
           <div style={{ width: '794px', transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}>
             {/* Status Dropdown */}
@@ -991,7 +984,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     testId="btn-korrektur-vortext"
                   />
                 </div>
-                <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={setVortext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} docContext={{ due_days: dueDays != null ? Number(dueDays) : undefined, anzahlung: depositAmount }} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="vortext" value={vortext} onChange={(v) => setVortext(htmlToPlain(v))} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} docContext={{ due_days: dueDays != null ? Number(dueDays) : undefined, anzahlung: depositAmount }} />
               </div>
 
               <PositionsTable
@@ -1031,7 +1024,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
                     testId="btn-korrektur-schlusstext"
                   />
                 </div>
-                <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={setSchlusstext} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} docContext={{ due_days: dueDays != null ? Number(dueDays) : undefined, anzahlung: depositAmount }} />
+                <TextTemplateSelect docType={docTypeMap[type]} textType="schlusstext" value={schlusstext} onChange={(v) => setSchlusstext(htmlToPlain(v))} customer={customer} settings={settings} docNumber={docNumber} lohnanteilData={{ netto: effectiveLohnanteil, mwst: lohnanteilMwst, brutto: lohnanteilBrutto, vatRate }} docContext={{ due_days: dueDays != null ? Number(dueDays) : undefined, anzahlung: depositAmount }} />
               </div>
 
               {/* Footer (3-spaltig wie PDF: Firma+Inhaber+Adresse · Kontakt+St.-Nr. · Bank) */}
@@ -1064,6 +1057,31 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         </div>
       </div>
 
+      {/* Leistungen & Artikel Slide-Over, ueber Werkzeugleiste erreichbar, unabhaengig vom Scrollen */}
+      {showLeistungenPanel && (
+        <div className="fixed left-0 top-14 lg:top-20 bottom-0 w-full sm:w-[380px] z-40 bg-card border-r shadow-2xl overflow-hidden" data-testid="leistungen-panel">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <h2 className="text-base font-semibold">Leistungen & Artikel</h2>
+            <button onClick={() => setShowLeistungenPanel(false)} className="p-1 hover:bg-muted rounded-sm" data-testid="btn-close-leistungen" title="Schliessen">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-4">
+            <EditorSidebar
+              sidebarSearch={sidebarSearch} setSidebarSearch={setSidebarSearch}
+              sidebarTab={sidebarTab} setSidebarTab={setSidebarTab}
+              filteredServices={filteredServices} filteredArticles={filteredArticles}
+              leistungsBloecke={leistungsBloecke}
+              selectedItem={selectedItem} setSelectedItem={setSelectedItem}
+              addFromStamm={addFromStamm} deleteLeistungsBlock={deleteLeistungsBlock}
+              insertLeistungsBlock={insertLeistungsBlock}
+              handleDragStart={handleDragStart} navigate={navigate}
+              settings={settings} onApplyKalkPrice={handleApplyKalkPrice}
+              onItemUpdated={loadData}
+            />
+          </div>
+        </div>
+      )}
       {/* Lohnkosten Slide-Over (nicht-modal, Editor bleibt klickbar) */}
       {showLohnkosten && (
         <div className="fixed right-0 top-14 lg:top-20 bottom-0 w-full sm:w-[360px] z-40 bg-card border-l shadow-2xl overflow-y-auto" data-testid="lohnkosten-panel">
@@ -1202,6 +1220,36 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           </div>
         </div>
       )}
+      {copyFlow && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="copyflow-dialog">
+          <div className="bg-card rounded-lg shadow-2xl p-6 max-w-lg w-full">
+            <h3 className="text-lg font-semibold mb-2">{copyFlow.step === "vortext" ? "Vortext" : "Schlusstext"} fuer neue {copyTargetLabel[copyFlow.target]}</h3>
+            <p className="text-sm text-muted-foreground mb-4">Vorlage auswaehlen oder den bisherigen Text uebernehmen.</p>
+            <TextTemplateSelect
+              docType={copyTargetDocType[copyFlow.target]}
+              textType={copyFlow.step}
+              value={copyFlow.step === "vortext" ? copyFlow.vortext : copyFlow.schlusstext}
+              onChange={(v) => setCopyFlow(f => f.step === "vortext" ? { ...f, vortext: htmlToPlain(v) } : { ...f, schlusstext: htmlToPlain(v) })}
+              customer={customer}
+              settings={settings}
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setCopyFlow(null)} className="px-4 py-2 text-sm font-medium rounded-sm border hover:bg-muted transition-colors" data-testid="btn-copyflow-cancel">
+                Abbrechen
+              </button>
+              {copyFlow.step === "vortext" ? (
+                <button onClick={() => setCopyFlow(f => ({ ...f, step: "schlusstext" }))} className="px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors" data-testid="btn-copyflow-next">
+                  Weiter zum Schlusstext
+                </button>
+              ) : (
+                <button onClick={finishCopyFlow} disabled={copying} className="px-4 py-2 text-sm font-medium rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50" data-testid="btn-copyflow-finish">
+                  {copying ? "Erstelle..." : `${copyTargetLabel[copyFlow.target]} erstellen`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showTemplateDialog && (
         <SaveAsTemplateDialog
@@ -1237,7 +1285,6 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           onClose={() => setShowPdfPreview(false)}
           filename={`${titles[type]}_${docNumber}.pdf`}
           getPdfBlob={async () => {
-            if (!validateTextFields()) return null;
             const savedId = await persistDocument();
             if (!savedId) return null;
             const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";

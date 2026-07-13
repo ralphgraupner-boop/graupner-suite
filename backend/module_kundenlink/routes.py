@@ -557,6 +557,7 @@ async def add_photo(
     token: str,
     file: UploadFile = File(...),
     author: str = Form(""),
+    beschreibung: str = Form(""),
 ):
     """Mitarbeiter lädt ein Foto in die Kunden-Galerie hoch (kein Login).
     Maximale Größe: 10 MB pro Foto.
@@ -578,6 +579,9 @@ async def add_photo(
     if not result:
         raise HTTPException(500, "Upload fehlgeschlagen")
 
+    _foto_beschreibung = f"{_now().strftime('%d.%m.%Y %H:%M')} - {(author or '').strip() or 'Mitarbeiter'}"
+    if (beschreibung or "").strip():
+        _foto_beschreibung += f": {beschreibung.strip()}"
     photo_entry = {
         "id": str(uuid.uuid4()),
         "url": storage_path,  # interner Object-Key, view_by_token wandelt um
@@ -586,6 +590,7 @@ async def add_photo(
         "uploaded_at": _iso(_now()),
         "uploaded_by_link": link["id"],
         "uploaded_by_label": (author or "").strip()[:60] or "Mitarbeiter",
+        "beschreibung": _foto_beschreibung,
     }
     if link.get("projekt_id"):
         photo_entry["kategorie"] = "sonstiges"
