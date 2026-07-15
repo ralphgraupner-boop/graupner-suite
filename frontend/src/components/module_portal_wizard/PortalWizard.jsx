@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Pencil, Camera, CheckCircle2, Loader2, MessageSquare, ImagePlus, X, Phone } from "lucide-react";
 import { api } from "@/lib/api";
 import { GraupnerBriefkopf } from "@/components/common/GraupnerBriefkopf";
+import { safeHtmlFromText } from "@/lib/utils";
 
 /**
  * PortalWizard — Öffentlicher Schritt-für-Schritt-Wizard für das Kundenportal.
@@ -299,7 +300,7 @@ const PortalWizard = ({ token: tokenProp }) => {
           <div className="space-y-3 text-base">
             <p>Sie hatten uns eine Anfrage gesendet — vielen Dank dafür. Um Ihnen schnell und gezielt helfen zu können, bitten wir Sie herzlich:</p>
             {auftragText && (
-              <div className="rounded-xl border-l-4 bg-emerald-50 px-4 py-3 text-emerald-900" style={{ borderColor: GREEN }} data-testid="portal-auftrag-text">{auftragText}</div>
+              <div className="rounded-xl border-l-4 bg-emerald-50 px-4 py-3 text-emerald-900" style={{ borderColor: GREEN }} data-testid="portal-auftrag-text" dangerouslySetInnerHTML={{ __html: safeHtmlFromText(auftragText) }} />
             )}
             <p className="text-muted-foreground">Wir führen Sie jetzt Schritt für Schritt — das dauert nur wenige Minuten.</p>
             <p className="font-medium">Wir stellen Ihnen gleich zwei kurze Fragen — dann sind Sie fertig. Versprochen.</p>

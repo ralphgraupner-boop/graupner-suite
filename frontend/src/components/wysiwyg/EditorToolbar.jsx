@@ -129,7 +129,7 @@ const EditorToolbar = ({
             </Button>
             </HelpTip>
           )}
-          {!isNew && (
+          {false && !isNew && (
             <HelpTip id="doc.btn-pdf" placement="bottom" text="Drucken: Speichert den aktuellen Stand und öffnet den Druck-Dialog mit frischem PDF.">
             <Button variant="outline" size="sm" onClick={handlePrint} data-testid="btn-print-document" className="bg-background text-foreground border-border">
               <Printer className="w-4 h-4" />
@@ -137,7 +137,11 @@ const EditorToolbar = ({
             </Button>
             </HelpTip>
           )}
-          {!isNew && (
+          {/* Drucken-Knopf stillgelegt am 13.07.2026: zeigte UUID statt sprechendem
+              Dateinamen beim Speichern (Blob + window.open-Einschraenkung von Chrome).
+              Nutze stattdessen "Vorschau" -> Drucken/Download von dort. Code bleibt
+              erhalten falls spaeter doch wieder gebraucht. */}
+          {false && !isNew && (
             <HelpTip id="doc.btn-pdf" placement="bottom">
             <Button variant="outline" size="sm" onClick={handleDownloadPDF} data-testid="btn-pdf-document" className="bg-background text-foreground border-border">
               <Download className="w-4 h-4" />
@@ -145,6 +149,8 @@ const EditorToolbar = ({
             </Button>
             </HelpTip>
           )}
+          {/* PDF-Knopf stillgelegt am 13.07.2026: gleicher Grund wie Drucken-Knopf
+              oben, siehe Kommentar dort. */}
           <div className="h-6 w-px bg-border hidden sm:block" />
           <HelpTip id="doc.btn-save" placement="bottom">
           <Button size="sm" onClick={handleSave} disabled={saving} data-testid="btn-save-document" className="bg-primary text-primary-foreground hover:bg-primary/90">

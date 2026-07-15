@@ -18,6 +18,7 @@ import MailHistoryModal from "@/components/MailHistoryModal";
 import { MailLink } from "@/components/MailLink";
 import { CustomerDocumentsPanel } from "@/components/CustomerDocumentsPanel";
 import EinsatzModal from "@/components/EinsatzModal";
+import PortalLinkDialog from "@/components/module_portal_wizard/PortalLinkDialog";
 
 const STATUS_COLORS = {
   "Anfrage": "bg-blue-100 text-blue-700 border-blue-300",
@@ -240,41 +241,10 @@ const ProjektWerkbank = () => {
         onClose={() => setEinsatzCtx(null)}
         onSaved={() => {}}
       />
-      <Modal isOpen={showPortalLinkDialog} onClose={() => setShowPortalLinkDialog(false)} title="🔗 Portal-Link erstellen" size="sm">
-        <div className="p-4 space-y-4">
-          {!portalLinkResult ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Erstellt einen einmaligen Link für <strong>{kunde?.vorname || ""} {kunde?.nachname || ""}{kunde?.firma ? ` (${kunde.firma})` : ""}</strong>.
-                Der Kunde kann darüber Nachricht und Fotos schicken.
-              </p>
-              <div>
-                <label className="text-sm font-medium block mb-1">Auftrag-Text (was soll der Kunde tun?)</label>
-                <Textarea value={portalLinkText} onChange={(e) => setPortalLinkText(e.target.value)} rows={3} placeholder="z.B. Bitte schicken Sie Fotos vom Schaden" />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowPortalLinkDialog(false)}>Abbrechen</Button>
-                <Button disabled={portalLinkBusy} onClick={async () => {
-                  setPortalLinkBusy(true);
-                  try {
-                    const res = await api.post("/kundenportal/link-erstellen", { kunde_id: kunde_id, auftrag_text: portalLinkText.trim() });
-                    setPortalLinkResult(`${window.location.origin}/kundenportal/${res.data.portal_token}`);
-                    toast.success(res.data.mail_sent ? "Portal-Link erstellt + Mail gesendet" : "Portal-Link erstellt (keine E-Mail hinterlegt)");
-                  } catch (err) {
-                    toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
-                  } finally { setPortalLinkBusy(false); }
-                }}>{portalLinkBusy ? "Erstelle…" : "Link erstellen"}</Button>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-emerald-700 font-medium">✓ Portal-Link erstellt!</p>
-              <p className="text-xs break-all bg-muted p-2 rounded">{portalLinkResult}</p>
-              <Button className="w-full" onClick={() => setShowPortalLinkDialog(false)}>Schließen</Button>
-            </div>
-          )}
-        </div>
-      </Modal>
+      <PortalLinkDialog
+        kunde={showPortalLinkDialog ? kunde : null}
+        onClose={() => setShowPortalLinkDialog(false)}
+      />
     </div>
   );
 };

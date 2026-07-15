@@ -21,7 +21,8 @@ export const PdfPreviewModal = ({ isOpen, onClose, getPdfBlob, filename = "Dokum
     try {
       const blob = await getPdfBlob();
       if (!blob) throw new Error("Kein PDF erhalten");
-      const url = URL.createObjectURL(blob);
+      const namedFile = new File([blob], filename, { type: "application/pdf" });
+      const url = URL.createObjectURL(namedFile);
       setBlobUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return url; });
     } catch (e) {
       setError(e.message || "PDF konnte nicht geladen werden");

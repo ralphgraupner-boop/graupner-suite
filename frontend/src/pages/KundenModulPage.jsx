@@ -20,6 +20,7 @@ import { MailLink } from "@/components/MailLink";
 import AbschlussDialog from "@/components/AbschlussDialog";
 import KundenLinkDialog from "@/components/KundenLinkDialog";
 import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBadge";
+import PortalLinkDialog from "@/components/module_portal_wizard/PortalLinkDialog";
 import NewProjektDialog from "@/components/NewProjektDialog";
 import EinsatzModal from "@/components/EinsatzModal";
 import TextvorlagenInlineManager from "@/components/TextvorlagenInlineManager";
@@ -886,72 +887,11 @@ const KundenModulPage = () => {
         kunde={linkDialogKunde}
       />
 
-      <Modal isOpen={!!portalLinkKunde} onClose={() => setPortalLinkKunde(null)} title="🔗 Portal-Link erstellen" size="sm">
-        <div className="p-4 space-y-4" data-testid="portal-link-dialog">
-          {!portalLinkResult ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Erstellt einen einmaligen Link für{" "}
-                <strong>{portalLinkKunde?.vorname || ""} {portalLinkKunde?.nachname || ""}{portalLinkKunde?.firma ? ` (${portalLinkKunde.firma})` : ""}</strong>.
-                Der Kunde kann darüber Nachricht und Fotos schicken.
-              </p>
-              <div>
-                <label className="text-sm font-medium block mb-1">Auftrag-Text (was soll der Kunde tun?)</label>
-                <Textarea
-                  value={portalLinkText}
-                  onChange={(e) => setPortalLinkText(e.target.value)}
-                  rows={3}
-                  placeholder="z.B. Bitte schicken Sie Fotos vom Schaden"
-                  data-testid="portal-link-text-input"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setPortalLinkKunde(null)}>Abbrechen</Button>
-                <Button
-                  disabled={portalLinkBusy}
-                  data-testid="portal-link-erstellen-submit"
-                  onClick={async () => {
-                    setPortalLinkBusy(true);
-                    try {
-                      const res = await api.post("/kundenportal/link-erstellen", {
-                        kunde_id: portalLinkKunde.id,
-                        auftrag_text: portalLinkText.trim(),
-                      });
-                      const full = `${window.location.origin}/kundenportal/${res.data.portal_token}`;
-                      setPortalLinkResult(full);
-                      loadPortalStatuses();
-                      toast.success("Portal-Link erstellt");
-                    } catch (err) {
-                      toast.error(err?.response?.data?.detail || "Fehler beim Erstellen");
-                    } finally {
-                      setPortalLinkBusy(false);
-                    }
-                  }}
-                >
-                  {portalLinkBusy ? "Erstelle…" : "Link erstellen"}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-3" data-testid="portal-link-result">
-              <p className="text-sm font-medium text-emerald-700">✅ Link erstellt — kopieren und per Mail an den Kunden schicken:</p>
-              <div className="flex items-center gap-2">
-                <Input value={portalLinkResult} readOnly className="text-sm" data-testid="portal-link-result-input" />
-                <Button
-                  variant="outline"
-                  data-testid="portal-link-copy"
-                  onClick={() => { navigator.clipboard.writeText(portalLinkResult); toast.success("Link kopiert"); }}
-                >
-                  Kopieren
-                </Button>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={() => setPortalLinkKunde(null)}>Fertig</Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
+      <PortalLinkDialog
+        kunde={portalLinkKunde}
+        onClose={() => setPortalLinkKunde(null)}
+        onCreated={loadPortalStatuses}
+      />
 
       {neuesProjektFuer && (
         <NewProjektDialog

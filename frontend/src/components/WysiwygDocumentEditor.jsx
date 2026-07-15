@@ -717,8 +717,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       // Cache-Buster, damit Browser nicht versehentlich eine alte PDF-Version zeigt
       const res = await api.get(`/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
+      const namedFile = new File([res.data], `${titles[type]}_${docNumber}.pdf`, { type: "application/pdf" });
+      const url = window.URL.createObjectURL(namedFile);
       const previewWin = window.open(url, "_blank");
       if (!previewWin) {
         // Fallback bei Popup-Blocker → Download
@@ -739,8 +739,8 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     try {
       const endpoint = type === "quote" ? "quote" : type === "order" ? "order" : "invoice";
       const res = await api.get(`/pdf/${endpoint}/${savedId}?t=${Date.now()}`, { responseType: "blob" });
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
+      const namedFile = new File([res.data], `${titles[type]}_${docNumber}.pdf`, { type: "application/pdf" });
+      const url = window.URL.createObjectURL(namedFile);
       const printWindow = window.open(url, "_blank");
       if (printWindow) {
         printWindow.addEventListener("load", () => {

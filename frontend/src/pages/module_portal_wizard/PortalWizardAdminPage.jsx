@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { useF1Help } from "@/lib/useF1Help";
+import { htmlToPlainText } from "@/lib/utils";
 import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBadge";
 
 /**
@@ -301,24 +302,26 @@ const PortalWizardAdminPage = () => {
 
       {/* Portal-Link erstellen */}
       <Modal isOpen={!!linkKunde} onClose={() => setLinkKunde(null)} title="🔗 Portal-Link erstellen" size="sm">
-        <div className="p-4 space-y-4" data-testid="portal-admin-link-dialog">
+        <div className="p-4 h-full flex flex-col" data-testid="portal-admin-link-dialog">
           {!linkResult ? (
             <>
-              <p className="text-sm text-muted-foreground">
-                Für <strong>{linkKunde?.firma || `${linkKunde?.vorname || ""} ${linkKunde?.nachname || ""}`}</strong>.
-                Der Kunde bekommt automatisch eine Mail mit dem Link{linkKunde?.email ? ` an ${linkKunde.email}` : " (keine E-Mail hinterlegt)"}.
-              </p>
-              <div>
-                <label className="text-sm font-medium block mb-1">Auftrag-Text</label>
-                {vorlagen.length > 0 && (
-                  <select className="w-full mb-2 border rounded-sm px-2 py-2 text-sm bg-background" data-testid="portal-admin-vorlage-select" defaultValue="" onChange={(e) => { const v = vorlagen.find((x) => x.id === e.target.value); if (v) setLinkText(v.content || ""); }}>
-                    <option value="">— Vorhandene Vorlage wählen —</option>
-                    {vorlagen.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
-                  </select>
-                )}
-                <Textarea value={linkText} onChange={(e) => setLinkText(e.target.value)} rows={3} placeholder="z.B. Bitte schicken Sie Fotos vom Schaden" data-testid="portal-admin-link-text" />
+              <div className="shrink-0 space-y-3 mb-3">
+                <p className="text-sm text-muted-foreground">
+                  Für <strong>{linkKunde?.firma || `${linkKunde?.vorname || ""} ${linkKunde?.nachname || ""}`}</strong>.
+                  Der Kunde bekommt automatisch eine Mail mit dem Link{linkKunde?.email ? ` an ${linkKunde.email}` : " (keine E-Mail hinterlegt)"}.
+                </p>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Auftrag-Text</label>
+                  {vorlagen.length > 0 && (
+                    <select className="w-full mb-2 border rounded-sm px-2 py-2 text-sm bg-background" data-testid="portal-admin-vorlage-select" defaultValue="" onChange={(e) => { const v = vorlagen.find((x) => x.id === e.target.value); if (v) setLinkText(htmlToPlainText(v.content || "")); }}>
+                      <option value="">— Vorhandene Vorlage wählen —</option>
+                      {vorlagen.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+                    </select>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-end gap-2">
+              <Textarea value={linkText} onChange={(e) => setLinkText(e.target.value)} className="flex-1 min-h-0 resize-none" placeholder="z.B. Bitte schicken Sie Fotos vom Schaden" data-testid="portal-admin-link-text" />
+              <div className="shrink-0 flex justify-end gap-2 mt-3">
                 <Button variant="outline" onClick={() => setLinkKunde(null)}>Abbrechen</Button>
                 <Button disabled={linkBusy} onClick={createLink} data-testid="portal-admin-link-submit">{linkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Link erstellen"}</Button>
               </div>

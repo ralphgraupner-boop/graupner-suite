@@ -126,7 +126,7 @@ const _detectSnap = (clientX, clientY) => {
   return null;
 };
 
-export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking = false, popoutUrl = null }) => {
+export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking = false, popoutUrl = null, initialHeight = null }) => {
   const preset = SIZE_PRESETS[size] || SIZE_PRESETS.md;
   const wm = useWindowManager();
 
@@ -147,7 +147,9 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
   const computeInitial = () => {
     if (typeof window === "undefined") return { pos: { x: 0, y: 0 }, box: { w: preset.w, h: 600 } };
     const w = Math.min(preset.w, window.innerWidth - 80);
-    const h = Math.min(700, Math.max(MIN_H, window.innerHeight - 100));
+    const h = initialHeight != null
+      ? Math.min(initialHeight, Math.max(MIN_H, window.innerHeight - 100))
+      : Math.min(700, Math.max(MIN_H, window.innerHeight - 100));
     return {
       pos: { x: Math.max(20, (window.innerWidth - w) / 2), y: Math.max(20, (window.innerHeight - h) / 2) },
       box: { w, h },
@@ -183,8 +185,16 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md", blocking 
         const parsed = JSON.parse(raw);
         if (parsed?.box?.w && parsed?.box?.h) {
           const cw = Math.min(parsed.box.w, window.innerWidth - 40);
-          const ch = Math.min(parsed.box.h, window.innerHeight - 40);
-          setBox({ w: Math.max(MIN_W, cw), h: Math.max(MIN_H, ch) });
+          if (initialHeight != null) {
+            // Modals mit fester Wunschhoehe (initialHeight gesetzt): nur die
+            // gespeicherte Breite uebernehmen, gespeicherte Hoehe bewusst
+            // ignorieren (sonst ueberschreibt eine alte, per Hand gezogene
+            // Groesse dauerhaft die gewuenschte feste Hoehe).
+            setBox((prev) => ({ w: Math.max(MIN_W, cw), h: prev.h }));
+          } else {
+            const ch = Math.min(parsed.box.h, window.innerHeight - 40);
+            setBox({ w: Math.max(MIN_W, cw), h: Math.max(MIN_H, ch) });
+          }
         }
         if (parsed?.pos && typeof parsed.pos.x === "number") {
           const cx = Math.min(Math.max(0, parsed.pos.x), window.innerWidth - 200);
