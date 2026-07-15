@@ -35,6 +35,7 @@ const PortalWizardAdminPage = () => {
   const [vorlagen, setVorlagen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortMode, setSortMode] = useState("updated_at");
   const [expandedId, setExpandedId] = useState(null);
   const [fotosById, setFotosById] = useState({});   // {eintrag_id: {fotos, fotos_data}}
   const [fotosBusy, setFotosBusy] = useState(null);
@@ -83,13 +84,17 @@ const PortalWizardAdminPage = () => {
       })
       .filter((k) => !q || k._name.toLowerCase().includes(q) || (k.email || "").toLowerCase().includes(q))
       .sort((a, b) => {
-        // Ungelesene Eingänge zuerst, dann Einträge mit Portal, dann alphabetisch
+        // Zuletzt bearbeitet/angelegt zuerst (Ralphs Wunsch: schnellster Zugriff
+        // auf aktuelle Faelle), ungelesene Eingaenge als Tiebreaker bei Gleichstand
+        const field = sortMode === "updated_at" ? "updated_at" : "created_at";
+        const da = a[field] || "";
+        const db_ = b[field] || "";
+        if (da !== db_) return db_.localeCompare(da);
         const ua = a._entry?.admin_status === "neu" ? 0 : 1;
         const ub = b._entry?.admin_status === "neu" ? 0 : 1;
-        const pa = a._entry ? 0 : 1, pb = b._entry ? 0 : 1;
-        return ua - ub || pa - pb || a._name.localeCompare(b._name);
+        return ua - ub || a._name.localeCompare(b._name);
       });
-  }, [kunden, latestByKunde, search]);
+  }, [kunden, latestByKunde, search, sortMode]);
 
   const patchEntry = (id, patch) =>
     setEintraege((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
@@ -188,6 +193,25 @@ const PortalWizardAdminPage = () => {
         </Button>
       </div>
 
+      {/* Sortierung */}
+      <div className="flex gap-2 mb-2">
+        <Button
+          variant="outline" className={sortMode === "created_at" ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white font-bold" : ""}
+          size="sm"
+          onClick={() => setSortMode("created_at")}
+          data-testid="portal-admin-sort-created"
+        >
+          Anlegedatum
+        </Button>
+        <Button
+          variant="outline" className={sortMode === "updated_at" ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:text-white font-bold" : ""}
+          size="sm"
+          onClick={() => setSortMode("updated_at")}
+          data-testid="portal-admin-sort-updated"
+        >
+          Zuletzt bearbeitet
+        </Button>
+      </div>
       <div className="relative mb-4 max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Kunde suchen…" className="pl-9" data-testid="portal-admin-search" />

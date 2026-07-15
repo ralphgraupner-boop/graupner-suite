@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from database import db, logger
 from auth import get_current_user
-from utils import send_email, get_portal_bcc
+from utils import send_email, get_portal_bcc, ersetze_platzhalter
 
 router = APIRouter(prefix="/kundenportal", tags=["kundenportal"])
 
@@ -96,6 +96,9 @@ async def link_erstellen(data: dict, request: Request, user=Depends(get_current_
             x for x in [kunde.get("vorname"), kunde.get("nachname")] if x
         ) or ""
 
+    # Platzhalter wie {kunde_name}/{anrede_brief} in der Vorlage durch die
+    # echten Kundendaten ersetzen, bevor der Text in die Mail wandert.
+    auftrag_text = ersetze_platzhalter(auftrag_text, kunde)
     mail_sent = False
     if customer_email and "@" in customer_email and base:
         anrede = f"Guten Tag{', ' + kunde_name if kunde_name else ''},"

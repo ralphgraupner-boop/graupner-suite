@@ -29,6 +29,51 @@ async def get_smtp_config():
     }
 
 
+def _build_anrede_brief(kunde_name: str) -> str:
+    """Erzeugt eine passende Briefanrede aus dem Kundennamen
+    (z.B. 'Sehr geehrter Herr Meier'). Zentrale Version, uebernommen
+    aus der bewaehrten Logik in module_kundenportal/routes_legacy.py."""
+    name = (kunde_name or "").strip()
+    if not name:
+        return "Sehr geehrte Damen und Herren"
+    clean = name
+    prefix = ""
+    for p in ("Herr", "Frau", "Divers"):
+        if clean.startswith(p + " "):
+            prefix = p
+            clean = clean[len(p):].strip()
+            break
+    parts = clean.split()
+    nachname = parts[-1] if parts else clean
+    if prefix == "Herr":
+        return f"Sehr geehrter Herr {nachname}"
+    if prefix == "Frau":
+        return f"Sehr geehrte Frau {nachname}"
+    return f"Sehr geehrte/r {clean}"
+
+
+def ersetze_platzhalter(text: str, kunde: dict) -> str:
+    """Ersetzt bekannte Textvorlagen-Platzhalter (z.B. {kunde_name},
+    {anrede_brief}) durch die echten Kundendaten. Zentrale Stelle fuer
+    die ganze Suite -- neue Platzhalter werden hier einmal ergaenzt,
+    statt an jeder Versandstelle einzeln nachgebaut zu werden.
+    Unbekannte Platzhalter (z.B. Tippfehler in einer Vorlage) bleiben
+    unveraendert im Text stehen, statt einen Fehler zu werfen."""
+    if not text:
+        return text
+    kunde = kunde or {}
+    kunde_name = kunde.get("firma") or " ".join(
+        x for x in [kunde.get("vorname"), kunde.get("nachname")] if x
+    ) or ""
+    ersatz = {
+        "{kunde_name}": kunde_name,
+        "{anrede_brief}": _build_anrede_brief(kunde_name),
+    }
+    for platzhalter, wert in ersatz.items():
+        text = text.replace(platzhalter, wert)
+    return text
+
+
 async def get_default_kunden_status() -> str:
     """Liest den ersten gültigen Kunden-Status live aus den Textvorlagen (kunden_status).
     Passt sich automatisch an, wenn Ralph die Werte umbenennt oder ergänzt.
