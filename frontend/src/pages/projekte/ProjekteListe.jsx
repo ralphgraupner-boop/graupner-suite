@@ -51,7 +51,7 @@ const ProjekteListe = () => {
       ]);
       setProjekte(pRes.data);
       const km = {};
-      (kRes.data || []).forEach(k => { km[k.id] = { vorname: k.vorname, nachname: k.nachname, firma: k.firma, anliegen: k.anliegen || "", nachricht: k.nachricht || "" }; });
+      (kRes.data || []).forEach(k => { km[k.id] = { vorname: k.vorname, nachname: k.nachname, firma: k.firma, anliegen: k.anliegen || "", nachricht: k.nachricht || "", phone: k.phone || "", mobile: k.mobile || "", strasse: k.strasse || "", hausnummer: k.hausnummer || "", plz: k.plz || "", ort: k.ort || "" }; });
       setKundenMap(km);
       api.get("/kundenportal/status-alle").then(r => setPortalStatuses(r.data?.statuses || {})).catch(() => {});
     } catch (err) {
@@ -89,10 +89,16 @@ const ProjekteListe = () => {
         const label = k.firma || [k.vorname, k.nachname].filter(Boolean).join(" ") || id;
         const anliegen = k.anliegen || "";
         const nachricht = k.nachricht || "";
+        const phone = (k.phone || "").replace(/\s|\/|-/g, "");
+        const mobile = (k.mobile || "").replace(/\s|\/|-/g, "");
+        const qPhone = q.replace(/\s|\/|-/g, "");
+        const adresse = [k.strasse, k.hausnummer, k.plz, k.ort].filter(Boolean).join(" ").toLowerCase();
         let matchedIn = null;
         if (label.toLowerCase().includes(q)) matchedIn = "Name";
         else if (anliegen.toLowerCase().includes(q)) matchedIn = "Anliegen";
         else if (nachricht.toLowerCase().includes(q)) matchedIn = "Nachricht";
+        else if (qPhone.length >= 5 && (phone.includes(qPhone) || mobile.includes(qPhone))) matchedIn = "Telefon";
+        else if (adresse.includes(q)) matchedIn = "Adresse";
         return { id, label, matchedIn };
       })
       .filter(k => k.matchedIn)

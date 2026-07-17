@@ -321,7 +321,14 @@ const KundenModulPage = () => {
       (c.email || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.firma || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.nachricht || "").toLowerCase().includes(search.toLowerCase()) ||
-      (c.anliegen || "").toLowerCase().includes(search.toLowerCase()));
+      (c.anliegen || "").toLowerCase().includes(search.toLowerCase()) ||
+      (() => {
+        const qDigits = search.replace(/\s|\/|-/g, "");
+        if (qDigits.length < 5) return false;
+        const phoneDigits = (c.phone || "").replace(/\s|\/|-/g, "");
+        const mobileDigits = (c.mobile || "").replace(/\s|\/|-/g, "");
+        return phoneDigits.includes(qDigits) || mobileDigits.includes(qDigits);
+      })());
     const catMatch = !categoryFilter || (c.categories || []).includes(categoryFilter);
     // Filter-Logik mit zwei Sonderkategorien:
     //   "aktiv"  -> alle AUSSER Abgeschlossen/Archiv (neuer Standard)

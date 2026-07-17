@@ -81,6 +81,7 @@ from monteur_app import router as monteur_app_router
 from module_duplikate import router as module_duplikate_router
 from module_projekte import router as module_projekte_router
 from module_aufgaben.routes import router as module_aufgaben_router
+from module_objektadressen.routes import router as module_objektadressen_router
 from module_termine.routes import router as module_termine_router
 from module_kalender_export.routes import router as module_kalender_export_router
 from module_user_prefs.routes import router as module_user_prefs_router
@@ -162,6 +163,7 @@ app.include_router(dokumente_v2_router)  # Dokumente v2 – Modul-First, prefix 
 app.include_router(module_duplikate_router)  # Duplikate-Erkennung & Merge, prefix /api/module-duplikate
 app.include_router(module_projekte_router)   # Projekte (Akten/Vorgaenge), prefix /api/module-projekte
 app.include_router(module_aufgaben_router, prefix="/api/module-aufgaben", tags=["Aufgaben"])  # Interne Aufgaben (Auto, Werkzeug, Lager)
+app.include_router(module_objektadressen_router, prefix="/api/module-objektadressen", tags=["Objektadressen"])  # Objektadressen & Hausverwaltungen (Sylt-Fall)
 app.include_router(module_termine_router, prefix="/api/module-termine", tags=["Termine"])  # Termine mit GO-Workflow & Datenmaske
 app.include_router(module_kalender_export_router, prefix="/api/module-kalender-export", tags=["Kalender-Export"])  # ICS-Mail + Monteur-Feed
 app.include_router(module_user_prefs_router, prefix="/api/module-user-prefs", tags=["UserPrefs"])  # UI-Präferenzen pro User
