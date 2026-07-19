@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Search, Globe, ChevronDown, Upload, File, Image as ImageIcon, Download, Package, FileText, ArrowDownToLine, Wrench, Receipt, ClipboardCheck, Eye, Folder, Mail, Link as LinkIcon, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Badge, Modal } from "@/components/common";
 import { TextareaWithAI } from "@/components/TextareaWithAI";
@@ -12,6 +12,7 @@ import { AufgabenPanel } from "@/components/AufgabenPanel";
 import { TerminePanel } from "@/components/TerminePanel";
 import { KundeExportButton } from "@/components/KundeExportButton";
 import { CustomerDocumentsPanel } from "@/components/CustomerDocumentsPanel";import { GroupedFilterBar, buildGroupedItems } from "@/components/GroupedFilterBar";
+import { ContactForm } from "@/components/ContactForm";
 import { KundeImportButton } from "@/components/KundeImportButton";
 import { KundenMultiExportButton } from "@/components/KundenMultiExportButton";
 import { KundeDeleteDialog } from "@/components/KundeDeleteDialog";
@@ -138,6 +139,10 @@ const KundenModulPage = () => {
   const [projektCounts, setProjektCounts] = useState({});  // {kunde_id: count_projekte}
   const [neuesProjektFuer, setNeuesProjektFuer] = useState(null);  // Kunde-Objekt für Schnell-Projekt-Dialog
   const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId} — öffnet zentrales EinsatzModal
+  // Sylt-Fall / Mehrfachadressen: weitere Adressen & Hausverwaltungen je Kunde
+  const [objektadressenByKunde, setObjektadressenByKunde] = useState({});  // {kunde_id: [Objektadresse, ...]}
+  const [objektlisteOffenFuer, setObjektlisteOffenFuer] = useState(null);  // kunde_id, dessen Adressliste gerade aufgeklappt ist
+  const [objektadresseModal, setObjektadresseModal] = useState(null);  // {kundeId, entry} — entry=null bei Neuanlage
   const KUNDEN_KATEGORIEN_PAGE = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const KUNDEN_KATEGORIEN_RAW = useTextvorlagenRaw("kunden_kategorie");
   const KUNDEN_STATUSES = useTextvorlagen("kunden_status", KUNDEN_STATUSES_FALLBACK);
@@ -145,6 +150,7 @@ const KundenModulPage = () => {
   const location = useLocation();
   // Lock gegen StrictMode-Doppel-Trigger: gleiche editId nicht zweimal verarbeiten.
   const handledEditRef = useRef(null);
+  const handledNewRef = useRef(null);
 
   // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
   // URL-Parameter ?filter=anfragen|aktiv|archiv -> Status-Filter aktivieren
@@ -179,9 +185,21 @@ const KundenModulPage = () => {
         }
       }
     }
+    const newFlag = params.get("new");
+    if (newFlag && handledNewRef.current !== newFlag + (returnTo || "")) {
+      handledNewRef.current = newFlag + (returnTo || "");
+      const popupOpened2 = openEditFor(null, returnTo);
+      const cleaned2 = new URLSearchParams(location.search);
+      cleaned2.delete("new");
+      cleaned2.delete("returnTo");
+      navigate(`${location.pathname}${cleaned2.toString() ? "?" + cleaned2.toString() : ""}`, { replace: true });
+      if (popupOpened2 && returnTo) {
+        navigate(returnTo, { replace: true });
+      }
+    }
   }, [location.search, kunden]);  // eslint-disable-line
 
-  useEffect(() => { loadKunden(); loadLinkCounts(); loadPortalStatuses(); }, []);
+  useEffect(() => { loadKunden(); loadLinkCounts(); loadPortalStatuses(); loadObjektadressen(); }, []);
 
   // Live-Sync mit Pop-Out-Fenstern: nach Speichern dort Liste hier neu laden
   useBroadcast("kunden-changed", () => { loadKunden(); loadLinkCounts(); });
@@ -240,6 +258,20 @@ const KundenModulPage = () => {
       const r = await api.get("/module-projekte/counts-by-kunde");
       setProjektCounts(r.data || {});
     } catch { /* still ignore */ }
+  };
+
+  // Laedt ALLE Objektadressen auf einmal (kein eigener counts-Endpoint noetig)
+  // und gruppiert sie hier im Frontend nach kunde_id.
+  const loadObjektadressen = async () => {
+    try {
+      const r = await api.get("/module-objektadressen/");
+      const grouped = {};
+      (r.data || []).forEach((eintrag) => {
+        if (!grouped[eintrag.kunde_id]) grouped[eintrag.kunde_id] = [];
+        grouped[eintrag.kunde_id].push(eintrag);
+      });
+      setObjektadressenByKunde(grouped);
+    } catch { /* Modul optional - still ignore */ }
   };
 
   // Wenn der Link-Dialog geschlossen wird → Counts neu laden
@@ -630,6 +662,42 @@ const KundenModulPage = () => {
                                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"><Globe className="w-3 h-3" /> Karten-Link kopieren</button>
                             </div>
                           )}
+
+                          {/* Sylt-Fall: weitere Adressen / Hausverwaltungen dieses Kunden */}
+                          <div className="pt-1">
+                            {(objektadressenByKunde[kunde.id] || []).length > 0 && (
+                              <button
+                                onClick={() => setObjektlisteOffenFuer(objektlisteOffenFuer === kunde.id ? null : kunde.id)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors"
+                                data-testid={`btn-objektadressen-${kunde.id}`}
+                              >
+                                <MapPin className="w-3 h-3" />
+                                {objektadressenByKunde[kunde.id].length === 1 ? "1 weitere Adresse/Hausverwaltung" : `${objektadressenByKunde[kunde.id].length} weitere Adressen/Hausverwaltungen`}
+                              </button>
+                            )}
+                            {objektlisteOffenFuer === kunde.id && (
+                              <div className="mt-2 space-y-1 border border-amber-200 rounded-sm bg-amber-50/50 p-2">
+                                {(objektadressenByKunde[kunde.id] || []).map((eintrag) => (
+                                  <button
+                                    key={eintrag.id}
+                                    onClick={() => { setObjektadresseModal({ kundeId: kunde.id, entry: eintrag }); setObjektlisteOffenFuer(null); }}
+                                    className="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-amber-100 flex items-center justify-between gap-2"
+                                    data-testid={`btn-objektadresse-oeffnen-${eintrag.id}`}
+                                  >
+                                    <span className="truncate">{eintrag.bezeichnung || "(ohne Bezeichnung)"}</span>
+                                    <span className="text-xs text-muted-foreground shrink-0">{eintrag.referenz}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => setObjektadresseModal({ kundeId: kunde.id, entry: null })}
+                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-sm bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-colors"
+                              data-testid={`btn-objektadresse-neu-${kunde.id}`}
+                            >
+                              <Plus className="w-3 h-3" /> weitere Adresse/Hausverwaltung
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div>
@@ -916,6 +984,18 @@ const KundenModulPage = () => {
         onClose={() => setEinsatzCtx(null)}
         onSaved={() => loadLinkCounts()}
       />
+
+      {/* Sylt-Fall: weitere Adresse / Hausverwaltung anlegen oder bearbeiten.
+          Nutzt bewusst dieselbe ContactForm-Komponente (gleiches Modal-Layout,
+          gleiche Input-Bausteine) wie beim Kunden- und Anfragen-Formular. */}
+      <ContactForm
+        isOpen={!!objektadresseModal}
+        onClose={() => setObjektadresseModal(null)}
+        contact={objektadresseModal?.entry || null}
+        kundeId={objektadresseModal?.kundeId || null}
+        mode="objektadresse"
+        onSave={() => { setObjektadresseModal(null); loadObjektadressen(); }}
+      />
     </div>
   );
 };
@@ -968,6 +1048,7 @@ const KundeInlineEdit = ({ kunde, onSaved, onCancel }) => {
     firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", mobile: kunde.mobile || "",
     strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "",
     customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage",
+    typ: kunde.typ || "Kunde",
     categories: kunde.categories || [], notes: kunde.notes || "",
   });
   const [saving, setSaving] = useState(false);
@@ -975,6 +1056,7 @@ const KundeInlineEdit = ({ kunde, onSaved, onCancel }) => {
   const KUNDEN_KATEGORIEN = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const ANREDEN = useTextvorlagen("anrede", ANREDEN_FALLBACK);
   const CUSTOMER_TYPES = useTextvorlagen("kunden_typ", CUSTOMER_TYPES_FALLBACK);
+  const KONTAKT_TYPEN = useTextvorlagen("kunden_kontakttyp", ["Kunde", "Hausverwaltung", "Lieferant"]);
 
   const toggleCat = (cat) => setForm(f => ({
     ...f,
@@ -1025,6 +1107,12 @@ const KundeInlineEdit = ({ kunde, onSaved, onCancel }) => {
             <label className={lblCls}>Kundentyp</label>
             <select value={form.customer_type} onChange={e => setForm({ ...form, customer_type: e.target.value })} className={selectCls} data-testid={`edit-typ-${kunde.id}`}>
               {CUSTOMER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={lblCls}>Kontaktart</label>
+            <select value={form.typ || "Kunde"} onChange={e => setForm({ ...form, typ: e.target.value })} className={selectCls} data-testid={`edit-kontaktart-${kunde.id}`}>
+              {KONTAKT_TYPEN.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div>
@@ -1085,12 +1173,13 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
   const KUNDEN_KATEGORIEN = useTextvorlagen("kunden_kategorie", KUNDEN_KATEGORIEN_FALLBACK);
   const ANREDEN = useTextvorlagen("anrede", ANREDEN_FALLBACK);
   const CUSTOMER_TYPES = useTextvorlagen("kunden_typ", CUSTOMER_TYPES_FALLBACK);
+  const KONTAKT_TYPEN = useTextvorlagen("kunden_kontakttyp", ["Kunde", "Hausverwaltung", "Lieferant"]);
 
   useEffect(() => {
     if (kunde) {
-      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", mobile: kunde.mobile || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", objekt_strasse: kunde.objekt_strasse || "", objekt_plz: kunde.objekt_plz || "", objekt_ort: kunde.objekt_ort || "", customer_type: kunde.customer_type || "Privat", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "", abschluss_grund: kunde.abschluss_grund || "", abschluss_at: kunde.abschluss_at || "" });
+      setForm({ anrede: kunde.anrede || "", vorname: kunde.vorname || "", nachname: kunde.nachname || "", firma: kunde.firma || "", email: kunde.email || "", phone: kunde.phone || "", mobile: kunde.mobile || "", strasse: kunde.strasse || "", hausnummer: kunde.hausnummer || "", plz: kunde.plz || "", ort: kunde.ort || "", objekt_strasse: kunde.objekt_strasse || "", objekt_plz: kunde.objekt_plz || "", objekt_ort: kunde.objekt_ort || "", customer_type: kunde.customer_type || "Privat", typ: kunde.typ || "Kunde", status: kunde.status || kunde.kontakt_status || "Anfrage", categories: kunde.categories || [], notes: kunde.notes || "", nachricht: kunde.nachricht || "", abschluss_grund: kunde.abschluss_grund || "", abschluss_at: kunde.abschluss_at || "" });
     } else {
-      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", mobile: "", strasse: "", hausnummer: "", plz: "", ort: "", objekt_strasse: "", objekt_plz: "", objekt_ort: "", customer_type: "Privat", status: "Anfrage", categories: [], notes: "", nachricht: "" });
+      setForm({ anrede: "", vorname: "", nachname: "", firma: "", email: "", phone: "", mobile: "", strasse: "", hausnummer: "", plz: "", ort: "", objekt_strasse: "", objekt_plz: "", objekt_ort: "", customer_type: "Privat", typ: "Kunde", status: "Anfrage", categories: [], notes: "", nachricht: "" });
     }
     setSelectedFiles([]);
   }, [kunde]);
@@ -1244,6 +1333,12 @@ const KundenFormModal = ({ isOpen, onClose, kunde, onSave, popoutEnabled = true 
               {CUSTOMER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Kontaktart</label>
+          <select value={form.typ || "Kunde"} onChange={e => setForm({ ...form, typ: e.target.value })} className="w-full h-10 rounded-sm border border-input bg-background px-3">
+            {KONTAKT_TYPEN.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
         </div>
         {(form.customer_type === "Firma" || form.customer_type === "Gewerblich" || form.firma) && (
           <div><label className="block text-sm font-medium mb-2">Firmenname</label><Input value={form.firma || ""} onChange={e => setForm({ ...form, firma: e.target.value })} placeholder="Firma GmbH" /></div>

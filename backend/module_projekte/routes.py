@@ -138,6 +138,7 @@ class ProjektCreate(BaseModel):
     beschreibung: Optional[str] = ""
     kategorie: Optional[str] = "Sonstiges"
     adresse: Optional[str] = ""
+    hausverwaltung_id: Optional[str] = None
     status: Optional[str] = None
     notizen: Optional[str] = ""
     # Wenn True und der Kunde hat noch kein Projekt: Photos vom Kunden werden
@@ -153,6 +154,7 @@ class ProjektUpdate(BaseModel):
     status: Optional[str] = None
     notizen: Optional[str] = None
     erledigt_am: Optional[str] = None
+    hausverwaltung_id: Optional[str] = None
 
 
 class ReorderPayload(BaseModel):
@@ -409,6 +411,7 @@ async def create_projekt(payload: ProjektCreate, user=Depends(get_current_user))
     projekt = {
         "id": str(uuid.uuid4()),
         "kunde_id": payload.kunde_id,
+        "hausverwaltung_id": payload.hausverwaltung_id,
         "titel": payload.titel.strip(),
         "beschreibung": (payload.beschreibung or "").strip(),
         "kategorie": payload.kategorie or "Sonstiges",

@@ -267,6 +267,7 @@ async def create_kunde(data: dict, user=Depends(get_current_user)):
         "objekt_plz": data.get("objekt_plz", ""),
         "objekt_ort": data.get("objekt_ort", ""),
         "customer_type": data.get("customer_type", "Privat"),
+        "typ": data.get("typ", "Kunde"),
         # Default: manuell angelegter Eintrag ist ein Kunde (Quelle = manuelle Eingabe)
         "status": data.get("status", "Kunde"),
         "kontakt_status": data.get("kontakt_status", "Kunde"),

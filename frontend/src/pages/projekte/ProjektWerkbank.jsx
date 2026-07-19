@@ -19,6 +19,7 @@ import { MailLink } from "@/components/MailLink";
 import { CustomerDocumentsPanel } from "@/components/CustomerDocumentsPanel";
 import EinsatzModal from "@/components/EinsatzModal";
 import PortalLinkDialog from "@/components/module_portal_wizard/PortalLinkDialog";
+import { openInPopup, useBroadcast } from "@/lib/windowSync";
 
 const STATUS_COLORS = {
   "Anfrage": "bg-blue-100 text-blue-700 border-blue-300",
@@ -46,6 +47,8 @@ const ProjektWerkbank = () => {
   const [portalLinkText, setPortalLinkText] = useState("");
   const [portalLinkResult, setPortalLinkResult] = useState("");
   const [portalLinkBusy, setPortalLinkBusy] = useState(false);
+  const [hausverwaltungen, setHausverwaltungen] = useState([]);
+  const [hvQuery, setHvQuery] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -64,6 +67,13 @@ const ProjektWerkbank = () => {
 
   // Beim Öffnen der Werkbank nach oben scrollen, damit der Datensatz voll sichtbar ist
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [kunde_id]);
+  const loadHausverwaltungen = async () => {
+    try {
+      const res = await api.get("/modules/kunden/data");
+      setHausverwaltungen((res.data || []).filter(k => k.typ === "Hausverwaltung"));
+    } catch { /* ignore */ }
+  };
+  useEffect(() => { loadHausverwaltungen(); }, []);
 
   if (loading && !data) return <div className="p-8 text-center text-muted-foreground">Lade…</div>;
   if (!data) return null;
@@ -213,7 +223,7 @@ const ProjektWerkbank = () => {
       ) : (
         <div className="space-y-4">
           {projekte.map(p => (
-            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} kunde={kunde} onChanged={load} onEinsatz={(projektId, projektTitel) => setEinsatzCtx({ kundeId: kunde_id, projektId, projektTitel })} />
+            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} kunde={kunde} onChanged={load} onEinsatz={(projektId, projektTitel) => setEinsatzCtx({ kundeId: kunde_id, projektId, projektTitel })} hausverwaltungen={hausverwaltungen} reloadHausverwaltungen={loadHausverwaltungen} />
           ))}
         </div>
       )}
@@ -250,7 +260,7 @@ const ProjektWerkbank = () => {
 };
 
 // ==================== Projekt-Karte (inline editierbar) ====================
-const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
+const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwaltungen, reloadHausverwaltungen }) => {
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [data, setData] = useState(projekt);
@@ -258,6 +268,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
   const [uploadKategorie, setUploadKategorie] = useState("schaden");
   const [uploading, setUploading] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [hvQuery, setHvQuery] = useState("");
   const [tabStats, setTabStats] = useState({ aufgaben: null, termine: null });
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -299,6 +310,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
         beschreibung: data.beschreibung,
         kategorie: data.kategorie,
         adresse: data.adresse,
+        hausverwaltung_id: data.hausverwaltung_id,
         status: data.status,
         notizen: data.notizen,
         vor_ort_notizen: data.vor_ort_notizen,
@@ -451,6 +463,60 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz }) => {
               <div>
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Adresse (überschreibt Kunde)</label>
                 <Input value={data.adresse || ""} onChange={(e) => update("adresse", e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">Hausverwaltung</label>
+                {data.hausverwaltung_id ? (
+                  (() => {
+                    const hv = hausverwaltungen.find(h => h.id === data.hausverwaltung_id);
+                    const hvName = hv ? (hv.name || hv.firma || `${hv.vorname || ""} ${hv.nachname || ""}`.trim()) : "(wird geladen…)";
+                    return (
+                      <div className="flex items-center gap-2 p-2 border rounded bg-muted/40">
+                        <button type="button" className="flex-1 text-left text-sm hover:underline" onClick={() => navigate(`/module/kunden?edit=${data.hausverwaltung_id}&returnTo=${encodeURIComponent(`/module/projekte/werkbank/${kunde.id}?projekt=${data.id}`)}`)}>
+                          {hvName}
+                        </button>
+                        <button type="button" className="text-xs text-primary hover:underline" onClick={() => update("hausverwaltung_id", null)}>Ändern</button>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <>
+                    <Input value={hvQuery} onChange={(e) => setHvQuery(e.target.value)} placeholder="Hausverwaltung suchen (Name, Telefon, Mobil)…" />
+                    {hvQuery && (() => {
+                      const qDigits = hvQuery.replace(/\s|\/|-/g, "");
+                      const hvMatches = hausverwaltungen.filter(h => {
+                        const name = (h.name || h.firma || `${h.vorname || ""} ${h.nachname || ""}`).toLowerCase();
+                        if (name.includes(hvQuery.toLowerCase())) return true;
+                        if (qDigits.length < 5) return false;
+                        const phoneDigits = (h.phone || "").replace(/\s|\/|-/g, "");
+                        const mobileDigits = (h.mobile || "").replace(/\s|\/|-/g, "");
+                        return phoneDigits.includes(qDigits) || mobileDigits.includes(qDigits);
+                      }).slice(0, 12);
+                      if (hvMatches.length === 0) {
+                        return (
+                          <div className="mt-1 border rounded p-2 text-sm">
+                            <button
+                              type="button"
+                              className="text-primary hover:underline"
+                              onClick={() => navigate(`/module/kunden?new=1&returnTo=${encodeURIComponent(`/module/projekte/werkbank/${kunde.id}?projekt=${data.id}`)}`)}
+                            >
+                              Nicht gefunden – Kundendatei öffnen?
+                            </button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="mt-1 border rounded max-h-52 overflow-y-auto">
+                          {hvMatches.map(h => (
+                            <button key={h.id} type="button" onClick={() => { update("hausverwaltung_id", h.id); setHvQuery(""); }} className="w-full text-left px-3 py-2 hover:bg-muted text-sm border-b last:border-0">
+                              {h.name || h.firma || `${h.vorname || ""} ${h.nachname || ""}`.trim()}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
               <div className="md:col-span-2">
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Beschreibung</label>

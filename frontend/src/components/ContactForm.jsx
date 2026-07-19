@@ -14,10 +14,12 @@ import { CATEGORIES, CUSTOMER_STATUSES } from "@/lib/constants";
  * - onClose: Function - Modal schließen
  * - contact: Object|null - Bestehender Kontakt zum Bearbeiten (null = neu)
  * - onSave: Function - Callback nach erfolgreichem Speichern
- * - mode: "kunde"|"anfrage" - Bestimmt API-Endpoint und Extra-Felder
+ * - mode: "kunde"|"anfrage"|"objektadresse" - Bestimmt API-Endpoint und Extra-Felder
+ *   ("objektadresse" = weitere Adresse/Hausverwaltung eines Kunden, z.B. "Wohnung Sylt")
  * - title: String - Modal-Titel (optional, wird automatisch generiert)
  * - customerStatuses: Array - Verfügbare Status-Optionen
  * - categories: Array - Verfügbare Kategorien
+ * - kundeId: String - nur bei mode="objektadresse" bei NEUER Adresse noetig (Verknuepfung zum Kunden)
  */
 const ContactForm = ({
   isOpen,
@@ -28,6 +30,7 @@ const ContactForm = ({
   title,
   customerStatuses = CUSTOMER_STATUSES,
   categories = CATEGORIES,
+  kundeId = null,
 }) => {
   const [form, setForm] = useState({
     anrede: "",
@@ -53,6 +56,18 @@ const ContactForm = ({
     objekt_hausnummer: "",
     objekt_plz: "",
     objekt_ort: "",
+    // Nur für mode="objektadresse" (weitere Adresse/Hausverwaltung eines Kunden)
+    bezeichnung: "",
+    referenz: "",
+    verwalter_firma: "",
+    verwalter_ansprechpartner: "",
+    verwalter_strasse: "",
+    verwalter_hausnummer: "",
+    verwalter_plz: "",
+    verwalter_ort: "",
+    verwalter_email: "",
+    verwalter_telefon: "",
+    rechnung_an_verwalter: false,
   });
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -60,10 +75,15 @@ const ContactForm = ({
   const [selectedFiles, setSelectedFiles] = useState([]);
 
   const isAnfrage = mode === "anfrage";
-  const apiBase = isAnfrage ? "/anfragen" : "/customers";
-  const defaultTitle = contact
-    ? (isAnfrage ? "Anfrage bearbeiten" : "Kunde bearbeiten")
-    : (isAnfrage ? "Neue Anfrage" : "Neuer Kunde");
+  const isObjektadresse = mode === "objektadresse";
+  const apiBase = isObjektadresse
+    ? "/module-objektadressen"
+    : (isAnfrage ? "/anfragen" : "/customers");
+  const defaultTitle = isObjektadresse
+    ? (contact ? "Objektadresse bearbeiten" : "Neue Objektadresse")
+    : contact
+      ? (isAnfrage ? "Anfrage bearbeiten" : "Kunde bearbeiten")
+      : (isAnfrage ? "Neue Anfrage" : "Neuer Kunde");
 
   useEffect(() => {
     if (contact) {
@@ -101,10 +121,21 @@ const ContactForm = ({
         categories: contact.categories || [],
         status: contact.status || "Neu",
         nachricht: contact.nachricht || "",
-        objekt_strasse: contact.objekt_strasse || "",
-        objekt_hausnummer: contact.objekt_hausnummer || "",
-        objekt_plz: contact.objekt_plz || "",
-        objekt_ort: contact.objekt_ort || "",
+        objekt_strasse: contact.strasse || "",
+        objekt_hausnummer: contact.hausnummer || "",
+        objekt_plz: contact.plz || "",
+        objekt_ort: contact.ort || "",
+        bezeichnung: contact.bezeichnung || "",
+        referenz: contact.referenz || "",
+        verwalter_firma: contact.verwalter?.firma || "",
+        verwalter_ansprechpartner: contact.verwalter?.ansprechpartner || "",
+        verwalter_strasse: contact.verwalter?.strasse || "",
+        verwalter_hausnummer: contact.verwalter?.hausnummer || "",
+        verwalter_plz: contact.verwalter?.plz || "",
+        verwalter_ort: contact.verwalter?.ort || "",
+        verwalter_email: contact.verwalter?.email || "",
+        verwalter_telefon: contact.verwalter?.telefon || "",
+        rechnung_an_verwalter: contact.rechnung_an_verwalter || false,
       });
       setUploadedFiles(contact.photos || []);
     } else {
@@ -114,6 +145,10 @@ const ContactForm = ({
         strasse: "", hausnummer: "", plz: "", ort: "",
         address: "", notes: "", customer_type: "Privat", categories: [], status: "Neu",
         nachricht: "", objekt_strasse: "", objekt_hausnummer: "", objekt_plz: "", objekt_ort: "",
+        bezeichnung: "", referenz: "",
+        verwalter_firma: "", verwalter_ansprechpartner: "",
+        verwalter_strasse: "", verwalter_hausnummer: "", verwalter_plz: "", verwalter_ort: "",
+        verwalter_email: "", verwalter_telefon: "", rechnung_an_verwalter: false,
       });
       setUploadedFiles([]);
     }
@@ -122,30 +157,66 @@ const ContactForm = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.vorname && !form.nachname && !form.firma) {
+    if (isObjektadresse) {
+      if (!form.bezeichnung) {
+        toast.error("Bezeichnung ist erforderlich (z.B. \"Wohnung Sylt\")");
+        return;
+      }
+      if (!contact && !kundeId) {
+        toast.error("Kunde fehlt - Objektadresse kann nicht ohne Kunden angelegt werden");
+        return;
+      }
+    } else if (!form.vorname && !form.nachname && !form.firma) {
       toast.error("Vorname, Nachname oder Firmenname ist erforderlich");
       return;
     }
     setLoading(true);
     try {
-      const addressCombined = `${form.strasse} ${form.hausnummer}, ${form.plz} ${form.ort}`.trim();
-      const payload = { ...form, address: addressCombined || form.address };
+      let payload;
 
-      if (isAnfrage) {
-        const objAddr = `${form.objekt_strasse} ${form.objekt_hausnummer}, ${form.objekt_plz} ${form.objekt_ort}`.trim();
-        payload.objektadresse = objAddr || addressCombined || form.address;
-        payload.name = form.firma || `${form.vorname} ${form.nachname}`.trim();
+      if (isObjektadresse) {
+        // Eigenes, schlankes Objekt statt der Kunden-/Anfragen-Felder -
+        // Feldnamen entsprechen backend/module_objektadressen/routes.py.
+        payload = {
+          kunde_id: contact?.kunde_id || kundeId,
+          bezeichnung: form.bezeichnung,
+          strasse: form.objekt_strasse,
+          hausnummer: form.objekt_hausnummer,
+          plz: form.objekt_plz,
+          ort: form.objekt_ort,
+          verwalter: {
+            firma: form.verwalter_firma,
+            ansprechpartner: form.verwalter_ansprechpartner,
+            strasse: form.verwalter_strasse,
+            hausnummer: form.verwalter_hausnummer,
+            plz: form.verwalter_plz,
+            ort: form.verwalter_ort,
+            email: form.verwalter_email,
+            telefon: form.verwalter_telefon,
+          },
+          rechnung_an_verwalter: form.rechnung_an_verwalter,
+          notiz: form.notes,
+        };
+      } else {
+        const addressCombined = `${form.strasse} ${form.hausnummer}, ${form.plz} ${form.ort}`.trim();
+        payload = { ...form, address: addressCombined || form.address };
+
+        if (isAnfrage) {
+          const objAddr = `${form.objekt_strasse} ${form.objekt_hausnummer}, ${form.objekt_plz} ${form.objekt_ort}`.trim();
+          payload.objektadresse = objAddr || addressCombined || form.address;
+          payload.name = form.firma || `${form.vorname} ${form.nachname}`.trim();
+        }
       }
 
       let contactId = contact?.id;
 
       if (contact) {
         await api.put(`${apiBase}/${contact.id}`, payload);
-        toast.success(isAnfrage ? "Anfrage aktualisiert" : "Kunde aktualisiert");
+        toast.success(isObjektadresse ? "Objektadresse aktualisiert" : (isAnfrage ? "Anfrage aktualisiert" : "Kunde aktualisiert"));
       } else {
         const res = await api.post(apiBase, payload);
         contactId = res.data.id;
-        toast.success(isAnfrage ? "Anfrage erstellt" : "Kunde erstellt");
+        toast.success(isObjektadresse ? "Objektadresse angelegt" : (isAnfrage ? "Anfrage erstellt" : "Kunde erstellt"));
       }
 
       if (selectedFiles.length > 0 && contactId) {
@@ -157,6 +228,18 @@ const ContactForm = ({
       toast.error("Fehler beim Speichern");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteObjektadresse = async () => {
+    if (!contact?.id) return;
+    if (!window.confirm("Diese Adresse\/Hausverwaltung wirklich loeschen?")) return;
+    try {
+      await api.delete(`${apiBase}/${contact.id}`);
+      toast.success("Objektadresse geloescht");
+      onSave();
+    } catch (err) {
+      toast.error("Fehler beim Loeschen");
     }
   };
 
@@ -237,7 +320,31 @@ const ContactForm = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title || defaultTitle} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4" data-testid={`${mode}-form-modal`}>
+        {/* Bezeichnung & Referenz (nur Objektadressen) */}
+        {isObjektadresse && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Bezeichnung *</label>
+              <Input
+                data-testid="input-objektadresse-bezeichnung"
+                value={form.bezeichnung}
+                onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
+                placeholder='z.B. "Wohnung Sylt"'
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Referenz</label>
+              <Input
+                value={form.referenz || "wird automatisch vergeben"}
+                disabled
+                className="text-muted-foreground"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Anrede & Kundentyp */}
+        {!isObjektadresse && (
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Anrede</label>
@@ -271,9 +378,10 @@ const ContactForm = ({
             </select>
           </div>
         </div>
+        )}
 
         {/* Firmenname */}
-        {(form.customer_type === "Firma" || form.customer_type === "Gewerblich" || form.firma) && (
+        {!isObjektadresse && (form.customer_type === "Firma" || form.customer_type === "Gewerblich" || form.firma) && (
           <div>
             <label className="block text-sm font-medium mb-2">Firmenname *</label>
             <Input
@@ -286,6 +394,7 @@ const ContactForm = ({
         )}
 
         {/* Vor- und Nachname */}
+        {!isObjektadresse && (
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Vorname *</label>
@@ -306,8 +415,10 @@ const ContactForm = ({
             />
           </div>
         </div>
+        )}
 
         {/* E-Mail & Telefon */}
+        {!isObjektadresse && (
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">E-Mail</label>
@@ -335,8 +446,10 @@ const ContactForm = ({
             />
           </div>
         </div>
+        )}
 
         {/* Kategorien */}
+        {!isObjektadresse && (
         <div>
           <label className="block text-sm font-medium mb-2">Kategorien</label>
           <div className="flex flex-wrap gap-2" data-testid={`${mode}-categories`}>
@@ -361,9 +474,10 @@ const ContactForm = ({
             ))}
           </div>
         </div>
+        )}
 
         {/* Status (nur Kunden) */}
-        {!isAnfrage && (
+        {!isAnfrage && !isObjektadresse && (
           <div>
             <label className="block text-sm font-medium mb-2">Status</label>
             <select
@@ -379,24 +493,24 @@ const ContactForm = ({
           </div>
         )}
 
-        {/* Adresse */}
+        {/* Adresse (bei Objektadresse: Objekt-Adresse = wo der Monteur hin muss) */}
         <div>
-          <label className="block text-sm font-medium mb-2">Adresse</label>
+          <label className="block text-sm font-medium mb-2">{isObjektadresse ? "Objekt-Adresse (Einsatzort)" : "Adresse"}</label>
           <div className="grid grid-cols-12 gap-2">
             <div className="col-span-8">
               <Input
                 data-testid={`input-${mode}-strasse`}
                 placeholder="Strasse"
-                value={form.strasse}
-                onChange={(e) => setForm({ ...form, strasse: e.target.value })}
+                value={isObjektadresse ? form.objekt_strasse : form.strasse}
+                onChange={(e) => setForm({ ...form, [isObjektadresse ? "objekt_strasse" : "strasse"]: e.target.value })}
               />
             </div>
             <div className="col-span-4">
               <Input
                 data-testid={`input-${mode}-hausnummer`}
                 placeholder="Nr."
-                value={form.hausnummer}
-                onChange={(e) => setForm({ ...form, hausnummer: e.target.value })}
+                value={isObjektadresse ? form.objekt_hausnummer : form.hausnummer}
+                onChange={(e) => setForm({ ...form, [isObjektadresse ? "objekt_hausnummer" : "hausnummer"]: e.target.value })}
               />
             </div>
           </div>
@@ -405,20 +519,20 @@ const ContactForm = ({
               <Input
                 data-testid={`input-${mode}-plz`}
                 placeholder="PLZ"
-                value={form.plz}
-                onChange={(e) => setForm({ ...form, plz: e.target.value })}
+                value={isObjektadresse ? form.objekt_plz : form.plz}
+                onChange={(e) => setForm({ ...form, [isObjektadresse ? "objekt_plz" : "plz"]: e.target.value })}
               />
             </div>
             <div className="col-span-3">
               <Input
                 data-testid={`input-${mode}-ort`}
                 placeholder="Ort"
-                value={form.ort}
-                onChange={(e) => setForm({ ...form, ort: e.target.value })}
+                value={isObjektadresse ? form.objekt_ort : form.ort}
+                onChange={(e) => setForm({ ...form, [isObjektadresse ? "objekt_ort" : "ort"]: e.target.value })}
               />
             </div>
           </div>
-          {(form.strasse || form.address) && (
+          {!isObjektadresse && (form.strasse || form.address) && (
             <button
               type="button"
               onClick={() => {
@@ -432,7 +546,107 @@ const ContactForm = ({
               <Globe className="w-3 h-3" /> Karten-Link kopieren
             </button>
           )}
+          {isObjektadresse && (form.objekt_strasse || form.objekt_ort) && (
+            <button
+              type="button"
+              onClick={() => {
+                const addr = `${form.objekt_strasse} ${form.objekt_hausnummer}, ${form.objekt_plz} ${form.objekt_ort}`.trim();
+                navigator.clipboard.writeText(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`);
+                toast.success("Maps-Link kopiert!");
+              }}
+              className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
+              data-testid="btn-objektadresse-map-link"
+            >
+              <Globe className="w-3 h-3" /> Karten-Link kopieren
+            </button>
+          )}
         </div>
+
+        {/* Hausverwaltung / Rechnungsempfaenger (nur Objektadressen) */}
+        {isObjektadresse && (
+          <div className="border border-input rounded-sm p-3 bg-muted/20">
+            <label className="block text-sm font-medium mb-3">Hausverwaltung / Verwalter (optional)</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Firma</label>
+                <Input
+                  data-testid="input-objektadresse-verwalter-firma"
+                  value={form.verwalter_firma}
+                  onChange={(e) => setForm({ ...form, verwalter_firma: e.target.value })}
+                  placeholder="Hausverwaltung GmbH"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Ansprechpartner</label>
+                <Input
+                  data-testid="input-objektadresse-verwalter-ansprechpartner"
+                  value={form.verwalter_ansprechpartner}
+                  onChange={(e) => setForm({ ...form, verwalter_ansprechpartner: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-12 gap-2 mt-2">
+              <div className="col-span-8">
+                <Input
+                  placeholder="Strasse"
+                  value={form.verwalter_strasse}
+                  onChange={(e) => setForm({ ...form, verwalter_strasse: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4">
+                <Input
+                  placeholder="Nr."
+                  value={form.verwalter_hausnummer}
+                  onChange={(e) => setForm({ ...form, verwalter_hausnummer: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              <div>
+                <Input
+                  placeholder="PLZ"
+                  value={form.verwalter_plz}
+                  onChange={(e) => setForm({ ...form, verwalter_plz: e.target.value })}
+                />
+              </div>
+              <div className="col-span-3">
+                <Input
+                  placeholder="Ort"
+                  value={form.verwalter_ort}
+                  onChange={(e) => setForm({ ...form, verwalter_ort: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">E-Mail</label>
+                <Input
+                  type="email"
+                  value={form.verwalter_email}
+                  onChange={(e) => setForm({ ...form, verwalter_email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Telefon</label>
+                <Input
+                  value={form.verwalter_telefon}
+                  onChange={(e) => setForm({ ...form, verwalter_telefon: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 mt-4 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                data-testid="checkbox-rechnung-an-verwalter"
+                checked={form.rechnung_an_verwalter}
+                onChange={(e) => setForm({ ...form, rechnung_an_verwalter: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">Rechnung geht an Verwalter statt an Kunde direkt</span>
+            </label>
+          </div>
+        )}
 
         {/* Objektadresse (nur Anfragen) */}
         {isAnfrage && (
@@ -482,7 +696,8 @@ const ContactForm = ({
           />
         </div>
 
-        {/* Datei-Upload */}
+        {/* Datei-Upload (nicht bei Objektadressen - dafuer hat das Backend-Modul keine Route) */}
+        {!isObjektadresse && (
         <div>
           <label className="block text-sm font-medium mb-2">
             Dateien <span className="text-xs text-muted-foreground">(max 10 Dateien, je 10 MB)</span>
@@ -552,8 +767,12 @@ const ContactForm = ({
             </div>
           )}
         </div>
+        )}
 
         <div className="flex justify-end gap-4 pt-4">
+          {isObjektadresse && contact?.id && (
+            <Button type="button" variant="destructive" onClick={handleDeleteObjektadresse} className="mr-auto">Loeschen</Button>
+          )}
           <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>
           <Button type="submit" data-testid={`btn-save-${mode}`} disabled={loading || uploadingFiles}>
             {loading ? "Speichern..." : uploadingFiles ? "Uploading..." : "Speichern"}
