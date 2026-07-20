@@ -783,7 +783,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       window.URL.revokeObjectURL(url);
       toast.success("E-Mail mit PDF-Anhang erstellt - jetzt in Betterbird oeffnen");
       if (status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
-        const newStatus = type === "order" ? "Gesendet" : "Versendet";
+        const newStatus = "Gesendet";
         const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
         api.put(`/${endpoint}/${savedId}/status`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
       }
@@ -814,7 +814,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     window.location.href = url;
     toast.success("Betterbird wird geöffnet … (lokaler Helfer muss installiert sein)");
     if (status && !["Versendet", "Gesendet", "Bezahlt", "Teilbezahlt"].includes(status)) {
-      const newStatus = type === "order" ? "Gesendet" : "Versendet";
+      const newStatus = "Gesendet";
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
       api.put(`/${endpoint}/${savedId}/status`, { status: newStatus }).then(() => setStatus(newStatus)).catch(() => {});
     }
