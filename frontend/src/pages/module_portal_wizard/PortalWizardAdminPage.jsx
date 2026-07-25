@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Share2, Search, RefreshCw, Link as LinkIcon, ChevronDown, MessageSquare, Camera, Loader2, Download, Send, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { useF1Help } from "@/lib/useF1Help";
-import { htmlToPlainText } from "@/lib/utils";
 import PortalStatusBadge from "@/components/module_portal_wizard/PortalStatusBadge";
+import PortalLinkDialog from "@/components/module_portal_wizard/PortalLinkDialog";
 
 /**
  * PortalWizardAdminPage — Zentraler Arbeitsplatz für das neue Kundenportal.
@@ -41,33 +41,43 @@ const PortalWizardAdminPage = () => {
   const [fotosBusy, setFotosBusy] = useState(null);
 
   const [linkKunde, setLinkKunde] = useState(null);
-  const [linkText, setLinkText] = useState("");
-  const [linkResult, setLinkResult] = useState("");
-  const [linkBusy, setLinkBusy] = useState(false);
 
   const [antwortEintrag, setAntwortEintrag] = useState(null);
   const [antwortText, setAntwortText] = useState("");
   const [antwortBusy, setAntwortBusy] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
+  const prevUnreadRef = useRef(null);
+  const load = async (silent) => {
+    if (!silent) setLoading(true);
     try {
-      const [kRes, eRes] = await Promise.all([
+      const [kRes, eRes, uRes] = await Promise.all([
         api.get("/modules/kunden/data"),
         api.get("/kundenportal/admin/liste"),
+        api.get("/kundenportal/admin/unread-count").catch(() => null),
       ]);
       setKunden(kRes.data || []);
       setEintraege(eRes.data?.eintraege || []);
+      const unread = uRes?.data?.count;
+      if (typeof unread === "number") {
+        if (prevUnreadRef.current !== null && unread > prevUnreadRef.current) {
+          toast.success((unread - prevUnreadRef.current) + " neue Kundenantwort(en) eingegangen");
+        }
+        prevUnreadRef.current = unread;
+      }
       api.get("/modules/textvorlagen/data?doc_type=kundenportal&text_type=portal_nachricht")
         .then(r => setVorlagen(r.data || [])).catch(() => {});
     } catch (e) {
-      toast.error("Fehler beim Laden");
+      if (!silent) toast.error("Fehler beim Laden");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const interval = setInterval(() => load(true), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const latestByKunde = useMemo(() => {
     const m = {};
@@ -160,20 +170,6 @@ const PortalWizardAdminPage = () => {
     }
   };
 
-  const createLink = async () => {
-    setLinkBusy(true);
-    try {
-      const res = await api.post("/kundenportal/link-erstellen", { kunde_id: linkKunde.id, auftrag_text: linkText.trim() });
-      setLinkResult(`${window.location.origin}/kundenportal/${res.data.portal_token}`);
-      toast.success(res.data.mail_sent ? "Link erstellt + Mail an Kunde gesendet" : "Link erstellt (keine Kunden-E-Mail hinterlegt)");
-      load();
-    } catch (e) {
-      toast.error(e?.response?.data?.detail || "Fehler beim Erstellen");
-    } finally {
-      setLinkBusy(false);
-    }
-  };
-
   const withPortal = rows.filter((r) => r._entry).length;
   const neuCount = rows.filter((r) => r._entry?.admin_status === "neu").length;
 
@@ -239,7 +235,7 @@ const PortalWizardAdminPage = () => {
                     </div>
                     {k.email && <div className="text-xs text-muted-foreground truncate">{k.email}</div>}
                   </div>
-                  <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => { setLinkKunde(k); setLinkText(""); setLinkResult(""); }} data-testid={`portal-admin-create-${k.id}`}>
+                  <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => setLinkKunde(k)} data-testid={`portal-admin-create-${k.id}`}>
                     <LinkIcon className="w-4 h-4" /> Link erstellen
                   </Button>
                   {e && (
@@ -324,44 +320,8 @@ const PortalWizardAdminPage = () => {
         </div>
       )}
 
-      {/* Portal-Link erstellen */}
-      <Modal isOpen={!!linkKunde} onClose={() => setLinkKunde(null)} title="🔗 Portal-Link erstellen" size="sm">
-        <div className="p-4 h-full flex flex-col" data-testid="portal-admin-link-dialog">
-          {!linkResult ? (
-            <>
-              <div className="shrink-0 space-y-3 mb-3">
-                <p className="text-sm text-muted-foreground">
-                  Für <strong>{linkKunde?.firma || `${linkKunde?.vorname || ""} ${linkKunde?.nachname || ""}`}</strong>.
-                  Der Kunde bekommt automatisch eine Mail mit dem Link{linkKunde?.email ? ` an ${linkKunde.email}` : " (keine E-Mail hinterlegt)"}.
-                </p>
-                <div>
-                  <label className="text-sm font-medium block mb-1">Auftrag-Text</label>
-                  {vorlagen.length > 0 && (
-                    <select className="w-full mb-2 border rounded-sm px-2 py-2 text-sm bg-background" data-testid="portal-admin-vorlage-select" defaultValue="" onChange={(e) => { const v = vorlagen.find((x) => x.id === e.target.value); if (v) setLinkText(htmlToPlainText(v.content || "")); }}>
-                      <option value="">— Vorhandene Vorlage wählen —</option>
-                      {vorlagen.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
-                    </select>
-                  )}
-                </div>
-              </div>
-              <Textarea value={linkText} onChange={(e) => setLinkText(e.target.value)} className="flex-1 min-h-0 resize-none" placeholder="z.B. Bitte schicken Sie Fotos vom Schaden" data-testid="portal-admin-link-text" />
-              <div className="shrink-0 flex justify-end gap-2 mt-3">
-                <Button variant="outline" onClick={() => setLinkKunde(null)}>Abbrechen</Button>
-                <Button disabled={linkBusy} onClick={createLink} data-testid="portal-admin-link-submit">{linkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Link erstellen"}</Button>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-3" data-testid="portal-admin-link-result">
-              <p className="text-sm font-medium text-emerald-700">✅ Link erstellt:</p>
-              <div className="flex items-center gap-2">
-                <Input value={linkResult} readOnly className="text-sm" />
-                <Button variant="outline" onClick={() => { navigator.clipboard.writeText(linkResult); toast.success("Link kopiert"); }}>Kopieren</Button>
-              </div>
-              <div className="flex justify-end"><Button onClick={() => setLinkKunde(null)}>Fertig</Button></div>
-            </div>
-          )}
-        </div>
-      </Modal>
+      {/* Portal-Link erstellen — gemeinsame Komponente, wie in Kunden-Modul und Projekte-Werkbank */}
+      <PortalLinkDialog kunde={linkKunde} onClose={() => setLinkKunde(null)} onCreated={load} />
 
       {/* ④ Antwort schicken */}
       <Modal isOpen={!!antwortEintrag} onClose={() => setAntwortEintrag(null)} title="Antwort an Kunden" size="sm">

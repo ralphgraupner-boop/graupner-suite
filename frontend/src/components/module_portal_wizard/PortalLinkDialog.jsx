@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Input, Textarea, Modal } from "@/components/common";
+import { Button, Input, Modal } from "@/components/common";
 import { api } from "@/lib/api";
 import { htmlToPlainText } from "@/lib/utils";
+import { TextTemplateSelect } from "@/components/TextTemplateSelect";
 
 /**
  * PortalLinkDialog — Einheitlicher Portal-Link-Dialog fuer die ganze Suite.
@@ -18,25 +19,13 @@ import { htmlToPlainText } from "@/lib/utils";
  *               (z.B. damit die aufrufende Seite ihre eigene Liste neu laedt)
  */
 const PortalLinkDialog = ({ kunde, onClose, onCreated }) => {
-  const [vorlagen, setVorlagen] = useState([]);
   const [linkText, setLinkText] = useState("");
   const [linkResult, setLinkResult] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
 
-  // Bei jedem neuen Kunden: Textfeld und Ergebnis zuruecksetzen
-  useEffect(() => {
-    if (kunde) {
-      setLinkText("");
-      setLinkResult("");
-    }
-  }, [kunde]);
-
-  // Vorlagen einmalig laden
-  useEffect(() => {
-    api.get("/modules/textvorlagen/data?doc_type=kundenportal&text_type=portal_nachricht")
-      .then((r) => setVorlagen(r.data || []))
-      .catch(() => {});
-  }, []);
+  const handleTemplateChange = (value) => {
+    setLinkText(htmlToPlainText(value || ""));
+  };
 
   const createLink = async () => {
     setLinkBusy(true);
@@ -67,30 +56,13 @@ const PortalLinkDialog = ({ kunde, onClose, onCreated }) => {
                 Für <strong>{name}</strong>. Der Kunde bekommt automatisch eine Mail mit dem Link
                 {kunde?.email ? ` an ${kunde.email}` : " (keine E-Mail hinterlegt)"}.
               </p>
-              <div>
-                <label className="text-sm font-medium block mb-1">Auftrag-Text (was soll der Kunde tun?)</label>
-                {vorlagen.length > 0 && (
-                  <select
-                    className="w-full mb-2 border rounded-sm px-2 py-2 text-sm bg-background"
-                    data-testid="portal-link-vorlage-select"
-                    defaultValue=""
-                    onChange={(e) => {
-                      const v = vorlagen.find((x) => x.id === e.target.value);
-                      if (v) setLinkText(htmlToPlainText(v.content || ""));
-                    }}
-                  >
-                    <option value="">— Vorhandene Vorlage wählen —</option>
-                    {vorlagen.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
-                  </select>
-                )}
-              </div>
             </div>
-            <Textarea
+            <TextTemplateSelect
+              docType="kundenportal"
+              textType="portal_nachricht"
               value={linkText}
-              onChange={(e) => setLinkText(e.target.value)}
-              className="flex-1 min-h-0 resize-none"
-              placeholder="z.B. Bitte schicken Sie Fotos vom Schaden"
-              data-testid="portal-link-text-input"
+              onChange={handleTemplateChange}
+              customer={kunde}
             />
             <div className="shrink-0 flex justify-end gap-2 mt-3">
               <Button variant="outline" onClick={onClose}>Abbrechen</Button>

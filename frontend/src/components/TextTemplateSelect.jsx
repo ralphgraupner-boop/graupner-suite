@@ -165,7 +165,7 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
     }
   };
 
-  const labels = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung" };
+  const labels = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", portal_nachricht: "Portal-Nachricht" };
   const label = labels[textType] || textType;
   const isBetreff = textType === "betreff";
 
@@ -249,8 +249,8 @@ const TextTemplateSelect = ({ docType, textType, value, onChange, customer, sett
   );
 };
 
-const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", allgemein: "Allgemein" };
-const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung" };
+const DOC_TYPE_LABELS = { angebot: "Angebot", auftrag: "Auftrag", rechnung: "Rechnung", allgemein: "Allgemein", kundenportal: "Kundenportal" };
+const TEXT_TYPE_LABELS = { vortext: "Vortext", schlusstext: "Schlusstext", betreff: "Betreff", bemerkung: "Bemerkung", titel: "Titel", email: "E-Mail", mahnung: "Mahnung", portal_nachricht: "Portal-Nachricht" };
 
 const TextvorlagenOverlay = ({ textType, docType, label, templates, customer, settings, docNumber, lohnanteilData, docContext, onSelect, onClose }) => {
   const [search, setSearch] = useState("");
