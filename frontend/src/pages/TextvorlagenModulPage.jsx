@@ -627,7 +627,7 @@ const VorlageFormModal = ({ isOpen, onClose, item, onSave }) => {
         {!isSelectionType && (
           <div>
             <label className="block text-sm font-medium mb-2">Inhalt *</label>
-            <RichTextEditor value={form.content} onChange={(val) => setForm({ ...form, content: val })} placeholder="Text eingeben... Formatierung mit der Toolbar" />
+            <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder="Text eingeben..." rows={5} className="w-full rounded-sm border border-input bg-background px-3 py-2 text-sm min-h-[120px] resize-y" data-testid="textarea-vorlage-content" />
             <p className="text-xs text-muted-foreground mt-1">Platzhalter wie {"{kunde_name}"}, {"{datum}"} werden automatisch ersetzt</p>
           </div>
         )}

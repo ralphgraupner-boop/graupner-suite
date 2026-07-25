@@ -298,6 +298,21 @@ const PopOutPrefsCard = () => {
     </Card>
   );
 };
+
+const TextvorlagenInfoCard = () => (
+  <Card className="p-4 lg:p-6">
+    <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+      <BookOpen className="w-5 h-5 text-primary" /> Zwei Wege, eine Vorlage
+    </h3>
+    <p className="text-sm text-muted-foreground">
+      Textvorlagen koennen auf zwei Arten bearbeitet werden: hier in den Einstellungen, oder direkt beim Erstellen eines Dokuments ueber den "Textvorlagen"-Button. Beide greifen auf dieselben Daten zu - Aenderungen sind sofort ueberall sichtbar.
+    </p>
+    <p className="text-sm text-muted-foreground mt-2">
+      Der Inhalt wird bewusst als einfacher Text ohne Formatierung (fett/kursiv) gespeichert. Das verhindert, dass beim Uebernehmen einer Vorlage in ein Dokument technischer Formatierungs-Code sichtbar wird.
+    </p>
+  </Card>
+);
+
 const DiversesTab = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -402,6 +417,7 @@ const DiversesTab = () => {
     <div className="space-y-4">
       <SchriftgroesseCard />
       <FarbschemaCard />
+      <TextvorlagenInfoCard />
       <RechnungsnummernCard />
       <FeatureFlagsCard />
       <PopOutPrefsCard />
