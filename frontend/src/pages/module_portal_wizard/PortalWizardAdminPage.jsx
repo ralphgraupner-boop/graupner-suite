@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Share2, Search, RefreshCw, Link as LinkIcon, ChevronDown, MessageSquare, Camera, Loader2, Download, Send, CheckCheck } from "lucide-react";
+import { Share2, Search, RefreshCw, Link as LinkIcon, ChevronDown, MessageSquare, Camera, Loader2, Download, Send, CheckCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card, Modal } from "@/components/common";
 import { api } from "@/lib/api";
@@ -39,6 +39,7 @@ const PortalWizardAdminPage = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [fotosById, setFotosById] = useState({});   // {eintrag_id: {fotos, fotos_data}}
   const [fotosBusy, setFotosBusy] = useState(null);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   const [linkKunde, setLinkKunde] = useState(null);
 
@@ -272,7 +273,7 @@ const PortalWizardAdminPage = () => {
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2" data-testid={`portal-admin-fotos-${k.id}`}>
                             {fotos.map((d, i) => (
                               <div key={i} className="relative group">
-                                <img src={d} alt={`Foto ${i + 1}`} className="h-24 w-full rounded-lg object-cover border" />
+                                <img src={d} alt={`Foto ${i + 1}`} className="h-24 w-full rounded-lg object-cover border cursor-pointer" onClick={() => setLightboxSrc(d)} />
                                 <button onClick={() => downloadFoto(d, fotosById[e.id]?.fotos?.[i] || `foto_${i + 1}.jpg`)} className="absolute bottom-1 right-1 bg-black/60 text-white rounded p-1" data-testid={`portal-admin-foto-download-${k.id}-${i}`} title="Herunterladen">
                                   <Download className="w-3.5 h-3.5" />
                                 </button>
@@ -344,6 +345,30 @@ const PortalWizardAdminPage = () => {
           </div>
         </div>
       </Modal>
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
+          onClick={() => setLightboxSrc(null)}
+          role="dialog"
+          aria-modal="true"
+          data-testid="portal-admin-foto-lightbox"
+        >
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/15 hover:bg-white/30 text-white"
+            aria-label="Schliessen"
+            data-testid="btn-close-foto-lightbox"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={lightboxSrc}
+            alt="Foto gross"
+            className="max-w-full max-h-[85vh] object-contain rounded shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -560,6 +560,58 @@ class FromKundePayload(BaseModel):
     bilder_uebernehmen: bool = True
 
 
+# ===================== PDFs =====================
+@router.post("/{projekt_id}/pdfs")
+async def upload_pdf(projekt_id: str, beschreibung: str = "",
+                      file: UploadFile = File(...), user=Depends(get_current_user)):
+    p = await db.module_projekte.find_one({"id": projekt_id})
+    if not p:
+        raise HTTPException(404, "Projekt nicht gefunden")
+    if not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(400, "Nur PDF-Dateien erlaubt")
+    content = await file.read()
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(400, "Datei zu gross (max 15 MB)")
+    try:
+        from utils.storage import put_object
+        safe_name = (file.filename or "dokument").replace(" ", "_")
+        if "." in safe_name:
+            safe_name = safe_name.rsplit(".", 1)[0]
+        path = f"module_projekte/{projekt_id}/{uuid.uuid4().hex[:8]}_{safe_name}.pdf"
+        result = put_object(path, content, "application/pdf")
+        url = result.get("url") or result.get("path", path)
+    except Exception as e:
+        logger.error(f"Projekt-PDF-Upload fehlgeschlagen: {e}")
+        raise HTTPException(500, "Upload fehlgeschlagen")
+    pdf = {
+        "id": str(uuid.uuid4()),
+        "url": url,
+        "filename": file.filename,
+        "beschreibung": beschreibung,
+        "content_type": "application/pdf",
+        "size": len(content),
+        "uploaded_by": user.get("username", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.module_projekte.update_one(
+        {"id": projekt_id},
+        {"$push": {"pdfs": pdf},
+         "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    return pdf
+
+
+@router.delete("/{projekt_id}/pdfs/{pdf_id}")
+async def delete_pdf(projekt_id: str, pdf_id: str, user=Depends(get_current_user)):
+    res = await db.module_projekte.update_one(
+        {"id": projekt_id},
+        {"$pull": {"pdfs": {"id": pdf_id}}},
+    )
+    if res.modified_count == 0:
+        raise HTTPException(404, "PDF nicht gefunden")
+    return {"message": "PDF geloescht"}
+
+
 @router.post("/from-kunde/{kunde_id}")
 async def create_from_kunde(kunde_id: str, payload: FromKundePayload = FromKundePayload(),
                               user=Depends(get_current_user)):

@@ -387,7 +387,7 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
   return (
     <div className="fixed inset-0 z-50 flex flex-col" data-testid="document-preview-modal">
       {/* ── Toolbar ── */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2.5 bg-card text-card-foreground border-b shadow-sm z-10">
+      <div className="shrink-0 flex items-center flex-wrap justify-between gap-2 px-2 sm:px-4 py-2.5 bg-card text-card-foreground border-b shadow-sm z-10">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold">{titles[type]} {docNumber}</h2>
           <Badge variant={doc.status === "Bezahlt" ? "success" : doc.status === "Offen" ? "warning" : "default"}>
@@ -409,14 +409,14 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
             </button>
           </div>
         )}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center flex-wrap gap-1.5">
           {onEdit && (
             <Button variant="outline" size="sm" onClick={() => { onClose(); onEdit(doc); }}>
-              <Edit className="w-3.5 h-3.5 mr-1" /> Bearbeiten
+              <Edit className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Bearbeiten</span>
             </Button>
           )}
           <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowMailDialog(true)} data-testid="btn-mailprogramm-preview">
-            <ExternalLink className="w-3.5 h-3.5 mr-1" /> Mailprogramm
+            <ExternalLink className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Mailprogramm</span>
           </Button>
           <Button variant="outline" size="sm" onClick={async () => {
             try {
@@ -428,15 +428,15 @@ const DocumentPreview = ({ isOpen, onClose, document: doc, type, onDownload, onE
               if (pw) { pw.addEventListener("load", () => { setTimeout(() => pw.print(), 500); }); }
             } catch { toast.error("Fehler beim Drucken"); }
           }} data-testid="btn-print-preview">
-            <Printer className="w-3.5 h-3.5 mr-1" /> Drucken
+            <Printer className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Drucken</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onDownload?.(doc.id, docNumber)}>
-            <Download className="w-3.5 h-3.5 mr-1" /> PDF
+            <Download className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">PDF</span>
           </Button>
           {onCreateDunning && doc.status === "Überfällig" && (
             <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50"
               onClick={() => { onClose(); onCreateDunning(doc); }} data-testid="btn-create-dunning-preview">
-              <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Mahnung
+              <AlertTriangle className="w-3.5 h-3.5 sm:mr-1" /> <span className="hidden sm:inline">Mahnung</span>
             </Button>
           )}
           <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-sm ml-1" data-testid="btn-close-preview">

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "axios";
-import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star, X } from "lucide-react";
+import { Package, CheckCircle, FileText, ClipboardCheck, Receipt, Search, Star, X, ExternalLink, Save } from "lucide-react";
 import { api, API } from "@/lib/api";
 import { TextTemplateSelect, getAnredeBrief, resolvePlaceholders } from "@/components/TextTemplateSelect";
 
@@ -614,11 +614,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
     setShowLoadTemplate(false);
   };
 
-  const persistDocument = async () => {
+  const persistDocument = async (silent = false) => {
     // Silent save - gibt savedId oder null zurueck, ohne Template-Dialog
-    if (!selectedCustomerId) { toast.error("Bitte wählen Sie einen Kunden aus"); return null; }
-    if (!validateTextFields()) return null;
-    if (!validatePositions()) return null;
+    if (!selectedCustomerId) { if (!silent) toast.error("Bitte wählen Sie einen Kunden aus"); return null; }
+    if (!silent) {
+      if (!validateTextFields()) return null;
+      if (!validatePositions()) return null;
+    }
     setSaving(true);
     try {
       const endpoint = type === "quote" ? "quotes" : type === "order" ? "orders" : "invoices";
@@ -626,15 +628,16 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         const _lohn = lohnanteilCustom === "" || lohnanteilCustom === null ? null : Number(String(lohnanteilCustom).replace(",", "."));
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, show_lohnanteil: showLohnanteil, lohnanteil_custom: (Number.isFinite(_lohn) ? _lohn : null), ...(type === "quote" && { valid_days: settings?.default_quote_validity_days ?? 30 }), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         const res = await api.post(`/${endpoint}`, payload);
-        if (res?.data?.id) { navigate(`/${endpoint}/edit/${res.data.id}`, { replace: true }); return res.data.id; }
+        if (res?.data?.id) { isDirtyRef.current = false; navigate(`/${endpoint}/edit/${res.data.id}`, { replace: true }); return res.data.id; }
         return null;
       } else {
         const _lohn = lohnanteilCustom === "" || lohnanteilCustom === null ? null : Number(String(lohnanteilCustom).replace(",", "."));
         const payload = { customer_id: selectedCustomerId, positions: positions.filter(p => p.description), notes, vortext, schlusstext, betreff, discount, discount_type: discountType, vat_rate: vatRate, status, show_lohnanteil: showLohnanteil, lohnanteil_custom: (Number.isFinite(_lohn) ? _lohn : null), ...(type === "invoice" && { deposit_amount: depositAmount, ...(dueDays != null && { due_days: Number(dueDays) }) }) };
         await api.put(`/${endpoint}/${id}`, payload);
+        isDirtyRef.current = false;
         return id;
       }
-    } catch { toast.error("Fehler beim Speichern"); return null; } finally { setSaving(false); }
+    } catch { if (!silent) toast.error("Fehler beim Speichern"); return null; } finally { setSaving(false); }
   };
 
   // Pflicht-Check vor Druck/PDF/Versand: bei Rechnung mit aktiviertem Lohnanteil
@@ -703,10 +706,69 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const handleExit = () => { setShowExitConfirm(true); };
+
+  // Autosave: speichert alle 60s im Hintergrund, still (kein Popup/Fehlertoast),
+  // damit spontanes Wegnavigieren (z.B. schnell einen Termin anlegen) keine
+  // Arbeit mehr verliert. Nutzt Refs, damit der Intervall-Timer nicht bei
+  // jedem Tastendruck neu gestartet wird (sonst wuerde er nie abgelaufen).
+  const persistDocumentRef = useRef(persistDocument);
+  useEffect(() => { persistDocumentRef.current = persistDocument; });
+  const savingRef = useRef(saving);
+  useEffect(() => { savingRef.current = saving; }, [saving]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!savingRef.current) persistDocumentRef.current(true);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Merkt sich, ob seit dem letzten Speichern etwas geaendert wurde (fuer den
+  // Warnhinweis unten). Erster Render zaehlt nicht als Aenderung.
+  const isDirtyRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    isDirtyRef.current = true;
+  }, [positions, notes, vortext, schlusstext, betreff, discount, discountType, vatRate, showLohnanteil, lohnanteilCustom, status, depositAmount, dueDays]);
+
+  // Warnhinweis beim Schliessen/Neuladen des Browser-Tabs, wenn ungespeicherte
+  // Aenderungen vorliegen (Autosave deckt spontanes Wegklicken innerhalb der
+  // Suite bereits ab; dies hier ist die Absicherung fuer Tab zu/Neu laden).
+  useEffect(() => {
+    const handler = (e) => {
+      if (isDirtyRef.current) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!isDirtyRef.current) return;
+      const link = e.target.closest && e.target.closest("a[href]");
+      if (!link) return;
+      const href = link.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("http") || link.target === "_blank") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.confirm("Ungespeicherte Änderungen - trotzdem verlassen?")) {
+        isDirtyRef.current = false;
+        navigate(href);
+      }
+    };
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
+  }, [navigate]);
   const handleExitWithSave = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
   const handleExitWithSaveKunde = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/kunden?edit=${selectedCustomerId}` : listPaths[type]); };
   const handleExitWithSaveProjekt = async () => { setShowExitConfirm(false); const savedId = await handleSave(); navigate(savedId && selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
   const handleExitWithoutSave = () => { setShowExitConfirm(false); navigate(selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]); };
+  // Zurueck-Button: bei ungespeicherten Aenderungen denselben Beenden-Dialog
+  // oeffnen (EA-004, kein neuer Dialog), sonst direkt wie bisher navigieren.
+  const handleBack = () => {
+    if (isDirtyRef.current) { setShowExitConfirm(true); return; }
+    navigate(selectedCustomerId ? `/module/projekte/werkbank/${selectedCustomerId}` : listPaths[type]);
+  };
 
   const handleDownloadPDF = async () => {
     if (!(await ensureLohnanteilOrConfirm())) return;
@@ -841,7 +903,7 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         type={type} isNew={isNew} titles={titles} listPaths={listPaths} docNumber={docNumber} status={status} selectedCustomerId={selectedCustomerId}
         isRecording={isRecording} aiLoading={aiLoading} saving={saving}
         navigate={navigate} setShowSettings={setShowSettings} startRecording={startRecording} stopRecording={stopRecording}
-        handleSave={handleSave} handleExit={handleExit} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
+        handleSave={handleSave} handleExit={handleExit} handleBack={handleBack} handleDownloadPDF={handleDownloadPDF} handlePrint={handlePrint}
         onOpenMailClient={onOpenMailClient}
         onToggleVorlagen={() => setShowVorlagen(v => !v)}
         onTogglePreview={() => setShowPreview(true)}
@@ -865,31 +927,49 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
           <div style={{ width: '794px', transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top left' }}>
             {/* Status Dropdown */}
             {!isNew && (
-              <div className="mb-3 lg:mb-4 flex flex-wrap items-center gap-2">
-                <select value={status} onChange={(e) => setStatus(e.target.value)}
-                  className="h-8 lg:h-9 rounded-sm border border-border bg-background text-foreground px-2 lg:px-3 text-xs lg:text-sm">
-                  {type === "quote" && (<><option value="Entwurf">Status: Entwurf</option><option value="Gesendet">Status: Gesendet</option><option value="Beauftragt">Status: Beauftragt</option><option value="Abgelehnt">Status: Abgelehnt</option></>)}
-                  {type === "order" && (<><option value="Offen">Status: Offen</option><option value="In Arbeit">Status: In Arbeit</option><option value="Abgeschlossen">Status: Abgeschlossen</option></>)}
-                  {type === "invoice" && (<><option value="Offen">Status: Offen</option><option value="Gesendet">Status: Gesendet</option><option value="Bezahlt">Status: Bezahlt</option><option value="Überfällig">Status: Überfällig</option></>)}
-                </select>
-                {type === "quote" && (
-                  <>
-                    <button type="button" onClick={() => handleCopyTo("order")} disabled={copying} data-testid="btn-create-order-from-quote"
-                      className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#1a6e3c" }}>
-                      Auftragsbestätigung erstellen
-                    </button>
-                    <button type="button" onClick={() => handleCopyTo("invoice-from-quote")} disabled={copying} data-testid="btn-create-invoice-from-quote"
+              <div className="mb-3 lg:mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={status} onChange={(e) => setStatus(e.target.value)}
+                    className="h-8 lg:h-9 rounded-sm border border-border bg-background text-foreground px-2 lg:px-3 text-xs lg:text-sm">
+                    {type === "quote" && (<><option value="Entwurf">Status: Entwurf</option><option value="Gesendet">Status: Gesendet</option><option value="Beauftragt">Status: Beauftragt</option><option value="Abgelehnt">Status: Abgelehnt</option></>)}
+                    {type === "order" && (<><option value="Offen">Status: Offen</option><option value="In Arbeit">Status: In Arbeit</option><option value="Gesendet">Status: Gesendet</option><option value="Abgeschlossen">Status: Abgeschlossen</option></>)}
+                    {type === "invoice" && (<><option value="Entwurf">Status: Entwurf</option><option value="Offen">Status: Offen</option><option value="Gesendet">Status: Gesendet</option><option value="Bezahlt">Status: Bezahlt</option><option value="Überfällig">Status: Überfällig</option></>)}
+                  </select>
+                  {type === "quote" && (
+                    <>
+                      <button type="button" onClick={() => handleCopyTo("order")} disabled={copying} data-testid="btn-create-order-from-quote"
+                        className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#1a6e3c" }}>
+                        Auftragsbestätigung erstellen
+                      </button>
+                      <button type="button" onClick={() => handleCopyTo("invoice-from-quote")} disabled={copying} data-testid="btn-create-invoice-from-quote"
+                        className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#003399" }}>
+                        Rechnung erstellen
+                      </button>
+                    </>
+                  )}
+                  {type === "order" && (
+                    <button type="button" onClick={() => handleCopyTo("invoice-from-order")} disabled={copying} data-testid="btn-create-invoice-from-order"
                       className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#003399" }}>
                       Rechnung erstellen
                     </button>
-                  </>
-                )}
-                {type === "order" && (
-                  <button type="button" onClick={() => handleCopyTo("invoice-from-order")} disabled={copying} data-testid="btn-create-invoice-from-order"
-                    className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50" style={{ backgroundColor: "#003399" }}>
-                    Rechnung erstellen
+                  )}
+                  {onOpenMailClient && (
+                    <button type="button" onClick={onOpenMailClient} data-testid="btn-mailto-document-row2"
+                      className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50 bg-blue-600 hover:bg-blue-700 flex items-center gap-1">
+                      <ExternalLink className="w-4 h-4" /> Mailprogramm
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={handleSave} disabled={saving} data-testid="btn-save-document-row2"
+                    className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50 bg-primary hover:bg-primary/90 flex items-center gap-1">
+                    <Save className="w-4 h-4" /> {saving ? "..." : "Speichern"}
                   </button>
-                )}
+                  <button type="button" onClick={handleExit} disabled={saving} data-testid="btn-exit-document-row2"
+                    className="h-8 lg:h-9 px-3 rounded-sm text-xs lg:text-sm font-medium text-white transition-colors disabled:opacity-50 bg-destructive hover:bg-destructive/90 flex items-center gap-1">
+                    <X className="w-4 h-4" /> Beenden
+                  </button>
+                </div>
               </div>
             )}
 

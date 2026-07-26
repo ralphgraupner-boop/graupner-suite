@@ -500,7 +500,7 @@ export default function ModuleAufgabenPage() {
                       <div className="flex items-center gap-2 mt-2 flex-wrap" data-testid={`aufgabe-zuordnung-${a.id}`}>
                         {a.kunde_id && kundeLabel(a.kunde_id) && (
                           <button
-                            onClick={() => navigate(`/kunden?edit=${a.kunde_id}`)}
+                            onClick={() => navigate(`/module/kunden?edit=${a.kunde_id}`)}
                             className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-800 border border-blue-200 rounded-sm px-2 py-0.5 hover:bg-blue-100 transition-colors"
                             data-testid={`btn-aufgabe-kunde-${a.id}`}
                             title="Zum Kunden springen"
@@ -510,7 +510,7 @@ export default function ModuleAufgabenPage() {
                         )}
                         {a.projekt_id && projekteMap[a.projekt_id]?.titel && (
                           <button
-                            onClick={() => navigate(`/projekte/${a.projekt_id}`)}
+                            onClick={() => navigate(`/module/projekte/werkbank/${a.kunde_id || projekteMap[a.projekt_id]?.kunde_id}`)}
                             className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm px-2 py-0.5 hover:bg-emerald-100 transition-colors"
                             data-testid={`btn-aufgabe-projekt-${a.id}`}
                             title="Zum Projekt springen"

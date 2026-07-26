@@ -267,10 +267,12 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwa
   const [saving, setSaving] = useState(false);
   const [uploadKategorie, setUploadKategorie] = useState("schaden");
   const [uploading, setUploading] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [hvQuery, setHvQuery] = useState("");
   const [tabStats, setTabStats] = useState({ aufgaben: null, termine: null });
   const fileInputRef = useRef(null);
+  const pdfInputRef = useRef(null);
   const navigate = useNavigate();
 
   const statusOptions = useTextvorlagen("projekt_status");
@@ -368,7 +370,40 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwa
     }
   };
 
+  const handlePdfChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploadingPdf(true);
+    try {
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        await api.post(`/module-projekte/${data.id}/pdfs`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+      toast.success(`${files.length} PDF(s) hochgeladen`);
+      onChanged();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    } finally {
+      setUploadingPdf(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+    }
+  };
+
+  const deletePdf = async (pdfId) => {
+    try {
+      await api.delete(`/module-projekte/${data.id}/pdfs/${pdfId}`);
+      toast.success("PDF gelöscht");
+      onChanged();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || err.message);
+    }
+  };
+
   const bilder = data.bilder || [];
+  const pdfs = data.pdfs || [];
 
   return (
     <Card className="overflow-hidden" data-testid={`projekt-card-${data.id}`}>
@@ -415,7 +450,8 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwa
                 { id: "details", label: "Details" },
                 { id: "aufgaben", label: "Aufgaben", count: aufgTotal, hasOffen: aufgOpen > 0 },
                 { id: "termine", label: "Termine", count: termTotal, hasOffen: termOpen > 0 },
-                { id: "bilder", label: `Bilder (${bilder.length})` },
+                { id: "bilder", label: "Bilder", count: bilder.length },
+                { id: "pdfs", label: "PDF", count: pdfs.length },
               ];
               return tabs.map(t => (
                 <button
@@ -427,7 +463,7 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwa
                 >
                   <span>{t.label}</span>
                   {t.count != null && t.count > 0 && (
-                    <span className="text-xs text-muted-foreground">({t.count})</span>
+                    <span className="text-xs font-semibold bg-blue-600 text-white rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">{t.count}</span>
                   )}
                   {t.hasOffen && (
                     <span
@@ -578,6 +614,50 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwa
                 </div>
               ) : (
                 <BilderGrid bilder={bilder} onDelete={deleteBild} projektId={data.id} />
+              )}
+            </div>
+          )}
+          {activeTab === "pdfs" && (
+            <div>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <h4 className="text-sm font-semibold flex items-center gap-1">
+                  <FileText className="w-4 h-4" /> PDF-Dokumente ({pdfs.length})
+                </h4>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" onClick={() => pdfInputRef.current?.click()} disabled={uploadingPdf} data-testid={`btn-upload-pdf-${data.id}`}>
+                    <Upload className="w-3.5 h-3.5" /> {uploadingPdf ? "Lade…" : "PDF hochladen"}
+                  </Button>
+                  <input ref={pdfInputRef} type="file" multiple accept="application/pdf" onChange={handlePdfChange} className="hidden" />
+                </div>
+              </div>
+              {pdfs.length === 0 ? (
+                <div className="text-xs text-muted-foreground border-2 border-dashed rounded p-4 text-center">
+                  Keine PDFs. Lade Dokumente hoch.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {pdfs.map(pdf => (
+                    <div key={pdf.id} className="flex items-center justify-between text-xs border rounded px-2 py-1.5 bg-muted/20">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const r = await api.get(`/module-projekte/files/${pdf.url}`, { responseType: "blob" });
+                            const objUrl = URL.createObjectURL(r.data);
+                            window.open(objUrl, "_blank");
+                          } catch (err) {
+                            toast.error("PDF konnte nicht geladen werden");
+                          }
+                        }}
+                        className="flex items-center gap-1.5 text-blue-700 hover:underline truncate text-left"
+                      >
+                        <FileText className="w-3.5 h-3.5 flex-shrink-0" /> {pdf.filename}
+                      </button>
+                      <button onClick={() => deletePdf(pdf.id)} className="text-red-600 hover:bg-red-50 rounded p-1 flex-shrink-0" title="PDF löschen">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}

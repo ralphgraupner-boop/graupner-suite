@@ -28,7 +28,7 @@ const prefillFrom = (parsed = {}) => ({
   plz: parsed.plz || "",
   ort: parsed.ort || "",
   customer_type: "Privat",
-  status: "Neu",
+  status: "Anfrage",
   categories: "",
   notes: "",
   nachricht: parsed.nachricht || "",
