@@ -908,9 +908,26 @@ const KundenModulPage = () => {
                         🔗 Portal-Link erstellen
                       </button>
                       <button
-                        onClick={() => setEinsatzCtx({ kundeId: kunde.id })}
+                        onClick={async () => {
+                          try {
+                            const res = await api.get(`/module-projekte/?kunde_id=${kunde.id}`);
+                            const projekteDesKunden = res.data || [];
+                            if (projekteDesKunden.length === 0) {
+                              if (window.confirm("Kein Projekt vorhanden. Soll ein neues Projekt angelegt werden?")) {
+                                navigate(`/module/projekte?kunde_id=${kunde.id}&new=1`);
+                              }
+                            } else if (projekteDesKunden.length === 1) {
+                              navigate(`/module/projekte/werkbank/${kunde.id}?projekt=${projekteDesKunden[0].id}`);
+                            } else {
+                              navigate(`/module/projekte?kunde_id=${kunde.id}`);
+                            }
+                          } catch {
+                            toast.error("Projekte konnten nicht geladen werden");
+                          }
+                        }}
                         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
                         data-testid={`btn-to-einsatz-${kunde.id}`}
+                        title="Projekt dieses Kunden oeffnen, um dort einen Einsatz anzulegen"
                       >
                         <Wrench className="w-4 h-4" />
                         Neuer Einsatz

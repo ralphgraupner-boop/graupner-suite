@@ -26,7 +26,7 @@ const ProjekteListe = () => {
   const [kundenMap, setKundenMap] = useState({});
   const [portalStatuses, setPortalStatuses] = useState({});
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("aktiv");
+  const [statusFilter, setStatusFilter] = useState(new URLSearchParams(location.search).get("kunde_id") ? "" : "aktiv");
   const [kategorieFilter, setKategorieFilter] = useState("");
   const [showNew, setShowNew] = useState(false);
   // Such-zuerst-Schema (Ralph 12.05.2026): erst Kunde oder Projekt wählen
@@ -331,7 +331,7 @@ const ProjekteListe = () => {
               onDrop={() => handleRowDrop(idx)}
               onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
               onClick={() => navigate(`/module/projekte/werkbank/${p.kunde_id}`)}
-              className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${dragOverIndex === idx ? "border-primary/50 bg-primary/5" : ""} ${dragIndex === idx ? "opacity-40" : ""}`}
+              className={`p-4 hover:shadow-md transition-shadow cursor-pointer ${dragOverIndex === idx ? "border-primary/50 bg-primary/5" : ""} ${dragIndex === idx ? "opacity-40" : ""} ${ARCHIV_STATES.includes(p.status) ? "opacity-60 grayscale-[30%]" : ""}`}
               data-testid={`projekt-row-${p.id}`}
             >
               <div className="flex items-start justify-between gap-3">
