@@ -359,7 +359,7 @@ const ProjekteListe = () => {
                   </div>
                   <div className="text-sm text-muted-foreground mt-1 flex flex-wrap items-center gap-3">
                     <span className="flex items-center gap-1"><UserIcon className="w-3.5 h-3.5" /> {p.kunde_name}</span>
-                    {p.adresse && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {p.adresse}</span>}
+                    {p.adresse && <a href={"https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(p.adresse)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:underline"><MapPin className="w-3.5 h-3.5" /> {p.adresse}</a>}
                     <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {(p.created_at || "").slice(0, 10)}</span>
                   </div>
                   {p.beschreibung && (
