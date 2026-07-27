@@ -102,10 +102,16 @@ const ProjektWerkbank = () => {
               </div>
               <div className="text-sm text-muted-foreground mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                 {(kunde.address || kunde.strasse || kunde.ort) && (
-                  <span className="flex items-center gap-1">
+                  
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(kunde.address || `${kunde.strasse || ""} ${kunde.hausnummer || ""}, ${kunde.plz || ""} ${kunde.ort || ""}`.replace(/, *$/, "").trim())}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:underline"
+                  >
                     <MapPin className="w-3.5 h-3.5" />
                     {kunde.address || `${kunde.strasse || ""} ${kunde.hausnummer || ""}, ${kunde.plz || ""} ${kunde.ort || ""}`.replace(/, *$/, "").trim()}
-                  </span>
+                  </a>
                 )}
                 {(kunde.phone || kunde.mobile) && (
                   <a href={`tel:${kunde.phone || kunde.mobile}`} className="flex items-center gap-1 hover:text-primary">

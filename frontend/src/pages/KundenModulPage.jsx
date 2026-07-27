@@ -657,7 +657,11 @@ const KundenModulPage = () => {
                           {(kunde.strasse || kunde.address) && (
                             <div>
                               <span className="text-sm font-medium">Adresse:</span>
-                              <p className="text-sm text-muted-foreground">{kunde.strasse} {kunde.hausnummer}{kunde.plz || kunde.ort ? `, ${kunde.plz} ${kunde.ort}` : ""}</p>
+                              <p className="text-sm text-muted-foreground">
+                                <a href={"https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(kunde.address || (kunde.strasse + " " + kunde.hausnummer + ", " + kunde.plz + " " + kunde.ort))} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                  {kunde.strasse} {kunde.hausnummer}{kunde.plz || kunde.ort ? `, ${kunde.plz} ${kunde.ort}` : ""}
+                                </a>
+                              </p>
                               <button onClick={() => { const addr = kunde.address || `${kunde.strasse} ${kunde.hausnummer}, ${kunde.plz} ${kunde.ort}`; navigator.clipboard.writeText(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`); toast.success("Maps-Link kopiert!"); }}
                                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"><Globe className="w-3 h-3" /> Karten-Link kopieren</button>
                             </div>
