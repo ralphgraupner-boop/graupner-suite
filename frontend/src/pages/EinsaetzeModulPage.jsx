@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle, FileText, Printer, Folder, User as UserIcon, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
@@ -20,6 +21,7 @@ const TYP_BADGE = {
 };
 
 const EinsaetzeModulPage = () => {
+  const navigate = useNavigate();
   useF1Help("hilfe_einsaetze");
   const [einsaetze, setEinsaetze] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,7 @@ const EinsaetzeModulPage = () => {
     <div className="max-w-7xl mx-auto" data-testid="einsaetze-page">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl lg:text-4xl font-bold">Einsaetze</h1>
+          <h1 className="text-2xl lg:text-4xl font-bold">Einsätze</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {selectedTarget ? `${filtered.length} Einsatz${filtered.length === 1 ? "" : "e"} für ${selectedTarget.label}` : `${einsaetze.length} Einsätze`}
           </p>
@@ -283,6 +285,7 @@ const EinsaetzeModulPage = () => {
 
 // ==================== DETAIL VIEW ====================
 const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload }) => {
+  const navigate = useNavigate();
   const [bildKat, setBildKat] = useState("");
   const [uploading, setUploading] = useState(false);
   const [mailVorlagen, setMailVorlagen] = useState([]);
@@ -595,7 +598,7 @@ const EinsatzDetail = ({ einsatz, config, mitarbeiter, onBack, onEdit, onReload 
       <Card className="p-4 mb-4">
         <h3 className="font-semibold mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Kontaktdaten</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-          <div><span className="text-xs text-muted-foreground block">Name</span>{e.kunde_name || "-"}</div>
+          <div><span className="text-xs text-muted-foreground block">Name</span>{e.kunde_id ? <button type="button" onClick={() => navigate(`/module/kunden?view=${e.kunde_id}`)} className="text-primary hover:underline text-left">{e.kunde_name || "-"}</button> : (e.kunde_name || "-")}</div>
           <div><span className="text-xs text-muted-foreground block">E-Mail</span>{e.kunde_email ? <a href={`mailto:${e.kunde_email}`} className="text-primary hover:underline">{e.kunde_email}</a> : "-"}</div>
           <div><span className="text-xs text-muted-foreground block">Telefon</span>{e.kunde_telefon ? <a href={`tel:${e.kunde_telefon}`} className="text-primary hover:underline">{e.kunde_telefon}</a> : "-"}</div>
           <div><span className="text-xs text-muted-foreground block">Adresse</span>{e.kunde_adresse || "-"}</div>

@@ -185,6 +185,18 @@ const KundenModulPage = () => {
         }
       }
     }
+    const viewId = params.get("view");
+    if (viewId && kunden.length > 0 && handledEditRef.current !== "view-" + viewId) {
+      handledEditRef.current = "view-" + viewId;
+      const kv = kunden.find((x) => x.id === viewId);
+      if (kv) {
+        setStatusFilter("");
+        setExpandedId(viewId);
+        const cleanedV = new URLSearchParams(location.search);
+        cleanedV.delete("view");
+        navigate(`${location.pathname}${cleanedV.toString() ? "?" + cleanedV.toString() : ""}`, { replace: true });
+      }
+    }
     const newFlag = params.get("new");
     if (newFlag && handledNewRef.current !== newFlag + (returnTo || "")) {
       handledNewRef.current = newFlag + (returnTo || "");
