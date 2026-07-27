@@ -26,7 +26,7 @@ const ProjekteListe = () => {
   const [kundenMap, setKundenMap] = useState({});
   const [portalStatuses, setPortalStatuses] = useState({});
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState(new URLSearchParams(location.search).get("kunde_id") ? "" : "aktiv");
+  const [statusFilter, setStatusFilter] = useState(new URLSearchParams(window.location.search).get("kunde_id") ? "" : "aktiv");
   const [kategorieFilter, setKategorieFilter] = useState("");
   const [showNew, setShowNew] = useState(false);
   // Such-zuerst-Schema (Ralph 12.05.2026): erst Kunde oder Projekt wählen
