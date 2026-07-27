@@ -198,8 +198,12 @@ const KontaktModulPage = () => {
                       <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Adresse</h4>
                         <div className="space-y-2">
-                          {contact.strasse && <p className="text-sm">{contact.strasse} {contact.hausnummer}</p>}
-                          {(contact.plz || contact.ort) && <p className="text-sm">{contact.plz} {contact.ort}</p>}
+                          {(contact.strasse || contact.plz) ? (
+                            <a href={"https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent((contact.strasse || "") + " " + (contact.hausnummer || "") + ", " + (contact.plz || "") + " " + (contact.ort || ""))} target="_blank" rel="noopener noreferrer" className="block hover:underline">
+                              {contact.strasse && <p className="text-sm">{contact.strasse} {contact.hausnummer}</p>}
+                              {(contact.plz || contact.ort) && <p className="text-sm">{contact.plz} {contact.ort}</p>}
+                            </a>
+                          ) : null}
                           {(contact.strasse || contact.plz) && (
                             <button onClick={() => { navigator.clipboard.writeText(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${contact.strasse} ${contact.hausnummer}, ${contact.plz} ${contact.ort}`)}`); toast.success("Maps-Link kopiert!"); }}
                               className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
