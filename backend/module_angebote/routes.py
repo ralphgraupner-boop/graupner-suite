@@ -13,7 +13,12 @@ async def find_customer_in_modules(customer_id: str):
     # 1. Kunden-Modul
     customer = await db.module_kunden.find_one({"id": customer_id}, {"_id": 0})
     if customer:
-        name = f"{customer.get('vorname', '')} {customer.get('nachname', '')}".strip() or customer.get('firma', 'Unbekannt')
+        persoenlich = f"{customer.get('vorname', '')} {customer.get('nachname', '')}".strip()
+        firma = customer.get('firma', '')
+        if firma and persoenlich:
+            name = firma + chr(10) + persoenlich
+        else:
+            name = firma or persoenlich or 'Unbekannt'
         address = customer.get('address') or f"{customer.get('strasse', '')} {customer.get('hausnummer', '')}, {customer.get('plz', '')} {customer.get('ort', '')}".strip().strip(",").strip()
         return {"name": name, "address": address, "email": customer.get("email", ""), "firma": customer.get("firma", "")}
     # 2. Kontakt-Modul
@@ -160,6 +165,7 @@ async def create_quote(quote: QuoteCreate):
     if not customer:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
 
+    kunde_dict = await db.module_kunden.find_one({"id": quote.customer_id}, {"_id": 0})
     quote_number = await get_next_quote_number()
 
     subtotal_net = sum(p.quantity * p.price_net for p in quote.positions if p.type != "titel")
@@ -176,9 +182,9 @@ async def create_quote(quote: QuoteCreate):
         customer_name=customer["name"],
         customer_address=customer.get("address", ""),
         positions=[p.model_dump() for p in quote.positions],
-        notes=quote.notes,
-        vortext=quote.vortext,
-        schlusstext=quote.schlusstext,
+        notes=ersetze_platzhalter(quote.notes, kunde_dict),
+        vortext=ersetze_platzhalter(quote.vortext, kunde_dict),
+        schlusstext=ersetze_platzhalter(quote.schlusstext, kunde_dict),
         betreff=quote.betreff,
         discount=quote.discount,
         discount_type=quote.discount_type,
@@ -237,6 +243,14 @@ async def update_quote(quote_id: str, update: QuoteUpdate):
                   "status", "show_lohnanteil", "lohnanteil_custom"):
         if field in sent:
             update_data[field] = sent[field]
+    # Platzhalter wie {anrede_brief} in Text-Feldern ersetzen, falls mitgesendet
+    if any(f in update_data for f in ("notes", "vortext", "schlusstext")):
+        kunde_dict_upd = await db.module_kunden.find_one(
+            {"id": sent.get("customer_id", existing.get("customer_id", ""))}, {"_id": 0}
+        )
+        for f in ("notes", "vortext", "schlusstext"):
+            if f in update_data:
+                update_data[f] = ersetze_platzhalter(update_data[f], kunde_dict_upd)
 
     # Kundendaten aktualisieren wenn customer_id mitgeschickt wird
     if "customer_id" in sent and update.customer_id:

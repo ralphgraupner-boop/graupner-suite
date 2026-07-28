@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from models import Order, OrderUpdate, Position
 from database import db
 from module_angebote import find_customer_in_modules
+from utils import ersetze_platzhalter
 
 router = APIRouter()
 
@@ -137,6 +138,15 @@ async def update_order(order_id: str, update: OrderUpdate):
                   "status", "show_lohnanteil", "lohnanteil_custom"):
         if field in sent:
             update_data[field] = sent[field]
+
+    # Platzhalter wie {anrede_brief} in Text-Feldern ersetzen, falls mitgesendet
+    if any(f in update_data for f in ("notes", "vortext", "schlusstext")):
+        kunde_dict_upd = await db.module_kunden.find_one(
+            {"id": sent.get("customer_id", existing.get("customer_id", ""))}, {"_id": 0}
+        )
+        for f in ("notes", "vortext", "schlusstext"):
+            if f in update_data:
+                update_data[f] = ersetze_platzhalter(update_data[f], kunde_dict_upd)
 
     if "customer_id" in sent and update.customer_id:
         customer = await find_customer_in_modules(update.customer_id)
