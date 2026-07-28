@@ -39,6 +39,30 @@ async def _customer_email(doc: dict) -> str:
     return ""
 
 
+import re
+
+
+def _sanitize_filename_part(s: str) -> str:
+    s = (s or "").strip()
+    s = re.sub(r'[\\/:*?"<>|]', "", s)
+    s = re.sub(r"\s+", "_", s)
+    return s
+
+
+async def _customer_name_for_filename(doc: dict) -> str:
+    cid = doc.get("customer_id")
+    if cid:
+        for coll in ("module_kunden", "module_kontakt"):
+            c = await db[coll].find_one({"id": cid}, {"_id": 0, "vorname": 1, "nachname": 1, "firma": 1})
+            if c:
+                if c.get("firma"):
+                    return _sanitize_filename_part(c["firma"])
+                name = f"{c.get('vorname', '')} {c.get('nachname', '')}".strip()
+                if name:
+                    return _sanitize_filename_part(name)
+    return ""
+
+
 def _signature(settings: dict) -> str:
     """Professionelle Text-Signatur aus den Firmendaten (company_settings).
     Leere Felder werden weggelassen – kein Hardcoding."""
@@ -174,11 +198,15 @@ async def _build_eml_response(doc_type: str, doc: dict, with_text: bool) -> Resp
         msg.add_alternative(_compose_body_html(doc, settings), subtype="html")
 
     safe = _ascii_label(label)
+    kunde_teil = await _customer_name_for_filename(doc)
+    betreff_teil = _sanitize_filename_part(doc.get("betreff") or "")
+    teile = [t for t in [safe, kunde_teil, betreff_teil, number] if t]
+    basis_name = "_".join(teile)
     msg.add_attachment(pdf_bytes, maintype="application", subtype="pdf",
-                       filename=f"{safe}_{number}.pdf")
+                       filename=f"{basis_name}.pdf")
 
     eml_bytes = msg.as_bytes()
-    fname = f"{safe}_{number}.eml"
+    fname = f"{basis_name}.eml"
     return Response(
         content=eml_bytes,
         media_type="message/rfc822",

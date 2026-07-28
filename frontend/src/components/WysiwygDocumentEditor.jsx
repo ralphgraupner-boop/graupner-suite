@@ -840,7 +840,11 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
       const url = window.URL.createObjectURL(new Blob([res.data], { type: "message/rfc822" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${titles[type]}_${docNumber || savedId}.eml`;
+      const sanitize = (s) => (s || "").trim().replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_");
+      const kundeTeil = sanitize(customer?.firma || `${customer?.vorname || ""} ${customer?.nachname || ""}`.trim());
+      const betreffTeil = sanitize(betreff);
+      const emlTeile = [titles[type], kundeTeil, betreffTeil, docNumber || savedId].filter(Boolean);
+      a.download = `${emlTeile.join("_")}.eml`;
       document.body.appendChild(a); a.click(); a.remove();
       window.URL.revokeObjectURL(url);
       toast.success("E-Mail mit PDF-Anhang erstellt - jetzt in Betterbird oeffnen");
