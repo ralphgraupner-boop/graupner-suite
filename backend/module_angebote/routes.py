@@ -3,6 +3,7 @@ from typing import List
 from datetime import datetime, timezone, timedelta
 from models import Quote, QuoteCreate, QuoteUpdate, Position
 from database import db
+from utils import ersetze_platzhalter
 from auth import get_current_user
 
 router = APIRouter()

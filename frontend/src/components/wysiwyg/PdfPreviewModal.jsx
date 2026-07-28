@@ -36,6 +36,15 @@ export const PdfPreviewModal = ({ isOpen, onClose, getPdfBlob, filename = "Dokum
     return () => { if (blobUrl) URL.revokeObjectURL(blobUrl); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+  // Browser-Tab-Titel kurzzeitig auf den Dokumentnamen setzen, damit der
+  // Browser-eigene Druckdialog (Strg+P) beim "Als PDF speichern" den
+  // richtigen Dateinamen vorschlaegt (nutzt den Tab-Titel, nicht den PDF-Titel).
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousTitle = document.title;
+    document.title = filename.replace(/\.pdf$/i, "");
+    return () => { document.title = previousTitle; };
+  }, [isOpen, filename]);
 
   if (!isOpen) return null;
 

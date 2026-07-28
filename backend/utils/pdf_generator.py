@@ -287,8 +287,10 @@ def generate_dunning_pdf(invoice: dict, settings: dict, level: int) -> BytesIO:
     c.setFillColor(text_color)
     c.setFont("Helvetica", 10)
     y_cust = y_addr - 0.3 * cm
-    c.drawString(2 * cm, y_cust, invoice.get("customer_name", ""))
-    y_cust -= 0.4 * cm
+    for _name_line in (invoice.get("customer_name", "") or "").split(chr(10)):
+        if _name_line.strip():
+            c.drawString(2 * cm, y_cust, _name_line.strip())
+            y_cust -= 0.4 * cm
     if invoice.get("customer_address"):
         addr = invoice["customer_address"]
         addr_lines_c = addr.split("\n") if "\n" in addr else [p.strip() for p in addr.split(",")]
@@ -512,6 +514,10 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     website = settings.get("website", "") or "www.tischlerei-graupner.de"
     tax_id = settings.get("tax_id", "")
     doc_number = data.get(number_keys.get(doc_type, "quote_number"), "")
+    _pdf_titel_namen = {"quote": "Angebot", "order": "Auftragsbestaetigung", "invoice": "Rechnung"}
+    c.setTitle(f"{_pdf_titel_namen.get(doc_type, 'Dokument')}_{doc_number}")
+    _pdf_titel_namen = {"quote": "Angebot", "order": "Auftragsbestaetigung", "invoice": "Rechnung"}
+    c.setTitle(f"{_pdf_titel_namen.get(doc_type, 'Dokument')}_{doc_number}")
 
     # Body-Schriftgroesse aus Settings (small=9, normal=10, large=11)
     _font_map = {"small": 9, "normal": 10, "large": 11}
@@ -603,8 +609,10 @@ def generate_document_pdf(doc_type: str, data: dict, settings: dict) -> BytesIO:
     c.setFillColor(text_color)
     c.setFont("Helvetica", 10)
     y_cust = y_addr_start - 0.3 * cm
-    c.drawString(2 * cm, y_cust, data.get("customer_name", ""))
-    y_cust -= 0.4 * cm
+    for _name_line in (data.get("customer_name", "") or "").split(chr(10)):
+        if _name_line.strip():
+            c.drawString(2 * cm, y_cust, _name_line.strip())
+            y_cust -= 0.4 * cm
     if data.get("customer_address"):
         addr = data["customer_address"]
         # Adresse aufteilen: Zeilenumbrüche oder Kommas
