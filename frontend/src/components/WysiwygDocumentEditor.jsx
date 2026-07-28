@@ -1363,7 +1363,13 @@ const WysiwygDocumentEditor = ({ type = "quote" }) => {
         <PdfPreviewModal
           isOpen={true}
           onClose={() => setShowPdfPreview(false)}
-          filename={`${titles[type]}_${docNumber}.pdf`}
+          filename={(() => {
+            const sanitize = (s) => (s || "").trim().replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_");
+            const kundeTeil = sanitize(customer?.firma || `${customer?.vorname || ""} ${customer?.nachname || ""}`.trim());
+            const betreffTeil = sanitize(betreff);
+            const teile = [titles[type], kundeTeil, betreffTeil, docNumber].filter(Boolean);
+            return `${teile.join("_")}.pdf`;
+          })()}
           getPdfBlob={async () => {
             const savedId = await persistDocument();
             if (!savedId) return null;
