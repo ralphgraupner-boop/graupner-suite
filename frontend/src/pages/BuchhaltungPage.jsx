@@ -728,7 +728,7 @@ const OffenePostenTab = ({ posten, onMarkPaid }) => {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="font-bold text-sm">{(p.betrag || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR</span>
-                  <Button size="sm" onClick={() => onMarkPaid(p.id)} data-testid={`btn-bezahlt-${p.id}`}><Check className="w-3.5 h-3.5 mr-1" /> Bezahlt</Button>
+                  <Button size="sm" variant="outline" onClick={() => onMarkPaid(p.id)} data-testid={`btn-bezahlt-${p.id}`} title="Als bezahlt markieren und Einnahme-Buchung erstellen"><Check className="w-3.5 h-3.5 mr-1" /> Jetzt buchen</Button>
                 </div>
               </div>
             </Card>

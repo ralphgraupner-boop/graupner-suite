@@ -36,6 +36,7 @@ const ModuleMailInboxPage = () => {
   const [bulkAccepting, setBulkAccepting] = useState(false);
   const [reprio, setReprio] = useState(false);
   const [statusFilter, setStatusFilter] = useState("vorschlag");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Übersprungene Mails – Vorschau-Modal
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -610,6 +611,24 @@ const ModuleMailInboxPage = () => {
         </div>
       )}
 
+      <div className="mb-3 flex gap-2">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Suche nach Name, E-Mail oder Betreff..."
+          className="flex-1 border rounded-sm p-2 text-sm"
+          data-testid="mail-inbox-search"
+        />
+        <button
+          onClick={() => window.open("https://webmail.jimdo.com", "_blank")}
+          className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-sm hover:bg-muted whitespace-nowrap"
+          data-testid="btn-erweiterte-suche"
+          title="Jimdo-Webmail oeffnen, um dort im kompletten Postfach zu suchen"
+        >
+          <Mail className="w-4 h-4" /> Erweiterte Suche
+        </button>
+      </div>
       <div className="flex flex-wrap gap-2 border-b items-center">
         {[["vorschlag", "Offen"], ["spam_verdacht", "Spam-Verdacht"], ["übernommen", "Übernommen"], ["abgeschlossen", "Archiv"], ["ignoriert", "Ignoriert"], ["all", "Alle"]].map(([k, label]) => (
           <button
@@ -653,7 +672,15 @@ const ModuleMailInboxPage = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((e) => {
+          {items.filter((e) => {
+            if (!searchQuery.trim()) return true;
+            const p = e.parsed || {};
+            const q = searchQuery.trim().toLowerCase();
+            const fullName = [p.vorname, p.nachname].filter(Boolean).join(" ") || e.from_name || "";
+            const email = p.email || e.email || "";
+            const subject = e.subject || "";
+            return fullName.toLowerCase().includes(q) || email.toLowerCase().includes(q) || subject.toLowerCase().includes(q);
+          }).map((e) => {
             const p = e.parsed || {};
             const sb = STATUS_LABELS[e.status] || { label: e.status, color: "bg-slate-100" };
             const fullName = [p.vorname, p.nachname].filter(Boolean).join(" ") || e.from_name || "(ohne Name)";

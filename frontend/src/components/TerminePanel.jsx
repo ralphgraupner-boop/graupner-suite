@@ -324,6 +324,23 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
       setSaving(false);
     }
   };
+  const markErledigt = async () => {
+    if (!data.beschreibung.trim()) {
+      toast.error("Bitte Beschreibung ausfuellen (was wurde gemacht / was fehlt noch), bevor der Termin als erledigt markiert werden kann");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.put(`/module-termine/${existing.id}`, data);
+      await api.patch(`/module-termine/${existing.id}/erledigt`, { beschreibung: data.beschreibung });
+      toast.success("Termin als erledigt markiert");
+      onSaved();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Konnte nicht als erledigt markiert werden");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -466,6 +483,17 @@ export const QuickTerminDialog = ({ existing, kunde_id, projekt_id, mitarbeiter,
         </div>
         <div className="p-4 border-t flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Abbrechen</button>
+          {isEdit && (existing.status === "bestaetigt" || existing.status === "im_kalender") && (
+            <button
+              onClick={markErledigt}
+              disabled={saving}
+              className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 disabled:opacity-50"
+              data-testid="quick-termin-erledigt"
+              title="Termin als erledigt markieren (Beschreibung erforderlich)"
+            >
+              ✓ Erledigt
+            </button>
+          )}
           <button
             onClick={save}
             disabled={saving}

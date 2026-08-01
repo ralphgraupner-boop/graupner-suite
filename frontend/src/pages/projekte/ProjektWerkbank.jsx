@@ -17,7 +17,6 @@ import ProjektBild from "@/components/ProjektBild";
 import MailHistoryModal from "@/components/MailHistoryModal";
 import { MailLink } from "@/components/MailLink";
 import { CustomerDocumentsPanel } from "@/components/CustomerDocumentsPanel";
-import EinsatzModal from "@/components/EinsatzModal";
 import PortalLinkDialog from "@/components/module_portal_wizard/PortalLinkDialog";
 import { openInPopup, useBroadcast } from "@/lib/windowSync";
 
@@ -42,13 +41,13 @@ const ProjektWerkbank = () => {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [mailHistoryFor, setMailHistoryFor] = useState(null);
-  const [einsatzCtx, setEinsatzCtx] = useState(null);  // {kundeId, projektId?} — zentrales EinsatzModal
   const [showPortalLinkDialog, setShowPortalLinkDialog] = useState(false);
   const [portalLinkText, setPortalLinkText] = useState("");
   const [portalLinkResult, setPortalLinkResult] = useState("");
   const [portalLinkBusy, setPortalLinkBusy] = useState(false);
   const [hausverwaltungen, setHausverwaltungen] = useState([]);
   const [hvQuery, setHvQuery] = useState("");
+  const [einsatzCounts, setEinsatzCounts] = useState({}); // { [projektId]: number } — Anzahl Einsaetze je Projekt
 
   const load = async () => {
     setLoading(true);
@@ -74,6 +73,17 @@ const ProjektWerkbank = () => {
     } catch { /* ignore */ }
   };
   useEffect(() => { loadHausverwaltungen(); }, []);
+  const loadEinsatzCounts = async () => {
+    try {
+      const res = await api.get(`/einsaetze?kunde_id=${kunde_id}`);
+      const counts = {};
+      (res.data || []).forEach((e) => {
+        if (e.projekt_id) counts[e.projekt_id] = (counts[e.projekt_id] || 0) + 1;
+      });
+      setEinsatzCounts(counts);
+    } catch { /* ignore */ }
+  };
+  useEffect(() => { loadEinsatzCounts(); }, [kunde_id]);
 
   if (loading && !data) return <div className="p-8 text-center text-muted-foreground">Lade…</div>;
   if (!data) return null;
@@ -185,13 +195,6 @@ const ProjektWerkbank = () => {
             <LinkIcon className="w-4 h-4" />
             🔗 Portal-Link erstellen
           </button>
-          <button
-            onClick={() => setEinsatzCtx({ kundeId: kunde_id })}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-sm bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
-            data-testid="btn-werkbank-einsatz"
-          >
-            <Wrench className="w-4 h-4" /> Neuer Einsatz
-          </button>
         </div>
       </div>
 
@@ -229,7 +232,7 @@ const ProjektWerkbank = () => {
       ) : (
         <div className="space-y-4">
           {projekte.map(p => (
-            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} kunde={kunde} onChanged={load} onEinsatz={(projektId, projektTitel) => setEinsatzCtx({ kundeId: kunde_id, projektId, projektTitel })} hausverwaltungen={hausverwaltungen} reloadHausverwaltungen={loadHausverwaltungen} />
+            <ProjektKarte key={p.id} projekt={p} kundeId={kunde_id} kunde={kunde} onChanged={load} onEinsatz={(projektId, projektTitel) => navigate(`/einsaetze?projekt_id=${projektId}&kunde_id=${kunde_id}&projekt_titel=${encodeURIComponent(projektTitel)}`)} hausverwaltungen={hausverwaltungen} reloadHausverwaltungen={loadHausverwaltungen} einsatzCount={einsatzCounts[p.id] ?? null} />
           ))}
         </div>
       )}
@@ -251,12 +254,6 @@ const ProjektWerkbank = () => {
         kundeName={mailHistoryFor?.name || ""}
       />
 
-      <EinsatzModal
-        open={!!einsatzCtx}
-        context={einsatzCtx || {}}
-        onClose={() => setEinsatzCtx(null)}
-        onSaved={() => {}}
-      />
       <PortalLinkDialog
         kunde={showPortalLinkDialog ? kunde : null}
         onClose={() => setShowPortalLinkDialog(false)}
@@ -266,7 +263,7 @@ const ProjektWerkbank = () => {
 };
 
 // ==================== Projekt-Karte (inline editierbar) ====================
-const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwaltungen, reloadHausverwaltungen }) => {
+const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwaltungen, reloadHausverwaltungen, einsatzCount }) => {
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [data, setData] = useState(projekt);
@@ -424,6 +421,22 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwa
               <h3 className="text-lg font-semibold">{data.titel}</h3>
               <Badge className={`text-xs border ${STATUS_COLORS[data.status] || ""}`}>{data.status}</Badge>
               {data.kategorie && <Badge variant="outline" className="text-xs">{data.kategorie}</Badge>}
+              <button
+                onClick={(ev) => { ev.stopPropagation(); onEinsatz?.(data.id, data.titel); }}
+                className="inline-flex items-center gap-1 border border-orange-300 text-orange-700 hover:bg-orange-50 rounded-sm px-2 py-0.5 text-xs"
+                data-testid={`btn-projekt-einsatz-${data.id}`}
+                title="Neuen Einsatz für dieses Projekt anlegen"
+              >
+                <Wrench className="w-3.5 h-3.5" /> Einsatz
+                {einsatzCount > 0 && (
+                  <span className="ml-1 bg-orange-200 text-orange-800 rounded-full px-1.5">{einsatzCount}</span>
+                )}
+              </button>
+              {(data.status === "Abgeschlossen" || data.status === "Archiv") && (
+                <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-0.5" title="Dieses Projekt ist archiviert. Bearbeitung ist trotzdem moeglich.">
+                  ⚠ Archiviert – wird trotzdem bearbeitet
+                </span>
+              )}
               {bilder.length > 0 && (
                 <span className="inline-flex items-center gap-1 text-xs text-slate-600">
                   <ImageIcon className="w-3 h-3" /> {bilder.length}
@@ -673,16 +686,6 @@ const ProjektKarte = ({ projekt, kundeId, kunde, onChanged, onEinsatz, hausverwa
               <Trash2 className="w-4 h-4" /> Löschen
             </Button>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEinsatz?.(data.id, data.titel)}
-                className="border-orange-300 text-orange-700 hover:bg-orange-50"
-                data-testid={`btn-projekt-einsatz-${data.id}`}
-                title="Neuen Einsatz für dieses Projekt anlegen"
-              >
-                <Wrench className="w-4 h-4" /> Einsatz
-              </Button>
               <Button
                 variant="outline"
                 size="sm"

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Save, FileText, Building2, Users, Palette, Package, Calculator, BookOpen, HardHat, HelpCircle, Smartphone, FolderTree, Flag, MessageSquare, Wrench } from "lucide-react";
+import { Mail, Save, FileText, Building2, Users, Palette, Package, Calculator, BookOpen, HardHat, HelpCircle, Smartphone, FolderTree, Flag, MessageSquare, Wrench, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { MitarbeiterModulPage } from "./MitarbeiterModulPage";
@@ -15,6 +15,7 @@ import { EmailTab } from "./settings/EmailTab";
 import { BenutzerTab } from "./settings/BenutzerTab";
 import { DokumentVorlagenTab } from "./settings/DokumentVorlagenTab";
 import { DiversesTab } from "./settings/DiversesTab";
+import ModuleFeedbackPage from "@/pages/feedback/ModuleFeedbackPage";
 import { BackupTab } from "./settings/BackupTab";
 import { ModuleTab } from "./settings/ModuleTab";
 import { KategorienGruppenTab } from "./settings/KategorienGruppenTab";
@@ -34,6 +35,7 @@ const TABS = [
   { id: "keyword-prio", label: "Keyword-Prioritäten", icon: Flag },
   { id: "begruessung", label: "Begrüßungsvorlagen", icon: MessageSquare },
   { id: "diverses", label: "Diverses / Info", icon: BookOpen },
+  { id: "notizen-bugs", label: "Notizen & Bugs", icon: StickyNote },
   { id: "backup", label: "Backup", icon: Save },
   { id: "module", label: "Module", icon: Package },
   { id: "wartung", label: "Wartung", icon: Wrench },
@@ -238,6 +240,7 @@ const SettingsPage = () => {
         </div>
       )}
       {activeTab === "diverses" && <DiversesTab />}
+      {activeTab === "notizen-bugs" && <ModuleFeedbackPage />}
       {activeTab === "kategorien" && <KategorienGruppenTab />}
       {activeTab === "keyword-prio" && <KeywordPrioritaetenTab />}
       {activeTab === "begruessung" && <BegruessungsvorlagenTab />}

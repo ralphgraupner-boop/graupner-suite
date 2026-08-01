@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Wrench, Plus, Search, Pencil, Trash2, X, User, Phone, Mail, MapPin, Calendar, Clock, Upload, Image as ImageIcon, Send, Download, ChevronDown, ChevronUp, AlertCircle, CheckCircle, FileText, Printer, Folder, User as UserIcon, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Badge } from "@/components/common";
@@ -25,8 +25,10 @@ const EinsaetzeModulPage = () => {
   useF1Help("hilfe_einsaetze");
   const [einsaetze, setEinsaetze] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("aktiv");
+  const [searchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState(() => (searchParams.get("projekt_id") ? "" : "aktiv"));
   const [selected, setSelected] = useState(null);
+  const autoCreateTriggered = useRef(false); // Schutz gegen Mehrfachausloesung der Automatik
   const [showForm, setShowForm] = useState(false);
 
   // Beim Öffnen eines Einsatz-Datensatzes (Detail/Formular) nach oben scrollen
@@ -61,7 +63,26 @@ const EinsaetzeModulPage = () => {
   }, [statusFilter]);
 
   useEffect(() => { load(); }, [load]);
-
+  useEffect(() => {
+    const projektId = searchParams.get("projekt_id");
+    const kundeIdParam = searchParams.get("kunde_id");
+    const projektTitel = searchParams.get("projekt_titel");
+    if (projektId && kundeIdParam) {
+      setSelectedTarget({ type: "projekt", id: projektId, label: projektTitel || "", kunde_id: kundeIdParam });
+    }
+  }, [searchParams]);
+  const createEinsatzFuerProjekt = async (target) => {
+    try {
+      const res = await api.post(`/einsaetze/from-kunde/${target.kunde_id}`, {
+        projekt_id: target.id,
+        projekt_titel: target.label,
+      });
+      setSelected(res.data);
+      load();
+    } catch {
+      toast.error("Einsatz konnte nicht automatisch angelegt werden");
+    }
+  };
   const kundeLabelOf = (k) => k?.firma || [k?.vorname, k?.nachname].filter(Boolean).join(" ") || k?.name || k?.id || "";
   const kundeLabelById = (id) => {
     const k = kunden.find(x => x.id === id);
@@ -96,6 +117,18 @@ const EinsaetzeModulPage = () => {
     }
     return einsaetze;
   }, [einsaetze, selectedTarget, projekte]);
+  useEffect(() => {
+    if (
+      selectedTarget?.type === "projekt" &&
+      !loading &&
+      filtered.length === 0 &&
+      !autoCreateTriggered.current
+    ) {
+      autoCreateTriggered.current = true;
+      toast(`Für dieses Projekt sind noch keine Einsätze vorhanden. Es wird jetzt ein neuer Einsatz für dieses Projekt angelegt.`);
+      createEinsatzFuerProjekt(selectedTarget);
+    }
+  }, [selectedTarget, loading, filtered]);
 
   const deleteEinsatz = async (id) => {
     if (!window.confirm("Einsatz wirklich loeschen?")) return;
@@ -124,7 +157,7 @@ const EinsaetzeModulPage = () => {
           </p>
         </div>
         {selectedTarget && (
-          <button onClick={() => { setSelected(null); setShowForm(true); }} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90" data-testid="btn-new-einsatz">
+          <button onClick={() => { if (selectedTarget?.type === "projekt") { createEinsatzFuerProjekt(selectedTarget); } else { setSelected(null); setShowForm(true); } }} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-sm text-sm font-medium hover:bg-primary/90" data-testid="btn-new-einsatz">
             <Plus className="w-4 h-4" /> Neuer Einsatz
           </button>
         )}

@@ -10,7 +10,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 
 from database import db, logger
@@ -20,7 +20,7 @@ from .settings import _get_or_create_settings
 router = APIRouter()
 
 
-VALID_STATUS = ["wartet_auf_go", "bestaetigt", "im_kalender", "abgesagt"]
+VALID_STATUS = ["wartet_auf_go", "bestaetigt", "im_kalender", "abgesagt", "erledigt"]
 VALID_TYP = ["besichtigung", "ausfuehrung", "abnahme", "intern", "sonstiges"]
 
 
@@ -379,6 +379,33 @@ async def mark_im_kalender(
     }
     if payload and payload.get("google_event_id"):
         update["google_event_id"] = str(payload["google_event_id"])
+    await db.module_termine.update_one({"id": termin_id}, {"$set": update})
+    return await db.module_termine.find_one({"id": termin_id}, {"_id": 0})
+
+
+@router.patch("/{termin_id}/erledigt")
+async def mark_erledigt(termin_id: str, payload: dict = Body(...), user=Depends(get_current_user)):
+    """
+    Markiert einen Termin als erledigt. Erzwingt eine ausgefuellte Beschreibung
+    (Arbeitsbericht: was wurde gemacht / was fehlt noch) - kein Ueberspringen
+    dieses Schritts moeglich, auch nicht ueber die API direkt.
+    """
+    await _require_enabled()
+    existing = await db.module_termine.find_one({"id": termin_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(404, "Termin nicht gefunden")
+    if existing["status"] not in ("bestaetigt", "im_kalender"):
+        raise HTTPException(400, f"Nur 'bestaetigt'- oder 'im_kalender'-Termine als erledigt markierbar (aktuell: {existing['status']})")
+    beschreibung = (payload.get("beschreibung") or "").strip()
+    if not beschreibung:
+        raise HTTPException(400, "Beschreibung (Arbeitsbericht) ist Pflicht, um einen Termin als erledigt zu markieren")
+    now = datetime.now(timezone.utc).isoformat()
+    update = {
+        "status": "erledigt",
+        "beschreibung": beschreibung,
+        "erledigt_at": now,
+        "updated_at": now,
+    }
     await db.module_termine.update_one({"id": termin_id}, {"$set": update})
     return await db.module_termine.find_one({"id": termin_id}, {"_id": 0})
 

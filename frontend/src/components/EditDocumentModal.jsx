@@ -23,7 +23,7 @@ const EditDocumentModal = ({ isOpen, onClose, document, type, onSave }) => {
   const statusOptions = {
     quote: ["Entwurf", "Gesendet", "Beauftragt", "Abgelehnt"],
     order: ["Offen", "In Arbeit", "Abgeschlossen", "Abgerechnet"],
-    invoice: ["Offen", "Gesendet", "Bezahlt", "Überfällig"]
+    invoice: ["Entwurf", "Offen", "Gesendet", "Bezahlt", "Überfällig"]
   };
 
   const docTypeMap = { quote: "angebot", order: "auftrag", invoice: "rechnung" };

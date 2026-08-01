@@ -364,7 +364,13 @@ export default function ModuleTerminePage() {
       ) : filteredTermine.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed rounded-md text-muted-foreground" data-testid="empty-state">
           <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>{selectedTarget ? `Keine Termine für ${selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}${filterStatus ? " in diesem Status" : ""}.` : "Keine Termine vorhanden."}</p>
+          <p>
+            {selectedMonteure.size > 0
+              ? "Keine weiteren Termine für diesen Monteur vorhanden."
+              : selectedTarget
+                ? `Keine Termine für ${selectedTarget.type === "kunde" ? "diesen Kunden" : "dieses Projekt"}${filterStatus ? " in diesem Status" : ""}.`
+                : "Keine Termine vorhanden."}
+          </p>
           {selectedTarget && <p className="text-xs mt-1">Klicke oben rechts auf „+ Neuer Termin".</p>}
         </div>
       ) : (
@@ -372,6 +378,17 @@ export default function ModuleTerminePage() {
           {uniqueMonteure.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap pb-2 mb-1 border-b" data-testid="monteur-filter-bar">
               <span className="text-xs text-muted-foreground font-medium">Monteur-Filter:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMonteure(new Set());
+                  toast.success(`Alle Termine werden angezeigt (${filteredTermine.length} gesamt)`);
+                }}
+                className={`px-2 py-1 rounded-full border text-xs transition-all ${selectedMonteure.size === 0 ? "bg-foreground text-background border-transparent shadow" : "bg-background border-border hover:bg-muted"}`}
+                data-testid="monteur-filter-alle"
+              >
+                Alle
+              </button>
               {uniqueMonteure.map(u => {
                 const active = selectedMonteure.has(u);
                 const c = colorForUser(u);
@@ -391,16 +408,7 @@ export default function ModuleTerminePage() {
                   </button>
                 );
               })}
-              {selectedMonteure.size > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedMonteure(new Set())}
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  data-testid="monteur-filter-reset"
-                >
-                  <X className="w-3 h-3" /> Alle anzeigen
-                </button>
-              )}
+
             </div>
           )}
           {filteredTermine.map((t, idx) => {
@@ -612,6 +620,23 @@ const TerminDialog = ({ termin, kunden, projekte, aufgaben, mitarbeiter, selecte
       setSaving(false);
     }
   };
+  const markErledigt = async () => {
+    if (!data.beschreibung.trim()) {
+      toast.error("Bitte Beschreibung ausfuellen (was wurde gemacht / was fehlt noch), bevor der Termin als erledigt markiert werden kann");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.put(`/module-termine/${termin.id}`, data);
+      await api.patch(`/module-termine/${termin.id}/erledigt`, { beschreibung: data.beschreibung });
+      toast.success("Termin als erledigt markiert");
+      onSaved();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Konnte nicht als erledigt markiert werden");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="termin-dialog">
@@ -766,6 +791,17 @@ const TerminDialog = ({ termin, kunden, projekte, aufgaben, mitarbeiter, selecte
 
         <div className="p-4 border-t flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm border rounded-sm hover:bg-muted">Abbrechen</button>
+          {isEdit && (termin.status === "bestaetigt" || termin.status === "im_kalender") && (
+            <button
+              onClick={markErledigt}
+              disabled={saving}
+              className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 disabled:opacity-50"
+              data-testid="termin-dialog-erledigt"
+              title="Termin als erledigt markieren (Beschreibung erforderlich)"
+            >
+              ✓ Erledigt
+            </button>
+          )}
           <button
             onClick={save}
             disabled={saving}

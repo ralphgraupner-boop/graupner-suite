@@ -355,7 +355,7 @@ class Invoice(BaseModel):
     total_gross: CoercedFloat = 0
     deposit_amount: CoercedFloat = 0
     final_amount: CoercedFloat = 0
-    status: str = "Offen"
+    status: str = "Entwurf"
     paid_at: Optional[str] = None
     due_date: str = ""
     due_days: int = 14

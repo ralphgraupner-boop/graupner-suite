@@ -201,12 +201,16 @@ async def update_config(body: dict, user=Depends(get_current_user)):
 # ===================== EINSAETZE CRUD =====================
 
 @router.get("/einsaetze")
-async def list_einsaetze(status: str = "", user=Depends(get_current_user)):
+async def list_einsaetze(status: str = "", projekt_id: str = "", kunde_id: str = "", user=Depends(get_current_user)):
     query = {}
     if status == "aktiv":
         query["status"] = {"$in": ["aktiv", "in_bearbeitung"]}
     elif status == "inaktiv":
         query["status"] = {"$in": ["inaktiv", "abgeschlossen"]}
+    if projekt_id:
+        query["projekt_id"] = projekt_id
+    if kunde_id:
+        query["kunde_id"] = kunde_id
     items = await db.einsaetze.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
 
     # Kundendaten live nachladen (Datenmasken-Prinzip)
@@ -408,8 +412,10 @@ async def create_from_kunde(kunde_id: str, data: dict = {}, user=Depends(get_cur
     einsatz = {
         "id": str(uuid.uuid4()),
         "kunde_id": kunde_id,
+        "projekt_id": data.get("projekt_id", ""),
+        "projekt_titel": data.get("projekt_titel", ""),
         "objekt_strasse": kunde.get("strasse", ""), "objekt_plz": kunde.get("plz", ""), "objekt_ort": kunde.get("ort", ""),
-        "betreff": data.get("betreff", f"Einsatz fuer {name}"),
+        "betreff": data.get("betreff", data.get("projekt_titel") or f"Einsatz fuer {name}"),
         "beschreibung": data.get("beschreibung", ""), "reparaturgruppe": data.get("reparaturgruppe", ""),
         "material": data.get("material", ""),
         "monteur_id": "", "monteur_name": "", "monteur2_id": "", "monteur2_name": "",
