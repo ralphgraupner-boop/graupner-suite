@@ -80,7 +80,7 @@ function App() {
   const role = getUserRole();
   // Phase 1 Rollen-Konzept: Monteur/Mitarbeiter landen direkt in der Monteur-App,
   // alle anderen Rollen (admin, buchhaltung, ...) wie bisher auf dem Dashboard.
-  const defaultPage = (role === "monteur" || role === "mitarbeiter") ? "/monteur" : "/module/termine";
+  const defaultPage = (role === "monteur" || role === "mitarbeiter") ? "/monteur" : "/dashboard";
 
   // Tab-Titel und Favicon-Hinweis je Umgebung
   useEffect(() => {
