@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Plus, Download, Trash2, Edit, CheckCircle, Search } from "lucide-react";
+import { FileText, Plus, Download, Trash2, Edit, CheckCircle, Search, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Badge } from "@/components/common";
 import { api, API } from "@/lib/api";
@@ -12,11 +12,17 @@ const QuotesPage = () => {
   const [previewQuote, setPreviewQuote] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("alle");
   const navigate = useNavigate();
+  const statusCounts = useMemo(() => {
+    const c = { alle: quotes.filter(q => q.status !== "Beauftragt").length };
+    ["Entwurf", "Gesendet", "Beauftragt", "Abgelehnt"].forEach((s) => { c[s] = quotes.filter(q => q.status === s).length; });
+    return c;
+  }, [quotes]);
 
   const filteredQuotes = useMemo(() => {
     // Weitergewandelte Angebote (Status "Beauftragt") nicht mehr in der Angebote-Liste anzeigen
-    const offen = quotes.filter(q => q.status !== "Beauftragt");
+    let offen = statusFilter === "alle" ? quotes.filter(q => q.status !== "Beauftragt") : quotes.filter(q => q.status === statusFilter);
     if (!searchTerm.trim()) return offen;
     const term = searchTerm.toLowerCase();
     return offen.filter(q =>
@@ -24,7 +30,7 @@ const QuotesPage = () => {
       (q.customer_name || "").toLowerCase().includes(term) ||
       (q.quote_number || "").toLowerCase().includes(term)
     );
-  }, [quotes, searchTerm]);
+  }, [quotes, searchTerm, statusFilter]);
 
   useEffect(() => {
     loadQuotes();
@@ -114,6 +120,26 @@ const QuotesPage = () => {
           <span className="hidden sm:inline">Neues Angebot</span>
           <span className="sm:hidden">Neu</span>
         </Button>
+      </div>
+
+      {/* Status-Filter */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap" data-testid="quotes-status-filter">
+        {[
+          { key: "alle", label: "Alle", info: "Alle Angebote ausser Bestätigt" },
+          { key: "Entwurf", label: "Entwurf", info: "Wartet auf Fertigstellung und Versenden" },
+          { key: "Gesendet", label: "Gesendet", info: "Gesendet, aber noch nicht beauftragt" },
+          { key: "Beauftragt", label: "Bestätigt", info: "Kunde hat beauftragt" },
+          { key: "Abgelehnt", label: "Abgelehnt", info: "Vom Kunden abgelehnt" },
+        ].map((s) => {
+          const count = statusCounts[s.key] || 0;
+          return (
+            <button key={s.key} type="button" onClick={() => setStatusFilter(s.key)} title={s.info} data-testid={`quotes-filter-${s.key}`} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${statusFilter === s.key ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}>
+              {s.label}
+              <Info className="w-3 h-3 text-blue-500" />
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${statusFilter === s.key ? "bg-primary-foreground/20" : "bg-muted"}`}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Suchfeld */}

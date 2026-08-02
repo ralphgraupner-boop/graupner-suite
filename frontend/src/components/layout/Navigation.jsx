@@ -13,7 +13,7 @@ const APP_ENV = detectAppEnv();
 const allNavItems = [
   // Dashboard vorübergehend ausgeblendet (Ralph 17.06.2026) – Route /dashboard + DashboardPage.jsx bleiben erhalten.
   // Zum Reaktivieren einfach die folgende Zeile wieder aktivieren:
-  // { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin"] },
   { path: "/module/kunden", icon: Users, label: "Kunden", roles: ["admin"], permKey: "modul_kunden" },
   { path: "/module/mail-inbox", icon: Inbox, label: "Mail-Anfragen", roles: ["admin"], permKey: "modul_mail_anfragen" },
   { path: "/module/duplikate", icon: Copy, label: "Duplikate", roles: ["admin"], parentPath: "/settings" },

@@ -11,7 +11,7 @@ import { useF1Help } from "@/lib/useF1Help";
 
 const TABS = [
   { id: "quotes", label: "Angebote", icon: FileText },
-  { id: "orders", label: "Auftraege", icon: ClipboardCheck },
+  { id: "orders", label: "Aufträge", icon: ClipboardCheck },
   { id: "invoices", label: "Rechnungen", icon: Receipt },
   { id: "templates", label: "Vorlagen", icon: Star },
 ];
@@ -51,7 +51,7 @@ const DokumenteModulPage = () => {
           {stats && (
             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
               <span>{stats.quotes} Angebote</span>
-              <span>{stats.orders} Auftraege</span>
+              <span>{stats.orders} Aufträge</span>
               <span>{stats.invoices} Rechnungen</span>
               {stats.total_invoiced > 0 && (
                 <span className="font-medium text-foreground">

@@ -50,7 +50,7 @@ const TextvorlagenModulPage = () => {
     if (confirmDeleteId !== id) { setConfirmDeleteId(id); setTimeout(() => setConfirmDeleteId(null), 3000); return; }
     try {
       await api.delete(`/modules/textvorlagen/data/${id}`);
-      toast.success("Geloescht");
+      toast.success("Gelöscht");
       setConfirmDeleteId(null);
       loadItems();
     } catch { toast.error("Fehler"); }
@@ -219,7 +219,7 @@ const TextvorlagenModulPage = () => {
 
   const [seeding, setSeeding] = useState(false);
   const handleSeedPortal = async () => {
-    if (!window.confirm("Die 3 Standard-Vorlagen fuer das Kundenportal anlegen?\n\n- Begruessung + Bilder-Anfrage\n- Weitere Bilder benoetigt\n- Rueckfrage / Eigene Frage\n\nVorhandene Vorlagen mit gleichem Titel werden NICHT ueberschrieben.")) return;
+    if (!window.confirm("Die 3 Standard-Vorlagen für das Kundenportal anlegen?\n\n- Begrüßung + Bilder-Anfrage\n- Weitere Bilder benötigt\n- Rückfrage / Eigene Frage\n\nVorhandene Vorlagen mit gleichem Titel werden NICHT überschrieben.")) return;
     setSeeding(true);
     try {
       const res = await api.post("/modules/textvorlagen/seed-kundenportal");
@@ -255,7 +255,7 @@ const TextvorlagenModulPage = () => {
           <p className="text-muted-foreground mt-1 text-sm">{items.length} Vorlagen gesamt</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Button variant="outline" size="sm" onClick={handleSeedPortal} disabled={seeding} data-testid="btn-seed-portal-vorlagen" title="Legt die 3 Standard-Vorlagen fuer das Kundenportal an">
+          <Button variant="outline" size="sm" onClick={handleSeedPortal} disabled={seeding} data-testid="btn-seed-portal-vorlagen" title="Legt die 3 Standard-Vorlagen für das Kundenportal an">
             <Sparkles className="w-4 h-4" /> {seeding ? "Lege an..." : "Portal-Vorlagen importieren"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport} data-testid="btn-export-vorlagen" title={filterDocType || filterTextType ? "Aktuell gefilterte Auswahl exportieren" : "Alle Vorlagen exportieren"}>
